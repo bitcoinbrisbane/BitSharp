@@ -12,16 +12,6 @@ namespace BitSharp.Data.Test
     public class BlockHeaderTest
     {
         [TestMethod]
-        public void TestBlockHeaderIsDefault()
-        {
-            var defaultBlockHeader = default(BlockHeader);
-            Assert.IsTrue(defaultBlockHeader.IsDefault);
-
-            var randomBlockHeader = RandomData.RandomBlockHeader();
-            Assert.IsFalse(randomBlockHeader.IsDefault);
-        }
-
-        [TestMethod]
         public void TestBlockHeaderEquality()
         {
             var randomBlockHeader = RandomData.RandomBlockHeader();

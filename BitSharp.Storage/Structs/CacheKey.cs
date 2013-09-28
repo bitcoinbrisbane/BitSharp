@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    internal struct CacheKey<T>
+    internal class CacheKey<T>
     {
         public readonly T Key;
         public readonly long Index;

@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace BitSharp.Network
 {
-    public struct AddressPayload
+    public class AddressPayload
     {
         public readonly ImmutableArray<NetworkAddressWithTime> NetworkAddresses;
 

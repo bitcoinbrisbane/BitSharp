@@ -70,7 +70,7 @@ namespace BitSharp.Common
 
         public static bool operator ==(ImmutableBitArray left, ImmutableBitArray right)
         {
-            return left.SequenceEqual(right);
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.SequenceEqual(right));
         }
 
         public static bool operator !=(ImmutableBitArray left, ImmutableBitArray right)

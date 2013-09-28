@@ -12,16 +12,6 @@ namespace BitSharp.Data.Test
     public class BlockchainTest
     {
         [TestMethod]
-        public void TestBlockchainIsDefault()
-        {
-            var defaultBlockchain = default(Blockchain);
-            Assert.IsTrue(defaultBlockchain.IsDefault);
-
-            var randomBlockchain = RandomData.RandomBlockchain(new RandomDataOptions { BlockCount = 1 });
-            Assert.IsFalse(randomBlockchain.IsDefault);
-        }
-
-        [TestMethod]
         public void TestBlockchainEquality()
         {
             var randomBlockchain = RandomData.RandomBlockchain();

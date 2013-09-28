@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Data
 {
-    public struct TxInput
+    public class TxInput
     {
         private readonly TxOutputKey _previousTxOutputKey;
         private readonly ImmutableArray<byte> _scriptSignature;
@@ -29,7 +29,7 @@ namespace BitSharp.Data
 
         public UInt32 Sequence { get { return this._sequence; } }
 
-        public TxInput With(TxOutputKey? previousTxOutput = null, ImmutableArray<byte>? scriptSignature = null, UInt32? sequence = null)
+        public TxInput With(TxOutputKey previousTxOutput = null, ImmutableArray<byte>? scriptSignature = null, UInt32? sequence = null)
         {
             return new TxInput
             (
@@ -49,7 +49,7 @@ namespace BitSharp.Data
 
         public static bool operator ==(TxInput left, TxInput right)
         {
-            return left.PreviousTxOutputKey == right.PreviousTxOutputKey && left.ScriptSignature.SequenceEqual(right.ScriptSignature) && left.Sequence == right.Sequence;
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.PreviousTxOutputKey == right.PreviousTxOutputKey && left.ScriptSignature.SequenceEqual(right.ScriptSignature) && left.Sequence == right.Sequence);
         }
 
         public static bool operator !=(TxInput left, TxInput right)

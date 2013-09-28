@@ -11,16 +11,6 @@ namespace BitSharp.Data.Test
     public class UnspentTxTest
     {
         [TestMethod]
-        public void TestUnspentTxIsDefault()
-        {
-            var defaultUnspentTx = default(UnspentTx);
-            Assert.IsTrue(defaultUnspentTx.IsDefault);
-
-            var randomUnspentTx = RandomData.RandomUnspentTx();
-            Assert.IsFalse(randomUnspentTx.IsDefault);
-        }
-
-        [TestMethod]
         public void TestUnspentTxEquality()
         {
             var randomUnspentTx = RandomData.RandomUnspentTx();

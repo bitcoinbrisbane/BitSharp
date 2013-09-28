@@ -9,7 +9,7 @@ using System.Numerics;
 
 namespace BitSharp.Data
 {
-    public struct BlockHeader
+    public class BlockHeader
     {
         private readonly UInt32 _version;
         private readonly UInt256 _previousBlock;
@@ -19,10 +19,9 @@ namespace BitSharp.Data
         private readonly UInt32 _nonce;
         private readonly UInt256 _hash;
 
-        private readonly bool notDefault;
         private readonly int hashCode;
 
-        public BlockHeader(UInt32 version, UInt256 previousBlock, UInt256 merkleRoot, UInt32 time, UInt32 bits, UInt32 nonce, UInt256? hash = null)
+        public BlockHeader(UInt32 version, UInt256 previousBlock, UInt256 merkleRoot, UInt32 time, UInt32 bits, UInt32 nonce, UInt256 hash = null)
         {
             this._version = version;
             this._previousBlock = previousBlock;
@@ -33,11 +32,8 @@ namespace BitSharp.Data
 
             this._hash = hash ?? DataCalculator.CalculateBlockHash(version, previousBlock, merkleRoot, time, bits, nonce);
 
-            this.notDefault = true;
             this.hashCode = this._hash.GetHashCode();
         }
-
-        public bool IsDefault { get { return !this.notDefault; } }
 
         public UInt32 Version { get { return this._version; } }
 
@@ -53,7 +49,7 @@ namespace BitSharp.Data
 
         public UInt256 Hash { get { return this._hash; } }
 
-        public BlockHeader With(UInt32? Version = null, UInt256? PreviousBlock = null, UInt256? MerkleRoot = null, UInt32? Time = null, UInt32? Bits = null, UInt32? Nonce = null)
+        public BlockHeader With(UInt32? Version = null, UInt256 PreviousBlock = null, UInt256 MerkleRoot = null, UInt32? Time = null, UInt32? Bits = null, UInt32? Nonce = null)
         {
             return new BlockHeader
             (
@@ -91,7 +87,7 @@ namespace BitSharp.Data
 
         public static bool operator ==(BlockHeader left, BlockHeader right)
         {
-            return left.Hash == right.Hash && left.Version == right.Version && left.PreviousBlock == right.PreviousBlock && left.MerkleRoot == right.MerkleRoot && left.Time == right.Time && left.Bits == right.Bits && left.Nonce == right.Nonce;
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.Hash == right.Hash && left.Version == right.Version && left.PreviousBlock == right.PreviousBlock && left.MerkleRoot == right.MerkleRoot && left.Time == right.Time && left.Bits == right.Bits && left.Nonce == right.Nonce);
         }
 
         public static bool operator !=(BlockHeader left, BlockHeader right)

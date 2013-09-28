@@ -812,7 +812,7 @@ namespace BitSharp.Node
                 var nodeId = (((UInt64)random.Next()) << 32) + (UInt64)random.Next(); //TODO should be generated and verified on version message
 
                 var currentBlockchainLocal = this.blockchainDaemon.CurrentBlockchain;
-                var currentHeight = !currentBlockchainLocal.IsDefault ? (UInt32)currentBlockchainLocal.Height : 0;
+                var currentHeight = currentBlockchainLocal != null ? (UInt32)currentBlockchainLocal.Height : 0;
                 await remoteNode.Sender.SendVersion(Messaging.GetExternalIPEndPoint(), remoteNode.RemoteEndPoint, nodeId, currentHeight);
 
                 // wait for our local version to be acknowledged by the remote peer

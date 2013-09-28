@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace BitSharp.Network
 {
-    public struct GetBlocksPayload
+    public class GetBlocksPayload
     {
         public readonly UInt32 Version;
         public readonly ImmutableArray<UInt256> BlockLocatorHashes;
@@ -22,7 +22,7 @@ namespace BitSharp.Network
             this.HashStop = HashStop;
         }
 
-        public GetBlocksPayload With(UInt32? Version = null, ImmutableArray<UInt256>? BlockLocatorHashes = null, UInt256? HashStop = null)
+        public GetBlocksPayload With(UInt32? Version = null, ImmutableArray<UInt256>? BlockLocatorHashes = null, UInt256 HashStop = null)
         {
             return new GetBlocksPayload
             (

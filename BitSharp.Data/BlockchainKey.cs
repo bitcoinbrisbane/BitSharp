@@ -7,12 +7,11 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Data
 {
-    public struct BlockchainKey
+    public class BlockchainKey
     {
         private readonly Guid _guid;
         private readonly UInt256 _rootBlockHash;
 
-        private readonly bool notDefault;
         private readonly int hashCode;
 
         public BlockchainKey(Guid guid, UInt256 rootBlockHash)
@@ -20,11 +19,8 @@ namespace BitSharp.Data
             this._guid = guid;
             this._rootBlockHash = rootBlockHash;
 
-            this.notDefault = true;
             this.hashCode = guid.GetHashCode() ^ rootBlockHash.GetHashCode();
         }
-
-        public bool IsDefault { get { return !this.notDefault; } }
 
         public Guid Guid { get { return this._guid; } }
 
@@ -45,7 +41,7 @@ namespace BitSharp.Data
 
         public static bool operator ==(BlockchainKey left, BlockchainKey right)
         {
-            return left.Guid == right.Guid && left.RootBlockHash == right.RootBlockHash;
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.Guid == right.Guid && left.RootBlockHash == right.RootBlockHash);
         }
 
         public static bool operator !=(BlockchainKey left, BlockchainKey right)

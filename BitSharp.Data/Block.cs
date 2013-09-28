@@ -9,12 +9,11 @@ using System.Linq;
 
 namespace BitSharp.Data
 {
-    public struct Block
+    public class Block
     {
         private readonly BlockHeader _header;
         private readonly ImmutableArray<Transaction> _transactions;
         private readonly long _sizeEstimate;
-        private readonly bool notDefault;
 
         public Block(BlockHeader header, ImmutableArray<Transaction> transactions)
         {
@@ -33,11 +32,7 @@ namespace BitSharp.Data
             sizeEstimate = (long)(sizeEstimate * 1.5);
 
             this._sizeEstimate = sizeEstimate;
-
-            this.notDefault = true;
         }
-
-        public bool IsDefault { get { return !this.notDefault; } }
 
         public UInt256 Hash { get { return this.Header.Hash; } }
 
@@ -47,7 +42,7 @@ namespace BitSharp.Data
 
         public long SizeEstimate { get { return this._sizeEstimate; } }
 
-        public Block With(BlockHeader? Header = null, ImmutableArray<Transaction>? Transactions = null)
+        public Block With(BlockHeader Header = null, ImmutableArray<Transaction>? Transactions = null)
         {
             return new Block
             (
@@ -72,7 +67,7 @@ namespace BitSharp.Data
 
         public static bool operator ==(Block left, Block right)
         {
-            return left.Header == right.Header && left.Transactions.SequenceEqual(right.Transactions);
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.Header == right.Header && left.Transactions.SequenceEqual(right.Transactions));
         }
 
         public static bool operator !=(Block left, Block right)

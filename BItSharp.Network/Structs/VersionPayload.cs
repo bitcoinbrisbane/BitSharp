@@ -8,7 +8,7 @@ using System.Collections.Immutable;
 
 namespace BitSharp.Network
 {
-    public struct VersionPayload
+    public class VersionPayload
     {
         public static readonly UInt32 RELAY_VERSION = 70001;
 
@@ -35,7 +35,7 @@ namespace BitSharp.Network
             this.Relay = Relay;
         }
 
-        public VersionPayload With(UInt32? ProtocolVersion = null, UInt64? ServicesBitfield = null, UInt64? UnixTime = null, NetworkAddress? RemoteAddress = null, NetworkAddress? LocalAddress = null, UInt64? Nonce = null, string UserAgent = null, UInt32? StartBlockHeight = null, bool? Relay = null)
+        public VersionPayload With(UInt32? ProtocolVersion = null, UInt64? ServicesBitfield = null, UInt64? UnixTime = null, NetworkAddress RemoteAddress = null, NetworkAddress LocalAddress = null, UInt64? Nonce = null, string UserAgent = null, UInt32? StartBlockHeight = null, bool? Relay = null)
         {
             return new VersionPayload
             (

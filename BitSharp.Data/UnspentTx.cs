@@ -7,14 +7,13 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Data
 {
-    public struct UnspentTx
+    public class UnspentTx
     {
         private readonly UInt256 _blockHash;
         private readonly UInt32 _txIndex;
         private readonly UInt256 _txHash;
         private readonly ImmutableBitArray _unspentOutputs;
 
-        private readonly bool notDefault;
         private readonly int hashCode;
 
         public UnspentTx(UInt256 blockHash, UInt32 txIndex, UInt256 txHash, ImmutableBitArray unspentOutputs)
@@ -24,11 +23,8 @@ namespace BitSharp.Data
             this._txHash = txHash;
             this._unspentOutputs = unspentOutputs;
 
-            this.notDefault = true;
             this.hashCode = blockHash.GetHashCode() ^ txIndex.GetHashCode() ^ txHash.GetHashCode() ^ unspentOutputs.GetHashCode();
         }
-
-        public bool IsDefault { get { return !this.notDefault; } }
 
         public UInt256 BlockHash { get { return this._blockHash; } }
 
@@ -58,7 +54,7 @@ namespace BitSharp.Data
 
         public static bool operator ==(UnspentTx left, UnspentTx right)
         {
-            return left.BlockHash == right.BlockHash && left.TxIndex == right.TxIndex && left.TxHash == right.TxHash && left.UnspentOutputs == right.UnspentOutputs;
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.BlockHash == right.BlockHash && left.TxIndex == right.TxIndex && left.TxHash == right.TxHash && left.UnspentOutputs == right.UnspentOutputs);
         }
 
         public static bool operator !=(UnspentTx left, UnspentTx right)

@@ -10,7 +10,7 @@ using System.Collections.Immutable;
 
 namespace BitSharp.Network
 {
-    public struct Message
+    public class Message
     {
         public readonly UInt32 Magic;
         public readonly string Command;

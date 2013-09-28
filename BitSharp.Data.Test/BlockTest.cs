@@ -12,16 +12,6 @@ namespace BitSharp.Data.Test
     public class BlockTest
     {
         [TestMethod]
-        public void TestBlockIsDefault()
-        {
-            var defaultBlock = default(Block);
-            Assert.IsTrue(defaultBlock.IsDefault);
-
-            var randomBlock = RandomData.RandomBlock();
-            Assert.IsFalse(randomBlock.IsDefault);
-        }
-
-        [TestMethod]
         public void TestBlockEquality()
         {
             var randomBlock = RandomData.RandomBlock();

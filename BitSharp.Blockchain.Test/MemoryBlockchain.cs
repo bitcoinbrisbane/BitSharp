@@ -38,7 +38,7 @@ namespace BitSharp.Blockchain.Test
         private readonly ECPrivateKeyParameters _coinbasePrivateKey;
         private readonly ECPublicKeyParameters _coinbasePublicKey;
 
-        public MemoryBlockchain(Block? genesisBlock = null)
+        public MemoryBlockchain(Block genesisBlock = null)
         {
             this.shutdownToken = new CancellationToken();
             this.random = new Random();
@@ -169,7 +169,7 @@ namespace BitSharp.Blockchain.Test
             return AddBlock(block, prevChainedBlock);
         }
 
-        public Tuple<Block, ChainedBlock> MineAndAddBlock(Block block, ChainedBlock? prevChainedBlock)
+        public Tuple<Block, ChainedBlock> MineAndAddBlock(Block block, ChainedBlock prevChainedBlock)
         {
             var minedHeader = Miner.MineBlockHeader(block.Header, this._rules.HighestTarget);
             if (minedHeader == null)
@@ -180,17 +180,17 @@ namespace BitSharp.Blockchain.Test
             return AddBlock(minedBlock, prevChainedBlock);
         }
 
-        public Tuple<Block, ChainedBlock> AddBlock(Block block, ChainedBlock? prevChainedBlock)
+        public Tuple<Block, ChainedBlock> AddBlock(Block block, ChainedBlock prevChainedBlock)
         {
             if (prevChainedBlock != null)
-                Assert.AreEqual(block.Header.PreviousBlock, prevChainedBlock.Value.BlockHash);
+                Assert.AreEqual(block.Header.PreviousBlock, prevChainedBlock.BlockHash);
 
             var chainedBlock = new ChainedBlock
             (
                 block.Hash,
                 block.Header.PreviousBlock,
-                prevChainedBlock != null ? prevChainedBlock.Value.Height + 1 : 0,
-                prevChainedBlock != null ? prevChainedBlock.Value.TotalWork + block.Header.CalculateWork() : block.Header.CalculateWork()
+                prevChainedBlock != null ? prevChainedBlock.Height + 1 : 0,
+                prevChainedBlock != null ? prevChainedBlock.TotalWork + block.Header.CalculateWork() : block.Header.CalculateWork()
             );
 
             this.CacheContext.BlockCache.CreateValue(block.Hash, block);
@@ -230,7 +230,7 @@ namespace BitSharp.Blockchain.Test
             while (true)
             {
                 var newWinner = this._rules.SelectWinningChainedBlock(leafChainedBlocks.Values.ToList());
-                if (newWinner.IsDefault)
+                if (newWinner == null)
                     break;
 
                 leafChainedBlocks.Remove(newWinner.BlockHash);

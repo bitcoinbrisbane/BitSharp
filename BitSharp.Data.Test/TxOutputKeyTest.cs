@@ -11,16 +11,6 @@ namespace BitSharp.Data.Test
     public class TxOutputKeyTest
     {
         [TestMethod]
-        public void TestTxOutputKeyIsDefault()
-        {
-            var defaultTxOutputKey = default(TxOutputKey);
-            Assert.IsTrue(defaultTxOutputKey.IsDefault);
-
-            var randomTxOutputKey = RandomData.RandomTxOutputKey();
-            Assert.IsFalse(randomTxOutputKey.IsDefault);
-        }
-
-        [TestMethod]
         public void TestTxOutputKeyEquality()
         {
             var randomTxOutputKey = RandomData.RandomTxOutputKey();

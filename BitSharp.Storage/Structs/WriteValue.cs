@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public struct WriteValue<T>
+    public class WriteValue<T>
     {
         public readonly T Value;
         public readonly bool IsCreate;

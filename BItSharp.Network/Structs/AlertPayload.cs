@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace BitSharp.Network
 {
-    public struct AlertPayload
+    public class AlertPayload
     {
         public readonly string Payload;
         public readonly string Signature;

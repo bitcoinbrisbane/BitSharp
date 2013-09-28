@@ -13,16 +13,6 @@ namespace BitSharp.Data.Test
     public class TransactionTest
     {
         [TestMethod]
-        public void TestTransactionIsDefault()
-        {
-            var defaultTransaction = default(Transaction);
-            Assert.IsTrue(defaultTransaction.IsDefault);
-
-            var randomTransaction = RandomData.RandomTransaction();
-            Assert.IsFalse(randomTransaction.IsDefault);
-        }
-
-        [TestMethod]
         public void TestTransactionEquality()
         {
             var randomTransaction = RandomData.RandomTransaction();

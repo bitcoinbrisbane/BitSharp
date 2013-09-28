@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Data
 {
-    public struct TxOutput
+    public class TxOutput
     {
         private readonly UInt64 _value;
         private readonly ImmutableArray<byte> _scriptPublicKey;
@@ -44,7 +44,7 @@ namespace BitSharp.Data
 
         public static bool operator ==(TxOutput left, TxOutput right)
         {
-            return left.Value == right.Value && left.ScriptPublicKey.SequenceEqual(right.ScriptPublicKey);
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.Value == right.Value && left.ScriptPublicKey.SequenceEqual(right.ScriptPublicKey));
         }
 
         public static bool operator !=(TxOutput left, TxOutput right)

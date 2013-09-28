@@ -11,16 +11,6 @@ namespace BitSharp.Data.Test
     public class ChainedBlockTest
     {
         [TestMethod]
-        public void TestChainedBlockIsDefault()
-        {
-            var defaultChainedBlock = default(ChainedBlock);
-            Assert.IsTrue(defaultChainedBlock.IsDefault);
-
-            var randomChainedBlock = RandomData.RandomChainedBlock();
-            Assert.IsFalse(randomChainedBlock.IsDefault);
-        }
-
-        [TestMethod]
         public void TestChainedBlockEquality()
         {
             var randomChainedBlock = RandomData.RandomChainedBlock();

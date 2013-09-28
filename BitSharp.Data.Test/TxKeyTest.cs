@@ -11,16 +11,6 @@ namespace BitSharp.Data.Test
     public class TxKeyTest
     {
         [TestMethod]
-        public void TestTxKeyIsDefault()
-        {
-            var defaultTxKey = default(TxKey);
-            Assert.IsTrue(defaultTxKey.IsDefault);
-
-            var randomTxKey = RandomData.RandomTxKey();
-            Assert.IsFalse(randomTxKey.IsDefault);
-        }
-
-        [TestMethod]
         public void TestTxKeyEquality()
         {
             var randomTxKey = RandomData.RandomTxKey();

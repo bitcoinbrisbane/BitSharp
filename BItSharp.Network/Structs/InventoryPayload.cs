@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace BitSharp.Network
 {
-    public struct InventoryPayload
+    public class InventoryPayload
     {
         public readonly ImmutableArray<InventoryVector> InventoryVectors;
 

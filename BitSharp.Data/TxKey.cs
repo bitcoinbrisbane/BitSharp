@@ -7,13 +7,12 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Data
 {
-    public struct TxKey
+    public class TxKey
     {
         private readonly UInt256 _blockHash;
         private readonly UInt32 _txIndex;
         private readonly UInt256 _txHash;
 
-        private readonly bool notDefault;
         private readonly int hashCode;
 
         public TxKey(UInt256 blockHash, UInt32 txIndex, UInt256 txHash)
@@ -22,11 +21,8 @@ namespace BitSharp.Data
             this._txIndex = txIndex;
             this._txHash = txHash;
 
-            this.notDefault = true;
             this.hashCode = blockHash.GetHashCode() ^ txIndex.GetHashCode() ^ txHash.GetHashCode();
         }
-
-        public bool IsDefault { get { return !this.notDefault; } }
 
         public UInt256 BlockHash { get { return this._blockHash; } }
 
@@ -49,7 +45,7 @@ namespace BitSharp.Data
 
         public static bool operator ==(TxKey left, TxKey right)
         {
-            return left.BlockHash == right.BlockHash && left.TxIndex == right.TxIndex && left.TxHash == right.TxHash;
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.BlockHash == right.BlockHash && left.TxIndex == right.TxIndex && left.TxHash == right.TxHash);
         }
 
         public static bool operator !=(TxKey left, TxKey right)

@@ -155,7 +155,7 @@ namespace BitSharp.Daemon
                                 var winningBlockLocal = this.WinningBlock;
 
                                 List<ChainedBlock> winningChain;
-                                if (!winningBlockLocal.IsDefault
+                                if (winningBlockLocal != null
                                     && this.CacheContext.ChainedBlockCache.TryGetChain(winningBlockLocal, out winningChain))
                                 {
                                     this._winningBlockchain = winningChain.ToImmutableArray();
@@ -380,7 +380,7 @@ namespace BitSharp.Daemon
             stopwatch.Start();
 
             var chainCount = 0;
-            ChainedBlock? lastChainedBlock = null;
+            ChainedBlock lastChainedBlock = null;
 
             var chainedBlocks = new List<ChainedBlock>();
             var chainedBlocksSet = new HashSet<UInt256>();
@@ -496,7 +496,7 @@ namespace BitSharp.Daemon
             }
 
             if (lastChainedBlock != null)
-                Debug.WriteLine("Chained block {0} at height {1}, total work: {2}".Format2(lastChainedBlock.Value.BlockHash.ToHexNumberString(), lastChainedBlock.Value.Height, lastChainedBlock.Value.TotalWork.ToString("X")));
+                Debug.WriteLine("Chained block {0} at height {1}, total work: {2}".Format2(lastChainedBlock.BlockHash.ToHexNumberString(), lastChainedBlock.Height, lastChainedBlock.TotalWork.ToString("X")));
 
             if (chainCount > 0)
             {
@@ -525,7 +525,7 @@ namespace BitSharp.Daemon
                 var winningBlock = this._rules.SelectWinningChainedBlock(leafChainedBlocks);
 
                 //List<ChainedBlock> winningChain;
-                if (!winningBlock.IsDefault
+                if (winningBlock != null
                     && winningBlock.BlockHash != this.WinningBlock.BlockHash
                     )//&& this.CacheContext.ChainedBlockCache.TryGetChain(winningBlock, out winningChain))
                 {
@@ -563,7 +563,7 @@ namespace BitSharp.Daemon
         private void ValidateCurrentChainWorker()
         {
             var currentBlockchainLocal = this._currentBlockchain;
-            if (!currentBlockchainLocal.IsDefault && !this.Rules.GenesisBlock.IsDefault)
+            if (currentBlockchainLocal != null && this.Rules.GenesisBlock != null)
             {
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
@@ -608,7 +608,7 @@ namespace BitSharp.Daemon
                 var currentBlockchainLocal = this.CurrentBlockchain;
 
                 // check if the winning blockchain has changed
-                if (currentBlockchainLocal.IsDefault || (currentBlockchainLocal.RootBlockHash != winningBlockLocal.BlockHash))
+                if (currentBlockchainLocal == null || (currentBlockchainLocal.RootBlockHash != winningBlockLocal.BlockHash))
                 {
                     var lastCurrentBlockchainWriteLocal = this.lastCurrentBlockchainWrite;
                     using (var cancelToken = new CancellationTokenSource())
@@ -689,7 +689,7 @@ namespace BitSharp.Daemon
             var currentBlockchainLocal = this._currentBlockchain;
 
             // don't write out genesis blockchain
-            if (!currentBlockchainLocal.IsDefault && currentBlockchainLocal.Height > 0)
+            if (currentBlockchainLocal != null && currentBlockchainLocal.Height > 0)
             {
                 //TODO
                 this.StorageContext.BlockchainStorage.WriteBlockchain(currentBlockchainLocal);

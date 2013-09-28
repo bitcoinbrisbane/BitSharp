@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Data
 {
-    public struct BlockchainMetadata
+    public class BlockchainMetadata
     {
         private readonly Guid _guid;
         private readonly UInt256 _rootBlockHash;
@@ -37,7 +37,7 @@ namespace BitSharp.Data
 
         public static bool operator ==(BlockchainMetadata left, BlockchainMetadata right)
         {
-            return left.Guid == right.Guid && left.RootBlockHash == right.RootBlockHash && left.TotalWork == right.TotalWork;
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.Guid == right.Guid && left.RootBlockHash == right.RootBlockHash && left.TotalWork == right.TotalWork);
         }
 
         public static bool operator !=(BlockchainMetadata left, BlockchainMetadata right)

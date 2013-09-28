@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace BitSharp.Data
 {
-    public struct Transaction
+    public class Transaction
     {
         private readonly UInt32 _version;
         private readonly ImmutableArray<TxInput> _inputs;
@@ -20,10 +20,9 @@ namespace BitSharp.Data
         private readonly UInt256 _hash;
         private readonly long _sizeEstimate;
 
-        private readonly bool notDefault;
         private readonly int hashCode;
 
-        public Transaction(UInt32 version, ImmutableArray<TxInput> inputs, ImmutableArray<TxOutput> outputs, UInt32 lockTime, UInt256? hash = null)
+        public Transaction(UInt32 version, ImmutableArray<TxInput> inputs, ImmutableArray<TxOutput> outputs, UInt32 lockTime, UInt256 hash = null)
         {
             this._version = version;
             this._inputs = inputs;
@@ -41,11 +40,8 @@ namespace BitSharp.Data
 
             this._hash = hash ?? DataCalculator.CalculateTransactionHash(version, inputs, outputs, lockTime);
 
-            this.notDefault = true;
             this.hashCode = this._hash.GetHashCode();
         }
-
-        public bool IsDefault { get { return !this.notDefault; } }
 
         public UInt32 Version { get { return this._version; } }
 
@@ -85,7 +81,7 @@ namespace BitSharp.Data
 
         public static bool operator ==(Transaction left, Transaction right)
         {
-            return left.Hash == right.Hash && left.Version == right.Version && left.Inputs.SequenceEqual(right.Inputs) && left.Outputs.SequenceEqual(right.Outputs) && left.LockTime == right.LockTime;
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.Hash == right.Hash && left.Version == right.Version && left.Inputs.SequenceEqual(right.Inputs) && left.Outputs.SequenceEqual(right.Outputs) && left.LockTime == right.LockTime);
         }
 
         public static bool operator !=(Transaction left, Transaction right)

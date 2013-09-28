@@ -10,7 +10,7 @@ using System.Net;
 
 namespace BitSharp.Network
 {
-    public struct NetworkAddress
+    public class NetworkAddress
     {
         public readonly UInt64 Services;
         public readonly ImmutableArray<byte> IPv6Address;

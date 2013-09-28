@@ -9,7 +9,7 @@ using System.Net;
 
 namespace BitSharp.Network
 {
-    public struct NetworkAddressWithTime
+    public class NetworkAddressWithTime
     {
         public readonly UInt32 Time;
         public readonly NetworkAddress NetworkAddress;
@@ -20,7 +20,7 @@ namespace BitSharp.Network
             this.NetworkAddress = NetworkAddress;
         }
 
-        public NetworkAddressWithTime With(UInt32? Time = null, NetworkAddress? NetworkAddress = null)
+        public NetworkAddressWithTime With(UInt32? Time = null, NetworkAddress NetworkAddress = null)
         {
             return new NetworkAddressWithTime
             (

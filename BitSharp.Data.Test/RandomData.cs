@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Data.Test
 {
-    public struct RandomDataOptions
+    public class RandomDataOptions
     {
         public int? MinimumBlockCount { get; set; }
         public int? BlockCount { get; set; }
@@ -31,7 +31,7 @@ namespace BitSharp.Data.Test
             return new Block
             (
                 header: RandomBlockHeader(),
-                transactions: Enumerable.Range(0, random.Next(options.TransactionCount ?? 100)).Select(x => RandomTransaction()).ToImmutableArray()
+                transactions: Enumerable.Range(0, random.Next((options != null ? options.TransactionCount : null) ?? 100)).Select(x => RandomTransaction()).ToImmutableArray()
             );
         }
 
@@ -53,8 +53,8 @@ namespace BitSharp.Data.Test
             return new Transaction
             (
                 version: random.NextUInt32(),
-                inputs: Enumerable.Range(0, random.Next(options.TxInputCount ?? 100)).Select(x => RandomTxInput()).ToImmutableArray(),
-                outputs: Enumerable.Range(0, random.Next(options.TxOutputCount ?? 100)).Select(x => RandomTxOutput()).ToImmutableArray(),
+                inputs: Enumerable.Range(0, random.Next((options != null ? options.TxInputCount : null) ?? 100)).Select(x => RandomTxInput()).ToImmutableArray(),
+                outputs: Enumerable.Range(0, random.Next((options != null ? options.TxOutputCount : null) ?? 100)).Select(x => RandomTxOutput()).ToImmutableArray(),
                 lockTime: random.NextUInt32()
             );
         }
@@ -68,7 +68,7 @@ namespace BitSharp.Data.Test
                     txHash: random.NextUInt32(),
                     txOutputIndex: random.NextUInt32()
                 ),
-                scriptSignature: random.NextBytes(random.Next(options.ScriptSignatureSize ?? 100)).ToImmutableArray(),
+                scriptSignature: random.NextBytes(random.Next((options != null ? options.ScriptSignatureSize : null) ?? 100)).ToImmutableArray(),
                 sequence: random.NextUInt32()
             );
         }
@@ -78,14 +78,14 @@ namespace BitSharp.Data.Test
             return new TxOutput
             (
                 value: random.NextUInt64(),
-                scriptPublicKey: random.NextBytes(random.Next(options.ScriptPublicKeySize ?? 100)).ToImmutableArray()
+                scriptPublicKey: random.NextBytes(random.Next((options != null ? options.ScriptPublicKeySize : null) ?? 100)).ToImmutableArray()
             );
         }
 
         public static Blockchain RandomBlockchain(RandomDataOptions options = default(RandomDataOptions))
         {
             //TODO blockCount algorithm isn't exact
-            var blockCount = random.Next(options.BlockCount ?? 100) + (options.MinimumBlockCount ?? 1);
+            var blockCount = random.Next((options != null ? options.BlockCount : null) ?? 100) + ((options != null ? options.MinimumBlockCount : null) ?? 1);
             var blockList = new List<Block>(blockCount);
             var chainedBlockList = new List<ChainedBlock>(blockCount);
 
@@ -106,7 +106,7 @@ namespace BitSharp.Data.Test
             var blockListHashes = blockList.Select(x => x.Hash).ToImmutableHashSet();
             var utxo = blockList.SelectMany(block =>
                 block.Transactions.Select((tx, txIndex) =>
-                    new UnspentTx(block.Hash, (UInt32)txIndex, tx.Hash, random.NextImmutableBitArray(options.TxOutputCount ?? 100))))
+                    new UnspentTx(block.Hash, (UInt32)txIndex, tx.Hash, random.NextImmutableBitArray((options != null ? options.TxOutputCount : null) ?? 100))))
                 .ToImmutableDictionary(unspentTx => unspentTx.TxHash, unspentTx => unspentTx);
 
             return new Blockchain
@@ -164,7 +164,7 @@ namespace BitSharp.Data.Test
                 txHash: random.NextUInt256(),
                 blockHash: random.NextUInt256(),
                 txIndex: random.NextUInt32(),
-                unspentOutputs: random.NextImmutableBitArray(random.Next(options.TxOutputCount ?? 100))
+                unspentOutputs: random.NextImmutableBitArray(random.Next((options != null ? options.TxOutputCount : null) ?? 100))
             );
         }
 

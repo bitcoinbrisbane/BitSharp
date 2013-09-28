@@ -53,7 +53,7 @@ namespace BitSharp.Blockchain
                 );
             }
             // if currentBlockchain is not present find the genesis block for the target block and use it as the current chain
-            else if (currentBlockchain.IsDefault)
+            else if (currentBlockchain == null)
             {
                 // find the genesis block for the target block
                 var genesisBlock = targetChainedBlock;

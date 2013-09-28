@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Network
 {
-    public struct NetworkAddressKey
+    public class NetworkAddressKey
     {
         public readonly ImmutableArray<byte> IPv6Address;
         public readonly UInt16 Port;

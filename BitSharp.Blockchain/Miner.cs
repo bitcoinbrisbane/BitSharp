@@ -15,7 +15,7 @@ namespace BitSharp.Blockchain
 {
     public static class Miner
     {
-        private struct LocalMinerState
+        private class LocalMinerState
         {
             public readonly byte[] headerBytes;
             public long total;
@@ -29,7 +29,7 @@ namespace BitSharp.Blockchain
             }
         }
 
-        public static BlockHeader? MineBlockHeader(BlockHeader blockHeader, UInt256 hashTarget)
+        public static BlockHeader MineBlockHeader(BlockHeader blockHeader, UInt256 hashTarget)
         {
             var blockHeaderBytes = DataCalculator.EncodeBlockHeader(blockHeader);
             

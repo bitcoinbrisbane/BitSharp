@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 
 namespace BitSharp.Common
 {
-    public struct UInt256 : IComparable<UInt256>
+    public class UInt256 : IComparable<UInt256>
     {
         private static readonly UInt256 _zero = new UInt256(new byte[0]);
 
@@ -21,7 +21,6 @@ namespace BitSharp.Common
         private readonly UInt64 part3;
         private readonly UInt64 part4;
         private readonly int hashCode;
-        private readonly bool notDefault;
 
         public UInt256(byte[] value)
         {
@@ -48,8 +47,6 @@ namespace BitSharp.Common
             this.part4 = Bits.ToUInt64(part4Bytes);
 
             this.hashCode = this.part1.GetHashCode() ^ this.part2.GetHashCode() ^ this.part3.GetHashCode() ^ this.part4.GetHashCode();
-
-            this.notDefault = true;
         }
 
         private UInt256(UInt64 part1, UInt64 part2, UInt64 part3, UInt64 part4)
@@ -60,8 +57,6 @@ namespace BitSharp.Common
             this.part4 = part4;
 
             this.hashCode = this.part1.GetHashCode() ^ this.part2.GetHashCode() ^ this.part3.GetHashCode() ^ this.part4.GetHashCode();
-
-            this.notDefault = true;
         }
 
         public UInt256(int value)
@@ -92,8 +87,6 @@ namespace BitSharp.Common
             if (value < 0)
                 throw new ArgumentOutOfRangeException();
         }
-
-        public bool IsDefault { get { return !this.notDefault; } }
 
         public byte[] ToByteArray()
         {
@@ -176,7 +169,7 @@ namespace BitSharp.Common
 
         public static bool operator ==(UInt256 left, UInt256 right)
         {
-            return left.part1 == right.part1 && left.part2 == right.part2 && left.part3 == right.part3 && left.part4 == right.part4;
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.part1 == right.part1 && left.part2 == right.part2 && left.part3 == right.part3 && left.part4 == right.part4);
         }
 
         public static bool operator !=(UInt256 left, UInt256 right)
