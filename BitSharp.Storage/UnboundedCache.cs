@@ -380,7 +380,7 @@ namespace BitSharp.Storage
                 Interlocked.Add(ref this.flushPendingSize, sizeDelta);
 
                 stopwatch.Stop();
-                Debug.WriteLineIf(this.Name == "BlockCache", "{0,25} StorageWorker flushed {1,3:#,##0} items, {2,6:#,##0} KB in {3,6:#,##0} ms".Format2(this.Name + ":", flushPendingLocal.Count, (float)-sizeDelta / 1.THOUSAND(), stopwatch.ElapsedMilliseconds));
+                //Debug.WriteLineIf(this.Name == "BlockCache", "{0,25} StorageWorker flushed {1,3:#,##0} items, {2,6:#,##0} KB in {3,6:#,##0} ms".Format2(this.Name + ":", flushPendingLocal.Count, (float)-sizeDelta / 1.THOUSAND(), stopwatch.ElapsedMilliseconds));
 
                 this.flushRatesLock.DoWrite(() =>
                 {

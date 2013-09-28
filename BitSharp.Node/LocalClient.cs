@@ -254,9 +254,9 @@ namespace BitSharp.Node
             //Debug.WriteLine("b: {0:#,##0.000} s".Format2(stopwatch.ElapsedSecondsFloat()));
 
             //Debug.WriteLine("{0:#,##0}%".Format2(fulfilledRatio * 100));
-            Debug.WriteLine("{0,5}".Format2(this.requestedBlocks.Count));
-            Debug.WriteLine("{0,5}".Format2(requestAmount));
-            Debug.WriteLine("{0:#,##0.000}/s".Format2(receiveRateHz));
+            //Debug.WriteLine("{0,5}".Format2(this.requestedBlocks.Count));
+            //Debug.WriteLine("{0,5}".Format2(requestAmount));
+            //Debug.WriteLine("{0:#,##0.000}/s".Format2(receiveRateHz));
             if (this.requestedBlocks.Count > requestAmount)
                 return;
 

@@ -104,7 +104,7 @@ namespace BitSharp.Storage.SQLite
             }
             finally
             {
-                Debug.WriteLine("flushed {0,5}: {1:#,##0.000000}s @ {2:#,##0.000}/s".Format2(count, stopwatch.ElapsedSecondsFloat(), count / stopwatch.ElapsedSecondsFloat()));
+                //Debug.WriteLine("flushed {0,5}: {1:#,##0.000000}s @ {2:#,##0.000}/s".Format2(count, stopwatch.ElapsedSecondsFloat(), count / stopwatch.ElapsedSecondsFloat()));
             }
         }
 
