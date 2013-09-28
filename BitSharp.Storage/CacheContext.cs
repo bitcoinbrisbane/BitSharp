@@ -53,7 +53,7 @@ namespace BitSharp.Storage
             this._transactionCache = new TransactionCache
             (
                 cacheContext: this,
-                maxCacheMemorySize: 100.MILLION()
+                maxCacheMemorySize: 1.MILLION()
             );
         }
 
