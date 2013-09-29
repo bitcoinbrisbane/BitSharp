@@ -174,31 +174,34 @@ namespace BitSharp.Blockchain
         {
             try
             {
-                // lookup genesis block header
-                var genesisBlockHeader = this.CacheContext.GetBlockHeader(blockchain.BlockList[0].BlockHash);
-
-                // lookup the latest block on the current blockchain
-                var currentBlockHeader = this.CacheContext.GetBlockHeader(blockchain.RootBlockHash);
-
-                // use genesis block difficulty if first adjusment interval has not yet been reached
-                if (blockchain.Height < DifficultyInternal)
+                // genesis block, use its target
+                if (blockchain.Height == 0)
                 {
+                    // lookup genesis block header
+                    var genesisBlockHeader = this.CacheContext.GetBlockHeader(blockchain.BlockList[0].BlockHash);
+
                     return genesisBlockHeader.CalculateTarget();
                 }
-                // not on an adjustment interval, reuse current block's target
+                // not on an adjustment interval, use previous block's target
                 else if (blockchain.Height % DifficultyInternal != 0)
                 {
-                    return currentBlockHeader.CalculateTarget();
+                    // lookup the previous block on the current blockchain
+                    var prevBlockHeader = this.CacheContext.GetBlockHeader(blockchain.RootBlock.PreviousBlockHash);
+
+                    return prevBlockHeader.CalculateTarget();
                 }
                 // on an adjustment interval, calculate the required next target
                 else
                 {
+                    // lookup the previous block on the current blockchain
+                    var prevBlockHeader = this.CacheContext.GetBlockHeader(blockchain.RootBlock.PreviousBlockHash);
+
                     // get the block difficultyInterval blocks ago
                     var startChainedBlock = blockchain.BlockList.Reverse().Skip(DifficultyInternal).First();
                     var startBlockHeader = this.CacheContext.GetBlockHeader(startChainedBlock.BlockHash);
-                    Debug.Assert(startChainedBlock.Height == blockchain.Height - DifficultyInternal);
+                    //Debug.Assert(startChainedBlock.Height == blockchain.Height - DifficultyInternal);
 
-                    var actualTimespan = (long)currentBlockHeader.Time - (long)startBlockHeader.Time;
+                    var actualTimespan = (long)prevBlockHeader.Time - (long)startBlockHeader.Time;
                     var targetTimespan = DifficultyTargetTimespan;
 
                     // limit adjustment to 4x or 1/4x
