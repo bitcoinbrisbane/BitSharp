@@ -40,14 +40,8 @@ namespace BitSharp.Daemon
         private readonly IBlockchainRules _rules;
         private readonly BlockchainCalculator _calculator;
 
-        private ChainedBlock _winningBlock;
-        private ImmutableArray<ChainedBlock> _winningBlockchain;
-        private readonly ReaderWriterLockSlim winningBlockchainLock;
-
-        private Data.Blockchain _currentBlockchain;
-        private ReaderWriterLockSlim currentBlockchainLock;
-        //TODO
-        private Guid lastCurrentBlockchainWrite;
+        private ChainState chainState;
+        private readonly ReaderWriterLockSlim chainStateLock;
 
         private readonly ConcurrentSetBuilder<UInt256> missingBlocks;
         private readonly ConcurrentSetBuilder<UInt256> unchainedBlocks;
@@ -71,14 +65,8 @@ namespace BitSharp.Daemon
             this._cacheContext = cacheContext;
             this._calculator = new BlockchainCalculator(this._rules, this._cacheContext, this.shutdownToken.Token);
 
-            this._winningBlock = this._rules.GenesisChainedBlock;
-            this._winningBlockchain = ImmutableArray.Create(this._rules.GenesisChainedBlock);
-            this.winningBlockchainLock = new ReaderWriterLockSlim();
-
-            this._currentBlockchain = this._rules.GenesisBlockchain;
-            this.currentBlockchainLock = new ReaderWriterLockSlim();
-            //TODO
-            this.lastCurrentBlockchainWrite = Guid.NewGuid();
+            this.chainState = new ChainState(this._rules.GenesisBlockchain);
+            this.chainStateLock = new ReaderWriterLockSlim();
 
             this.missingBlocks = new ConcurrentSetBuilder<UInt256>();
             this.unchainedBlocks = new ConcurrentSetBuilder<UInt256>();
@@ -136,56 +124,19 @@ namespace BitSharp.Daemon
 
         public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
 
-        public ChainedBlock WinningBlock { get { return this._winningBlock; } }
+        public ChainState ChainState { get { return this.chainState; } }
 
-        public ImmutableArray<ChainedBlock> WinningBlockchain
+        public ChainedBlock WinningBlock { get { return this.chainState.TargetBlock; } }
+
+        public IImmutableList<ChainedBlock> WinningBlockchain
         {
             get
             {
-                this.winningBlockchainLock.EnterUpgradeableReadLock();
-                try
-                {
-                    if (this._winningBlockchain.IsDefault)
-                    {
-                        this.winningBlockchainLock.EnterWriteLock();
-                        try
-                        {
-                            if (this._winningBlockchain.IsDefault)
-                            {
-                                var winningBlockLocal = this.WinningBlock;
-
-                                List<ChainedBlock> winningChain;
-                                if (winningBlockLocal != null
-                                    && this.CacheContext.ChainedBlockCache.TryGetChain(winningBlockLocal, out winningChain))
-                                {
-                                    this._winningBlockchain = winningChain.ToImmutableArray();
-                                }
-                                else
-                                {
-                                    this._winningBlockchain = ImmutableArray.Create(this.Rules.GenesisChainedBlock);
-                                }
-                            }
-                        }
-                        finally
-                        {
-                            this.winningBlockchainLock.ExitWriteLock();
-                        }
-                    }
-
-                    return this._winningBlockchain;
-                }
-                catch (Exception)
-                {
-                    return ImmutableArray.Create(this.Rules.GenesisChainedBlock);
-                }
-                finally
-                {
-                    this.winningBlockchainLock.ExitUpgradeableReadLock();
-                }
+                return this.chainState.TargetBlockchain;
             }
         }
 
-        public Data.Blockchain CurrentBlockchain { get { return this._currentBlockchain; } }
+        public Data.Blockchain CurrentBlockchain { get { return this.chainState.CurrentBlock; } }
 
         public ImmutableHashSet<UInt256> MissingBlocks
         {
@@ -239,7 +190,6 @@ namespace BitSharp.Daemon
                 this.blockchainWorker,
                 this.validateCurrentChainWorker,
                 this.writeBlockchainWorker,
-                this.winningBlockchainLock,
                 this.shutdownToken
             }.DisposeList();
         }
@@ -344,8 +294,7 @@ namespace BitSharp.Daemon
             {
                 // read the winning blockchain
                 var blockchain = this.StorageContext.BlockchainStorage.ReadBlockchain(winner.Item1);
-                UpdateCurrentBlockchain(blockchain);
-                UpdateWinningBlock(blockchain.RootBlock);
+                UpdateCurrentBlockchain(new ChainState(blockchain));
 
                 // collect after loading
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
@@ -516,39 +465,51 @@ namespace BitSharp.Daemon
 
         private void WinnerWorker()
         {
-            try
+            this.chainStateLock.DoWrite(() =>
             {
-                // get winning chain metadata
-                var leafChainedBlocks = this.CacheContext.ChainedBlockCache.FindLeafChainedBlocks().ToList();
-
-                //TODO ordering will need to follow actual bitcoin rules to ensure the same winning chaing is always selected
-                var winningBlock = this._rules.SelectWinningChainedBlock(leafChainedBlocks);
-
-                //List<ChainedBlock> winningChain;
-                if (winningBlock != null
-                    && winningBlock.BlockHash != this.WinningBlock.BlockHash
-                    )//&& this.CacheContext.ChainedBlockCache.TryGetChain(winningBlock, out winningChain))
+                try
                 {
-                    //var missingChainBlocks = winningChain.Select(x => x.BlockHash).Except(this.CacheContext.BlockCache.GetAllKeys());
-                    //this.missingBlocks.UnionWith(missingChainBlocks);
+                    // get winning chain metadata
+                    var leafChainedBlocks = this.CacheContext.ChainedBlockCache.FindLeafChainedBlocks().ToList();
 
-                    UpdateWinningBlock(winningBlock); //, winningChain.ToImmutableArray());
+                    //TODO ordering will need to follow actual bitcoin rules to ensure the same winning chaing is always selected
+                    var winningBlock = this._rules.SelectWinningChainedBlock(leafChainedBlocks);
+
+                    var chainStateLocal = this.chainState;
+                    if (winningBlock != null && winningBlock.BlockHash != chainStateLocal.TargetBlock.BlockHash)
+                    {
+                        //var missingChainBlocks = winningChain.Select(x => x.BlockHash).Except(this.CacheContext.BlockCache.GetAllKeys());
+                        //this.missingBlocks.UnionWith(missingChainBlocks);
+
+                        ImmutableList<ChainedBlock> forwardBlocks;
+                        ImmutableList<ChainedBlock> rolledBackBlocks;
+                        using (var cancelToken = new CancellationTokenSource())
+                        {
+                            forwardBlocks = this.Calculator.FindBlocksPastLastCommonAncestor(chainStateLocal.CurrentBlock, winningBlock, cancelToken.Token, out rolledBackBlocks)
+                                .ToImmutableList();
+                        }
+
+                        var targetBlockchain = chainStateLocal.CurrentBlock.BlockList.GetRange(0, chainStateLocal.CurrentBlock.BlockList.Count - rolledBackBlocks.Count).Concat(forwardBlocks).ToImmutableList();
+
+                        var newChainState = new ChainState(chainStateLocal.CurrentBlock, winningBlock, targetBlockchain, rolledBackBlocks);
+                        UpdateCurrentBlockchain(newChainState);
+                    }
                 }
-            }
-            catch (MissingDataException e)
-            {
-                HandleMissingData(e);
-            }
-            catch (AggregateException e)
-            {
-                foreach (var missingDataException in e.InnerExceptions.OfType<MissingDataException>())
+                catch (MissingDataException e)
                 {
-                    HandleMissingData(missingDataException);
+                    HandleMissingData(e);
                 }
+                catch (AggregateException e)
+                {
+                    foreach (var missingDataException in e.InnerExceptions.OfType<MissingDataException>())
+                    {
+                        HandleMissingData(missingDataException);
+                    }
 
-                if (e.InnerExceptions.Any(x => !(x is MissingDataException)))
-                    throw;
-            }
+                    if (e.InnerExceptions.Any(x => !(x is MissingDataException)))
+                        throw;
+                }
+            });
         }
 
         private void ValidationWorker()
@@ -562,8 +523,8 @@ namespace BitSharp.Daemon
 
         private void ValidateCurrentChainWorker()
         {
-            var currentBlockchainLocal = this._currentBlockchain;
-            if (currentBlockchainLocal != null && this.Rules.GenesisBlock != null)
+            var chainStateLocal = this.chainState;
+            if (chainStateLocal != null && this.Rules.GenesisBlock != null)
             {
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
@@ -571,7 +532,7 @@ namespace BitSharp.Daemon
                 // revalidate current blockchain
                 try
                 {
-                    Calculator.RevalidateBlockchain(currentBlockchainLocal, this.Rules.GenesisBlock);
+                    Calculator.RevalidateBlockchain(chainStateLocal.CurrentBlock, this.Rules.GenesisBlock);
                 }
                 catch (ValidationException e)
                 {
@@ -583,7 +544,7 @@ namespace BitSharp.Daemon
                     Debug.WriteLine("******************************");
                     Debug.WriteLine("******************************");
 
-                    UpdateCurrentBlockchain(this._rules.GenesisBlockchain);
+                    UpdateCurrentBlockchain(new ChainState(this._rules.GenesisBlockchain));
                 }
                 catch (MissingDataException e)
                 {
@@ -600,59 +561,52 @@ namespace BitSharp.Daemon
         {
             try
             {
-                var winningBlockchainLocal = this.WinningBlockchain;
-                if (winningBlockchainLocal.IsDefault)
-                    return;
-
-                var winningBlockLocal = this.WinningBlock;
-                var currentBlockchainLocal = this.CurrentBlockchain;
-
-                // check if the winning blockchain has changed
-                if (currentBlockchainLocal == null || (currentBlockchainLocal.RootBlockHash != winningBlockLocal.BlockHash))
+                this.chainStateLock.DoWrite(() =>
                 {
-                    var lastCurrentBlockchainWriteLocal = this.lastCurrentBlockchainWrite;
-                    using (var cancelToken = new CancellationTokenSource())
-                    {
-                        //TODO cleanup this design
-                        List<MissingDataException> missingData;
+                    var chainStateLocal = this.chainState;
 
-                        // try to advance the blockchain with the new winning block
-                        var newBlockchain = Calculator.CalculateBlockchainFromExisting(currentBlockchainLocal, winningBlockLocal, out missingData, cancelToken.Token,
-                            progressBlockchain =>
-                            {
-                                // check that nothing else has changed the current blockchain
-                                currentBlockchainLock.DoRead(() =>
+                    // check if the winning blockchain has changed
+                    if (chainStateLocal.CurrentBlock.RootBlockHash != chainStateLocal.TargetBlock.BlockHash)
+                    {
+                        using (var cancelToken = new CancellationTokenSource())
+                        {
+                            var count = 0;
+                            //TODO cleanup this design
+                            List<MissingDataException> missingData;
+
+                            // try to advance the blockchain with the new winning block
+                            var newBlockchain = Calculator.CalculateBlockchainFromExisting(chainStateLocal.CurrentBlock, chainStateLocal.TargetBlock, out missingData, cancelToken.Token,
+                                progressBlockchain =>
                                 {
-                                    if (lastCurrentBlockchainWriteLocal != this.lastCurrentBlockchainWrite)
-                                    {
+                                    var newChainState = new ChainState(progressBlockchain, chainStateLocal.TargetBlock, chainStateLocal.TargetBlockchain, /*TODO this is a horrible stop gap -->*/ chainStateLocal.RewindBlocks.Skip(1).ToImmutableList());
+                                    UpdateCurrentBlockchain(newChainState);
+
+                                    // let the blockchain writer know there is new work
+                                    this.writeBlockchainWorker.NotifyWork();
+
+                                    //TODO
+                                    count++;
+                                    if (count > 144)
                                         cancelToken.Cancel();
-                                        return;
-                                    }
                                 });
 
-                                // update the current blockchain
-                                lastCurrentBlockchainWriteLocal = UpdateCurrentBlockchain(progressBlockchain);
+                            // collect after processing
+                            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
 
-                                // let the blockchain writer know there is new work
-                                this.writeBlockchainWorker.NotifyWork();
-                            });
-
-                        // collect after processing
-                        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
-
-                        // handle any missing data that prevented further processing
-                        foreach (var e in missingData)
-                        {
-                            HandleMissingData(e);
+                            // handle any missing data that prevented further processing
+                            foreach (var e in missingData)
+                            {
+                                HandleMissingData(e);
+                            }
                         }
+
+                        // whenever the chain is successfully advanced, keep looking for more
+                        //this.blockchainWorker.NotifyWork();
+
+                        // kick off a blockchain revalidate after update
+                        this.validateCurrentChainWorker.NotifyWork();
                     }
-
-                    // whenever the chain is successfully advanced, keep looking for more
-                    //this.blockchainWorker.NotifyWork();
-
-                    // kick off a blockchain revalidate after update
-                    this.validateCurrentChainWorker.NotifyWork();
-                }
+                });
             }
             catch (ValidationException e)
             {
@@ -686,14 +640,14 @@ namespace BitSharp.Daemon
             stopwatch.Start();
 
             // grab a snapshot
-            var currentBlockchainLocal = this._currentBlockchain;
+            var chainStateLocal = this.chainState;
 
             // don't write out genesis blockchain
-            if (currentBlockchainLocal != null && currentBlockchainLocal.Height > 0)
+            if (chainStateLocal.CurrentBlock.Height > 0)
             {
                 //TODO
-                this.StorageContext.BlockchainStorage.WriteBlockchain(currentBlockchainLocal);
-                this.StorageContext.BlockchainStorage.RemoveBlockchains(currentBlockchainLocal.TotalWork);
+                this.StorageContext.BlockchainStorage.WriteBlockchain(chainStateLocal.CurrentBlock);
+                this.StorageContext.BlockchainStorage.RemoveBlockchains(chainStateLocal.CurrentBlock.TotalWork);
             }
 
             stopwatch.Stop();
@@ -804,43 +758,39 @@ namespace BitSharp.Daemon
             }
         }
 
-        private void UpdateWinningBlock(ChainedBlock winningBlock)
+        //private void UpdateWinningBlock(ChainedBlock winningBlock)
+        //{
+        //    this.winningBlockchainLock.EnterWriteLock();
+        //    try
+        //    {
+        //        this._winningBlockchain = default(ImmutableArray<ChainedBlock>);
+        //    }
+        //    finally
+        //    {
+        //        this.winningBlockchainLock.ExitWriteLock();
+        //    }
+
+        //    this._winningBlock = winningBlock;
+
+        //    // notify the blockchain worker after updating winning block
+        //    this.blockchainWorker.NotifyWork();
+
+        //    var handler = this.OnWinningBlockChanged;
+        //    if (handler != null)
+        //        handler(this, winningBlock);
+        //}
+
+        private void UpdateCurrentBlockchain(ChainState newChainState)
         {
-            this.winningBlockchainLock.EnterWriteLock();
-            try
-            {
-                this._winningBlockchain = default(ImmutableArray<ChainedBlock>);
-            }
-            finally
-            {
-                this.winningBlockchainLock.ExitWriteLock();
-            }
-
-            this._winningBlock = winningBlock;
-
-            // notify the blockchain worker after updating winning block
-            this.blockchainWorker.NotifyWork();
-
-            var handler = this.OnWinningBlockChanged;
-            if (handler != null)
-                handler(this, winningBlock);
-        }
-
-        private Guid UpdateCurrentBlockchain(Data.Blockchain newBlockchain)
-        {
-            var guid = Guid.NewGuid();
-
-            this.currentBlockchainLock.DoWrite(() =>
-            {
-                this.lastCurrentBlockchainWrite = guid;
-                this._currentBlockchain = newBlockchain;
-            });
+            this.chainState = newChainState;
 
             var handler = this.OnCurrentBlockchainChanged;
             if (handler != null)
-                handler(this, newBlockchain);
+                handler(this, newChainState.CurrentBlock);
 
-            return guid;
+            var handler2 = this.OnWinningBlockChanged;
+            if (handler2 != null)
+                handler2(this, newChainState.TargetBlock);
         }
     }
 }

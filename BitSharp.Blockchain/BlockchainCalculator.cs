@@ -274,75 +274,82 @@ namespace BitSharp.Blockchain
             return currentBlockchain;
         }
 
-        public List<UInt256> FindBlocksPastLastCommonAncestor(Data.Blockchain currentBlockchain, ChainedBlock targetChainedBlock, CancellationToken cancelToken)
+        public List<ChainedBlock> FindBlocksPastLastCommonAncestor(Data.Blockchain currentBlockchain, ChainedBlock targetChainedBlock, CancellationToken cancelToken, out ImmutableList<ChainedBlock> rolledBackBlocks)
         {
-            return new MethodTimer().Time(() =>
+            //ImmutableList<ChainedBlock> rolledBackBlocksLocal;
+            //var result = new MethodTimer().Time(() =>
+            //{
+            // take snapshots
+            var newChainedBlock = targetChainedBlock;
+            var newChainBlockList = new List<ChainedBlock>();
+
+            // check height difference between chains, they will be roll backed before checking for the last common ancestor
+            var heightDelta = targetChainedBlock.Height - currentBlockchain.Height;
+
+            var rolledBackBlocksBuilder = ImmutableList.CreateBuilder<ChainedBlock>();
+
+            // if current chain is shorter, roll new chain back to current chain's height
+            ImmutableList<ChainedBlock> currentChainedBlocks;
+            if (heightDelta > 0)
             {
-                // take snapshots
-                var newChainedBlock = targetChainedBlock;
-                var newChainBlockList = new List<UInt256>();
+                currentChainedBlocks = currentBlockchain.BlockList;
 
-                // check height difference between chains, they will be roll backed before checking for the last common ancestor
-                var heightDelta = targetChainedBlock.Height - currentBlockchain.Height;
+                List<ChainedBlock> rolledBackChainedBlocks;
+                newChainedBlock = RollbackChainedBlockToHeight(targetChainedBlock, currentBlockchain.Height, out rolledBackChainedBlocks, this.shutdownToken);
+                newChainBlockList.AddRange(rolledBackChainedBlocks);
+            }
+            // if current chain is longer, roll it back to new chain's height
+            else if (heightDelta < 0)
+            {
+                rolledBackBlocksBuilder.InsertRange(0, currentBlockchain.BlockList.GetRange(targetChainedBlock.Height + 1, currentBlockchain.BlockList.Count));
+                currentChainedBlocks = currentBlockchain.BlockList.GetRange(0, targetChainedBlock.Height + 1);
+            }
+            else
+            {
+                currentChainedBlocks = currentBlockchain.BlockList;
+            }
 
-                // if current chain is shorter, roll new chain back to current chain's height
-                ImmutableList<ChainedBlock> currentChainedBlocks;
-                if (heightDelta > 0)
+            if (newChainedBlock.Height != currentChainedBlocks.Last().Height)
+                throw new Exception();
+
+            // with both chains at the same height, roll back to last common ancestor
+            if (newChainedBlock.BlockHash != currentChainedBlocks.Last().BlockHash)
+            {
+                foreach (var tuple in
+                    PreviousChainedBlocks(newChainedBlock).Zip(currentChainedBlocks.Reverse<ChainedBlock>(),
+                        (prevBlock, currentBlock) => Tuple.Create(prevBlock, currentBlock)))
                 {
-                    currentChainedBlocks = currentBlockchain.BlockList;
+                    // cooperative loop
+                    this.shutdownToken.ThrowIfCancellationRequested();
+                    cancelToken.ThrowIfCancellationRequested();
 
-                    List<ChainedBlock> rolledBackChainedBlocks;
-                    newChainedBlock = RollbackChainedBlockToHeight(targetChainedBlock, currentBlockchain.Height, out rolledBackChainedBlocks, this.shutdownToken);
-                    newChainBlockList.AddRange(rolledBackChainedBlocks.Select(x => x.BlockHash));
-                }
-                // if current chain is longer, roll it back to new chain's height
-                else if (heightDelta < 0)
-                {
-                    currentChainedBlocks = currentBlockchain.BlockList.GetRange(0, targetChainedBlock.Height + 1);
-                }
-                else
-                {
-                    currentChainedBlocks = currentBlockchain.BlockList;
-                }
+                    rolledBackBlocksBuilder.Add(newChainedBlock);
+                    newChainedBlock = tuple.Item1;
+                    var currentBlock = tuple.Item2;
 
-                if (newChainedBlock.Height != currentChainedBlocks.Last().Height)
-                    throw new Exception();
-
-                // with both chains at the same height, roll back to last common ancestor
-                if (newChainedBlock.BlockHash != currentChainedBlocks.Last().BlockHash)
-                {
-                    foreach (var tuple in
-                        PreviousChainedBlocks(newChainedBlock).Zip(currentChainedBlocks.Reverse<ChainedBlock>(),
-                            (prevBlock, currentBlock) => Tuple.Create(prevBlock, currentBlock)))
+                    // ensure that height is as expected while looking up previous blocks
+                    if (newChainedBlock.Height != currentBlock.Height)
                     {
-                        // cooperative loop
-                        this.shutdownToken.ThrowIfCancellationRequested();
-                        cancelToken.ThrowIfCancellationRequested();
-
-                        newChainedBlock = tuple.Item1;
-                        var currentBlock = tuple.Item2;
-
-                        // ensure that height is as expected while looking up previous blocks
-                        if (newChainedBlock.Height != currentBlock.Height)
-                        {
-                            throw new ValidationException();
-                        }
-
-                        if (newChainedBlock.BlockHash == currentBlock.BlockHash)
-                        {
-                            break;
-                        }
-
-                        // keep track of rolled back data on the new blockchain
-                        newChainBlockList.Add(newChainedBlock.BlockHash);
+                        throw new ValidationException();
                     }
+
+                    if (newChainedBlock.BlockHash == currentBlock.BlockHash)
+                    {
+                        break;
+                    }
+
+                    // keep track of rolled back data on the new blockchain
+                    newChainBlockList.Add(newChainedBlock);
                 }
+            }
 
-                // work list will have last items added first, reverse
-                newChainBlockList.Reverse();
+            // work list will have last items added first, reverse
+            newChainBlockList.Reverse();
 
-                return newChainBlockList;
-            });
+            rolledBackBlocks = rolledBackBlocksBuilder.ToImmutable();
+
+            return newChainBlockList;
+            //});
         }
 
         public ChainedBlock RollbackChainedBlockToHeight(ChainedBlock chainedBlock, int targetHeight, out List<ChainedBlock> rolledBackChainedBlocks, CancellationToken cancelToken)

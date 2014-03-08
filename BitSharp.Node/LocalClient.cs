@@ -203,9 +203,6 @@ namespace BitSharp.Node
 
         private void RequestBlocksWorker()
         {
-            //TODO
-            return;
-
             //var stopwatch = new Stopwatch();
             //stopwatch.Start();
 
@@ -269,8 +266,7 @@ namespace BitSharp.Node
 
             var requestTasks = new List<Task>();
 
-            var currentBlockchain = this.blockchainDaemon.CurrentBlockchain;
-            var targetChainedBlock = this.blockchainDaemon.WinningBlock;
+            var chainStateLocal = this.blockchainDaemon.ChainState;
             //if (this.requestBlocks.IsEmpty) // && targetChainedBlock.BlockHash != this.lastTargetChainedBlock)
             //{
             try
@@ -278,20 +274,21 @@ namespace BitSharp.Node
                 if (this.newChainBlockList == null
                     //|| this.newChainBlockList.Count == 0
                     //|| currentBlockchain.RootBlockHash != this.lastCurrentBlockchain
-                    || targetChainedBlock.BlockHash != this.lastTargetChainedBlock)
+                    || chainStateLocal.TargetBlock.BlockHash != this.lastTargetChainedBlock)
                 {
                     using (var cancelToken = new CancellationTokenSource())
                     {
                         this.newChainBlockList =
                             new MethodTimer().Time("newChainBlockList", () =>
-                                this.blockchainDaemon.Calculator.FindBlocksPastLastCommonAncestor(currentBlockchain, targetChainedBlock, cancelToken.Token)
+                                chainStateLocal.RewindBlocks.Select(x => x.BlockHash)
+                                .Concat(chainStateLocal.ForwardBlocks.Select(x => x.BlockHash))
                                 .Except(this.blockchainDaemon.CacheContext.BlockCache.GetAllKeys())
                                 .ToList());
                     }
                 }
 
-                this.lastCurrentBlockchain = currentBlockchain.RootBlockHash;
-                this.lastTargetChainedBlock = targetChainedBlock.BlockHash;
+                this.lastCurrentBlockchain = chainStateLocal.CurrentBlock.RootBlockHash;
+                this.lastTargetChainedBlock = chainStateLocal.TargetBlock.BlockHash;
 
                 // send out requests for blocks in winning chain in order
                 for (var i = 0; i < this.newChainBlockList.Count; i++)
