@@ -147,7 +147,7 @@ namespace BitSharp.Client
                 try
                 {
                     List<MissingDataException> missingData;
-                    var blockchain = this.blockchainDaemon.Calculator.CalculateBlockchainFromExisting(this.viewBlockchain, targetBlock, out missingData, cancelToken.Token);
+                    var blockchain = this.blockchainDaemon.Calculator.CalculateBlockchainFromExisting(this.viewBlockchain, targetBlock, null, out missingData, cancelToken.Token);
                     SetViewBlockchain(blockchain);
                 }
                 catch (MissingDataException)

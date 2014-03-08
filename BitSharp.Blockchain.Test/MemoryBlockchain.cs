@@ -241,7 +241,7 @@ namespace BitSharp.Blockchain.Test
                     using (var cancelToken = new CancellationTokenSource())
                     {
                         List<MissingDataException> missingData;
-                        this._currentBlockchain = this._calculator.CalculateBlockchainFromExisting(this._currentBlockchain, newWinner, out missingData, cancelToken.Token);
+                        this._currentBlockchain = this._calculator.CalculateBlockchainFromExisting(this._currentBlockchain, newWinner, null, out missingData, cancelToken.Token);
                     }
 
                     // success, exit
