@@ -47,7 +47,7 @@ namespace BitSharp.Daemon
         private readonly ConcurrentSetBuilder<UInt256> missingBlocks;
         private readonly ConcurrentSetBuilder<UInt256> unchainedBlocks;
         private readonly ConcurrentSet<UInt256> missingChainedBlocks;
-        private readonly ConcurrentSet<UInt256> missingTransactions;
+        private readonly ConcurrentSetBuilder<UInt256> missingTransactions;
 
         private readonly CancellationTokenSource shutdownToken;
 
@@ -72,7 +72,7 @@ namespace BitSharp.Daemon
             this.missingBlocks = new ConcurrentSetBuilder<UInt256>();
             this.unchainedBlocks = new ConcurrentSetBuilder<UInt256>();
             this.missingChainedBlocks = new ConcurrentSet<UInt256>();
-            this.missingTransactions = new ConcurrentSet<UInt256>();
+            this.missingTransactions = new ConcurrentSetBuilder<UInt256>();
 
             // write genesis block out to storage
             this._cacheContext.BlockCache.UpdateValue(this._rules.GenesisBlock.Hash, this._rules.GenesisBlock);
@@ -144,6 +144,14 @@ namespace BitSharp.Daemon
             get
             {
                 return this.missingBlocks.ToImmutable();
+            }
+        }
+
+        public ImmutableHashSet<UInt256> MissingTransactions
+        {
+            get
+            {
+                return this.missingTransactions.ToImmutable();
             }
         }
 
@@ -735,12 +743,12 @@ namespace BitSharp.Daemon
         {
             if (this.CacheContext.TransactionCache.TryGetValue(txHash, out transaction))
             {
-                this.missingTransactions.TryRemove(txHash);
+                this.missingTransactions.Remove(txHash);
                 return true;
             }
             else
             {
-                this.missingTransactions.TryAdd(txHash);
+                this.missingTransactions.Add(txHash);
                 transaction = default(Transaction);
                 return false;
             }
@@ -775,7 +783,7 @@ namespace BitSharp.Daemon
                     break;
 
                 case DataType.Transaction:
-                    this.missingTransactions.TryAdd(e.DataKey);
+                    this.missingTransactions.Add(e.DataKey);
                     break;
             }
         }

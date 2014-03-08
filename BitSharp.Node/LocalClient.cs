@@ -45,6 +45,7 @@ namespace BitSharp.Node
         private readonly Worker connectWorker;
         private readonly Worker requestBlocksWorker;
         private readonly Worker requestHeadersWorker;
+        private readonly Worker requestTransactionsWorker;
         private readonly Worker statsWorker;
 
         private readonly BlockchainDaemon blockchainDaemon;
@@ -67,6 +68,9 @@ namespace BitSharp.Node
         private UInt256 lastCurrentBlockchain;
         private UInt256 lastTargetChainedBlock;
 
+        private readonly ConcurrentSet<UInt256> requestedTransactions = new ConcurrentSet<UInt256>();
+        private readonly ConcurrentDictionary<UInt256, Tuple<DateTime, DateTime?>> requestedTransactionTimes = new ConcurrentDictionary<UInt256, Tuple<DateTime, DateTime?>>();
+
         private Socket listenSocket;
 
         public LocalClient(LocalClientType type, BlockchainDaemon blockchainDaemon, IBoundedStorage<NetworkAddressKey, NetworkAddressWithTime> knownAddressStorage)
@@ -88,6 +92,7 @@ namespace BitSharp.Node
             this.connectWorker = new Worker("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
             this.requestBlocksWorker = new Worker("LocalClient.RequestBlocksWorker", RequestBlocksWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
             this.requestHeadersWorker = new Worker("LocalClient.RequestHeadersWorker", RequestHeadersWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
+            this.requestTransactionsWorker = new Worker("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
             this.statsWorker = new Worker("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
             this.blockchainDaemon.OnWinningBlockChanged += OnWinningBlockChanged;
@@ -121,6 +126,7 @@ namespace BitSharp.Node
 
             this.requestBlocksWorker.Start();
             this.requestHeadersWorker.Start();
+            this.requestTransactionsWorker.Start();
 
             this.messageStopwatch.Start();
             this.messageCount = 0;
@@ -139,6 +145,7 @@ namespace BitSharp.Node
             {
                 this.requestBlocksWorker,
                 this.requestHeadersWorker,
+                this.requestTransactionsWorker,
                 this.connectWorker,
                 this.statsWorker,
                 this.knownAddressCache,
@@ -379,6 +386,93 @@ namespace BitSharp.Node
                 SendGetHeaders(connectedPeersLocal.RandomOrDefault()).Forget();
         }
 
+        private void RequestTransactionsWorker()
+        {
+            //var stopwatch = new Stopwatch();
+            //stopwatch.Start();
+
+            var now = DateTime.UtcNow;
+
+            //Debug.WriteLine("a: {0:#,##0.000} s".Format2(stopwatch.ElapsedSecondsFloat()));
+
+            foreach (var keyPair in this.requestedTransactionTimes)
+            {
+                if ((keyPair.Value.Item2 != null && now - keyPair.Value.Item2 > TimeSpan.FromSeconds(60))
+                    || now - keyPair.Value.Item1 > TimeSpan.FromMinutes(10))
+                {
+                    Tuple<DateTime, DateTime?> ignore;
+                    this.requestedTransactionTimes.TryRemove(keyPair.Key, out ignore);
+                }
+            }
+
+            foreach (var keyPair in this.requestedTransactionTimes)
+            {
+                if (now - keyPair.Value.Item1 > TimeSpan.FromSeconds(15))
+                {
+                    this.requestedTransactions.TryRemove(keyPair.Key);
+                }
+            }
+
+            var receiveTimes = this.requestedTransactionTimes.Where(x => x.Value.Item2 != null).ToList();
+
+            var receiveRateHz = 0d;
+            if (receiveTimes.Count > 0)
+            {
+                var minStartTime = new DateTime(receiveTimes.Min(x => x.Value.Item1.Ticks));
+                var maxFinishTime = new DateTime(receiveTimes.Max(x => x.Value.Item2.Value.Ticks));
+
+                if (maxFinishTime > minStartTime)
+                    receiveRateHz = receiveTimes.Count / (maxFinishTime - minStartTime).TotalSeconds;
+            }
+
+            //var fulfilledRatio = (float)receiveTimes.Count / this.requestedTransactionTimes.Count;
+            //if (float.IsNaN(fulfilledRatio) || float.IsInfinity(fulfilledRatio) || fulfilledRatio <= 0.1f)
+            //    fulfilledRatio = 0.1f;
+            //else if (fulfilledRatio > 1.0f)
+            //    fulfilledRatio = 1.0f;
+
+            //TODO
+            // request 60 seconds download worth of transactions
+            var requestAmount = 1 + (int)(receiveRateHz * 60);
+
+
+            //Debug.WriteLine("b: {0:#,##0.000} s".Format2(stopwatch.ElapsedSecondsFloat()));
+
+            //Debug.WriteLine("{0:#,##0}%".Format2(fulfilledRatio * 100));
+            //Debug.WriteLine("{0,5}".Format2(this.requestedTransactions.Count));
+            //Debug.WriteLine("{0,5}".Format2(requestAmount));
+            //Debug.WriteLine("{0:#,##0.000}/s".Format2(receiveRateHz));
+            if (this.requestedTransactions.Count > requestAmount)
+                return;
+
+            var connectedPeersLocal = this.connectedPeers.Values.SafeToList();
+            if (connectedPeersLocal.Count == 0)
+                return;
+
+            var requestTasks = new List<Task>();
+
+            // send out requests for any missing transactions
+            foreach (var transaction in this.blockchainDaemon.MissingTransactions)
+            {
+                //if (requestTasks.Count > requestAmount)
+                if (this.requestedTransactions.Count > requestAmount)
+                    break;
+
+                // cooperative loop
+                this.shutdownToken.Token.ThrowIfCancellationRequested();
+
+                var task = RequestTransaction(connectedPeersLocal.RandomOrDefault(), transaction);
+                if (task != null)
+                    requestTasks.Add(task);
+            }
+
+            //Debug.WriteLine("e: {0:#,##0.000} s".Format2(stopwatch.ElapsedSecondsFloat()));
+
+            //Task.WaitAll(requestTasks.ToArray(), TimeSpan.FromSeconds(15));
+
+            //Debug.WriteLine("f: {0:#,##0.000} s".Format2(stopwatch.ElapsedSecondsFloat()));
+        }
+
         private void StatsWorker()
         {
             Debug.WriteLine(string.Format("UNCONNECTED: {0,3}, PENDING: {1,3}, CONNECTED: {2,3}, BAD: {3,3}, INCOMING: {4,3}, MESSAGES/SEC: {5,6}", this.unconnectedPeers.Count, this.pendingPeers.Count, this.connectedPeers.Count, this.badPeers.Count, this.incomingCount, ((float)this.messageCount / ((float)this.messageStopwatch.ElapsedMilliseconds / 1000)).ToString("0")));
@@ -606,6 +700,7 @@ namespace BitSharp.Node
             remoteNode.Receiver.OnInventoryVectors += OnInventoryVectors;
             remoteNode.Receiver.OnBlock += OnBlock;
             remoteNode.Receiver.OnBlockHeader += OnBlockHeader;
+            remoteNode.Receiver.OnTransaction += OnTransaction;
             remoteNode.Receiver.OnReceivedAddresses += OnReceivedAddresses;
             remoteNode.OnGetBlocks += OnGetBlocks;
             remoteNode.OnGetHeaders += OnGetHeaders;
@@ -619,6 +714,7 @@ namespace BitSharp.Node
             remoteNode.Receiver.OnInventoryVectors -= OnInventoryVectors;
             remoteNode.Receiver.OnBlock -= OnBlock;
             remoteNode.Receiver.OnBlockHeader -= OnBlockHeader;
+            remoteNode.Receiver.OnTransaction -= OnTransaction;
             remoteNode.Receiver.OnReceivedAddresses -= OnReceivedAddresses;
             remoteNode.OnGetBlocks -= OnGetBlocks;
             remoteNode.OnGetHeaders -= OnGetHeaders;
@@ -684,6 +780,42 @@ namespace BitSharp.Node
             return null;
         }
 
+        private Task RequestTransaction(RemoteNode remoteNode, UInt256 txHash)
+        {
+            //TODO
+            //if (this.blockchainDaemon.CacheContext.TransactionCache.ContainsKey(txHash))
+            //    return null;
+
+            var now = DateTime.UtcNow;
+            var newRequestTime = Tuple.Create(now, (DateTime?)null);
+
+            // check if transaction has already been requested
+            if (this.requestedTransactionTimes.TryAdd(txHash, newRequestTime))
+            {
+                this.requestedTransactions.TryAdd(txHash);
+                var invVectors = ImmutableArray.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_TRANSACTION, txHash));
+                return remoteNode.Sender.SendGetData(invVectors);
+            }
+            else
+            {
+                // if transaction has already been requested, check if the request is old enough to send again
+                Tuple<DateTime, DateTime?> lastRequestTime;
+                if (this.requestedTransactionTimes.TryGetValue(txHash, out lastRequestTime))
+                {
+                    if ((now - lastRequestTime.Item1) > TimeSpan.FromSeconds(15))
+                    {
+                        this.requestedTransactions.TryAdd(txHash);
+                        this.requestedTransactionTimes.AddOrUpdate(txHash, newRequestTime, (existingKey, existingValue) => newRequestTime);
+
+                        var invVectors = ImmutableArray.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_TRANSACTION, txHash));
+                        return remoteNode.Sender.SendGetData(invVectors);
+                    }
+                }
+            }
+
+            return null;
+        }
+
         private void OnBlock(Block block)
         {
             //Debug.WriteLine("Received block {0}".Format2(block.Hash));
@@ -708,6 +840,16 @@ namespace BitSharp.Node
             {
                 this.blockchainDaemon.CacheContext.BlockHeaderCache.CreateValue(blockHeader.Hash, blockHeader);
             }
+        }
+
+        private void OnTransaction(Transaction transaction)
+        {
+            //Debug.WriteLine("Received block header {0}".Format2(transaction.Hash);
+            //TODO
+            //if (!this.blockchainDaemon.CacheContext.TransactionCache.ContainsKey(transaction.Hash))
+            //{
+                this.blockchainDaemon.CacheContext.TransactionCache.CreateValue(transaction.Hash, transaction);
+            //}
         }
 
         private void OnReceivedAddresses(ImmutableArray<NetworkAddressWithTime> addresses)

@@ -110,17 +110,17 @@ namespace BitSharp.Blockchain
                 utxoBuilder: utxoBuilder
             );
 
-            // start calculating new utxo
-            foreach (var tuple in BlockAndTxLookAhead(newChainBlockList))
+            try
             {
-                // cooperative loop
-                if (this.shutdownToken.IsCancellationRequested)
-                    break;
-                if (cancelToken.IsCancellationRequested)
-                    break;
-
-                try
+                // start calculating new utxo
+                foreach (var tuple in BlockAndTxLookAhead(newChainBlockList))
                 {
+                    // cooperative loop
+                    if (this.shutdownToken.IsCancellationRequested)
+                        break;
+                    if (cancelToken.IsCancellationRequested)
+                        break;
+
                     // get block and metadata for next link in blockchain
                     var nextBlock = tuple.Item1;
                     var nextChainedBlock = tuple.Item2;
@@ -173,23 +173,21 @@ namespace BitSharp.Blockchain
                         currentRateStopwatch.Start();
                     }
                 }
-                catch (MissingDataException e)
+            }
+            catch (MissingDataException e)
+            {
+                // if there is missing data once blockchain processing has started, return the current progress
+                missingData.Add(e);
+            }
+            catch (AggregateException e)
+            {
+                if (e.InnerExceptions.Any(x => !(x is MissingDataException)))
                 {
-                    // if there is missing data once blockchain processing has started, return the current progress
-                    missingData.Add(e);
-                    break;
+                    throw;
                 }
-                catch (AggregateException e)
+                else
                 {
-                    if (e.InnerExceptions.Any(x => !(x is MissingDataException)))
-                    {
-                        throw;
-                    }
-                    else
-                    {
-                        missingData.AddRange(e.InnerExceptions.OfType<MissingDataException>());
-                        break;
-                    }
+                    missingData.AddRange(e.InnerExceptions.OfType<MissingDataException>());
                 }
             }
 
