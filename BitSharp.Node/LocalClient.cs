@@ -334,25 +334,6 @@ namespace BitSharp.Node
             catch (ValidationException) { }
             //}
 
-            //Debug.WriteLine("c: {0:#,##0.000} s".Format2(stopwatch.ElapsedSecondsFloat()));
-
-            UInt256 requestBlockHash;
-            while (this.requestBlocks.TryDequeue(out requestBlockHash))
-            {
-                var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), requestBlockHash);
-                if (task != null)
-                    requestTasks.Add(task);
-
-                //if (requestTasks.Count > requestAmount)
-                if (this.requestedBlocks.Count > requestAmount)
-                    break;
-
-                // cooperative loop
-                this.shutdownToken.Token.ThrowIfCancellationRequested();
-            }
-
-            //Debug.WriteLine("d: {0:#,##0.000} s".Format2(stopwatch.ElapsedSecondsFloat()));
-
             // send out requests for any missing blocks
             foreach (var block in this.blockchainDaemon.MissingBlocks)
             {
@@ -368,11 +349,20 @@ namespace BitSharp.Node
                     requestTasks.Add(task);
             }
 
-            //Debug.WriteLine("e: {0:#,##0.000} s".Format2(stopwatch.ElapsedSecondsFloat()));
+            UInt256 requestBlockHash;
+            while (this.requestBlocks.TryDequeue(out requestBlockHash))
+            {
+                var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), requestBlockHash);
+                if (task != null)
+                    requestTasks.Add(task);
 
-            //Task.WaitAll(requestTasks.ToArray(), TimeSpan.FromSeconds(15));
+                //if (requestTasks.Count > requestAmount)
+                if (this.requestedBlocks.Count > requestAmount)
+                    break;
 
-            //Debug.WriteLine("f: {0:#,##0.000} s".Format2(stopwatch.ElapsedSecondsFloat()));
+                // cooperative loop
+                this.shutdownToken.Token.ThrowIfCancellationRequested();
+            }
         }
 
         private void RequestHeadersWorker()
