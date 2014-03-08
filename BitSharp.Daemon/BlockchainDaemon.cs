@@ -563,45 +563,55 @@ namespace BitSharp.Daemon
                         //TODO cleanup this design
                         List<MissingDataException> missingData;
 
+                        var disposed = false;
                         var utxoBuilder = chainStateLocal.CurrentBlock.Utxo.ToBuilder(chainStateLocal.TargetBlock.BlockHash);
-                        var blockchainBuilder = new BlockchainBuilder
-                        (
-                            blockList: chainStateLocal.CurrentBlock.BlockList,
-                            blockListHashes: chainStateLocal.CurrentBlock.BlockListHashes,
-                            utxoBuilder: utxoBuilder
-                        );
+                        try
+                        {
+                            var blockchainBuilder = new BlockchainBuilder
+                            (
+                                blockList: chainStateLocal.CurrentBlock.BlockList,
+                                blockListHashes: chainStateLocal.CurrentBlock.BlockListHashes,
+                                utxoBuilder: utxoBuilder
+                            );
 
-                        // try to advance the blockchain with the new winning block
-                        var startTime = new Stopwatch();
-                        startTime.Start();
-                        var newBlockchain = Calculator.CalculateBlockchainFromExisting(blockchainBuilder, chainStateLocal.TargetBlock, utxoBuilder, chainStateLocal.TargetBlockchain, out missingData, cancelToken.Token,
-                            progressBlockchain =>
-                            {
-                                if (startTime.Elapsed > TimeSpan.FromSeconds(5))
+                            // try to advance the blockchain with the new winning block
+                            var startTime = new Stopwatch();
+                            startTime.Start();
+                            var newBlockchain = Calculator.CalculateBlockchainFromExisting(blockchainBuilder, chainStateLocal.TargetBlock, utxoBuilder, chainStateLocal.TargetBlockchain, out missingData, cancelToken.Token,
+                                progressBlockchain =>
                                 {
-                                    //TODO
-                                    //UpdateCurrentBlockchain(progressBlockchain);
+                                    if (startTime.Elapsed > TimeSpan.FromSeconds(5))
+                                    {
+                                        //TODO
+                                        //UpdateCurrentBlockchain(progressBlockchain);
+                                        this.writeBlockchainWorker.NotifyWork();
+                                        cancelToken.Cancel();
+                                    }
+
+                                    // let the blockchain writer know there is new work
                                     this.writeBlockchainWorker.NotifyWork();
-                                    cancelToken.Cancel();
-                                }
+                                });
 
-                                // let the blockchain writer know there is new work
-                                this.writeBlockchainWorker.NotifyWork();
-                            });
+                            utxoBuilder.ToImmutable().Dispose();
+                            disposed = true;
 
-                        newBlockchain.UtxoBuilder.ToImmutable().Dispose();
+                            //TODO obviously a stop gap here...
+                            var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", newBlockchain.RootBlockHash.ToString());
+                            if (Directory.Exists(destPath))
+                                Directory.Delete(destPath, recursive: true);
+                            Directory.CreateDirectory(destPath);
 
-                        //TODO obviously a stop gap here...
-                        var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", newBlockchain.RootBlockHash.ToString());
-                        if (Directory.Exists(destPath))
-                            Directory.Delete(destPath, recursive:true);
-                        Directory.CreateDirectory(destPath);
+                            var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", chainStateLocal.TargetBlock.BlockHash.ToString());
+                            foreach (var srcFile in Directory.GetFiles(srcPath))
+                                File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
 
-                        var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", chainStateLocal.TargetBlock.BlockHash.ToString());
-                        foreach (var srcFile in Directory.GetFiles(srcPath))
-                            File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
-
-                        UpdateCurrentBlockchain(new Data.Blockchain(newBlockchain.BlockList, newBlockchain.BlockListHashes, new PersistentUtxo(newBlockchain.RootBlockHash)));
+                            UpdateCurrentBlockchain(new Data.Blockchain(newBlockchain.BlockList, newBlockchain.BlockListHashes, new PersistentUtxo(newBlockchain.RootBlockHash)));
+                        }
+                        finally
+                        {
+                            if (!disposed)
+                                utxoBuilder.ToImmutable().DisposeDelete();
+                        }
 
                         // collect after processing
                         GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
