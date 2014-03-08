@@ -611,7 +611,7 @@ namespace BitSharp.Daemon
                                     Directory.Delete(destPath, recursive: true);
                                 Directory.CreateDirectory(destPath);
 
-                                var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", ((PersistentUtxoBuilder)utxoBuilder).BlockHash.ToString());
+                                var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", chainStateLocal.TargetBlock.BlockHash.ToString());
                                 foreach (var srcFile in Directory.GetFiles(srcPath))
                                     File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
 

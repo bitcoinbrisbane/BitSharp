@@ -89,7 +89,7 @@ namespace BitSharp.Storage
                 Directory.Delete(destPath, recursive: true);
 
             Directory.CreateDirectory(destPath);
-            foreach (var srcFile in Directory.GetFiles(srcPath, "*.edb"))
+            foreach (var srcFile in Directory.GetFiles(srcPath))
                 File.Copy(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
 
             this._utxo = new PersistentDictionary<string, string>(srcPath);
