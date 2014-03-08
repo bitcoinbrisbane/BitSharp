@@ -603,17 +603,20 @@ namespace BitSharp.Daemon
                             utxoBuilder.ToImmutable().Dispose();
                             disposed = true;
 
-                            //TODO obviously a stop gap here...
-                            var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", newBlockchain.RootBlockHash.ToString());
-                            if (Directory.Exists(destPath))
-                                Directory.Delete(destPath, recursive: true);
-                            Directory.CreateDirectory(destPath);
+                            if (chainStateLocal.CurrentBlock.RootBlockHash != newBlockchain.RootBlockHash)
+                            {
+                                //TODO obviously a stop gap here...
+                                var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", newBlockchain.RootBlockHash.ToString());
+                                if (Directory.Exists(destPath))
+                                    Directory.Delete(destPath, recursive: true);
+                                Directory.CreateDirectory(destPath);
 
-                            var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", chainStateLocal.TargetBlock.BlockHash.ToString());
-                            foreach (var srcFile in Directory.GetFiles(srcPath))
-                                File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
+                                var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", ((PersistentUtxoBuilder)utxoBuilder).BlockHash.ToString());
+                                foreach (var srcFile in Directory.GetFiles(srcPath))
+                                    File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
 
-                            UpdateCurrentBlockchain(new Data.Blockchain(newBlockchain.BlockList, newBlockchain.BlockListHashes, new PersistentUtxo(newBlockchain.RootBlockHash)));
+                                UpdateCurrentBlockchain(new Data.Blockchain(newBlockchain.BlockList, newBlockchain.BlockListHashes, new PersistentUtxo(newBlockchain.RootBlockHash)));
+                            }
                         }
                         finally
                         {

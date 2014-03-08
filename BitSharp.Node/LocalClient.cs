@@ -845,11 +845,10 @@ namespace BitSharp.Node
         private void OnTransaction(Transaction transaction)
         {
             //Debug.WriteLine("Received block header {0}".Format2(transaction.Hash);
-            //TODO
-            //if (!this.blockchainDaemon.CacheContext.TransactionCache.ContainsKey(transaction.Hash))
-            //{
+            if (this.blockchainDaemon.MissingTransactions.Contains(transaction.Hash))
+            {
                 this.blockchainDaemon.CacheContext.TransactionCache.CreateValue(transaction.Hash, transaction);
-            //}
+            }
         }
 
         private void OnReceivedAddresses(ImmutableArray<NetworkAddressWithTime> addresses)

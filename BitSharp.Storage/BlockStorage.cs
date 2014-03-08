@@ -95,8 +95,6 @@ namespace BitSharp.Storage
                             }
                             else
                             {
-                                //TODO
-                                throw new MissingDataException(DataType.Transaction, txHash);
                                 success = false;
                                 break;
                             }
