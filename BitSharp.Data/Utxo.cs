@@ -22,5 +22,7 @@ namespace BitSharp.Data
         UnspentTx this[UInt256 txHash] { get; }
 
         void Dispose();
+
+        void DisposeDelete();
     }
 }

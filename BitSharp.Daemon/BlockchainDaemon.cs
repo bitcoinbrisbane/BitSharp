@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BitSharp.Data;
+using System.IO;
 
 namespace BitSharp.Daemon
 {
@@ -107,7 +108,7 @@ namespace BitSharp.Daemon
                 runOnStart: true, waitTime: TimeSpan.FromSeconds(10), maxIdleTime: TimeSpan.FromMinutes(5));
 
             this.blockchainWorker = new Worker("BlockchainDaemon.BlockchainWorker", BlockchainWorker,
-                runOnStart: true, waitTime: TimeSpan.FromSeconds(5), maxIdleTime: TimeSpan.FromMinutes(5));
+                runOnStart: true, waitTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromMinutes(5));
 
             this.validateCurrentChainWorker = new Worker("BlockchainDaemon.ValidateCurrentChainWorker", ValidateCurrentChainWorker,
                 runOnStart: true, waitTime: TimeSpan.FromMinutes(30), maxIdleTime: TimeSpan.FromMinutes(30));
@@ -562,15 +563,45 @@ namespace BitSharp.Daemon
                         //TODO cleanup this design
                         List<MissingDataException> missingData;
 
+                        var utxoBuilder = chainStateLocal.CurrentBlock.Utxo.ToBuilder(chainStateLocal.TargetBlock.BlockHash);
+                        var blockchainBuilder = new BlockchainBuilder
+                        (
+                            blockList: chainStateLocal.CurrentBlock.BlockList,
+                            blockListHashes: chainStateLocal.CurrentBlock.BlockListHashes,
+                            utxoBuilder: utxoBuilder
+                        );
+
                         // try to advance the blockchain with the new winning block
-                        var newBlockchain = Calculator.CalculateBlockchainFromExisting(chainStateLocal.CurrentBlock, chainStateLocal.TargetBlock, chainStateLocal.TargetBlockchain, out missingData, cancelToken.Token,
+                        var startTime = new Stopwatch();
+                        startTime.Start();
+                        var newBlockchain = Calculator.CalculateBlockchainFromExisting(blockchainBuilder, chainStateLocal.TargetBlock, utxoBuilder, chainStateLocal.TargetBlockchain, out missingData, cancelToken.Token,
                             progressBlockchain =>
                             {
-                                UpdateCurrentBlockchain(progressBlockchain);
+                                if (startTime.Elapsed > TimeSpan.FromSeconds(5))
+                                {
+                                    //TODO
+                                    //UpdateCurrentBlockchain(progressBlockchain);
+                                    this.writeBlockchainWorker.NotifyWork();
+                                    cancelToken.Cancel();
+                                }
 
                                 // let the blockchain writer know there is new work
                                 this.writeBlockchainWorker.NotifyWork();
                             });
+
+                        newBlockchain.UtxoBuilder.ToImmutable().Dispose();
+
+                        //TODO obviously a stop gap here...
+                        var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", newBlockchain.RootBlockHash.ToString());
+                        if (Directory.Exists(destPath))
+                            Directory.Delete(destPath, recursive:true);
+                        Directory.CreateDirectory(destPath);
+
+                        var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", chainStateLocal.TargetBlock.BlockHash.ToString());
+                        foreach (var srcFile in Directory.GetFiles(srcPath))
+                            File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
+
+                        UpdateCurrentBlockchain(new Data.Blockchain(newBlockchain.BlockList, newBlockchain.BlockListHashes, new PersistentUtxo(newBlockchain.RootBlockHash)));
 
                         // collect after processing
                         GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
@@ -804,6 +835,9 @@ namespace BitSharp.Daemon
                 }
 
                 this.chainState = new ChainState(newBlockchain, chainStateLocal.TargetBlock, chainStateLocal.TargetBlockchain, rolledBackBlocks);
+
+                //TODO stop gap
+                chainStateLocal.CurrentBlock.Utxo.DisposeDelete();
             }
             finally
             {

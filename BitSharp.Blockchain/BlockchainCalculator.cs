@@ -39,40 +39,44 @@ namespace BitSharp.Blockchain
 
         public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
 
-        public Data.Blockchain CalculateBlockchainFromExisting(Data.Blockchain currentBlockchain, ChainedBlock targetChainedBlock, IImmutableList<ChainedBlock> currentChain, out List<MissingDataException> missingData, CancellationToken cancelToken, Action<Data.Blockchain> onProgress = null)
+        public Data.BlockchainBuilder CalculateBlockchainFromExisting(BlockchainBuilder currentBlockchain, ChainedBlock targetChainedBlock, UtxoBuilder utxoBuilder, IImmutableList<ChainedBlock> currentChain, out List<MissingDataException> missingData, CancellationToken cancelToken, Action<BlockchainBuilder> onProgress = null)
         {
             Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetChainedBlock.BlockHash.ToHexNumberString(), targetChainedBlock.Height, targetChainedBlock.TotalWork.ToString("X")));
 
             // if the target block is at height 0 don't use currentBlockchain as-is, set it to be the genesis chain for the target block
             if (targetChainedBlock.Height == 0)
             {
-                currentBlockchain = new Data.Blockchain
-                (
-                    blockList: ImmutableList.Create(targetChainedBlock),
-                    blockListHashes: ImmutableHashSet.Create(targetChainedBlock.BlockHash),
-                    utxo: MemoryUtxo.Genesis(targetChainedBlock.BlockHash)
-                );
+                throw new NotImplementedException();
+                //TODO
+                //currentBlockchain = new BlockchainBuilder
+                //(
+                //    blockList: ImmutableList.Create(targetChainedBlock),
+                //    blockListHashes: ImmutableHashSet.Create(targetChainedBlock.BlockHash),
+                //    utxo: MemoryUtxo.Genesis(targetChainedBlock.BlockHash)
+                //);
             }
             // if currentBlockchain is not present find the genesis block for the target block and use it as the current chain
             else if (currentBlockchain == null)
             {
-                // find the genesis block for the target block
-                var genesisBlock = targetChainedBlock;
-                foreach (var prevBlock in PreviousChainedBlocks(targetChainedBlock, currentChain))
-                {
-                    // cooperative loop
-                    this.shutdownToken.ThrowIfCancellationRequested();
-                    cancelToken.ThrowIfCancellationRequested();
+                throw new NotImplementedException();
+                //TODO
+                //// find the genesis block for the target block
+                //var genesisBlock = targetChainedBlock;
+                //foreach (var prevBlock in PreviousChainedBlocks(targetChainedBlock, currentChain))
+                //{
+                //    // cooperative loop
+                //    this.shutdownToken.ThrowIfCancellationRequested();
+                //    cancelToken.ThrowIfCancellationRequested();
 
-                    genesisBlock = prevBlock;
-                }
+                //    genesisBlock = prevBlock;
+                //}
 
-                currentBlockchain = new Data.Blockchain
-                (
-                    blockList: ImmutableList.Create(genesisBlock),
-                    blockListHashes: ImmutableHashSet.Create(genesisBlock.BlockHash),
-                    utxo: MemoryUtxo.Genesis(genesisBlock.BlockHash)
-                );
+                //currentBlockchain = new Data.Blockchain
+                //(
+                //    blockList: ImmutableList.Create(genesisBlock),
+                //    blockListHashes: ImmutableHashSet.Create(genesisBlock.BlockHash),
+                //    utxo: MemoryUtxo.Genesis(genesisBlock.BlockHash)
+                //);
             }
 
             missingData = new List<MissingDataException>();
@@ -80,7 +84,7 @@ namespace BitSharp.Blockchain
             Debug.WriteLine("Searching for last common ancestor between current chainblock and winning chainblock");
 
             List<UInt256> newChainBlockList;
-            var lastCommonAncestorChain = RollbackToLastCommonAncestor(currentBlockchain, targetChainedBlock, currentChain, cancelToken, out newChainBlockList);
+            var lastCommonAncestorChain = RollbackToLastCommonAncestor(currentBlockchain, targetChainedBlock, utxoBuilder, currentChain, cancelToken, out newChainBlockList);
 
             Debug.WriteLine("Last common ancestor found at block {0}, height {1:#,##0}, begin processing winning blockchain".Format2(currentBlockchain.RootBlockHash.ToHexNumberString(), currentBlockchain.Height));
 
@@ -99,19 +103,21 @@ namespace BitSharp.Blockchain
 
             // with last common ancestor found and utxo rolled back to that point, calculate the new blockchain
             // use ImmutableList for BlockList during modification
-            var newBlockchain = new Data.Blockchain
+            var newBlockchain = new BlockchainBuilder
             (
                 blockList: lastCommonAncestorChain.BlockList,
                 blockListHashes: lastCommonAncestorChain.BlockListHashes,
-                utxo: lastCommonAncestorChain.Utxo
+                utxoBuilder: utxoBuilder
             );
 
             // start calculating new utxo
             foreach (var tuple in BlockAndTxLookAhead(newChainBlockList))
             {
                 // cooperative loop
-                this.shutdownToken.ThrowIfCancellationRequested();
-                cancelToken.ThrowIfCancellationRequested();
+                if (this.shutdownToken.IsCancellationRequested)
+                    break;
+                if (cancelToken.IsCancellationRequested)
+                    break;
 
                 try
                 {
@@ -122,27 +128,26 @@ namespace BitSharp.Blockchain
                     // calculate the new block utxo, double spends will be checked for
                     ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions = ImmutableDictionary.Create<UInt256, ImmutableHashSet<int>>();
                     long txCount = 0, inputCount = 0;
-                    var newUtxo = new MethodTimer(false).Time("CalculateUtxo", () =>
-                        CalculateUtxo(nextChainedBlock.Height, nextBlock, newBlockchain.Utxo, out newTransactions, out txCount, out inputCount));
+                    new MethodTimer(false).Time("CalculateUtxo", () =>
+                        CalculateUtxo(nextChainedBlock.Height, nextBlock, utxoBuilder, out newTransactions, out txCount, out inputCount));
 
                     var nextBlockchain =
                         new MethodTimer(false).Time("nextBlockchain", () =>
-                            new Data.Blockchain
+                            new BlockchainBuilder
                             (
                                 blockList: newBlockchain.BlockList.Add(nextChainedBlock),
                                 blockListHashes: newBlockchain.BlockListHashes.Add(nextChainedBlock.BlockHash),
-                                utxo: newUtxo
+                                utxoBuilder: utxoBuilder
                             ));
 
                     // validate the block
                     // validation utxo includes all transactions added in the same block, any double spends will have failed the block above
                     validateStopwatch.Start();
                     new MethodTimer(false).Time("ValidateBlock", () =>
-                        this.Rules.ValidateBlock(nextBlock, nextBlockchain, newBlockchain.Utxo, newTransactions));
+                        this.Rules.ValidateBlock(nextBlock, nextBlockchain, newBlockchain.UtxoBuilder, newTransactions));
                     validateStopwatch.Stop();
 
                     // create the next link in the new blockchain
-                    newBlockchain.Utxo.Dispose();
                     newBlockchain = nextBlockchain;
                     if (onProgress != null)
                         onProgress(newBlockchain);
@@ -196,7 +201,7 @@ namespace BitSharp.Blockchain
             return newBlockchain;
         }
 
-        public Data.Blockchain RollbackToLastCommonAncestor(Data.Blockchain currentBlockchain, ChainedBlock targetChainedBlock, IImmutableList<ChainedBlock> currentChain, CancellationToken cancelToken, out List<UInt256> newChainBlockList)
+        public BlockchainBuilder RollbackToLastCommonAncestor(BlockchainBuilder currentBlockchain, ChainedBlock targetChainedBlock, UtxoBuilder utxoBuilder, IImmutableList<ChainedBlock> currentChain, CancellationToken cancelToken, out List<UInt256> newChainBlockList)
         {
             // take snapshots
             var newChainedBlock = targetChainedBlock;
@@ -215,8 +220,8 @@ namespace BitSharp.Blockchain
             // if current chain is longer, roll it back to new chain's height
             else if (heightDelta < 0)
             {
-                List<Data.Blockchain> rolledBackBlockchains;
-                currentBlockchain = RollbackBlockchainToHeight(currentBlockchain, newChainedBlock.Height, currentChain, out rolledBackBlockchains, this.shutdownToken);
+                List<BlockchainBuilder> rolledBackBlockchains;
+                currentBlockchain = RollbackBlockchainToHeight(currentBlockchain, newChainedBlock.Height, utxoBuilder, currentChain, out rolledBackBlockchains, this.shutdownToken);
             }
 
             if (newChainedBlock.Height != currentBlockchain.Height)
@@ -264,7 +269,7 @@ namespace BitSharp.Blockchain
                 foreach (var tuple in BlockLookAhead(rollbackList))
                 {
                     var block = tuple.Item1;
-                    currentBlockchain = RollbackBlockchain(currentBlockchain, block);
+                    currentBlockchain = RollbackBlockchain(currentBlockchain, block, utxoBuilder);
                 }
             }
 
@@ -388,7 +393,7 @@ namespace BitSharp.Blockchain
             return targetChainedBlock;
         }
 
-        public Data.Blockchain RollbackBlockchainToHeight(Data.Blockchain blockchain, int targetHeight, IImmutableList<ChainedBlock> currentChain, out List<Data.Blockchain> rolledBackBlockchains, CancellationToken cancelToken)
+        public BlockchainBuilder RollbackBlockchainToHeight(BlockchainBuilder blockchain, int targetHeight, UtxoBuilder utxoBuilder, IImmutableList<ChainedBlock> currentChain, out List<BlockchainBuilder> rolledBackBlockchains, CancellationToken cancelToken)
         {
             if (targetHeight > blockchain.Height || targetHeight < 0)
                 throw new ArgumentOutOfRangeException("targetHeight");
@@ -400,7 +405,7 @@ namespace BitSharp.Blockchain
             if (rolledBackChainedBlocks.Count != rollbackCount)
                 throw new Exception();
 
-            rolledBackBlockchains = new List<Data.Blockchain>();
+            rolledBackBlockchains = new List<BlockchainBuilder>();
 
             var targetBlockchain = blockchain;
             var rollbackIndex = 0;
@@ -416,7 +421,7 @@ namespace BitSharp.Blockchain
                 // roll back
                 var block = tuple.Item1;
                 Debug.Assert(targetBlockchain.RootBlockHash == block.Hash);
-                targetBlockchain = RollbackBlockchain(targetBlockchain, block);
+                targetBlockchain = RollbackBlockchain(targetBlockchain, block, utxoBuilder);
 
                 Debug.WriteLineIf(rollbackIndex % 100 == 0, "Rolling back {0} of {1}".Format2(rollbackIndex + 1, rollbackCount));
                 rollbackIndex++;
@@ -425,28 +430,28 @@ namespace BitSharp.Blockchain
             return targetBlockchain;
         }
 
-        public Data.Blockchain RollbackBlockchain(Data.Blockchain blockchain, Block block)
+        public BlockchainBuilder RollbackBlockchain(BlockchainBuilder blockchain, Block block, UtxoBuilder utxoBuilder)
         {
             List<TxOutputKey> spendOutputs, receiveOutputs;
-            return RollbackBlockchain(blockchain, block, out spendOutputs, out receiveOutputs);
+            return RollbackBlockchain(blockchain, block, utxoBuilder, out spendOutputs, out receiveOutputs);
         }
 
-        public Data.Blockchain RollbackBlockchain(Data.Blockchain blockchain, Block block, out List<TxOutputKey> spendOutputs, out List<TxOutputKey> receiveOutputs)
+        public BlockchainBuilder RollbackBlockchain(BlockchainBuilder blockchain, Block block, UtxoBuilder utxoBuilder, out List<TxOutputKey> spendOutputs, out List<TxOutputKey> receiveOutputs)
         {
             if (blockchain.BlockCount == 0 || blockchain.RootBlockHash != block.Hash)
                 throw new ValidationException();
 
-            var newUtxo = RollbackUtxo(blockchain, block, out spendOutputs, out receiveOutputs);
+            var newUtxo = RollbackUtxo(blockchain, block, utxoBuilder, out spendOutputs, out receiveOutputs);
 
-            return new Data.Blockchain
+            return new BlockchainBuilder
             (
                 blockList: blockchain.BlockList.RemoveAt(blockchain.BlockCount - 1),
                 blockListHashes: blockchain.BlockListHashes.Remove(blockchain.RootBlockHash),
-                utxo: newUtxo
+                utxoBuilder: utxoBuilder
             );
         }
 
-        private void LogBlockchainProgress(Data.Blockchain blockchain, Stopwatch totalStopwatch, long totalTxCount, long totalInputCount, Stopwatch currentRateStopwatch, long currentBlockCount, long currentTxCount, long currentInputCount)
+        private void LogBlockchainProgress(BlockchainBuilder blockchain, Stopwatch totalStopwatch, long totalTxCount, long totalInputCount, Stopwatch currentRateStopwatch, long currentBlockCount, long currentTxCount, long currentInputCount)
         {
             var currentBlockRate = (float)currentBlockCount / currentRateStopwatch.ElapsedSecondsFloat();
             var currentTxRate = (float)currentTxCount / currentRateStopwatch.ElapsedSecondsFloat();
@@ -471,19 +476,17 @@ namespace BitSharp.Blockchain
                     totalInputCount.ToString("#,##0"),
                     totalStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
                     validateStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
-                    blockchain.Utxo.Count.ToString("#,##0"),
+                    "TODO", //TODO blockchain.UtxoBuilder.Count.ToString("#,##0"),
                     (float)GC.GetTotalMemory(false) / 1.MILLION(),
                     (float)Process.GetCurrentProcess().PrivateMemorySize64 / 1.MILLION()
                 ));
         }
 
-        private Utxo CalculateUtxo(long blockHeight, Block block, Utxo currentUtxo, out ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions, out long txCount, out long inputCount)
+        private void CalculateUtxo(long blockHeight, Block block, UtxoBuilder utxoBuilder, out ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions, out long txCount, out long inputCount)
         {
             txCount = 0;
             inputCount = 0;
 
-            // create builder for new utxo
-            var newUtxoBuilder = currentUtxo.ToBuilder(block.Hash);
             var newTransactionsBuilder = ImmutableDictionary.CreateBuilder<UInt256, ImmutableHashSet<int>>();
 
             // don't include genesis block coinbase in utxo
@@ -497,7 +500,7 @@ namespace BitSharp.Blockchain
                 var coinbaseUnspentTx = new UnspentTx(coinbaseTx.Hash, new ImmutableBitArray(coinbaseTx.Outputs.Length, true));
 
                 // add transaction output to to the utxo
-                if (newUtxoBuilder.ContainsKey(coinbaseTx.Hash))
+                if (utxoBuilder.ContainsKey(coinbaseTx.Hash))
                 {
                     // duplicate transaction output
                     Debug.WriteLine("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(blockHeight, block.Hash.ToHexNumberString()));
@@ -506,7 +509,7 @@ namespace BitSharp.Blockchain
                     if ((blockHeight == 91842 && coinbaseTx.Hash == UInt256.Parse("d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599", NumberStyles.HexNumber))
                         || (blockHeight == 91880 && coinbaseTx.Hash == UInt256.Parse("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468", NumberStyles.HexNumber)))
                     {
-                        newUtxoBuilder.Remove(coinbaseTx.Hash);
+                        utxoBuilder.Remove(coinbaseTx.Hash);
                     }
                     else
                     {
@@ -515,7 +518,7 @@ namespace BitSharp.Blockchain
                 }
 
                 newTransactionsBuilder.Add(coinbaseTx.Hash, ImmutableHashSet.Create(0));
-                newUtxoBuilder.Add(coinbaseTx.Hash, coinbaseUnspentTx);
+                utxoBuilder.Add(coinbaseTx.Hash, coinbaseUnspentTx);
             }
 
             // check for double spends
@@ -529,13 +532,13 @@ namespace BitSharp.Blockchain
                     var input = tx.Inputs[inputIndex];
                     inputCount++;
 
-                    if (!newUtxoBuilder.ContainsKey(input.PreviousTxOutputKey.TxHash))
+                    if (!utxoBuilder.ContainsKey(input.PreviousTxOutputKey.TxHash))
                     {
                         // output wasn't present in utxo, invalid block
                         throw new ValidationException();
                     }
 
-                    var prevUnspentTx = newUtxoBuilder[input.PreviousTxOutputKey.TxHash];
+                    var prevUnspentTx = utxoBuilder[input.PreviousTxOutputKey.TxHash];
 
                     if (input.PreviousTxOutputKey.TxOutputIndex >= prevUnspentTx.UnspentOutputs.Length)
                     {
@@ -550,19 +553,19 @@ namespace BitSharp.Blockchain
 
 
                     // remove the output from the utxo
-                    newUtxoBuilder[input.PreviousTxOutputKey.TxHash] =
+                    utxoBuilder[input.PreviousTxOutputKey.TxHash] =
                         new UnspentTx(prevUnspentTx.TxHash, prevUnspentTx.UnspentOutputs.Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), false));
 
                     // remove fully spent transaction from the utxo
-                    if (newUtxoBuilder[input.PreviousTxOutputKey.TxHash].UnspentOutputs.All(x => !x))
-                        newUtxoBuilder.Remove(input.PreviousTxOutputKey.TxHash);
+                    if (utxoBuilder[input.PreviousTxOutputKey.TxHash].UnspentOutputs.All(x => !x))
+                        utxoBuilder.Remove(input.PreviousTxOutputKey.TxHash);
                 }
 
                 // add the output to the list to be added to the utxo
                 var unspentTx = new UnspentTx(tx.Hash, new ImmutableBitArray(tx.Outputs.Length, true));
 
                 // add transaction output to to the utxo
-                if (newUtxoBuilder.ContainsKey(tx.Hash))
+                if (utxoBuilder.ContainsKey(tx.Hash))
                 {
                     // duplicate transaction output
                     Debug.WriteLine("Duplicate transaction at block {0:#,##0}, {1}, tx {2}".Format2(blockHeight, block.Hash.ToHexNumberString(), txIndex));
@@ -577,21 +580,17 @@ namespace BitSharp.Blockchain
                     newTransactionsBuilder.Add(tx.Hash, ImmutableHashSet.Create(txIndex));
                 else
                     newTransactionsBuilder[tx.Hash] = newTransactionsBuilder[tx.Hash].Add(txIndex);
-                newUtxoBuilder.Add(tx.Hash, unspentTx);
+                utxoBuilder.Add(tx.Hash, unspentTx);
             }
 
             // validation successful, return the new utxo
             newTransactions = newTransactionsBuilder.ToImmutable();
-            return newUtxoBuilder.ToImmutable();
         }
 
-        private Utxo RollbackUtxo(Data.Blockchain blockchain, Block block, out List<TxOutputKey> spendOutputs, out List<TxOutputKey> receiveOutputs)
+        private UtxoBuilder RollbackUtxo(BlockchainBuilder blockchain, Block block, UtxoBuilder utxoBuilder, out List<TxOutputKey> spendOutputs, out List<TxOutputKey> receiveOutputs)
         {
             var blockHeight = blockchain.Height;
-            var currentUtxo = blockchain.Utxo;
 
-            // create builder for prev utxo
-            var prevUtxoBuilder = currentUtxo.ToBuilder(block.Hash);
             spendOutputs = new List<TxOutputKey>();
             receiveOutputs = new List<TxOutputKey>();
 
@@ -605,7 +604,7 @@ namespace BitSharp.Blockchain
                 if (blockHeight > 0)
                 {
                     // remove new outputs from the rolled back utxo
-                    if (prevUtxoBuilder.Remove(coinbaseTx.Hash))
+                    if (utxoBuilder.Remove(coinbaseTx.Hash))
                     {
                         receiveOutputs.Add(txOutputKey);
                     }
@@ -635,7 +634,7 @@ namespace BitSharp.Blockchain
                     //TODO maybe a flag bit to track this?
 
                     // remove new outputs from the rolled back utxo
-                    if (prevUtxoBuilder.Remove(tx.Hash))
+                    if (utxoBuilder.Remove(tx.Hash))
                     {
                         receiveOutputs.Add(txOutputKey);
                     }
@@ -656,9 +655,9 @@ namespace BitSharp.Blockchain
                     var input = tx.Inputs[inputIndex];
 
                     // add spent outputs back into the rolled back utxo
-                    if (prevUtxoBuilder.ContainsKey(input.PreviousTxOutputKey.TxHash))
+                    if (utxoBuilder.ContainsKey(input.PreviousTxOutputKey.TxHash))
                     {
-                        var prevUnspentTx = prevUtxoBuilder[input.PreviousTxOutputKey.TxHash];
+                        var prevUnspentTx = utxoBuilder[input.PreviousTxOutputKey.TxHash];
 
                         // check if output is out of bounds
                         if (input.PreviousTxOutputKey.TxOutputIndex >= prevUnspentTx.UnspentOutputs.Length)
@@ -669,7 +668,7 @@ namespace BitSharp.Blockchain
                             throw new ValidationException();
 
                         // mark output as unspent
-                        prevUtxoBuilder[input.PreviousTxOutputKey.TxHash] =
+                        utxoBuilder[input.PreviousTxOutputKey.TxHash] =
                             new UnspentTx(prevUnspentTx.TxHash, prevUnspentTx.UnspentOutputs.Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
                     }
                     else
@@ -677,7 +676,7 @@ namespace BitSharp.Blockchain
                         // fully spent transaction being added back in during roll back
                         var prevUnspentTx = this.CacheContext.GetTransaction(input.PreviousTxOutputKey.TxHash);
 
-                        prevUtxoBuilder[input.PreviousTxOutputKey.TxHash] =
+                        utxoBuilder[input.PreviousTxOutputKey.TxHash] =
                             new UnspentTx(prevUnspentTx.Hash, new ImmutableBitArray(new BitArray(new bool[prevUnspentTx.Outputs.Length])).Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
                     }
 
@@ -699,7 +698,7 @@ namespace BitSharp.Blockchain
                 }
             }
 
-            return prevUtxoBuilder.ToImmutable();
+            return utxoBuilder;
         }
 
         public void RevalidateBlockchain(Data.Blockchain blockchain, Block genesisBlock)

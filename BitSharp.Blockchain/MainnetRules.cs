@@ -170,7 +170,7 @@ namespace BitSharp.Blockchain
             return new UInt256(targetBytes);
         }
 
-        public virtual UInt256 GetRequiredNextTarget(Data.Blockchain blockchain)
+        public virtual UInt256 GetRequiredNextTarget(BlockchainBuilder blockchain)
         {
             try
             {
@@ -230,7 +230,7 @@ namespace BitSharp.Blockchain
             }
         }
 
-        public virtual void ValidateBlock(Block block, Data.Blockchain blockchain, Utxo utxo, ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions/*, ImmutableDictionary<UInt256, Transaction> transactions*/)
+        public virtual void ValidateBlock(Block block, BlockchainBuilder blockchain, UtxoBuilder utxoBuilder, ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions/*, ImmutableDictionary<UInt256, Transaction> transactions*/)
         {
             //TODO
             if (BypassValidation)
@@ -278,7 +278,7 @@ namespace BitSharp.Blockchain
 
                     long unspentValueInner;
                     //TODO utxo will not be correct at transaction if a tx hash is reused within the same block
-                    ValidateTransaction(blockchain.Height, block, tx, txIndex, utxo, newTransactions, out unspentValueInner);
+                    ValidateTransaction(blockchain.Height, block, tx, txIndex, utxoBuilder, newTransactions, out unspentValueInner);
 
                     Interlocked.Add(ref unspentValue, unspentValueInner);
                 });
@@ -298,7 +298,7 @@ namespace BitSharp.Blockchain
             }
 
             //TODO utxo will not be correct at transaction if a tx hash is reused within the same block
-            ValidateTransactionScripts(block, utxo, newTransactions);
+            ValidateTransactionScripts(block, utxoBuilder, newTransactions);
 
             // calculate the expected reward in coinbase
             var expectedReward = (long)(50 * SATOSHI_PER_BTC);
@@ -321,7 +321,7 @@ namespace BitSharp.Blockchain
         }
 
         //TODO utxo needs to be as-at transaction, with regards to a transaction being fully spent and added back in in the same block
-        public virtual void ValidateTransaction(long blockHeight, Block block, Transaction tx, int txIndex, Utxo utxo, ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions, out long unspentValue /*, ImmutableDictionary<UInt256, Transaction> transactions*/)
+        public virtual void ValidateTransaction(long blockHeight, Block block, Transaction tx, int txIndex, UtxoBuilder utxoBuilder, ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions, out long unspentValue /*, ImmutableDictionary<UInt256, Transaction> transactions*/)
         {
             unspentValue = -1;
 
@@ -387,7 +387,7 @@ namespace BitSharp.Blockchain
         }
 
         //TODO utxo needs to be as-at transaction, with regards to a transaction being fully spent and added back in in the same block
-        public virtual void ValidateTransactionScripts(Block block, Utxo utxo, ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions)
+        public virtual void ValidateTransactionScripts(Block block, UtxoBuilder utxoBuilder, ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions)
         {
             if (BypassExecuteScript)
                 return;

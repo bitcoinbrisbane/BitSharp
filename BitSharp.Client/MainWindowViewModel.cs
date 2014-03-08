@@ -146,9 +146,10 @@ namespace BitSharp.Client
             {
                 try
                 {
-                    List<MissingDataException> missingData;
-                    var blockchain = this.blockchainDaemon.Calculator.CalculateBlockchainFromExisting(this.viewBlockchain, targetBlock, null, out missingData, cancelToken.Token);
-                    SetViewBlockchain(blockchain);
+                    //TODO
+                    //List<MissingDataException> missingData;
+                    //var blockchain = this.blockchainDaemon.Calculator.CalculateBlockchainFromExisting(this.viewBlockchain, targetBlock, null, out missingData, cancelToken.Token);
+                    //SetViewBlockchain(blockchain);
                 }
                 catch (MissingDataException)
                 {
@@ -176,10 +177,12 @@ namespace BitSharp.Client
                         // TODO this is abusing rollback a bit just to get the transactions that exist in a target block that's already known
                         // TODO make a better api for get the net output of a block
                         List<TxOutputKey> spendOutputs, receiveOutputs;
-                        this.blockchainDaemon.Calculator.RollbackBlockchain(this.viewBlockchain, block, out spendOutputs, out receiveOutputs);
+                        //TODO
+                        //this.blockchainDaemon.Calculator.RollbackBlockchain(this.viewBlockchain, block, out spendOutputs, out receiveOutputs);
 
-                        ViewBlockchainSpendOutputs = spendOutputs;
-                        ViewBlockchainReceiveOutputs = receiveOutputs;
+                        //TODO
+                        //ViewBlockchainSpendOutputs = spendOutputs;
+                        //ViewBlockchainReceiveOutputs = receiveOutputs;
                     }
                 }
                 else

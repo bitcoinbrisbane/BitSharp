@@ -41,7 +41,7 @@ namespace BitSharp.Storage
         {
             return this._utxo.Values;
         }
-        
+
         public UtxoBuilder ToBuilder(UInt256 blockHash)
         {
             return new PersistentUtxoBuilder(blockHash, this);
@@ -59,6 +59,10 @@ namespace BitSharp.Storage
         }
 
         public void Dispose()
+        {
+        }
+
+        public void DisposeDelete()
         {
         }
     }

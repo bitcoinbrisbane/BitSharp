@@ -60,7 +60,7 @@ namespace BitSharp.Storage
         {
             foreach (var rawUnspentTx in _utxo)
             {
-                yield return DeserializeUnspentTx(rawUnspentTx.Key, rawUnspentTx.Value);   
+                yield return DeserializeUnspentTx(rawUnspentTx.Key, rawUnspentTx.Value);
             }
         }
 
@@ -98,6 +98,11 @@ namespace BitSharp.Storage
         public void Dispose()
         {
             this._utxo.Dispose();
+        }
+
+        public void DisposeDelete()
+        {
+            Dispose();
             Directory.Delete(FolderPath(this.BlockHash), recursive: true);
         }
     }

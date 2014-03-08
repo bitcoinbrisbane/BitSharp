@@ -70,6 +70,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BlockchainBuilder.cs" />
     <Compile Include="Blockchain.cs" />
     <Compile Include="BlockchainKey.cs" />
     <Compile Include="BlockchainMetadata.cs" />
