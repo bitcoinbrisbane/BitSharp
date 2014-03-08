@@ -32,9 +32,9 @@ namespace BitSharp.Node
 
     public class LocalClient : IDisposable
     {
-        private static readonly int SERVER_BACKLOG = 100;
-        private static readonly int CONNECTED_MAX = 100;
-        private static readonly int PENDING_MAX = 100;
+        private static readonly int SERVER_BACKLOG = 10;
+        private static readonly int CONNECTED_MAX = 10;
+        private static readonly int PENDING_MAX = 10;
         private static readonly int HANDSHAKE_TIMEOUT_MS = 15000;
         private static readonly Random random = new Random();
 
@@ -203,6 +203,9 @@ namespace BitSharp.Node
 
         private void RequestBlocksWorker()
         {
+            //TODO
+            return;
+
             //var stopwatch = new Stopwatch();
             //stopwatch.Start();
 

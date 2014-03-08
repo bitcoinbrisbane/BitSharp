@@ -8,7 +8,7 @@ namespace BitSharp.Blockchain
 {
     public class ValidationException : Exception
     {
-        [Obsolete]
+        //[Obsolete]
         public ValidationException()
             : base()
         { }

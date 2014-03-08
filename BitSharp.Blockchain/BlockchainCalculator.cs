@@ -14,6 +14,7 @@ using BitSharp.Data;
 using System.IO;
 using BitSharp.Storage;
 using System.Globalization;
+using System.Collections;
 
 namespace BitSharp.Blockchain
 {
@@ -49,7 +50,7 @@ namespace BitSharp.Blockchain
                 (
                     blockList: ImmutableList.Create(targetChainedBlock),
                     blockListHashes: ImmutableHashSet.Create(targetChainedBlock.BlockHash),
-                    utxo: ImmutableDictionary.Create<UInt256, UnspentTx>()
+                    utxo: MemoryUtxo.Genesis(targetChainedBlock.BlockHash)
                 );
             }
             // if currentBlockchain is not present find the genesis block for the target block and use it as the current chain
@@ -70,7 +71,7 @@ namespace BitSharp.Blockchain
                 (
                     blockList: ImmutableList.Create(genesisBlock),
                     blockListHashes: ImmutableHashSet.Create(genesisBlock.BlockHash),
-                    utxo: ImmutableDictionary.Create<UInt256, UnspentTx>()
+                    utxo: MemoryUtxo.Genesis(genesisBlock.BlockHash)
                 );
             }
 
@@ -141,6 +142,7 @@ namespace BitSharp.Blockchain
                     validateStopwatch.Stop();
 
                     // create the next link in the new blockchain
+                    newBlockchain.Utxo.Dispose();
                     newBlockchain = nextBlockchain;
                     if (onProgress != null)
                         onProgress(newBlockchain);
@@ -461,13 +463,13 @@ namespace BitSharp.Blockchain
                 ));
         }
 
-        private ImmutableDictionary<UInt256, UnspentTx> CalculateUtxo(long blockHeight, Block block, ImmutableDictionary<UInt256, UnspentTx> currentUtxo, out ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions, out long txCount, out long inputCount)
+        private Utxo CalculateUtxo(long blockHeight, Block block, Utxo currentUtxo, out ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions, out long txCount, out long inputCount)
         {
             txCount = 0;
             inputCount = 0;
 
             // create builder for new utxo
-            var newUtxoBuilder = currentUtxo.ToBuilder();
+            var newUtxoBuilder = currentUtxo.ToBuilder(block.Hash);
             var newTransactionsBuilder = ImmutableDictionary.CreateBuilder<UInt256, ImmutableHashSet<int>>();
 
             // don't include genesis block coinbase in utxo
@@ -478,7 +480,7 @@ namespace BitSharp.Blockchain
                 var coinbaseTx = block.Transactions[0];
 
                 // add the coinbase outputs to the utxo
-                var coinbaseUnspentTx = new UnspentTx(block.Hash, 0, coinbaseTx.Hash, new ImmutableBitArray(coinbaseTx.Outputs.Length, true));
+                var coinbaseUnspentTx = new UnspentTx(coinbaseTx.Hash, new ImmutableBitArray(coinbaseTx.Outputs.Length, true));
 
                 // add transaction output to to the utxo
                 if (newUtxoBuilder.ContainsKey(coinbaseTx.Hash))
@@ -486,6 +488,7 @@ namespace BitSharp.Blockchain
                     // duplicate transaction output
                     Debug.WriteLine("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(blockHeight, block.Hash.ToHexNumberString()));
 
+                    //TODO the inverse needs to be special cased in RollbackUtxo as well
                     if ((blockHeight == 91842 && coinbaseTx.Hash == UInt256.Parse("d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599", NumberStyles.HexNumber))
                         || (blockHeight == 91880 && coinbaseTx.Hash == UInt256.Parse("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468", NumberStyles.HexNumber)))
                     {
@@ -534,8 +537,7 @@ namespace BitSharp.Blockchain
 
                     // remove the output from the utxo
                     newUtxoBuilder[input.PreviousTxOutputKey.TxHash] =
-                        new UnspentTx(prevUnspentTx.BlockHash, prevUnspentTx.TxIndex, prevUnspentTx.TxHash,
-                            prevUnspentTx.UnspentOutputs.Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), false));
+                        new UnspentTx(prevUnspentTx.TxHash, prevUnspentTx.UnspentOutputs.Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), false));
 
                     // remove fully spent transaction from the utxo
                     if (newUtxoBuilder[input.PreviousTxOutputKey.TxHash].UnspentOutputs.All(x => !x))
@@ -543,7 +545,7 @@ namespace BitSharp.Blockchain
                 }
 
                 // add the output to the list to be added to the utxo
-                var unspentTx = new UnspentTx(block.Hash, (UInt32)txIndex, tx.Hash, new ImmutableBitArray(tx.Outputs.Length, true));
+                var unspentTx = new UnspentTx(tx.Hash, new ImmutableBitArray(tx.Outputs.Length, true));
 
                 // add transaction output to to the utxo
                 if (newUtxoBuilder.ContainsKey(tx.Hash))
@@ -569,13 +571,13 @@ namespace BitSharp.Blockchain
             return newUtxoBuilder.ToImmutable();
         }
 
-        private ImmutableDictionary<UInt256, UnspentTx> RollbackUtxo(Data.Blockchain blockchain, Block block, out List<TxOutputKey> spendOutputs, out List<TxOutputKey> receiveOutputs)
+        private Utxo RollbackUtxo(Data.Blockchain blockchain, Block block, out List<TxOutputKey> spendOutputs, out List<TxOutputKey> receiveOutputs)
         {
             var blockHeight = blockchain.Height;
             var currentUtxo = blockchain.Utxo;
 
             // create builder for prev utxo
-            var prevUtxoBuilder = currentUtxo.ToBuilder();
+            var prevUtxoBuilder = currentUtxo.ToBuilder(block.Hash);
             spendOutputs = new List<TxOutputKey>();
             receiveOutputs = new List<TxOutputKey>();
 
@@ -654,14 +656,15 @@ namespace BitSharp.Blockchain
 
                         // mark output as unspent
                         prevUtxoBuilder[input.PreviousTxOutputKey.TxHash] =
-                            new UnspentTx(prevUnspentTx.BlockHash, prevUnspentTx.TxIndex, prevUnspentTx.TxHash,
-                                prevUnspentTx.UnspentOutputs.Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
+                            new UnspentTx(prevUnspentTx.TxHash, prevUnspentTx.UnspentOutputs.Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
                     }
                     else
                     {
                         // fully spent transaction being added back in during roll back
-                        //TODO
-                        throw new NotImplementedException();
+                        var prevUnspentTx = this.CacheContext.GetTransaction(input.PreviousTxOutputKey.TxHash);
+
+                        prevUtxoBuilder[input.PreviousTxOutputKey.TxHash] =
+                            new UnspentTx(prevUnspentTx.Hash, new ImmutableBitArray(new BitArray(new bool[prevUnspentTx.Outputs.Length])).Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
                     }
 
                     //TODO

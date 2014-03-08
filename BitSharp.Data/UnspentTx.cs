@@ -9,35 +9,22 @@ namespace BitSharp.Data
 {
     public class UnspentTx
     {
-        private readonly UInt256 _blockHash;
-        private readonly UInt32 _txIndex;
         private readonly UInt256 _txHash;
         private readonly ImmutableBitArray _unspentOutputs;
 
         private readonly int hashCode;
 
-        public UnspentTx(UInt256 blockHash, UInt32 txIndex, UInt256 txHash, ImmutableBitArray unspentOutputs)
+        public UnspentTx(UInt256 txHash, ImmutableBitArray unspentOutputs)
         {
-            this._blockHash = blockHash;
-            this._txIndex = txIndex;
             this._txHash = txHash;
             this._unspentOutputs = unspentOutputs;
 
-            this.hashCode = blockHash.GetHashCode() ^ txIndex.GetHashCode() ^ txHash.GetHashCode() ^ unspentOutputs.GetHashCode();
+            this.hashCode = txHash.GetHashCode() ^ unspentOutputs.GetHashCode();
         }
-
-        public UInt256 BlockHash { get { return this._blockHash; } }
-
-        public UInt32 TxIndex { get { return this._txIndex; } }
 
         public UInt256 TxHash { get { return this._txHash; } }
 
         public ImmutableBitArray UnspentOutputs { get { return this._unspentOutputs; } }
-
-        public TxKey ToTxKey()
-        {
-            return new TxKey(this.BlockHash, this.TxIndex, this.TxHash);
-        }
 
         public override bool Equals(object obj)
         {
@@ -54,7 +41,7 @@ namespace BitSharp.Data
 
         public static bool operator ==(UnspentTx left, UnspentTx right)
         {
-            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.BlockHash == right.BlockHash && left.TxIndex == right.TxIndex && left.TxHash == right.TxHash && left.UnspentOutputs == right.UnspentOutputs);
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.TxHash == right.TxHash && left.UnspentOutputs == right.UnspentOutputs);
         }
 
         public static bool operator !=(UnspentTx left, UnspentTx right)

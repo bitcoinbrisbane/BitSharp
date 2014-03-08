@@ -11,6 +11,7 @@ namespace BitSharp.Storage.Test
     {
         private readonly MemoryBlockHeaderStorage _blockHeaderStorage;
         private readonly MemoryBlockTransactionsStorage _blockTransactionsStorage;
+        private readonly MemoryTransactionStorage _transactionStorage;
         private readonly MemoryChainedBlockStorage _chainedBlockStorage;
         private readonly MemoryBlockchainStorage _blockchainStorage;
 
@@ -18,6 +19,7 @@ namespace BitSharp.Storage.Test
         {
             this._blockHeaderStorage = new MemoryBlockHeaderStorage(this);
             this._blockTransactionsStorage = new MemoryBlockTransactionsStorage(this);
+            this._transactionStorage = new MemoryTransactionStorage(this);
             this._chainedBlockStorage = new MemoryChainedBlockStorage(this);
             this._blockchainStorage = new MemoryBlockchainStorage(this);
         }
@@ -26,6 +28,8 @@ namespace BitSharp.Storage.Test
 
         public MemoryBlockTransactionsStorage BlockTransactionsStorage { get { return this._blockTransactionsStorage; } }
 
+        public MemoryTransactionStorage TransactionStorage { get { return this._transactionStorage; } }
+
         public MemoryChainedBlockStorage ChainedBlockStorage { get { return this._chainedBlockStorage; } }
 
         public MemoryBlockchainStorage BlockchainStorage { get { return this._blockchainStorage; } }
@@ -33,6 +37,8 @@ namespace BitSharp.Storage.Test
         IBlockHeaderStorage IStorageContext.BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 
         IBlockTransactionsStorage IStorageContext.BlockTransactionsStorage { get { return this._blockTransactionsStorage; } }
+
+        ITransactionStorage IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
 
         IChainedBlockStorage IStorageContext.ChainedBlockStorage { get { return this._chainedBlockStorage; } }
 

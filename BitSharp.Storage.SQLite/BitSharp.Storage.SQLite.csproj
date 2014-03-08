@@ -94,6 +94,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="BlockchainStorage.cs" />
+    <Compile Include="TransactionStorage.cs" />
     <Compile Include="BlockHeaderStorage.cs" />
     <Compile Include="BlockTransactionsStorage.cs" />
     <Compile Include="KnownAddressStorage.cs" />

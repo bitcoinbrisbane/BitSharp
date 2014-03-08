@@ -30,19 +30,39 @@ namespace BitSharp.Storage
 
         public IEnumerable<UInt256> ReadAllKeys()
         {
-            return this.StorageContext.BlockTransactionsStorage.ReadAllBlockHashes();
+            return this.StorageContext.BlockTransactionsStorage.ReadAllKeys();
         }
 
         public IEnumerable<KeyValuePair<UInt256, Block>> ReadAllValues()
         {
             foreach (var blockHeader in this.CacheContext.BlockHeaderCache.StreamAllValues())
             {
-                ImmutableArray<Transaction> blockTransactions;
-                if (this.StorageContext.BlockTransactionsStorage.TryReadValue(blockHeader.Value.Hash, out blockTransactions))
+                ImmutableArray<UInt256> blockTxHashes;
+                if (this.StorageContext.BlockTransactionsStorage.TryReadValue(blockHeader.Value.Hash, out blockTxHashes))
                 {
-                    if (blockHeader.Value.MerkleRoot == DataCalculator.CalculateMerkleRoot(blockTransactions))
+                    if (blockHeader.Value.MerkleRoot == DataCalculator.CalculateMerkleRoot(blockTxHashes))
                     {
-                        yield return new KeyValuePair<UInt256, Block>(blockHeader.Value.Hash, new Block(blockHeader.Value, blockTransactions));
+                        var blockTransactions = new Transaction[blockTxHashes.Length];
+
+                        var success = true;
+                        var txIndex = 0;
+                        foreach (var txHash in blockTxHashes)
+                        {
+                            Transaction transaction;
+                            if (this.StorageContext.TransactionStorage.TryReadValue(txHash, out transaction))
+                            {
+                                blockTransactions[txIndex] = transaction;
+                            }
+                            else
+                            {
+                                success = false;
+                                break;
+                            }
+                            txIndex++;
+                        }
+
+                        if (success)
+                            yield return new KeyValuePair<UInt256, Block>(blockHeader.Value.Hash, new Block(blockHeader.Value, blockTransactions.ToImmutableArray()));
                     }
                     else
                     {
@@ -57,13 +77,37 @@ namespace BitSharp.Storage
             BlockHeader blockHeader;
             if (this.CacheContext.BlockHeaderCache.TryGetValue(key, out blockHeader))
             {
-                ImmutableArray<Transaction> blockTransactions;
-                if (this.StorageContext.BlockTransactionsStorage.TryReadValue(blockHeader.Hash, out blockTransactions))
+                ImmutableArray<UInt256> blockTxHashes;
+                if (this.StorageContext.BlockTransactionsStorage.TryReadValue(blockHeader.Hash, out blockTxHashes))
                 {
-                    if (blockHeader.MerkleRoot == DataCalculator.CalculateMerkleRoot(blockTransactions))
+                    if (blockHeader.MerkleRoot == DataCalculator.CalculateMerkleRoot(blockTxHashes))
                     {
-                        value = new Block(blockHeader, blockTransactions);
-                        return true;
+                        var blockTransactions = new Transaction[blockTxHashes.Length];
+
+                        var success = true;
+                        var txIndex = 0;
+                        foreach (var txHash in blockTxHashes)
+                        {
+                            Transaction transaction;
+                            if (this.StorageContext.TransactionStorage.TryReadValue(txHash, out transaction))
+                            {
+                                blockTransactions[txIndex] = transaction;
+                            }
+                            else
+                            {
+                                //TODO
+                                throw new MissingDataException(DataType.Transaction, txHash);
+                                success = false;
+                                break;
+                            }
+                            txIndex++;
+                        }
+
+                        if (success)
+                        {
+                            value = new Block(blockHeader, blockTransactions.ToImmutableArray());
+                            return true;
+                        }
                     }
                     else
                     {
@@ -79,15 +123,24 @@ namespace BitSharp.Storage
         public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<Block>>> values)
         {
             var writeBlockTransactions = new List<KeyValuePair<UInt256, WriteValue<ImmutableArray<Transaction>>>>();
+            var writeTransactions = new List<KeyValuePair<UInt256, WriteValue<Transaction>>>();
 
             foreach (var value in values)
             {
-                writeBlockTransactions.Add(
-                    new KeyValuePair<UInt256, WriteValue<ImmutableArray<Transaction>>>(value.Key,
-                        new WriteValue<ImmutableArray<Transaction>>(value.Value.Value.Transactions, value.Value.IsCreate)));
+                var block = value.Value.Value;
+
+                //TODO check return value
+                this.StorageContext.BlockTransactionsStorage.TryWriteValue(block.Hash,
+                    new WriteValue<ImmutableArray<UInt256>>(block.Transactions.Select(x => x.Hash).ToImmutableArray(), value.Value.IsCreate));
+
+                //TODO check return value
+                this.StorageContext.TransactionStorage.TryWriteValues(
+                    block.Transactions.Select(x => new KeyValuePair<UInt256, WriteValue<Transaction>>(x.Hash, new WriteValue<Transaction>(x, value.Value.IsCreate))));
             }
 
-            return this.StorageContext.BlockTransactionsStorage.TryWriteValues(writeBlockTransactions);
+            //return this.StorageContext.BlockTransactionsStorage.TryWriteValues(writeBlockTransactions);
+            //TODO
+            return true;
         }
     }
 }

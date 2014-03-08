@@ -55,6 +55,13 @@ namespace BitSharp.Common
             return this.bitArray.GetEnumerator();
         }
 
+        public byte[] ToByteArray()
+        {
+            var bytes = new byte[(int)Math.Ceiling((double)this.bitArray.Length / 8)];
+            this.bitArray.CopyTo(bytes, 0);
+            return bytes;
+        }
+
         public override bool Equals(object obj)
         {
             if (!(obj is ImmutableBitArray))

@@ -106,14 +106,14 @@ namespace BitSharp.Data.Test
             var blockListHashes = blockList.Select(x => x.Hash).ToImmutableHashSet();
             var utxo = blockList.SelectMany(block =>
                 block.Transactions.Select((tx, txIndex) =>
-                    new UnspentTx(block.Hash, (UInt32)txIndex, tx.Hash, random.NextImmutableBitArray((options != null ? options.TxOutputCount : null) ?? 100))))
+                    new UnspentTx(tx.Hash, random.NextImmutableBitArray((options != null ? options.TxOutputCount : null) ?? 100))))
                 .ToImmutableDictionary(unspentTx => unspentTx.TxHash, unspentTx => unspentTx);
 
             return new Blockchain
             (
                 chainedBlockList.ToImmutableList(),
                 blockListHashes,
-                utxo
+                new MemoryUtxo(blockListHashes.Last(), utxo)
             );
         }
 
@@ -147,23 +147,11 @@ namespace BitSharp.Data.Test
             );
         }
 
-        public static TxKey RandomTxKey()
-        {
-            return new TxKey
-            (
-                txHash: random.NextUInt256(),
-                blockHash: random.NextUInt256(),
-                txIndex: random.NextUInt32()
-            );
-        }
-
         public static UnspentTx RandomUnspentTx(RandomDataOptions options = default(RandomDataOptions))
         {
             return new UnspentTx
             (
                 txHash: random.NextUInt256(),
-                blockHash: random.NextUInt256(),
-                txIndex: random.NextUInt32(),
                 unspentOutputs: random.NextImmutableBitArray(random.Next((options != null ? options.TxOutputCount : null) ?? 100))
             );
         }

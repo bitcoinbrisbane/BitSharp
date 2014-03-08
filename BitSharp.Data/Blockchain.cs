@@ -15,9 +15,9 @@ namespace BitSharp.Data
         //TODO use block hash instead of block metadata
         private readonly ImmutableList<ChainedBlock> _blockList;
         private readonly ImmutableHashSet<UInt256> _blockListHashes;
-        private readonly ImmutableDictionary<UInt256, UnspentTx> _utxo;
+        private readonly Utxo _utxo;
 
-        public Blockchain(ImmutableList<ChainedBlock> blockList, ImmutableHashSet<UInt256> blockListHashes, ImmutableDictionary<UInt256, UnspentTx> utxo)
+        public Blockchain(ImmutableList<ChainedBlock> blockList, ImmutableHashSet<UInt256> blockListHashes, Utxo utxo)
         {
             //Debug.Assert(!blockList.Where((x, i) => x.Height != i).Any());
 
@@ -30,7 +30,7 @@ namespace BitSharp.Data
 
         public ImmutableHashSet<UInt256> BlockListHashes { get { return this._blockListHashes; } }
 
-        public ImmutableDictionary<UInt256, UnspentTx> Utxo { get { return this._utxo; } }
+        public Utxo Utxo { get { return this._utxo; } }
 
         public int BlockCount { get { return this.BlockList.Count; } }
 
@@ -52,7 +52,8 @@ namespace BitSharp.Data
 
         public static bool operator ==(Blockchain left, Blockchain right)
         {
-            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.BlockList.SequenceEqual(right.BlockList) && left.BlockListHashes.SetEquals(right.BlockListHashes) && left.Utxo.SequenceEqual(right.Utxo, new UtxoComparer()));
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.BlockList.SequenceEqual(right.BlockList) && left.BlockListHashes.SetEquals(right.BlockListHashes)
+                /*&& left.Utxo.SequenceEqual(right.Utxo, new UtxoComparer())*/);
         }
 
         public static bool operator !=(Blockchain left, Blockchain right)

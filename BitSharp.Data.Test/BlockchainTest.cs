@@ -11,57 +11,57 @@ namespace BitSharp.Data.Test
     [TestClass]
     public class BlockchainTest
     {
-        [TestMethod]
-        public void TestBlockchainEquality()
-        {
-            var randomBlockchain = RandomData.RandomBlockchain();
+        //[TestMethod]
+        //public void TestBlockchainEquality()
+        //{
+        //    var randomBlockchain = RandomData.RandomBlockchain();
 
-            var sameBlockchain = new Blockchain
-            (
-                blockList: ImmutableList.Create(randomBlockchain.BlockList.ToArray()),
-                blockListHashes: ImmutableHashSet.Create(randomBlockchain.BlockListHashes.ToArray()),
-                utxo: randomBlockchain.Utxo.ToDictionary(x => x.Key, x => x.Value).ToImmutableDictionary(x => x.Key, x => x.Value)
-            );
+        //    var sameBlockchain = new Blockchain
+        //    (
+        //        blockList: ImmutableList.Create(randomBlockchain.BlockList.ToArray()),
+        //        blockListHashes: ImmutableHashSet.Create(randomBlockchain.BlockListHashes.ToArray()),
+        //        utxo: randomBlockchain.Utxo.ToDictionary(x => x.Key, x => x.Value).ToImmutableDictionary(x => x.Key, x => x.Value)
+        //    );
 
-            var newChainedBlock = randomBlockchain.BlockList.Last();
-            newChainedBlock = new ChainedBlock(newChainedBlock.BlockHash, newChainedBlock.PreviousBlockHash, newChainedBlock.Height + 1, newChainedBlock.TotalWork);
-            var differentBlockchainBlockList = new Blockchain
-            (
-                blockList: randomBlockchain.BlockList.Add(newChainedBlock),
-                blockListHashes: randomBlockchain.BlockListHashes,
-                utxo: randomBlockchain.Utxo
-            );
+        //    var newChainedBlock = randomBlockchain.BlockList.Last();
+        //    newChainedBlock = new ChainedBlock(newChainedBlock.BlockHash, newChainedBlock.PreviousBlockHash, newChainedBlock.Height + 1, newChainedBlock.TotalWork);
+        //    var differentBlockchainBlockList = new Blockchain
+        //    (
+        //        blockList: randomBlockchain.BlockList.Add(newChainedBlock),
+        //        blockListHashes: randomBlockchain.BlockListHashes,
+        //        utxo: randomBlockchain.Utxo
+        //    );
 
-            var differentBlockchainBlockListHashes = new Blockchain
-            (
-                blockList: randomBlockchain.BlockList,
-                blockListHashes: randomBlockchain.BlockListHashes.Remove(randomBlockchain.BlockListHashes.Last()),
-                utxo: randomBlockchain.Utxo
-            );
+        //    var differentBlockchainBlockListHashes = new Blockchain
+        //    (
+        //        blockList: randomBlockchain.BlockList,
+        //        blockListHashes: randomBlockchain.BlockListHashes.Remove(randomBlockchain.BlockListHashes.Last()),
+        //        utxo: randomBlockchain.Utxo
+        //    );
 
-            var differentBlockchainUtxo = new Blockchain
-            (
-                blockList: randomBlockchain.BlockList,
-                blockListHashes: randomBlockchain.BlockListHashes,
-                utxo: randomBlockchain.Utxo.Remove(randomBlockchain.Utxo.Keys.Last())
-            );
+        //    var differentBlockchainUtxo = new Blockchain
+        //    (
+        //        blockList: randomBlockchain.BlockList,
+        //        blockListHashes: randomBlockchain.BlockListHashes,
+        //        utxo: randomBlockchain.Utxo.Remove(randomBlockchain.Utxo.Keys.Last())
+        //    );
 
-            Assert.IsTrue(randomBlockchain.Equals(sameBlockchain));
-            Assert.IsTrue(randomBlockchain == sameBlockchain);
-            Assert.IsFalse(randomBlockchain != sameBlockchain);
+        //    Assert.IsTrue(randomBlockchain.Equals(sameBlockchain));
+        //    Assert.IsTrue(randomBlockchain == sameBlockchain);
+        //    Assert.IsFalse(randomBlockchain != sameBlockchain);
 
-            Assert.IsFalse(randomBlockchain.Equals(differentBlockchainBlockList));
-            Assert.IsFalse(randomBlockchain == differentBlockchainBlockList);
-            Assert.IsTrue(randomBlockchain != differentBlockchainBlockList);
+        //    Assert.IsFalse(randomBlockchain.Equals(differentBlockchainBlockList));
+        //    Assert.IsFalse(randomBlockchain == differentBlockchainBlockList);
+        //    Assert.IsTrue(randomBlockchain != differentBlockchainBlockList);
 
-            Assert.IsFalse(randomBlockchain.Equals(differentBlockchainBlockListHashes));
-            Assert.IsFalse(randomBlockchain == differentBlockchainBlockListHashes);
-            Assert.IsTrue(randomBlockchain != differentBlockchainBlockListHashes);
+        //    Assert.IsFalse(randomBlockchain.Equals(differentBlockchainBlockListHashes));
+        //    Assert.IsFalse(randomBlockchain == differentBlockchainBlockListHashes);
+        //    Assert.IsTrue(randomBlockchain != differentBlockchainBlockListHashes);
 
-            Assert.IsFalse(randomBlockchain.Equals(differentBlockchainUtxo));
-            Assert.IsFalse(randomBlockchain == differentBlockchainUtxo);
-            Assert.IsTrue(randomBlockchain != differentBlockchainUtxo);
-        }
+        //    Assert.IsFalse(randomBlockchain.Equals(differentBlockchainUtxo));
+        //    Assert.IsFalse(randomBlockchain == differentBlockchainUtxo);
+        //    Assert.IsTrue(randomBlockchain != differentBlockchainUtxo);
+        //}
 
         [TestMethod]
         public void TestBlockchainBlockCount()

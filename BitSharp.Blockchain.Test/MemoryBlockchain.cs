@@ -117,7 +117,8 @@ namespace BitSharp.Blockchain.Test
             //Debug.WriteLine("Coinbase Tx Created: {0}".Format2(coinbaseTx.Hash.ToHexNumberString()));
 
             var transactions = ImmutableArray.Create(coinbaseTx);
-            var merkleRoot = DataCalculator.CalculateMerkleRoot(transactions);
+            var txHashes = ImmutableArray.Create(coinbaseTx.Hash);
+            var merkleRoot = DataCalculator.CalculateMerkleRoot(txHashes);
 
             var block = new Block
             (

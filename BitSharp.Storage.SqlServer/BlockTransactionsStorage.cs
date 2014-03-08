@@ -23,38 +23,95 @@ namespace BitSharp.Storage.SqlServer
             : base(storageContext)
         { }
 
-        public bool TryReadValue(UInt256 blockHash, out ImmutableArray<Transaction> blockTransactions)
+        public IEnumerable<UInt256> ReadAllKeys()
         {
             using (var conn = this.OpenConnection())
             using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = @"
-                    SELECT TxHash, TxBytes
+                    SELECT BlockHash
+                    FROM BlockTransactions";
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var blockHash = reader.GetUInt256(0);
+                        yield return blockHash;
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<KeyValuePair<UInt256, ImmutableArray<UInt256>>> ReadAllValues()
+        {
+            using (var conn = this.OpenConnection())
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT BlockHash, TxHashesBytes
+                    FROM BlockTransactions";
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var blockHash = reader.GetUInt256(0);
+                        var txHashesBytes = reader.GetBytes(1);
+
+                        var txHashes = new UInt256[txHashesBytes.Length / 32];
+                        var txHashBytes = new byte[32];
+                        for (var i = 0; i < txHashesBytes.Length / 32; i++)
+                        {
+                            Array.Copy(txHashesBytes, i * 32, txHashBytes, 0, 32);
+                            txHashes[i] = new UInt256(txHashBytes);
+                        }
+
+                        yield return new KeyValuePair<UInt256, ImmutableArray<UInt256>>(blockHash, txHashes.ToImmutableArray());
+                    }
+                }
+            }
+        }
+
+        public bool TryReadValue(UInt256 blockHash, out ImmutableArray<UInt256> blockTxHashes)
+        {
+            using (var conn = this.OpenConnection())
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT TxHashesBytes
                     FROM BlockTransactions
-                    WHERE BlockHash = @blockHash
-                    ORDER BY TxIndex ASC";
+                    WHERE BlockHash = @blockHash";
 
                 cmd.Parameters.SetValue("@blockHash", SqlDbType.Binary, 32).Value = blockHash.ToDbByteArray();
 
                 using (var reader = cmd.ExecuteReader())
                 {
-                    var blockTransactionsBuilder = ImmutableArray.CreateBuilder<Transaction>();
-
-                    while (reader.Read())
+                    if (reader.Read())
                     {
-                        var txHash = reader.GetUInt256(0);
-                        var txBytes = reader.GetBytes(1);
+                        var txHashesBytes = reader.GetBytes(0);
 
-                        blockTransactionsBuilder.Add(StorageEncoder.DecodeTransaction(txBytes.ToMemoryStream(), txHash));
+                        var txHashes = new UInt256[txHashesBytes.Length / 32];
+                        var txHashBytes = new byte[32];
+                        for (var i = 0; i < txHashesBytes.Length / 32; i++)
+                        {
+                            Array.Copy(txHashesBytes, i * 32, txHashBytes, 0, 32);
+                            txHashes[i] = new UInt256(txHashBytes);
+                        }
+
+                        blockTxHashes = txHashes.ToImmutableArray();
+                        return true;
                     }
-
-                    blockTransactions = blockTransactionsBuilder.ToImmutable();
-                    return blockTransactions.Length > 0;
+                    else
+                    {
+                        blockTxHashes = default(ImmutableArray<UInt256>);
+                        return false;
+                    }
                 }
             }
         }
 
-        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<ImmutableArray<Transaction>>>> values)
+        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<ImmutableArray<UInt256>>>> values)
         {
             var stopwatch = new Stopwatch();
             var count = 0;
@@ -68,36 +125,30 @@ namespace BitSharp.Storage.SqlServer
 
                     cmd.CommandText = @"
                         MERGE BlockTransactions AS target
-                        USING (SELECT @blockHash, @txIndex) AS source (BlockHash, TxIndex)
-                        ON (target.BlockHash = source.BlockHash AND target.TxIndex = source.TxIndex)
+                        USING (SELECT @blockHash) AS source (BlockHash)
+                        ON (target.BlockHash = source.BlockHash)
 	                    WHEN NOT MATCHED THEN
-	                        INSERT (BlockHash, TxIndex, TxHash, TxBytes)
-	                        VALUES (@blockHash, @txIndex, @txHash, @txBytes);";
+	                        INSERT (BlockHash, TxHashesBytes)
+	                        VALUES (@blockHash, @txHashesBytes);";
 
                     cmd.Parameters.Add(new SqlParameter { ParameterName = "@blockHash", DbType = DbType.Binary, Size = 32 });
-                    cmd.Parameters.Add(new SqlParameter { ParameterName = "@txIndex", DbType = DbType.Int32 });
-                    cmd.Parameters.Add(new SqlParameter { ParameterName = "@txHash", DbType = DbType.Binary, Size = 32 });
-                    cmd.Parameters.Add(new SqlParameter { ParameterName = "@txBytes", DbType = DbType.Binary });
+                    cmd.Parameters.Add(new SqlParameter { ParameterName = "@txHashesBytes", DbType = DbType.Binary });
 
                     foreach (var keyPair in values)
                     {
                         var blockHash = keyPair.Key;
 
-                        cmd.Parameters["@blockHash"].Value = blockHash.ToDbByteArray();
-
-                        for (var txIndex = 0; txIndex < keyPair.Value.Value.Length; txIndex++)
+                        var txHashesBytes = new byte[keyPair.Value.Value.Length * 32];
+                        for (var i = 0; i < keyPair.Value.Value.Length; i++)
                         {
-                            var tx = keyPair.Value.Value[txIndex];
-                            var txBytes = StorageEncoder.EncodeTransaction(tx);
-
-                            cmd.Parameters["@txIndex"].Value = txIndex;
-                            cmd.Parameters["@txHash"].Value = tx.Hash.ToDbByteArray();
-                            cmd.Parameters["@txBytes"].Size = txBytes.Length;
-                            cmd.Parameters["@txBytes"].Value = txBytes;
-
-                            count++;
-                            cmd.ExecuteNonQuery();
+                            Array.Copy(keyPair.Value.Value[i].ToByteArray(), 0, txHashesBytes, i * 32, 32);
                         }
+
+                        cmd.Parameters["@blockHash"].Value = blockHash.ToDbByteArray();
+                        cmd.Parameters["@txHashesBytes"].Value = txHashesBytes;
+
+                        count++;
+                        cmd.ExecuteNonQuery();
                     }
 
                     stopwatch.Start();
@@ -130,56 +181,56 @@ namespace BitSharp.Storage.SqlServer
             }
         }
 
-        public IEnumerable<UInt256> ReadAllBlockHashes()
-        {
-            using (var conn = this.OpenConnection())
-            using (var cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = @"
-                    SELECT DISTINCT BlockHash
-                    FROM BlockTransactions";
+//        public IEnumerable<UInt256> ReadAllBlockHashes()
+//        {
+//            using (var conn = this.OpenConnection())
+//            using (var cmd = conn.CreateCommand())
+//            {
+//                cmd.CommandText = @"
+//                    SELECT DISTINCT BlockHash
+//                    FROM BlockTransactions";
 
-                using (var reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        var blockHash = reader.GetUInt256(0);
-                        yield return blockHash;
-                    }
-                }
-            }
-        }
+//                using (var reader = cmd.ExecuteReader())
+//                {
+//                    while (reader.Read())
+//                    {
+//                        var blockHash = reader.GetUInt256(0);
+//                        yield return blockHash;
+//                    }
+//                }
+//            }
+//        }
 
-        public bool TryReadTransaction(TxKey txKey, out Transaction transaction)
-        {
-            using (var conn = this.OpenConnection())
-            using (var cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = @"
-                    SELECT TxHash, TxBytes
-                    FROM BlockTransactions
-                    WHERE BlockHash = @blockHash AND TxIndex = @txIndex";
+//        public bool TryReadTransaction(TxKey txKey, out Transaction transaction)
+//        {
+//            using (var conn = this.OpenConnection())
+//            using (var cmd = conn.CreateCommand())
+//            {
+//                cmd.CommandText = @"
+//                    SELECT TxHash, TxBytes
+//                    FROM BlockTransactions
+//                    WHERE BlockHash = @blockHash AND TxIndex = @txIndex";
 
-                cmd.Parameters.SetValue("@blockHash", SqlDbType.Binary, 32).Value = txKey.BlockHash.ToDbByteArray();
-                cmd.Parameters.SetValue("@txIndex", SqlDbType.Int).Value = txKey.TxIndex.ToIntChecked();
+//                cmd.Parameters.SetValue("@blockHash", SqlDbType.Binary, 32).Value = txKey.BlockHash.ToDbByteArray();
+//                cmd.Parameters.SetValue("@txIndex", SqlDbType.Int).Value = txKey.TxIndex.ToIntChecked();
 
-                using (var reader = cmd.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        var txHash = reader.GetUInt256(0);
-                        var txBytes = reader.GetBytes(1);
+//                using (var reader = cmd.ExecuteReader())
+//                {
+//                    if (reader.Read())
+//                    {
+//                        var txHash = reader.GetUInt256(0);
+//                        var txBytes = reader.GetBytes(1);
 
-                        transaction = StorageEncoder.DecodeTransaction(txBytes.ToMemoryStream(), txHash);
-                        return true;
-                    }
-                    else
-                    {
-                        transaction = default(Transaction);
-                        return false;
-                    }
-                }
-            }
-        }
+//                        transaction = StorageEncoder.DecodeTransaction(txBytes.ToMemoryStream(), txHash);
+//                        return true;
+//                    }
+//                    else
+//                    {
+//                        transaction = default(Transaction);
+//                        return false;
+//                    }
+//                }
+//            }
+//        }
     }
 }

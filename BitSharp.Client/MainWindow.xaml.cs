@@ -1,6 +1,6 @@
-﻿#define SQLITE
+﻿//#define SQLITE
 //#define FIREBIRD
-//#define SQL_SERVER
+#define SQL_SERVER
 
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Blockchain;
@@ -54,7 +54,7 @@ namespace BitSharp.Client
             {
                 //TODO
                 //MainnetRules.BypassValidation = true;
-                //MainnetRules.BypassExecuteScript = true;
+                MainnetRules.BypassExecuteScript = true;
                 ScriptEngine.BypassVerifySignature = true;
 
 #if SQLITE

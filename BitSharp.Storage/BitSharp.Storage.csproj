@@ -95,7 +95,7 @@
     <Compile Include="IUnboundedStorage.cs" />
     <Compile Include="MemoryCache.cs" />
     <Compile Include="Provider\IBlockHeaderStorage.cs" />
-    <Compile Include="TransactionStorage.cs" />
+    <Compile Include="Provider\ITransactionStorage.cs" />
     <Compile Include="Provider\IBlockTransactionsStorage.cs" />
     <Compile Include="Provider\IBlockchainStorage.cs" />
     <Compile Include="Provider\IStorageContext.cs" />

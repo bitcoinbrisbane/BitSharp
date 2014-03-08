@@ -43,36 +43,20 @@ IF OBJECT_ID('BlockTransactions') IS NULL
 CREATE TABLE BlockTransactions
 (
 	BlockHash BINARY(32) NOT NULL,
-	TxIndex INTEGER NOT NULL,
+	TxHashesBytes VARBINARY(MAX) NOT NULL,
+	CONSTRAINT PK_BlockTransactions PRIMARY KEY NONCLUSTERED
+	(
+		BlockHash
+	)
+);
+
+IF OBJECT_ID('Transactions') IS NULL
+CREATE TABLE Transactions
+(
 	TxHash BINARY(32) NOT NULL,
 	TxBytes VARBINARY(MAX) NOT NULL,
-	CONSTRAINT PK_TransactionLocators PRIMARY KEY NONCLUSTERED
+	CONSTRAINT PK_Transactions PRIMARY KEY NONCLUSTERED
 	(
-		BlockHash,
-		TxIndex
-	) WITH ( IGNORE_DUP_KEY = ON )
+		TxHash
+	)
 );
-
-IF NOT EXISTS(SELECT * FROM sysindexes WHERE name = 'IX_BlockTransactions_BlockHash')
-CREATE NONCLUSTERED INDEX IX_BlockTransactions_BlockHash ON BlockTransactions ( BlockHash );
-
-IF NOT EXISTS(SELECT * FROM sysindexes WHERE name = 'IX_BlockTransactions_TxHash')
-CREATE NONCLUSTERED INDEX IX_BlockTransactions_TxHash ON BlockTransactions ( TxHash );
-
-IF OBJECT_ID('BlockTransactionsChunked') IS NULL
-CREATE TABLE BlockTransactionsChunked
-(
-	BlockHash BINARY(32) NOT NULL,
-	MinTxIndex INTEGER NOT NULL,
-	MaxTxIndex INTEGER NOT NULL,
-	TxChunkBytes VARBINARY(MAX) NOT NULL,
-	CONSTRAINT PK_BlockTransactionsChunked PRIMARY KEY NONCLUSTERED
-	(
-		BlockHash,
-		MinTxIndex
-	),
-	CONSTRAINT UQ_BlockTransactionsChunked_MaxTxIndex UNIQUE ( BlockHash, MaxTxIndex )
-);
-
---IF NOT EXISTS(SELECT * FROM sysindexes WHERE name = 'IX_BlockTransactionsChunked_BlockHash')
---CREATE NONCLUSTERED INDEX IX_BlockTransactionsChunked_BlockHash ON BlockTransactionsChunked ( BlockHash );

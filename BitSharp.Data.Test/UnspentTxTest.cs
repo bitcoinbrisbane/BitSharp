@@ -18,40 +18,30 @@ namespace BitSharp.Data.Test
             var sameUnspentTx = new UnspentTx
             (
                 txHash: randomUnspentTx.TxHash,
-                blockHash: randomUnspentTx.BlockHash,
-                txIndex: randomUnspentTx.TxIndex,
                 unspentOutputs: randomUnspentTx.UnspentOutputs
             );
 
             var differentUnspentTxBlockHash = new UnspentTx
             (
                 txHash: randomUnspentTx.TxHash,
-                blockHash: ~randomUnspentTx.BlockHash,
-                txIndex: randomUnspentTx.TxIndex,
                 unspentOutputs: randomUnspentTx.UnspentOutputs
             );
 
             var differentUnspentTxTxIndex = new UnspentTx
             (
                 txHash: randomUnspentTx.TxHash,
-                blockHash: randomUnspentTx.BlockHash,
-                txIndex: ~randomUnspentTx.TxIndex,
                 unspentOutputs: randomUnspentTx.UnspentOutputs
             );
 
             var differentUnspentTxTxHash = new UnspentTx
             (
                 txHash: ~randomUnspentTx.TxHash,
-                blockHash: randomUnspentTx.BlockHash,
-                txIndex: randomUnspentTx.TxIndex,
                 unspentOutputs: randomUnspentTx.UnspentOutputs
             );
 
             var differentUnspentTxUnpsentOutputs = new UnspentTx
             (
                 txHash: ~randomUnspentTx.TxHash,
-                blockHash: randomUnspentTx.BlockHash,
-                txIndex: randomUnspentTx.TxIndex,
                 unspentOutputs: randomUnspentTx.UnspentOutputs
             );
 

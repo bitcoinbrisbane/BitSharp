@@ -12,4 +12,12 @@ namespace BitSharp.Storage
         
         bool TryWriteValues(IEnumerable<KeyValuePair<TKey, WriteValue<TValue>>> values);
     }
+
+    public static class IUnboundedStorageExtensionMethods
+    {
+        public static bool TryWriteValue<TKey, TValue>(this IUnboundedStorage<TKey, TValue> storage, TKey key, WriteValue<TValue> value)
+        {
+            return storage.TryWriteValues(new KeyValuePair<TKey, WriteValue<TValue>>[] { new KeyValuePair<TKey, WriteValue<TValue>>(key, value) });
+        }
+    }
 }

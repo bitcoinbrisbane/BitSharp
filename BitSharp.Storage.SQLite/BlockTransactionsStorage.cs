@@ -24,6 +24,50 @@ namespace BitSharp.Storage.SQLite
             : base(storageContext)
         { }
 
+        public IEnumerable<UInt256> ReadAllKeys()
+        {
+            using (var conn = this.OpenReadConnection())
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT BlockHash
+                    FROM BlockHeaders";
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var blockHash = reader.GetUInt256(0);
+                        yield return blockHash;
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<KeyValuePair<UInt256, ImmutableArray<Transaction>>> ReadAllValues()
+        {
+//            using (var conn = this.OpenReadConnection())
+//            using (var cmd = conn.CreateCommand())
+//            {
+//                cmd.CommandText = @"
+//                    SELECT BlockHash, HeaderBytes
+//                    FROM BlockHeaders";
+
+//                using (var reader = cmd.ExecuteReader())
+//                {
+//                    while (reader.Read())
+//                    {
+//                        var blockHash = reader.GetUInt256(0);
+//                        var headerBytes = reader.GetBytes(1);
+
+//                        yield return new KeyValuePair<UInt256, BlockHeader>(blockHash, StorageEncoder.DecodeBlockHeader(headerBytes.ToMemoryStream(), blockHash));
+//                    }
+//                }
+//            }
+
+            yield break;
+        }
+
         public bool TryReadValue(UInt256 blockHash, out ImmutableArray<Transaction> blockTransactions)
         {
             using (var conn = this.OpenReadConnection())
@@ -142,37 +186,37 @@ namespace BitSharp.Storage.SQLite
             }
         }
 
-        public bool TryReadTransaction(TxKey txKey, out Transaction transaction)
-        {
-            using (var conn = this.OpenReadConnection())
-            using (var cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = @"
-                    SELECT TxHash, TxBytes
-                    FROM BlockTransactions
-                    WHERE BlockHash = @blockHash AND TxIndex = @txIndex";
+//        public bool TryReadTransaction(TxKey txKey, out Transaction transaction)
+//        {
+//            using (var conn = this.OpenReadConnection())
+//            using (var cmd = conn.CreateCommand())
+//            {
+//                cmd.CommandText = @"
+//                    SELECT TxHash, TxBytes
+//                    FROM BlockTransactions
+//                    WHERE BlockHash = @blockHash AND TxIndex = @txIndex";
 
-                cmd.Parameters.SetValue("@blockHash", DbType.Binary, 32).Value = txKey.BlockHash.ToDbByteArray();
-                cmd.Parameters.SetValue("@txIndex", DbType.Int32).Value = txKey.TxIndex.ToIntChecked();
+//                cmd.Parameters.SetValue("@blockHash", DbType.Binary, 32).Value = txKey.BlockHash.ToDbByteArray();
+//                cmd.Parameters.SetValue("@txIndex", DbType.Int32).Value = txKey.TxIndex.ToIntChecked();
 
-                using (var reader = cmd.ExecuteReader())
-                {
-                    if (reader.Read())
-                    {
-                        var txHash = reader.GetUInt256(0);
-                        var txBytes = reader.GetBytes(1);
+//                using (var reader = cmd.ExecuteReader())
+//                {
+//                    if (reader.Read())
+//                    {
+//                        var txHash = reader.GetUInt256(0);
+//                        var txBytes = reader.GetBytes(1);
 
-                        transaction = StorageEncoder.DecodeTransaction(txBytes.ToMemoryStream(), txHash);
-                        return true;
-                    }
-                    else
-                    {
-                        transaction = default(Transaction);
-                        return false;
-                    }
-                }
-            }
-        }
+//                        transaction = StorageEncoder.DecodeTransaction(txBytes.ToMemoryStream(), txHash);
+//                        return true;
+//                    }
+//                    else
+//                    {
+//                        transaction = default(Transaction);
+//                        return false;
+//                    }
+//                }
+//            }
+//        }
     }
 
     /*

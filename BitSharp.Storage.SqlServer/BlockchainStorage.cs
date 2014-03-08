@@ -155,7 +155,7 @@ namespace BitSharp.Storage.SqlServer
                 }
             }
 
-            return new Data.Blockchain(blockListBuilder.ToImmutable(), blockListBuilder.Select(x => x.BlockHash).ToImmutableHashSet(), utxoBuilder.ToImmutable());
+            return new Data.Blockchain(blockListBuilder.ToImmutable(), blockListBuilder.Select(x => x.BlockHash).ToImmutableHashSet(), new MemoryUtxo(blockchainKey.RootBlockHash, utxoBuilder.ToImmutable()));
         }
 
         public BlockchainKey WriteBlockchain(Data.Blockchain blockchain)
@@ -230,7 +230,7 @@ namespace BitSharp.Storage.SqlServer
                         var currentOffset = 0;
                         var chunkBytes = new byte[4 + (36 * chunkSize)];
 
-                        using (var utxoEnumerator = blockchain.Utxo.GetEnumerator())
+                        using (var utxoEnumerator = blockchain.Utxo.UnspentTransactions().GetEnumerator())
                         {
                             // chunk outer loop
                             while (currentOffset < blockchain.Utxo.Count)

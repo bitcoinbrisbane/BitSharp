@@ -159,6 +159,8 @@ namespace BitSharp.Storage.SqlServer
             using (var trans = conn.BeginTransaction())
             using (var cmd = conn.CreateCommand())
             {
+                cmd.Transaction = trans;
+
                 cmd.CommandText = @"
                     DELETE FROM BlockHeaders";
 

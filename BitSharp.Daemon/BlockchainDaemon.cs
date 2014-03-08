@@ -755,16 +755,16 @@ namespace BitSharp.Daemon
             }
         }
 
-        public bool TryGetTransaction(TxKey txKey, out Transaction transaction, bool saveInCache = true)
+        public bool TryGetTransaction(UInt256 txHash, out Transaction transaction, bool saveInCache = true)
         {
-            if (this.CacheContext.TransactionCache.TryGetValue(txKey, out transaction))
+            if (this.CacheContext.TransactionCache.TryGetValue(txHash, out transaction))
             {
-                this.missingTransactions.TryRemove(txKey.TxHash);
+                this.missingTransactions.TryRemove(txHash);
                 return true;
             }
             else
             {
-                this.missingTransactions.TryAdd(txKey.TxHash);
+                this.missingTransactions.TryAdd(txHash);
                 transaction = default(Transaction);
                 return false;
             }

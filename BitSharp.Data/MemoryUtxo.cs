@@ -1,0 +1,64 @@
+﻿using BitSharp.Common;
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace BitSharp.Data
+{
+    public class MemoryUtxo : Utxo
+    {
+        private UInt256 _blockHash;
+        private ImmutableDictionary<UInt256, UnspentTx> _utxo;
+
+        static public MemoryUtxo Genesis(UInt256 blockHash)
+        {
+            return new MemoryUtxo(blockHash, ImmutableDictionary.Create<UInt256, UnspentTx>());
+        }
+
+        public MemoryUtxo(UInt256 blockHash, ImmutableDictionary<UInt256, UnspentTx> utxo)
+        {
+            this._blockHash = blockHash;
+            this._utxo = utxo;
+        }
+
+        public ImmutableDictionary<UInt256, UnspentTx> Dictionary { get { return this._utxo; } }
+
+        public UInt256 BlockHash
+        {
+            get { return this._blockHash; }
+        }
+
+        public int Count
+        {
+            get { return _utxo.Count; }
+        }
+
+        public IEnumerable<UnspentTx> UnspentTransactions()
+        {
+            return this._utxo.Values;
+        }
+        
+        public UtxoBuilder ToBuilder(UInt256 blockHash)
+        {
+            return new PersistentUtxoBuilder(blockHash, this);
+            //return new MemoryUtxoBuilder(this);
+        }
+
+        public bool ContainsKey(UInt256 txHash)
+        {
+            return this._utxo.ContainsKey(txHash);
+        }
+
+        public UnspentTx this[UInt256 txHash]
+        {
+            get { return this._utxo[txHash]; }
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+}
