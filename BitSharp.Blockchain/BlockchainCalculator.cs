@@ -474,7 +474,7 @@ namespace BitSharp.Blockchain
                     totalInputCount.ToString("#,##0"),
                     totalStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
                     validateStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
-                    "TODO", //TODO blockchain.UtxoBuilder.Count.ToString("#,##0"),
+                    blockchain.UtxoBuilder.Count.ToString("#,##0"),
                     (float)GC.GetTotalMemory(false) / 1.MILLION(),
                     (float)Process.GetCurrentProcess().PrivateMemorySize64 / 1.MILLION()
                 ));

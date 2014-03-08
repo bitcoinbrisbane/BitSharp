@@ -52,6 +52,8 @@ namespace BitSharp.Storage
             _utxo.Add(txHash.ToBigInteger().ToString(), PersistentUtxo.SerializeUnspentTx(unspentTx));
         }
 
+        public int Count { get { return this._utxo.Count; } }
+
         public UnspentTx this[Common.UInt256 txHash]
         {
             get

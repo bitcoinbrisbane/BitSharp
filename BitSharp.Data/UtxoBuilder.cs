@@ -15,6 +15,8 @@ namespace BitSharp.Data
 
         void Add(UInt256 txHash, UnspentTx unspentTx);
 
+        int Count { get; }
+
         UnspentTx this[UInt256 txHash] { get; set; }
 
         Utxo ToImmutable();
