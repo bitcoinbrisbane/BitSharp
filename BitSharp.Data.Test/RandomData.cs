@@ -113,7 +113,7 @@ namespace BitSharp.Data.Test
             (
                 chainedBlockList.ToImmutableList(),
                 blockListHashes,
-                new MemoryUtxo(blockListHashes.Last(), utxo)
+                null //TODO new MemoryUtxo(blockListHashes.Last(), utxo)
             );
         }
 

@@ -54,12 +54,6 @@
     <Reference Include="BouncyCastle.Crypto">
       <HintPath>..\packages\BouncyCastle.1.7.0\lib\Net40-Client\BouncyCastle.Crypto.dll</HintPath>
     </Reference>
-    <Reference Include="Esent.Collections">
-      <HintPath>..\packages\ManagedEsent.1.9.0.1\lib\net40\Esent.Collections.dll</HintPath>
-    </Reference>
-    <Reference Include="Esent.Interop">
-      <HintPath>..\packages\ManagedEsent.1.9.0.1\lib\net40\Esent.Interop.dll</HintPath>
-    </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.1.2\lib\net45\NLog.dll</HintPath>
     </Reference>
@@ -80,11 +74,8 @@
     <Compile Include="BlockchainKey.cs" />
     <Compile Include="BlockchainMetadata.cs" />
     <Compile Include="ChainedBlock.cs" />
+    <Compile Include="ChainState.cs" />
     <Compile Include="DataCalculator.cs" />
-    <Compile Include="MemoryUtxo.cs" />
-    <Compile Include="MemoryUtxoBuilder.cs" />
-    <Compile Include="PersistentUtxo.cs" />
-    <Compile Include="PersistentUtxoBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Block.cs" />
     <Compile Include="BlockHeader.cs" />

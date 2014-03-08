@@ -33,6 +33,7 @@ namespace BitSharp.Blockchain.Test
         }
 
         [TestMethod]
+        [Ignore]
         public void TestLongBlockchain()
         {
             var blockchain = new MemoryBlockchain();
