@@ -120,24 +120,21 @@ namespace BitSharp.Storage
 
         public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<Block>>> keyPairs)
         {
-            var writeBlockTransactions = new List<KeyValuePair<UInt256, WriteValue<ImmutableList<Transaction>>>>();
-            var writeTransactions = new List<KeyValuePair<UInt256, WriteValue<Transaction>>>();
-
             foreach (var value in keyPairs)
             {
                 var block = value.Value.Value;
 
-                //TODO check return value
-                this.StorageContext.BlockTransactionsStorage.TryWriteValue(block.Hash,
-                    new WriteValue<ImmutableList<UInt256>>(block.Transactions.Select(x => x.Hash).ToImmutableList(), value.Value.IsCreate));
+                // write the block's transactions
+                if (!this.StorageContext.TransactionStorage.TryWriteValues(
+                    block.Transactions.Select(x => new KeyValuePair<UInt256, WriteValue<Transaction>>(x.Hash, new WriteValue<Transaction>(x, value.Value.IsCreate)))))
+                    return false;
 
-                //TODO check return value
-                this.StorageContext.TransactionStorage.TryWriteValues(
-                    block.Transactions.Select(x => new KeyValuePair<UInt256, WriteValue<Transaction>>(x.Hash, new WriteValue<Transaction>(x, value.Value.IsCreate))));
+                // then write the transaction hash list
+                if (!this.StorageContext.BlockTransactionsStorage.TryWriteValue(block.Hash,
+                    new WriteValue<ImmutableList<UInt256>>(block.Transactions.Select(x => x.Hash).ToImmutableList(), value.Value.IsCreate)))
+                    return false;
             }
 
-            //return this.StorageContext.BlockTransactionsStorage.TryWriteValues(writeBlockTransactions);
-            //TODO
             return true;
         }
     }
