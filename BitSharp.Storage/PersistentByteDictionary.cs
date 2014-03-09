@@ -247,16 +247,9 @@ namespace BitSharp.Storage
 
             public IEnumerator<byte[]> GetEnumerator()
             {
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
-
                 foreach (var key in this.keyCollection)
                     yield return Decode(key);
 
-                stopwatch.Stop();
-                Debug.WriteLine(stopwatch.ElapsedSecondsFloat());
-                
-                int i = 0;
             }
 
             System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
