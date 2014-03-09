@@ -684,8 +684,7 @@ namespace BitSharp.Node
             this.requestedBlocks.TryRemove(block.Hash);
             this.blockchainDaemon.CacheContext.BlockCache.CreateValue(block.Hash, block);
 
-            //TODO
-            //this.requestBlocksWorker.NotifyWork();
+            this.requestBlocksWorker.NotifyWork();
         }
 
         private void OnBlockHeader(BlockHeader blockHeader)
