@@ -68,13 +68,11 @@ namespace BitSharp.Node
         private ConcurrentDictionary<IPEndPoint, RemoteNode> pendingPeers = new ConcurrentDictionary<IPEndPoint, RemoteNode>();
         private ConcurrentDictionary<IPEndPoint, RemoteNode> connectedPeers = new ConcurrentDictionary<IPEndPoint, RemoteNode>();
 
-        private readonly ConcurrentSet<UInt256> requestedBlocks = new ConcurrentSet<UInt256>();
-        private readonly ConcurrentDictionary<UInt256, DateTime> requestedBlockTimes = new ConcurrentDictionary<UInt256, DateTime>();
+        private readonly ConcurrentDictionary<UInt256, DateTime> requestedBlocks = new ConcurrentDictionary<UInt256, DateTime>();
         private List<ChainedBlock> newChainBlockList;
         private ChainedBlock lastTargetChainedBlock;
 
-        private readonly ConcurrentSet<UInt256> requestedTransactions = new ConcurrentSet<UInt256>();
-        private readonly ConcurrentDictionary<UInt256, DateTime> requestedTransactionTimes = new ConcurrentDictionary<UInt256, DateTime>();
+        private readonly ConcurrentDictionary<UInt256, DateTime> requestedTransactions = new ConcurrentDictionary<UInt256, DateTime>();
 
         private Socket listenSocket;
 
@@ -222,9 +220,9 @@ namespace BitSharp.Node
             var now = DateTime.UtcNow;
 
             // remove old requests
-            this.requestedBlockTimes.RemoveRange(
-                this.requestedBlockTimes
-                .Where(x => (now - x.Value) > TimeSpan.FromSeconds(600))
+            this.requestedBlocks.RemoveRange(
+                this.requestedBlocks
+                .Where(x => (now - x.Value) > TimeSpan.FromSeconds(15))
                 .Select(x => x.Key));
 
             if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
@@ -318,9 +316,9 @@ namespace BitSharp.Node
             var now = DateTime.UtcNow;
 
             // remove old requests
-            this.requestedTransactionTimes.RemoveRange(
-                this.requestedTransactionTimes
-                .Where(x => (now - x.Value) > TimeSpan.FromSeconds(600))
+            this.requestedTransactions.RemoveRange(
+                this.requestedTransactions
+                .Where(x => (now - x.Value) > TimeSpan.FromSeconds(15))
                 .Select(x => x.Key));
 
             if (this.requestedTransactions.Count > MAX_TRANSACTION_REQUESTS)
@@ -622,30 +620,12 @@ namespace BitSharp.Node
                 return null;
 
             var now = DateTime.UtcNow;
-            var newRequestTime = now;
 
             // check if block has already been requested
-            if (this.requestedBlockTimes.TryAdd(blockHash, newRequestTime))
+            if (this.requestedBlocks.TryAdd(blockHash, now))
             {
-                this.requestedBlocks.TryAdd(blockHash);
                 var invVectors = ImmutableList.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, blockHash));
                 return remoteNode.Sender.SendGetData(invVectors);
-            }
-            else
-            {
-                // if block has already been requested, check if the request is old enough to send again
-                DateTime lastRequestTime;
-                if (this.requestedBlockTimes.TryGetValue(blockHash, out lastRequestTime))
-                {
-                    if ((now - lastRequestTime) > TimeSpan.FromSeconds(15))
-                    {
-                        this.requestedBlocks.TryAdd(blockHash);
-                        this.requestedBlockTimes.AddOrUpdate(blockHash, newRequestTime, (existingKey, existingValue) => newRequestTime);
-
-                        var invVectors = ImmutableList.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, blockHash));
-                        return remoteNode.Sender.SendGetData(invVectors);
-                    }
-                }
             }
 
             return null;
@@ -661,27 +641,10 @@ namespace BitSharp.Node
             var newRequestTime = now;
 
             // check if transaction has already been requested
-            if (this.requestedTransactionTimes.TryAdd(txHash, newRequestTime))
+            if (this.requestedTransactions.TryAdd(txHash, now))
             {
-                this.requestedTransactions.TryAdd(txHash);
                 var invVectors = ImmutableList.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_TRANSACTION, txHash));
                 return remoteNode.Sender.SendGetData(invVectors);
-            }
-            else
-            {
-                // if transaction has already been requested, check if the request is old enough to send again
-                DateTime lastRequestTime;
-                if (this.requestedTransactionTimes.TryGetValue(txHash, out lastRequestTime))
-                {
-                    if ((now - lastRequestTime) > TimeSpan.FromSeconds(15))
-                    {
-                        this.requestedTransactions.TryAdd(txHash);
-                        this.requestedTransactionTimes.AddOrUpdate(txHash, newRequestTime, (existingKey, existingValue) => newRequestTime);
-
-                        var invVectors = ImmutableList.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_TRANSACTION, txHash));
-                        return remoteNode.Sender.SendGetData(invVectors);
-                    }
-                }
             }
 
             return null;
@@ -691,7 +654,8 @@ namespace BitSharp.Node
         {
             //Debug.WriteLine("Received block {0}".Format2(block.Hash));
 
-            this.requestedBlocks.TryRemove(block.Hash);
+            DateTime ignore;
+            this.requestedBlocks.TryRemove(block.Hash, out ignore);
             this.blockchainDaemon.CacheContext.BlockCache.CreateValue(block.Hash, block);
 
             this.requestBlocksWorker.NotifyWork();
