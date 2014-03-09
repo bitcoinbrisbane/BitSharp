@@ -568,6 +568,7 @@ namespace BitSharp.Daemon
                 if (chainStateLocal.CurrentBlock.RootBlockHash != chainStateLocal.TargetBlock.BlockHash)
                 {
                     // don't try processing if the first block that will be needed is missing
+                    this.missingBlocks.ExceptWith(this.CacheContext.BlockCache.GetAllKeys());
                     if (chainStateLocal.RewindBlocks.Count > 0
                         && this.missingBlocks.Contains(chainStateLocal.RewindBlocks.First().BlockHash))
                     {
