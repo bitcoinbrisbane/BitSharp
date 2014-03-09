@@ -110,11 +110,14 @@ namespace BitSharp.Blockchain
                 utxoBuilder: utxoBuilder
             );
 
+            var utxoSafe = true;
             try
             {
                 // start calculating new utxo
                 foreach (var tuple in BlockAndTxLookAhead(newChainBlockList))
                 {
+                    utxoSafe = false;
+
                     // cooperative loop
                     if (this.shutdownToken.IsCancellationRequested)
                         break;
@@ -172,12 +175,16 @@ namespace BitSharp.Blockchain
                         currentRateStopwatch.Reset();
                         currentRateStopwatch.Start();
                     }
+                    
+                    utxoSafe = true;
                 }
             }
             catch (MissingDataException e)
             {
                 // if there is missing data once blockchain processing has started, return the current progress
                 missingData.Add(e);
+                if (!utxoSafe)
+                    throw;
             }
             catch (AggregateException e)
             {
@@ -188,6 +195,8 @@ namespace BitSharp.Blockchain
                 else
                 {
                     missingData.AddRange(e.InnerExceptions.OfType<MissingDataException>());
+                    if (!utxoSafe)
+                        throw;
                 }
             }
 
