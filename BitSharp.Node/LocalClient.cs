@@ -40,6 +40,8 @@ namespace BitSharp.Node
         private static readonly int MAX_BLOCK_REQUESTS = 100;
         private static readonly int MAX_TRANSACTION_REQUESTS = 100;
         private static readonly int MAX_BLOCKCHAIN_LOOKAHEAD = 1000;
+        // don't limit the first 100,000 block downloading as they are so small it will slow down their processing
+        private static readonly int MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT = 100.THOUSAND();
 
         private static readonly Random random = new Random();
 
@@ -277,7 +279,9 @@ namespace BitSharp.Node
 
                 if (requestBlock != null)
                 {
-                    if (requestBlock.Height - chainStateLocal.CurrentBlock.Height > MAX_BLOCKCHAIN_LOOKAHEAD)
+                    // limit how far ahead the target blockchain will be downloaded
+                    if (requestBlock.Height >= MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT
+                        && requestBlock.Height - chainStateLocal.CurrentBlock.Height > MAX_BLOCKCHAIN_LOOKAHEAD)
                         break;
 
                     var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), requestBlock.BlockHash);

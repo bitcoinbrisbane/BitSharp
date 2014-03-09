@@ -488,6 +488,7 @@ namespace BitSharp.Daemon
                     var chainStateLocal = this.chainState;
                     if (winningBlock != null && winningBlock.BlockHash != chainStateLocal.TargetBlock.BlockHash)
                     {
+                        Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(winningBlock.BlockHash.ToHexNumberString(), winningBlock.Height, winningBlock.TotalWork.ToString("X")));
                         UpdateWinningBlockchain(winningBlock);
                     }
                 }
@@ -570,11 +571,13 @@ namespace BitSharp.Daemon
                     if (chainStateLocal.RewindBlocks.Count > 0
                         && this.missingBlocks.Contains(chainStateLocal.RewindBlocks.First().BlockHash))
                     {
+                        this.blockchainWorker.NotifyWork();
                         return;
                     }
                     else if (chainStateLocal.RewindBlocks.Count == 0 && chainStateLocal.ForwardBlocks.Count > 0
                         && this.missingBlocks.Contains(chainStateLocal.ForwardBlocks.First().BlockHash))
                     {
+                        this.blockchainWorker.NotifyWork();
                         return;
                     }
 

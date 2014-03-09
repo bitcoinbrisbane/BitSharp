@@ -41,8 +41,6 @@ namespace BitSharp.Blockchain
 
         public Data.BlockchainBuilder CalculateBlockchainFromExisting(BlockchainBuilder currentBlockchain, ChainedBlock targetChainedBlock, UtxoBuilder utxoBuilder, IImmutableList<ChainedBlock> currentChain, out List<MissingDataException> missingData, CancellationToken cancelToken, Action<BlockchainBuilder> onProgress = null)
         {
-            Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetChainedBlock.BlockHash.ToHexNumberString(), targetChainedBlock.Height, targetChainedBlock.TotalWork.ToString("X")));
-
             // if the target block is at height 0 don't use currentBlockchain as-is, set it to be the genesis chain for the target block
             if (targetChainedBlock.Height == 0)
             {
