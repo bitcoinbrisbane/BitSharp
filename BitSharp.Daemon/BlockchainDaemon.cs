@@ -636,8 +636,9 @@ namespace BitSharp.Daemon
                             Directory.CreateDirectory(destPath);
 
                             var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", chainStateLocal.TargetBlock.BlockHash.ToString());
-                            foreach (var srcFile in Directory.GetFiles(srcPath))
+                            foreach (var srcFile in Directory.GetFiles(srcPath, "*.edb"))
                                 File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
+                            Directory.Delete(srcPath, recursive: true);
 
                             UpdateCurrentBlockchain(new Data.Blockchain(newBlockchain.BlockList, newBlockchain.BlockListHashes, new PersistentUtxo(newBlockchain.RootBlockHash)));
                         }
