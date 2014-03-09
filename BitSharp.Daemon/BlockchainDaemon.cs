@@ -370,6 +370,11 @@ namespace BitSharp.Daemon
                             chainedBlocks.Add(chainedBlock);
                             chainedBlocksSet.Add(chainedBlock.BlockHash);
                         }
+                        else
+                        {
+                            this.unchainedBlocks.Add(unchainedBlockHeader.PreviousBlock);
+                            this.chainingWorker.NotifyWork();
+                        }
                     }
 
                     List<BlockHeader> unchainedGroup;
@@ -807,6 +812,8 @@ namespace BitSharp.Daemon
 
                 case DataType.ChainedBlock:
                     this.missingChainedBlocks.TryAdd(e.DataKey);
+                    this.unchainedBlocks.Add(e.DataKey);
+                    this.chainingWorker.NotifyWork();
                     break;
 
                 case DataType.Transaction:
