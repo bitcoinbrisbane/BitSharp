@@ -131,15 +131,23 @@ namespace BitSharp.Daemon
 
         public ChainedBlock WinningBlock { get { return this.chainState.TargetBlock; } }
 
-        public IImmutableList<ChainedBlock> WinningBlockchain
+        public IImmutableList<ChainedBlock> WinningBlockchain { get { return this.chainState.TargetBlockchain; } }
+
+        public Data.Blockchain CurrentBlockchain { get { return this.chainState.CurrentBlock; } }
+
+        public int CurrentBuilderHeight
         {
             get
             {
-                return this.chainState.TargetBlockchain;
+                var chainStateLocal = this.chainState;
+                var currentBlockBuilder = this.currentBlockBuilder;
+
+                if (currentBlockBuilder != null)
+                    return currentBlockBuilder.Height;
+                else
+                    return chainStateLocal.CurrentBlock.Height;
             }
         }
-
-        public Data.Blockchain CurrentBlockchain { get { return this.chainState.CurrentBlock; } }
 
         public ImmutableHashSet<UInt256> MissingBlocks
         {

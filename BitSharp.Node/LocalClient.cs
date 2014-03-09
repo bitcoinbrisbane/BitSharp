@@ -42,6 +42,7 @@ namespace BitSharp.Node
         private static readonly int MAX_BLOCKCHAIN_LOOKAHEAD = 1000;
         // don't limit the first 100,000 block downloading as they are so small it will slow down their processing
         private static readonly int MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT = 100.THOUSAND();
+        private static readonly int REQUEST_LIFETIME_SECONDS = 5;
 
         private static readonly Random random = new Random();
 
@@ -222,7 +223,7 @@ namespace BitSharp.Node
             // remove old requests
             this.requestedBlocks.RemoveRange(
                 this.requestedBlocks
-                .Where(x => (now - x.Value) > TimeSpan.FromSeconds(15))
+                .Where(x => (now - x.Value) > TimeSpan.FromSeconds(REQUEST_LIFETIME_SECONDS))
                 .Select(x => x.Key));
 
             if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
@@ -279,7 +280,7 @@ namespace BitSharp.Node
                 {
                     // limit how far ahead the target blockchain will be downloaded
                     if (requestBlock.Height >= MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT
-                        && requestBlock.Height - chainStateLocal.CurrentBlock.Height > MAX_BLOCKCHAIN_LOOKAHEAD)
+                        && requestBlock.Height - this.blockchainDaemon.CurrentBuilderHeight > MAX_BLOCKCHAIN_LOOKAHEAD)
                         break;
 
                     var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), requestBlock.BlockHash);
@@ -318,7 +319,7 @@ namespace BitSharp.Node
             // remove old requests
             this.requestedTransactions.RemoveRange(
                 this.requestedTransactions
-                .Where(x => (now - x.Value) > TimeSpan.FromSeconds(15))
+                .Where(x => (now - x.Value) > TimeSpan.FromSeconds(REQUEST_LIFETIME_SECONDS))
                 .Select(x => x.Key));
 
             if (this.requestedTransactions.Count > MAX_TRANSACTION_REQUESTS)
