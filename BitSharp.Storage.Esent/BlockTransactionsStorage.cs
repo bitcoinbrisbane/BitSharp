@@ -24,12 +24,12 @@ namespace BitSharp.Storage.Esent
 
         public IEnumerable<UInt256> ReadAllKeys()
         {
-            return this.ReadAllDataKeys().Select(x => new UInt256(x));
+            return this.Data.Keys.Select(x => new UInt256(x));
         }
 
         public IEnumerable<KeyValuePair<UInt256, ImmutableList<UInt256>>> ReadAllValues()
         {
-            return this.ReadAllDataValues().Select(x =>
+            return this.Data.Select(x =>
                 {
                     var blockHash = new UInt256(x.Key);
                     var txHashesBytes = x.Value;
@@ -49,7 +49,7 @@ namespace BitSharp.Storage.Esent
         public bool TryReadValue(UInt256 blockHash, out ImmutableList<UInt256> blockTxHashes)
         {
             byte[] txHashesBytes;
-            if (this.TryReadDataValue(blockHash.ToByteArray(), out txHashesBytes))
+            if (this.Data.TryGetValue(blockHash.ToByteArray(), out txHashesBytes))
             {
                 var txHashes = ImmutableList.CreateBuilder<UInt256>();
                 var txHashBytes = new byte[32];
@@ -71,21 +71,23 @@ namespace BitSharp.Storage.Esent
 
         public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<ImmutableList<UInt256>>>> keyPairs)
         {
-            return this.TryWriteDataValues(keyPairs.Select(x =>
+            foreach (var keyPair in keyPairs)
+            {
+                var txHashesBytes = new byte[keyPair.Value.Value.Count * 32];
+                for (var i = 0; i < keyPair.Value.Value.Count; i++)
                 {
-                    var txHashesBytes = new byte[x.Value.Value.Count * 32];
-                    for (var i = 0; i < x.Value.Value.Count; i++)
-                    {
-                        Buffer.BlockCopy(x.Value.Value[i].ToByteArray(), 0, txHashesBytes, i * 32, 32);
-                    }
+                    Buffer.BlockCopy(keyPair.Value.Value[i].ToByteArray(), 0, txHashesBytes, i * 32, 32);
+                }
 
-                    return new KeyValuePair<byte[], WriteValue<byte[]>>(x.Key.ToByteArray(), new WriteValue<byte[]>(txHashesBytes, x.Value.IsCreate));
-                }));
+                this.Data[keyPair.Key.ToByteArray()] = txHashesBytes;
+            }
+
+            return true;
         }
 
         public void Truncate()
         {
-            this.TruncateData();
+            this.Data.Clear();
         }
     }
 }

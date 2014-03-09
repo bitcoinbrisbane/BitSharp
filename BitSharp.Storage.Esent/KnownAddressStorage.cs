@@ -22,19 +22,19 @@ namespace BitSharp.Storage.Esent
 
         public IEnumerable<NetworkAddressKey> ReadAllKeys()
         {
-            return this.ReadAllDataKeys().Select(x => NetworkEncoder.DecodeNetworkAddressKey(x.ToMemoryStream()));
+            return this.Data.Keys.Select(x => NetworkEncoder.DecodeNetworkAddressKey(x.ToMemoryStream()));
         }
 
         public IEnumerable<KeyValuePair<NetworkAddressKey, NetworkAddressWithTime>> ReadAllValues()
         {
-            return this.ReadAllDataValues().Select(x =>
+            return this.Data.Select(x =>
                 new KeyValuePair<NetworkAddressKey, NetworkAddressWithTime>(NetworkEncoder.DecodeNetworkAddressKey(x.Key.ToMemoryStream()), NetworkEncoder.DecodeNetworkAddressWithTime(x.Value.ToMemoryStream())));
         }
 
         public bool TryReadValue(NetworkAddressKey networkAddressKey, out NetworkAddressWithTime networkAddressWithTime)
         {
             byte[] networkAddressWithTimeBytes;
-            if (this.TryReadDataValue(NetworkEncoder.EncodeNetworkAddressKey(networkAddressKey), out networkAddressWithTimeBytes))
+            if (this.Data.TryGetValue(NetworkEncoder.EncodeNetworkAddressKey(networkAddressKey), out networkAddressWithTimeBytes))
             {
                 networkAddressWithTime = NetworkEncoder.DecodeNetworkAddressWithTime(networkAddressWithTimeBytes.ToMemoryStream());
                 return true;
@@ -48,12 +48,15 @@ namespace BitSharp.Storage.Esent
 
         public bool TryWriteValues(IEnumerable<KeyValuePair<NetworkAddressKey, WriteValue<NetworkAddressWithTime>>> keyPairs)
         {
-            return this.TryWriteDataValues(keyPairs.Select(x => new KeyValuePair<byte[], WriteValue<byte[]>>(NetworkEncoder.EncodeNetworkAddressKey(x.Key).ToArray(), new WriteValue<byte[]>(NetworkEncoder.EncodeNetworkAddressWithTime(x.Value.Value), x.Value.IsCreate))));
+            foreach (var keyPair in keyPairs)
+                this.Data[NetworkEncoder.EncodeNetworkAddressKey(keyPair.Key).ToArray()] = NetworkEncoder.EncodeNetworkAddressWithTime(keyPair.Value.Value);
+
+            return true;
         }
 
         public void Truncate()
         {
-            this.TruncateData();
+            this.Data.Clear();
         }
     }
 }

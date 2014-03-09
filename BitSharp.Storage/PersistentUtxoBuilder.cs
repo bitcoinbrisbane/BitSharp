@@ -13,7 +13,7 @@ namespace BitSharp.Storage
     public class PersistentUtxoBuilder : UtxoBuilder
     {
         private UInt256 _blockHash;
-        private PersistentDictionary<string, string> _utxo;
+        private PersistentByteDictionary _utxo;
 
         public PersistentUtxoBuilder(UInt256 blockHash, Utxo utxo)
         {
@@ -23,10 +23,10 @@ namespace BitSharp.Storage
             if (Directory.Exists(path))
                 Directory.Delete(path, recursive: true);
 
-            this._utxo = new PersistentDictionary<string, string>(path);
+            this._utxo = new PersistentByteDictionary(path);
             foreach (var unspentTx in utxo.UnspentTransactions())
             {
-                _utxo.Add(unspentTx.TxHash.ToBigInteger().ToString(), PersistentUtxo.SerializeUnspentTx(unspentTx));
+                _utxo.Add(unspentTx.TxHash.ToByteArray(), PersistentUtxo.SerializeUnspentTx(unspentTx));
             }
         }
 
@@ -34,22 +34,22 @@ namespace BitSharp.Storage
         {
             this._blockHash = blockHash;
             utxo.Duplicate(blockHash);
-            this._utxo = new PersistentDictionary<string, string>(PersistentUtxo.FolderPath(blockHash));
+            this._utxo = new PersistentByteDictionary(PersistentUtxo.FolderPath(blockHash));
         }
 
         public bool ContainsKey(Common.UInt256 txHash)
         {
-            return _utxo.ContainsKey(txHash.ToBigInteger().ToString());
+            return _utxo.ContainsKey(txHash.ToByteArray());
         }
 
         public bool Remove(Common.UInt256 txHash)
         {
-            return _utxo.Remove(txHash.ToBigInteger().ToString());
+            return _utxo.Remove(txHash.ToByteArray());
         }
 
         public void Add(Common.UInt256 txHash, UnspentTx unspentTx)
         {
-            _utxo.Add(txHash.ToBigInteger().ToString(), PersistentUtxo.SerializeUnspentTx(unspentTx));
+            _utxo.Add(txHash.ToByteArray(), PersistentUtxo.SerializeUnspentTx(unspentTx));
         }
 
         public int Count { get { return this._utxo.Count; } }
@@ -58,11 +58,11 @@ namespace BitSharp.Storage
         {
             get
             {
-                return PersistentUtxo.DeserializeUnspentTx(txHash.ToBigInteger().ToString(), _utxo[txHash.ToBigInteger().ToString()]);
+                return PersistentUtxo.DeserializeUnspentTx(txHash.ToByteArray(), _utxo[txHash.ToByteArray()]);
             }
             set
             {
-                _utxo[txHash.ToBigInteger().ToString()] = PersistentUtxo.SerializeUnspentTx(value);
+                _utxo[txHash.ToByteArray()] = PersistentUtxo.SerializeUnspentTx(value);
             }
         }
 

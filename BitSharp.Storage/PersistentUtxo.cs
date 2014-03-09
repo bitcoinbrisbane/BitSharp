@@ -14,33 +14,33 @@ namespace BitSharp.Storage
     public class PersistentUtxo : Utxo
     {
         private UInt256 _blockHash;
-        private PersistentDictionary<string, string> _utxo;
+        private PersistentByteDictionary _utxo;
 
         static internal string FolderPath(UInt256 blockHash)
         {
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", blockHash.ToString());
         }
 
-        static internal UnspentTx DeserializeUnspentTx(string key, string value)
+        static internal UnspentTx DeserializeUnspentTx(byte[] key, byte[] value)
         {
-            var txHash = UInt256.Parse(key);
-            var unspentOutputs = new ImmutableBitArray(Convert.FromBase64String(value));
+            var txHash = new UInt256(key);
+            var unspentOutputs = new ImmutableBitArray(value);
 
             return new UnspentTx(txHash, unspentOutputs);
         }
 
-        static internal string SerializeUnspentTx(UnspentTx unspentTx)
+        static internal byte[] SerializeUnspentTx(UnspentTx unspentTx)
         {
-            return Convert.ToBase64String(unspentTx.UnspentOutputs.ToByteArray());
+            return unspentTx.UnspentOutputs.ToByteArray();
         }
 
         public PersistentUtxo(UInt256 blockHash)
         {
             this._blockHash = blockHash;
-            this._utxo = new PersistentDictionary<string, string>(FolderPath(blockHash));
+            this._utxo = new PersistentByteDictionary(FolderPath(blockHash));
         }
 
-        internal PersistentUtxo(UInt256 blockHash, PersistentDictionary<string, string> utxo)
+        internal PersistentUtxo(UInt256 blockHash, PersistentByteDictionary utxo)
         {
             this._blockHash = blockHash;
             this._utxo = utxo;
@@ -71,12 +71,12 @@ namespace BitSharp.Storage
 
         public bool ContainsKey(Common.UInt256 txHash)
         {
-            return _utxo.ContainsKey(txHash.ToBigInteger().ToString());
+            return _utxo.ContainsKey(txHash.ToByteArray());
         }
 
         public UnspentTx this[Common.UInt256 txHash]
         {
-            get { return DeserializeUnspentTx(txHash.ToBigInteger().ToString(), this._utxo[txHash.ToBigInteger().ToString()]); }
+            get { return DeserializeUnspentTx(txHash.ToByteArray(), this._utxo[txHash.ToByteArray()]); }
         }
 
         internal void Duplicate(UInt256 blockHash)
@@ -95,7 +95,7 @@ namespace BitSharp.Storage
             foreach (var srcFile in Directory.GetFiles(srcPath))
                 File.Copy(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
 
-            this._utxo = new PersistentDictionary<string, string>(srcPath);
+            this._utxo = new PersistentByteDictionary(srcPath);
         }
 
         public void Dispose()
