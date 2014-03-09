@@ -658,7 +658,7 @@ namespace BitSharp.Daemon
                     }
 
                     // collect after processing
-                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
+                    //GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
 
                     // handle any missing data that prevented further processing
                     foreach (var e in missingData)
