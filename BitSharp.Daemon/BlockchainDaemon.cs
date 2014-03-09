@@ -43,6 +43,8 @@ namespace BitSharp.Daemon
 
         private ChainState chainState;
         private readonly ReaderWriterLockSlim chainStateLock;
+        private BlockchainBuilder currentBlockBuilder;
+        private DateTime currentBlockBuilderTime;
 
         private readonly ConcurrentSetBuilder<UInt256> missingBlocks;
         private readonly ConcurrentSetBuilder<UInt256> unchainedBlocks;
@@ -569,6 +571,29 @@ namespace BitSharp.Daemon
             {
                 var chainStateLocal = this.chainState;
 
+                if (this.currentBlockBuilder != null 
+                    && this.currentBlockBuilder.RootBlockHash != chainStateLocal.CurrentBlock.RootBlockHash
+                    && DateTime.UtcNow - this.currentBlockBuilderTime > TimeSpan.FromSeconds(60))
+                {
+                    this.currentBlockBuilder.UtxoBuilder.ToImmutable().Dispose();
+
+                    //TODO obviously a stop gap here...
+                    var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", this.currentBlockBuilder.RootBlockHash.ToString());
+                    if (Directory.Exists(destPath))
+                        Directory.Delete(destPath, recursive: true);
+                    Directory.CreateDirectory(destPath);
+
+                    var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", ((PersistentUtxoBuilder)this.currentBlockBuilder.UtxoBuilder).BlockHash.ToString());
+                    foreach (var srcFile in Directory.GetFiles(srcPath, "*.edb"))
+                        File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
+                    Directory.Delete(srcPath, recursive: true);
+
+                    UpdateCurrentBlockchain(new Data.Blockchain(this.currentBlockBuilder.BlockList, this.currentBlockBuilder.BlockListHashes, new PersistentUtxo(this.currentBlockBuilder.RootBlockHash)));
+                    chainStateLocal = this.chainState;
+                    
+                    this.currentBlockBuilder = null;
+                }
+
                 // check if the winning blockchain has changed
                 if (chainStateLocal.CurrentBlock.RootBlockHash != chainStateLocal.TargetBlock.BlockHash)
                 {
@@ -590,25 +615,26 @@ namespace BitSharp.Daemon
                     //TODO cleanup this design
                     List<MissingDataException> missingData;
 
-                    var disposed = false;
-                    var utxoBuilder = chainStateLocal.CurrentBlock.Utxo.ToBuilder(chainStateLocal.TargetBlock.BlockHash);
-                    try
+                    if (this.currentBlockBuilder == null)
                     {
-                        var blockchainBuilder = new BlockchainBuilder
+                        this.currentBlockBuilderTime = DateTime.UtcNow;
+                        this.currentBlockBuilder = new BlockchainBuilder
                         (
                             blockList: chainStateLocal.CurrentBlock.BlockList,
                             blockListHashes: chainStateLocal.CurrentBlock.BlockListHashes,
-                            utxoBuilder: utxoBuilder
+                            utxoBuilder: chainStateLocal.CurrentBlock.Utxo.ToBuilder(chainStateLocal.TargetBlock.BlockHash)
                         );
+                    }
 
+                    try
+                    {
                         // try to advance the blockchain with the new winning block
-                        BlockchainBuilder newBlockchain;
                         using (var cancelToken = new CancellationTokenSource())
                         {
                             var startTime = new Stopwatch();
                             startTime.Start();
 
-                            newBlockchain = Calculator.CalculateBlockchainFromExisting(blockchainBuilder, chainStateLocal.TargetBlock, utxoBuilder, chainStateLocal.TargetBlockchain, out missingData, cancelToken.Token,
+                            this.currentBlockBuilder = Calculator.CalculateBlockchainFromExisting(this.currentBlockBuilder, chainStateLocal.TargetBlock, this.currentBlockBuilder.UtxoBuilder, chainStateLocal.TargetBlockchain, out missingData, cancelToken.Token,
                                 progressBlockchain =>
                                 {
                                     if (startTime.Elapsed > TimeSpan.FromSeconds(60))
@@ -623,30 +649,12 @@ namespace BitSharp.Daemon
                                     this.writeBlockchainWorker.NotifyWork();
                                 });
                         }
-
-                        utxoBuilder.ToImmutable().Dispose();
-                        disposed = true;
-
-                        if (chainStateLocal.CurrentBlock.RootBlockHash != newBlockchain.RootBlockHash)
-                        {
-                            //TODO obviously a stop gap here...
-                            var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", newBlockchain.RootBlockHash.ToString());
-                            if (Directory.Exists(destPath))
-                                Directory.Delete(destPath, recursive: true);
-                            Directory.CreateDirectory(destPath);
-
-                            var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", chainStateLocal.TargetBlock.BlockHash.ToString());
-                            foreach (var srcFile in Directory.GetFiles(srcPath, "*.edb"))
-                                File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
-                            Directory.Delete(srcPath, recursive: true);
-
-                            UpdateCurrentBlockchain(new Data.Blockchain(newBlockchain.BlockList, newBlockchain.BlockListHashes, new PersistentUtxo(newBlockchain.RootBlockHash)));
-                        }
                     }
-                    finally
+                    catch (Exception e)
                     {
-                        if (!disposed)
-                            utxoBuilder.ToImmutable().DisposeDelete();
+                        this.currentBlockBuilder.UtxoBuilder.ToImmutable().DisposeDelete();
+                        this.currentBlockBuilder = null;
+                        throw;
                     }
 
                     // collect after processing

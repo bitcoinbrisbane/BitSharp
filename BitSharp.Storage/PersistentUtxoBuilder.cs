@@ -37,6 +37,8 @@ namespace BitSharp.Storage
             this._utxo = new PersistentUInt256ByteDictionary(PersistentUtxo.FolderPath(blockHash));
         }
 
+        public UInt256 BlockHash { get { return this._blockHash; } }
+
         public bool ContainsKey(Common.UInt256 txHash)
         {
             return _utxo.ContainsKey(txHash);
