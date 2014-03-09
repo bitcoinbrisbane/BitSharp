@@ -571,27 +571,19 @@ namespace BitSharp.Daemon
             {
                 var chainStateLocal = this.chainState;
 
-                if (this.currentBlockBuilder != null 
+                if (this.currentBlockBuilder != null
                     && this.currentBlockBuilder.RootBlockHash != chainStateLocal.CurrentBlock.RootBlockHash
                     && DateTime.UtcNow - this.currentBlockBuilderTime > TimeSpan.FromSeconds(60))
                 {
-                    this.currentBlockBuilder.UtxoBuilder.ToImmutable().Dispose();
+                    var blockList = this.currentBlockBuilder.BlockList.ToImmutable();
+                    var blockListHashes = this.currentBlockBuilder.BlockListHashes.ToImmutable();
+                    var utxo = this.currentBlockBuilder.UtxoBuilder.Close(this.currentBlockBuilder.RootBlockHash);
 
-                    //TODO obviously a stop gap here...
-                    var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", this.currentBlockBuilder.RootBlockHash.ToString());
-                    if (Directory.Exists(destPath))
-                        Directory.Delete(destPath, recursive: true);
-                    Directory.CreateDirectory(destPath);
-
-                    var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", ((PersistentUtxoBuilder)this.currentBlockBuilder.UtxoBuilder).BlockHash.ToString());
-                    foreach (var srcFile in Directory.GetFiles(srcPath, "*.edb"))
-                        File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
-                    Directory.Delete(srcPath, recursive: true);
-
-                    UpdateCurrentBlockchain(new Data.Blockchain(this.currentBlockBuilder.BlockList, this.currentBlockBuilder.BlockListHashes, new PersistentUtxo(this.currentBlockBuilder.RootBlockHash)));
-                    chainStateLocal = this.chainState;
-                    
+                    this.currentBlockBuilder.Dispose();
                     this.currentBlockBuilder = null;
+
+                    UpdateCurrentBlockchain(new Data.Blockchain(blockList, blockListHashes, utxo));
+                    chainStateLocal = this.chainState;
                 }
 
                 // check if the winning blockchain has changed
@@ -620,9 +612,9 @@ namespace BitSharp.Daemon
                         this.currentBlockBuilderTime = DateTime.UtcNow;
                         this.currentBlockBuilder = new BlockchainBuilder
                         (
-                            blockList: chainStateLocal.CurrentBlock.BlockList,
-                            blockListHashes: chainStateLocal.CurrentBlock.BlockListHashes,
-                            utxoBuilder: chainStateLocal.CurrentBlock.Utxo.ToBuilder(chainStateLocal.TargetBlock.BlockHash)
+                            blockList: chainStateLocal.CurrentBlock.BlockList.ToBuilder(),
+                            blockListHashes: chainStateLocal.CurrentBlock.BlockListHashes.ToBuilder(),
+                            utxoBuilder: chainStateLocal.CurrentBlock.Utxo.ToBuilder()
                         );
                     }
 
@@ -634,13 +626,11 @@ namespace BitSharp.Daemon
                             var startTime = new Stopwatch();
                             startTime.Start();
 
-                            this.currentBlockBuilder = Calculator.CalculateBlockchainFromExisting(this.currentBlockBuilder, chainStateLocal.TargetBlock, this.currentBlockBuilder.UtxoBuilder, chainStateLocal.TargetBlockchain, out missingData, cancelToken.Token,
-                                progressBlockchain =>
+                            Calculator.CalculateBlockchainFromExisting(this.currentBlockBuilder, chainStateLocal.TargetBlock, chainStateLocal.TargetBlockchain, out missingData, cancelToken.Token,
+                                () =>
                                 {
                                     if (startTime.Elapsed > TimeSpan.FromSeconds(60))
                                     {
-                                        //TODO
-                                        //UpdateCurrentBlockchain(progressBlockchain);
                                         this.writeBlockchainWorker.NotifyWork();
                                         cancelToken.Cancel();
                                     }
@@ -652,7 +642,7 @@ namespace BitSharp.Daemon
                     }
                     catch (Exception e)
                     {
-                        this.currentBlockBuilder.UtxoBuilder.ToImmutable().DisposeDelete();
+                        this.currentBlockBuilder.Dispose();
                         this.currentBlockBuilder = null;
                         throw;
                     }

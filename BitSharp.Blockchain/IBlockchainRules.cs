@@ -21,7 +21,7 @@ namespace BitSharp.Blockchain
 
         Data.Blockchain GenesisBlockchain { get; }
 
-        void ValidateBlock(Block block, BlockchainBuilder blockchain, UtxoBuilder utxo, ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions /*, ImmutableDictionary<UInt256, Transaction> transactions*/);
+        void ValidateBlock(Block block, BlockchainBuilder blockchainBuilder, ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions /*, ImmutableDictionary<UInt256, Transaction> transactions*/);
 
         ChainedBlock SelectWinningChainedBlock(IList<ChainedBlock> leafChainedBlocks);
     }

@@ -10,27 +10,40 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Data
 {
-    public class BlockchainBuilder
+    public class BlockchainBuilder : IDisposable
     {
         //TODO use block hash instead of block metadata
-        private readonly ImmutableList<ChainedBlock> _blockList;
-        private readonly ImmutableHashSet<UInt256> _blockListHashes;
-        private readonly UtxoBuilder _utxoBuilder;
+        private ImmutableList<ChainedBlock>.Builder blockList;
+        private ImmutableHashSet<UInt256>.Builder blockListHashes;
+        private readonly UtxoBuilder utxoBuilder;
 
-        public BlockchainBuilder(ImmutableList<ChainedBlock> blockList, ImmutableHashSet<UInt256> blockListHashes, UtxoBuilder utxoBuilder)
+        public BlockchainBuilder(ImmutableList<ChainedBlock>.Builder blockList, ImmutableHashSet<UInt256>.Builder blockListHashes, UtxoBuilder utxoBuilder)
         {
             //Debug.Assert(!blockList.Where((x, i) => x.Height != i).Any());
 
-            this._blockList = blockList;
-            this._blockListHashes = blockListHashes;
-            this._utxoBuilder = utxoBuilder;
+            this.blockList = blockList;
+            this.blockListHashes = blockListHashes;
+            this.utxoBuilder = utxoBuilder;
         }
 
-        public ImmutableList<ChainedBlock> BlockList { get { return this._blockList; } }
+        ~BlockchainBuilder()
+        {
+            this.Dispose();
+        }
 
-        public ImmutableHashSet<UInt256> BlockListHashes { get { return this._blockListHashes; } }
+        public ImmutableList<ChainedBlock>.Builder BlockList
+        {
+            get { return this.blockList; }
+            set { this.blockList = value; }
+        }
 
-        public UtxoBuilder UtxoBuilder { get { return this._utxoBuilder; } }
+        public ImmutableHashSet<UInt256>.Builder BlockListHashes
+        {
+            get { return this.blockListHashes; }
+            set { this.blockListHashes = value; }
+        }
+
+        public UtxoBuilder UtxoBuilder { get { return this.utxoBuilder; } }
 
         public int BlockCount { get { return this.BlockList.Count; } }
 
@@ -59,6 +72,12 @@ namespace BitSharp.Data
         public static bool operator !=(BlockchainBuilder left, BlockchainBuilder right)
         {
             return !(left == right);
+        }
+
+        public void Dispose()
+        {
+            this.utxoBuilder.Dispose();
+            GC.SuppressFinalize(this);
         }
 
         private class UtxoComparer : IEqualityComparer<KeyValuePair<UInt256, UnspentTx>>

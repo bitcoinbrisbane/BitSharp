@@ -12,65 +12,99 @@ namespace BitSharp.Storage
 {
     public class PersistentUtxoBuilder : UtxoBuilder
     {
-        private UInt256 _blockHash;
-        private PersistentUInt256ByteDictionary _utxo;
+        private readonly string directory;
+        private readonly PersistentUInt256ByteDictionary utxo;
+        private bool disposed = false;
 
-        public PersistentUtxoBuilder(UInt256 blockHash, Utxo utxo)
+        public PersistentUtxoBuilder(Utxo utxo)
         {
-            this._blockHash = blockHash;
-
-            var path = PersistentUtxo.FolderPath(blockHash);
-            if (Directory.Exists(path))
-                Directory.Delete(path, recursive: true);
-
-            this._utxo = new PersistentUInt256ByteDictionary(path);
+            this.directory = GetDirectory();
+            this.utxo = new PersistentUInt256ByteDictionary(this.directory);
             foreach (var unspentTx in utxo.UnspentTransactions())
             {
-                _utxo.Add(unspentTx.TxHash, PersistentUtxo.SerializeUnspentTx(unspentTx));
+                this.utxo.Add(unspentTx.TxHash, PersistentUtxo.SerializeUnspentTx(unspentTx));
             }
         }
 
-        public PersistentUtxoBuilder(UInt256 blockHash, PersistentUtxo utxo)
+        public PersistentUtxoBuilder(PersistentUtxo parentUtxo)
         {
-            this._blockHash = blockHash;
-            utxo.Duplicate(blockHash);
-            this._utxo = new PersistentUInt256ByteDictionary(PersistentUtxo.FolderPath(blockHash));
+            this.directory = GetDirectory();
+            parentUtxo.Duplicate(this.directory);
+            this.utxo = new PersistentUInt256ByteDictionary(this.directory);
         }
 
-        public UInt256 BlockHash { get { return this._blockHash; } }
+        ~PersistentUtxoBuilder()
+        {
+            this.Dispose();
+        }
 
         public bool ContainsKey(Common.UInt256 txHash)
         {
-            return _utxo.ContainsKey(txHash);
+            return this.utxo.ContainsKey(txHash);
         }
 
         public bool Remove(Common.UInt256 txHash)
         {
-            return _utxo.Remove(txHash);
+            return this.utxo.Remove(txHash);
         }
 
+        public void Clear()
+        {
+            this.utxo.Clear();
+        }
+        
         public void Add(Common.UInt256 txHash, UnspentTx unspentTx)
         {
-            _utxo.Add(txHash, PersistentUtxo.SerializeUnspentTx(unspentTx));
+            this.utxo.Add(txHash, PersistentUtxo.SerializeUnspentTx(unspentTx));
         }
 
-        public int Count { get { return this._utxo.Count; } }
+        public int Count { get { return this.utxo.Count; } }
 
         public UnspentTx this[Common.UInt256 txHash]
         {
             get
             {
-                return PersistentUtxo.DeserializeUnspentTx(txHash, _utxo[txHash]);
+                return PersistentUtxo.DeserializeUnspentTx(txHash, this.utxo[txHash]);
             }
             set
             {
-                _utxo[txHash] = PersistentUtxo.SerializeUnspentTx(value);
+                this.utxo[txHash] = PersistentUtxo.SerializeUnspentTx(value);
             }
         }
 
-        public Utxo ToImmutable()
+        public Utxo Close(UInt256 blockHash)
         {
-            return new PersistentUtxo(_blockHash, _utxo);
+            this.utxo.Dispose();
+            this.disposed = true;
+
+            //TODO obviously a stop gap here...
+            var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", PersistentUtxo.GetDirectory(blockHash));
+            if (Directory.Exists(destPath))
+                Directory.Delete(destPath, recursive: true);
+            Directory.CreateDirectory(destPath);
+
+            foreach (var srcFile in Directory.GetFiles(this.directory, "*.edb"))
+                File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
+            Directory.Delete(this.directory, recursive: true);
+
+            return new PersistentUtxo(blockHash);
+        }
+
+        public void Dispose()
+        {
+            if (!this.disposed)
+            {
+                this.utxo.Dispose();
+                this.disposed = true;
+                GC.SuppressFinalize(this);
+                
+                Directory.Delete(this.directory, recursive: true);
+            }
+        }
+
+        private string GetDirectory()
+        {
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", Guid.NewGuid().ToString());
         }
     }
 }

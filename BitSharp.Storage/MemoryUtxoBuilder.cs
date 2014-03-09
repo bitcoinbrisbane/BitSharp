@@ -11,58 +11,64 @@ namespace BitSharp.Storage
 {
     public class MemoryUtxoBuilder : UtxoBuilder
     {
-        private UInt256 _blockHash;
-        private ImmutableDictionary<UInt256, UnspentTx>.Builder _utxo;
+        private ImmutableDictionary<UInt256, UnspentTx>.Builder utxo;
 
-        public MemoryUtxoBuilder(UInt256 blockHash, Utxo utxo)
+        public MemoryUtxoBuilder(Utxo parentUtxo)
         {
-            this._blockHash = blockHash;
-            this._utxo = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
+            this.utxo = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
 
-            foreach (var unspentTx in utxo.UnspentTransactions())
+            foreach (var unspentTx in parentUtxo.UnspentTransactions())
             {
-                _utxo.Add(unspentTx.TxHash, unspentTx);
+                this.utxo.Add(unspentTx.TxHash, unspentTx);
             }
         }
 
-        public MemoryUtxoBuilder(UInt256 blockHash, MemoryUtxo utxo)
+        public MemoryUtxoBuilder(MemoryUtxo parentUtxo)
         {
-            this._blockHash = blockHash;
-            this._utxo = utxo.Dictionary.ToBuilder();
+            this.utxo = parentUtxo.Dictionary.ToBuilder();
         }
 
         public bool ContainsKey(Common.UInt256 txHash)
         {
-            return _utxo.ContainsKey(txHash);
+            return this.utxo.ContainsKey(txHash);
         }
 
         public bool Remove(Common.UInt256 txHash)
         {
-            return _utxo.Remove(txHash);
+            return this.utxo.Remove(txHash);
+        }
+
+        public void Clear()
+        {
+            this.utxo.Clear();
         }
 
         public void Add(Common.UInt256 txHash, UnspentTx unspentTx)
         {
-            _utxo.Add(txHash, unspentTx);
+            this.utxo.Add(txHash, unspentTx);
         }
 
-        public int Count { get { return this._utxo.Count; } }
+        public int Count { get { return this.utxo.Count; } }
 
         public UnspentTx this[Common.UInt256 txHash]
         {
             get
             {
-                return _utxo[txHash];
+                return utxo[txHash];
             }
             set
             {
-                _utxo[txHash] = value;
+                utxo[txHash] = value;
             }
         }
 
-        public Utxo ToImmutable()
+        public Utxo Close(UInt256 blockHash)
         {
-            return new MemoryUtxo(_blockHash, _utxo.ToImmutable());
+            return new MemoryUtxo(blockHash, this.utxo.ToImmutable());
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

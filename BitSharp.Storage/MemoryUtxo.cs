@@ -42,9 +42,9 @@ namespace BitSharp.Storage
             return this._utxo.Values;
         }
 
-        public UtxoBuilder ToBuilder(UInt256 blockHash)
+        public UtxoBuilder ToBuilder()
         {
-            return new PersistentUtxoBuilder(blockHash, this);
+            return new PersistentUtxoBuilder(this);
             //return new MemoryUtxoBuilder(this);
         }
 

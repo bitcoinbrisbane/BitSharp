@@ -170,23 +170,23 @@ namespace BitSharp.Blockchain
             return new UInt256(targetBytes);
         }
 
-        public virtual UInt256 GetRequiredNextTarget(BlockchainBuilder blockchain)
+        public virtual UInt256 GetRequiredNextTarget(BlockchainBuilder blockchainBuilder)
         {
             try
             {
                 // genesis block, use its target
-                if (blockchain.Height == 0)
+                if (blockchainBuilder.Height == 0)
                 {
                     // lookup genesis block header
-                    var genesisBlockHeader = this.CacheContext.GetBlockHeader(blockchain.BlockList[0].BlockHash);
+                    var genesisBlockHeader = this.CacheContext.GetBlockHeader(blockchainBuilder.BlockList[0].BlockHash);
 
                     return genesisBlockHeader.CalculateTarget();
                 }
                 // not on an adjustment interval, use previous block's target
-                else if (blockchain.Height % DifficultyInternal != 0)
+                else if (blockchainBuilder.Height % DifficultyInternal != 0)
                 {
                     // lookup the previous block on the current blockchain
-                    var prevBlockHeader = this.CacheContext.GetBlockHeader(blockchain.RootBlock.PreviousBlockHash);
+                    var prevBlockHeader = this.CacheContext.GetBlockHeader(blockchainBuilder.RootBlock.PreviousBlockHash);
 
                     return prevBlockHeader.CalculateTarget();
                 }
@@ -194,10 +194,10 @@ namespace BitSharp.Blockchain
                 else
                 {
                     // lookup the previous block on the current blockchain
-                    var prevBlockHeader = this.CacheContext.GetBlockHeader(blockchain.RootBlock.PreviousBlockHash);
+                    var prevBlockHeader = this.CacheContext.GetBlockHeader(blockchainBuilder.RootBlock.PreviousBlockHash);
 
                     // get the block difficultyInterval blocks ago
-                    var startChainedBlock = blockchain.BlockList.Reverse().Skip(DifficultyInternal).First();
+                    var startChainedBlock = blockchainBuilder.BlockList.ToImmutable().Reverse().Skip(DifficultyInternal).First();
                     var startBlockHeader = this.CacheContext.GetBlockHeader(startChainedBlock.BlockHash);
                     //Debug.Assert(startChainedBlock.Height == blockchain.Height - DifficultyInternal);
 
@@ -230,32 +230,32 @@ namespace BitSharp.Blockchain
             }
         }
 
-        public virtual void ValidateBlock(Block block, BlockchainBuilder blockchain, UtxoBuilder utxoBuilder, ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions/*, ImmutableDictionary<UInt256, Transaction> transactions*/)
+        public virtual void ValidateBlock(Block block, BlockchainBuilder blockchainBuilder, ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions/*, ImmutableDictionary<UInt256, Transaction> transactions*/)
         {
             //TODO
             if (BypassValidation)
                 return;
 
             // calculate the next required target
-            var requiredTarget = GetRequiredNextTarget(blockchain);
+            var requiredTarget = GetRequiredNextTarget(blockchainBuilder);
 
             // validate block's target against the required target
             var blockTarget = block.Header.CalculateTarget();
             if (blockTarget > requiredTarget)
             {
-                throw new ValidationException("Failing block {0} at height {1}: Block target {2} did not match required target of {3}".Format2(block.Hash.ToHexNumberString(), blockchain.Height, blockTarget.ToHexNumberString(), requiredTarget.ToHexNumberString()));
+                throw new ValidationException("Failing block {0} at height {1}: Block target {2} did not match required target of {3}".Format2(block.Hash.ToHexNumberString(), blockchainBuilder.Height, blockTarget.ToHexNumberString(), requiredTarget.ToHexNumberString()));
             }
 
             // validate block's proof of work against its stated target
             if (block.Hash > blockTarget || block.Hash > requiredTarget)
             {
-                throw new ValidationException("Failing block {0} at height {1}: Block did not match its own target of {2}".Format2(block.Hash.ToHexNumberString(), blockchain.Height, blockTarget.ToHexNumberString()));
+                throw new ValidationException("Failing block {0} at height {1}: Block did not match its own target of {2}".Format2(block.Hash.ToHexNumberString(), blockchainBuilder.Height, blockTarget.ToHexNumberString()));
             }
 
             // ensure there is at least 1 transaction
             if (block.Transactions.Count == 0)
             {
-                throw new ValidationException("Failing block {0} at height {1}: Zero transactions present".Format2(block.Hash.ToHexNumberString(), blockchain.Height));
+                throw new ValidationException("Failing block {0} at height {1}: Zero transactions present".Format2(block.Hash.ToHexNumberString(), blockchainBuilder.Height));
             }
 
             //TODO apply real coinbase rule
@@ -265,7 +265,7 @@ namespace BitSharp.Blockchain
             // check that coinbase has only one input
             if (coinbaseTx.Inputs.Count != 1)
             {
-                throw new ValidationException("Failing block {0} at height {1}: Coinbase transaction does not have exactly one input".Format2(block.Hash.ToHexNumberString(), blockchain.Height));
+                throw new ValidationException("Failing block {0} at height {1}: Coinbase transaction does not have exactly one input".Format2(block.Hash.ToHexNumberString(), blockchainBuilder.Height));
             }
 
             // validate transactions in parallel
@@ -278,7 +278,7 @@ namespace BitSharp.Blockchain
 
                     long unspentValueInner;
                     //TODO utxo will not be correct at transaction if a tx hash is reused within the same block
-                    ValidateTransaction(blockchain.Height, block, tx, txIndex, utxoBuilder, newTransactions, out unspentValueInner);
+                    ValidateTransaction(blockchainBuilder.Height, block, tx, txIndex, blockchainBuilder.UtxoBuilder, newTransactions, out unspentValueInner);
 
                     Interlocked.Add(ref unspentValue, unspentValueInner);
                 });
@@ -298,12 +298,12 @@ namespace BitSharp.Blockchain
             }
 
             //TODO utxo will not be correct at transaction if a tx hash is reused within the same block
-            ValidateTransactionScripts(block, utxoBuilder, newTransactions);
+            ValidateTransactionScripts(block, blockchainBuilder.UtxoBuilder, newTransactions);
 
             // calculate the expected reward in coinbase
             var expectedReward = (long)(50 * SATOSHI_PER_BTC);
-            if (blockchain.Height / 210000 <= 32)
-                expectedReward /= (long)Math.Pow(2, blockchain.Height / 210000);
+            if (blockchainBuilder.Height / 210000 <= 32)
+                expectedReward /= (long)Math.Pow(2, blockchainBuilder.Height / 210000);
             expectedReward += unspentValue;
 
             // calculate the actual reward in coinbase
@@ -314,7 +314,7 @@ namespace BitSharp.Blockchain
             // ensure coinbase has correct reward
             if (actualReward > expectedReward)
             {
-                throw new ValidationException("Failing block {0} at height {1}: Coinbase value is greater than reward + fees".Format2(block.Hash.ToHexNumberString(), blockchain.Height));
+                throw new ValidationException("Failing block {0} at height {1}: Coinbase value is greater than reward + fees".Format2(block.Hash.ToHexNumberString(), blockchainBuilder.Height));
             }
 
             // all validation has passed

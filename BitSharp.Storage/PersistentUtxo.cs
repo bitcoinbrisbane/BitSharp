@@ -1,4 +1,5 @@
 ﻿using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using Microsoft.Isam.Esent.Collections.Generic;
 using System;
@@ -7,16 +8,19 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
     public class PersistentUtxo : Utxo
     {
-        private UInt256 _blockHash;
-        private PersistentUInt256ByteDictionary _utxo;
+        private readonly UInt256 blockHash;
+        private readonly string directory;
+        private PersistentUInt256ByteDictionary utxo;
+        private readonly ReaderWriterLockSlim utxoLock;
 
-        static internal string FolderPath(UInt256 blockHash)
+        static internal string GetDirectory(UInt256 blockHash)
         {
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", blockHash.ToString());
         }
@@ -36,77 +40,76 @@ namespace BitSharp.Storage
 
         public PersistentUtxo(UInt256 blockHash)
         {
-            this._blockHash = blockHash;
-            this._utxo = new PersistentUInt256ByteDictionary(FolderPath(blockHash));
-        }
-
-        internal PersistentUtxo(UInt256 blockHash, PersistentUInt256ByteDictionary utxo)
-        {
-            this._blockHash = blockHash;
-            this._utxo = utxo;
+            this.blockHash = blockHash;
+            this.directory = GetDirectory(blockHash);
+            this.utxo = new PersistentUInt256ByteDictionary(this.directory);
+            this.utxoLock = new ReaderWriterLockSlim();
         }
 
         public UInt256 BlockHash
         {
-            get { return this._blockHash; }
+            get { return this.blockHash; }
         }
 
         public int Count
         {
-            get { return this._utxo.Count; }
+            get { return this.utxoLock.DoRead(() => this.utxo.Count); }
         }
 
         public IEnumerable<UnspentTx> UnspentTransactions()
         {
-            foreach (var rawUnspentTx in _utxo)
+            this.utxoLock.EnterReadLock();
+            try
             {
-                yield return DeserializeUnspentTx(rawUnspentTx.Key, rawUnspentTx.Value);
+                foreach (var rawUnspentTx in utxo)
+                {
+                    yield return DeserializeUnspentTx(rawUnspentTx.Key, rawUnspentTx.Value);
+                }
+            }
+            finally
+            {
+                this.utxoLock.ExitReadLock();
             }
         }
 
-        public UtxoBuilder ToBuilder(UInt256 blockHash)
+        public UtxoBuilder ToBuilder()
         {
-            return new PersistentUtxoBuilder(blockHash, this);
+            return new PersistentUtxoBuilder(this);
         }
 
         public bool ContainsKey(Common.UInt256 txHash)
         {
-            return _utxo.ContainsKey(txHash);
+            return this.utxoLock.DoRead(() => utxo.ContainsKey(txHash));
         }
 
         public UnspentTx this[Common.UInt256 txHash]
         {
-            get { return DeserializeUnspentTx(txHash, this._utxo[txHash]); }
+            get { return this.utxoLock.DoRead(() => DeserializeUnspentTx(txHash, this.utxo[txHash])); }
         }
 
-        internal void Duplicate(UInt256 blockHash)
+        internal void Duplicate(string destDirectory)
         {
-            if (blockHash == this.BlockHash)
-                throw new InvalidOperationException();
+            this.utxoLock.DoWrite(() =>
+            {
+                this.utxo.Dispose();
 
-            this._utxo.Dispose();
-            var srcPath = FolderPath(this.BlockHash);
-            var destPath = FolderPath(blockHash);
+                Directory.CreateDirectory(destDirectory);
+                foreach (var srcFile in Directory.GetFiles(this.directory, "*.edb"))
+                    File.Copy(srcFile, Path.Combine(destDirectory, Path.GetFileName(srcFile)));
 
-            if (Directory.Exists(destPath))
-                Directory.Delete(destPath, recursive: true);
-
-            Directory.CreateDirectory(destPath);
-            foreach (var srcFile in Directory.GetFiles(srcPath, "*.edb"))
-                File.Copy(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
-
-            this._utxo = new PersistentUInt256ByteDictionary(srcPath);
+                this.utxo = new PersistentUInt256ByteDictionary(this.directory);
+            });
         }
 
         public void Dispose()
         {
-            this._utxo.Dispose();
+            this.utxo.Dispose();
         }
 
         public void DisposeDelete()
         {
-            Dispose();
-            Directory.Delete(FolderPath(this.BlockHash), recursive: true);
+            this.Dispose();
+            Directory.Delete(this.directory, recursive: true);
         }
     }
 }

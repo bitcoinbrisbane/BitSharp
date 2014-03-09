@@ -7,11 +7,13 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Data
 {
-    public interface UtxoBuilder
+    public interface UtxoBuilder : IDisposable
     {
         bool ContainsKey(UInt256 txHash);
 
         bool Remove(UInt256 txHash);
+
+        void Clear();
 
         void Add(UInt256 txHash, UnspentTx unspentTx);
 
@@ -19,6 +21,6 @@ namespace BitSharp.Data
 
         UnspentTx this[UInt256 txHash] { get; set; }
 
-        Utxo ToImmutable();
+        Utxo Close(UInt256 blockHash);
     }
 }
