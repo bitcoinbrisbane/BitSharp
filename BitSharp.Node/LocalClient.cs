@@ -283,15 +283,17 @@ namespace BitSharp.Node
                     //|| currentBlockchain.RootBlockHash != this.lastCurrentBlockchain
                     || chainStateLocal.TargetBlock.BlockHash != this.lastTargetChainedBlock)
                 {
-                    using (var cancelToken = new CancellationTokenSource())
-                    {
-                        this.newChainBlockList =
-                            new MethodTimer().Time("newChainBlockList", () =>
-                                chainStateLocal.RewindBlocks.Select(x => x.BlockHash)
-                                .Concat(chainStateLocal.ForwardBlocks.Select(x => x.BlockHash))
-                                .Except(this.blockchainDaemon.CacheContext.BlockCache.GetAllKeys())
-                                .ToList());
-                    }
+                    new MethodTimer().Time("newChainBlockList", () =>
+                        {
+                            this.newChainBlockList = new List<UInt256>();
+                            foreach (var blockHash in chainStateLocal.RewindBlocks.Select(x => x.BlockHash)
+                                    .Concat(chainStateLocal.ForwardBlocks.Select(x => x.BlockHash)))
+                            {
+                                if (!this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(blockHash))
+                                    this.newChainBlockList.Add(blockHash);
+
+                            }
+                        });
                 }
 
                 this.lastCurrentBlockchain = chainStateLocal.CurrentBlock.RootBlockHash;
