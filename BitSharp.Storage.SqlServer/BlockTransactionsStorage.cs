@@ -59,15 +59,15 @@ namespace BitSharp.Storage.SqlServer
                         var blockHash = reader.GetUInt256(0);
                         var txHashesBytes = reader.GetBytes(1);
 
-                        var txHashes = new UInt256[txHashesBytes.Length / 32];
+                        var txHashes = ImmutableList.CreateBuilder<UInt256>();
                         var txHashBytes = new byte[32];
-                        for (var i = 0; i < txHashesBytes.Length / 32; i++)
+                        for (var i = 0; i < txHashesBytes.Length; i += 32)
                         {
-                            Array.Copy(txHashesBytes, i * 32, txHashBytes, 0, 32);
-                            txHashes[i] = new UInt256(txHashBytes);
+                            Buffer.BlockCopy(txHashesBytes, i, txHashBytes, 0, 32);
+                            txHashes.Add(new UInt256(txHashBytes));
                         }
 
-                        yield return new KeyValuePair<UInt256, ImmutableList<UInt256>>(blockHash, txHashes.ToImmutableList());
+                        yield return new KeyValuePair<UInt256, ImmutableList<UInt256>>(blockHash, txHashes.ToImmutable());
                     }
                 }
             }
@@ -91,15 +91,15 @@ namespace BitSharp.Storage.SqlServer
                     {
                         var txHashesBytes = reader.GetBytes(0);
 
-                        var txHashes = new UInt256[txHashesBytes.Length / 32];
+                        var txHashes = ImmutableList.CreateBuilder<UInt256>();
                         var txHashBytes = new byte[32];
-                        for (var i = 0; i < txHashesBytes.Length / 32; i++)
+                        for (var i = 0; i < txHashesBytes.Length; i += 32)
                         {
-                            Array.Copy(txHashesBytes, i * 32, txHashBytes, 0, 32);
-                            txHashes[i] = new UInt256(txHashBytes);
+                            Buffer.BlockCopy(txHashesBytes, i, txHashBytes, 0, 32);
+                            txHashes.Add(new UInt256(txHashBytes));
                         }
 
-                        blockTxHashes = txHashes.ToImmutableList();
+                        blockTxHashes = txHashes.ToImmutable();
                         return true;
                     }
                     else
@@ -141,7 +141,7 @@ namespace BitSharp.Storage.SqlServer
                         var txHashesBytes = new byte[keyPair.Value.Value.Count * 32];
                         for (var i = 0; i < keyPair.Value.Value.Count; i++)
                         {
-                            Array.Copy(keyPair.Value.Value[i].ToByteArray(), 0, txHashesBytes, i * 32, 32);
+                            Buffer.BlockCopy(keyPair.Value.Value[i].ToByteArray(), 0, txHashesBytes, i * 32, 32);
                         }
 
                         cmd.Parameters["@blockHash"].Value = blockHash.ToDbByteArray();
@@ -181,56 +181,56 @@ namespace BitSharp.Storage.SqlServer
             }
         }
 
-//        public IEnumerable<UInt256> ReadAllBlockHashes()
-//        {
-//            using (var conn = this.OpenConnection())
-//            using (var cmd = conn.CreateCommand())
-//            {
-//                cmd.CommandText = @"
-//                    SELECT DISTINCT BlockHash
-//                    FROM BlockTransactions";
+        //        public IEnumerable<UInt256> ReadAllBlockHashes()
+        //        {
+        //            using (var conn = this.OpenConnection())
+        //            using (var cmd = conn.CreateCommand())
+        //            {
+        //                cmd.CommandText = @"
+        //                    SELECT DISTINCT BlockHash
+        //                    FROM BlockTransactions";
 
-//                using (var reader = cmd.ExecuteReader())
-//                {
-//                    while (reader.Read())
-//                    {
-//                        var blockHash = reader.GetUInt256(0);
-//                        yield return blockHash;
-//                    }
-//                }
-//            }
-//        }
+        //                using (var reader = cmd.ExecuteReader())
+        //                {
+        //                    while (reader.Read())
+        //                    {
+        //                        var blockHash = reader.GetUInt256(0);
+        //                        yield return blockHash;
+        //                    }
+        //                }
+        //            }
+        //        }
 
-//        public bool TryReadTransaction(TxKey txKey, out Transaction transaction)
-//        {
-//            using (var conn = this.OpenConnection())
-//            using (var cmd = conn.CreateCommand())
-//            {
-//                cmd.CommandText = @"
-//                    SELECT TxHash, TxBytes
-//                    FROM BlockTransactions
-//                    WHERE BlockHash = @blockHash AND TxIndex = @txIndex";
+        //        public bool TryReadTransaction(TxKey txKey, out Transaction transaction)
+        //        {
+        //            using (var conn = this.OpenConnection())
+        //            using (var cmd = conn.CreateCommand())
+        //            {
+        //                cmd.CommandText = @"
+        //                    SELECT TxHash, TxBytes
+        //                    FROM BlockTransactions
+        //                    WHERE BlockHash = @blockHash AND TxIndex = @txIndex";
 
-//                cmd.Parameters.SetValue("@blockHash", SqlDbType.Binary, 32).Value = txKey.BlockHash.ToDbByteArray();
-//                cmd.Parameters.SetValue("@txIndex", SqlDbType.Int).Value = txKey.TxIndex.ToIntChecked();
+        //                cmd.Parameters.SetValue("@blockHash", SqlDbType.Binary, 32).Value = txKey.BlockHash.ToDbByteArray();
+        //                cmd.Parameters.SetValue("@txIndex", SqlDbType.Int).Value = txKey.TxIndex.ToIntChecked();
 
-//                using (var reader = cmd.ExecuteReader())
-//                {
-//                    if (reader.Read())
-//                    {
-//                        var txHash = reader.GetUInt256(0);
-//                        var txBytes = reader.GetBytes(1);
+        //                using (var reader = cmd.ExecuteReader())
+        //                {
+        //                    if (reader.Read())
+        //                    {
+        //                        var txHash = reader.GetUInt256(0);
+        //                        var txBytes = reader.GetBytes(1);
 
-//                        transaction = StorageEncoder.DecodeTransaction(txBytes.ToMemoryStream(), txHash);
-//                        return true;
-//                    }
-//                    else
-//                    {
-//                        transaction = default(Transaction);
-//                        return false;
-//                    }
-//                }
-//            }
-//        }
+        //                        transaction = StorageEncoder.DecodeTransaction(txBytes.ToMemoryStream(), txHash);
+        //                        return true;
+        //                    }
+        //                    else
+        //                    {
+        //                        transaction = default(Transaction);
+        //                        return false;
+        //                    }
+        //                }
+        //            }
+        //        }
     }
 }

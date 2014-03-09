@@ -38,7 +38,7 @@ namespace BitSharp.Storage.Esent
                     var txHashBytes = new byte[32];
                     for (var i = 0; i < txHashesBytes.Length; i += 32)
                     {
-                        Array.Copy(txHashesBytes, i, txHashBytes, 0, 32);
+                        Buffer.BlockCopy(txHashesBytes, i, txHashBytes, 0, 32);
                         txHashes.Add(new UInt256(txHashBytes));
                     }
 
@@ -55,7 +55,7 @@ namespace BitSharp.Storage.Esent
                 var txHashBytes = new byte[32];
                 for (var i = 0; i < txHashesBytes.Length; i += 32)
                 {
-                    Array.Copy(txHashesBytes, i, txHashBytes, 0, 32);
+                    Buffer.BlockCopy(txHashesBytes, i, txHashBytes, 0, 32);
                     txHashes.Add(new UInt256(txHashBytes));
                 }
 
@@ -76,7 +76,7 @@ namespace BitSharp.Storage.Esent
                     var txHashesBytes = new byte[x.Value.Value.Count * 32];
                     for (var i = 0; i < x.Value.Value.Count; i++)
                     {
-                        Array.Copy(x.Value.Value[i].ToByteArray(), 0, txHashesBytes, i * 32, 32);
+                        Buffer.BlockCopy(x.Value.Value[i].ToByteArray(), 0, txHashesBytes, i * 32, 32);
                     }
 
                     return new KeyValuePair<byte[], WriteValue<byte[]>>(x.Key.ToByteArray(), new WriteValue<byte[]>(txHashesBytes, x.Value.IsCreate));

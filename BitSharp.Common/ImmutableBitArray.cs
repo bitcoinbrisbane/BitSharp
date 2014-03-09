@@ -57,8 +57,11 @@ namespace BitSharp.Common
 
         public byte[] ToByteArray()
         {
-            var bytes = new byte[(int)Math.Ceiling((double)this.bitArray.Length / 8)];
+            var byteLength = (this.bitArray.Length + 7) / 8;
+            var bytes = new byte[byteLength];
+            
             this.bitArray.CopyTo(bytes, 0);
+            
             return bytes;
         }
 
