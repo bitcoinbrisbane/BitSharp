@@ -32,12 +32,12 @@ namespace BitSharp.BlockHelper
             );
         }
 
-        public static ImmutableArray<Transaction> ReadTransactions(dynamic transactions)
+        public static ImmutableList<Transaction> ReadTransactions(dynamic transactions)
         {
             return
                 Enumerable.Range(0, (int)transactions.Length)
                 .Select(i => (Transaction)ReadTransaction(transactions[i]))
-                .ToImmutableArray();
+                .ToImmutableList();
         }
 
         public static Transaction ReadTransaction(dynamic transaction)
@@ -51,20 +51,20 @@ namespace BitSharp.BlockHelper
             );
         }
 
-        public static ImmutableArray<TxInput> ReadInputs(dynamic inputs)
+        public static ImmutableList<TxInput> ReadInputs(dynamic inputs)
         {
             return
                 Enumerable.Range(0, (int)inputs.Length)
                 .Select(i => (TxInput)ReadInput(inputs[i]))
-                .ToImmutableArray();
+                .ToImmutableList();
         }
 
-        public static ImmutableArray<TxOutput> ReadOutputs(dynamic outputs)
+        public static ImmutableList<TxOutput> ReadOutputs(dynamic outputs)
         {
             return
                 Enumerable.Range(0, (int)outputs.Length)
                 .Select(i => (TxOutput)ReadOutput(outputs[i]))
-                .ToImmutableArray();
+                .ToImmutableList();
         }
 
         public static TxInput ReadInput(dynamic input)
@@ -90,15 +90,15 @@ namespace BitSharp.BlockHelper
             );
         }
 
-        public static ImmutableArray<byte> ReadCoinbase(string data)
+        public static ImmutableList<byte> ReadCoinbase(string data)
         {
-            return data != null ? HexStringToByteArray(data) : ImmutableArray.Create<byte>();
+            return data != null ? HexStringToByteArray(data) : ImmutableList.Create<byte>();
         }
 
-        public static ImmutableArray<byte> ReadScript(string data)
+        public static ImmutableList<byte> ReadScript(string data)
         {
             if (data == null)
-                return ImmutableArray.Create<byte>();
+                return ImmutableList.Create<byte>();
 
             var bytes = new List<byte>();
             foreach (var x in data.Split(' '))
@@ -110,9 +110,9 @@ namespace BitSharp.BlockHelper
                 else
                 {
                     var pushBytes = HexStringToByteArray(x);
-                    if (pushBytes.Length >= (int)ScriptOp.OP_PUSHBYTES1 && pushBytes.Length <= (int)ScriptOp.OP_PUSHBYTES75)
+                    if (pushBytes.Count >= (int)ScriptOp.OP_PUSHBYTES1 && pushBytes.Count <= (int)ScriptOp.OP_PUSHBYTES75)
                     {
-                        bytes.Add((byte)pushBytes.Length);
+                        bytes.Add((byte)pushBytes.Count);
                         bytes.AddRange(pushBytes);
                     }
                     else
@@ -122,16 +122,16 @@ namespace BitSharp.BlockHelper
                 }
             }
 
-            return bytes.ToImmutableArray();
+            return bytes.ToImmutableList();
         }
 
         //TODO not actually an extension method...
-        private static ImmutableArray<byte> HexStringToByteArray(string hex)
+        private static ImmutableList<byte> HexStringToByteArray(string hex)
         {
             return Enumerable.Range(0, hex.Length)
                              .Where(x => x % 2 == 0)
                              .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
-                             .ToImmutableArray();
+                             .ToImmutableList();
         }
     }
 }

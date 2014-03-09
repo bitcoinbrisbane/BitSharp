@@ -81,6 +81,9 @@ namespace BitSharp.Storage
 
         internal void Duplicate(UInt256 blockHash)
         {
+            if (blockHash == this.BlockHash)
+                throw new InvalidOperationException();
+
             this._utxo.Dispose();
             var srcPath = FolderPath(this.BlockHash);
             var destPath = FolderPath(blockHash);

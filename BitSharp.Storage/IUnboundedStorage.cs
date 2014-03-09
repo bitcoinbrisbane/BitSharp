@@ -10,7 +10,7 @@ namespace BitSharp.Storage
     {
         bool TryReadValue(TKey key, out TValue value);
         
-        bool TryWriteValues(IEnumerable<KeyValuePair<TKey, WriteValue<TValue>>> values);
+        bool TryWriteValues(IEnumerable<KeyValuePair<TKey, WriteValue<TValue>>> keyPairs);
     }
 
     public static class IUnboundedStorageExtensionMethods

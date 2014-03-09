@@ -46,10 +46,10 @@ namespace BitSharp.Network
 
         public async Task SendGetData(InventoryVector invVector)
         {
-            await SendGetData(ImmutableArray.Create(invVector));
+            await SendGetData(ImmutableList.Create(invVector));
         }
 
-        public async Task SendGetData(ImmutableArray<InventoryVector> invVectors)
+        public async Task SendGetData(ImmutableList<InventoryVector> invVectors)
         {
             //TODO
             await Task.Delay(0);
@@ -60,7 +60,7 @@ namespace BitSharp.Network
             await SendMessageAsync(getDataMessage);
         }
 
-        public async Task SendGetHeaders(ImmutableArray<UInt256> blockLocatorHashes, UInt256 hashStop)
+        public async Task SendGetHeaders(ImmutableList<UInt256> blockLocatorHashes, UInt256 hashStop)
         {
             var getHeadersPayload = Messaging.ConstructGetBlocksPayload(blockLocatorHashes, hashStop);
             var getBlocksMessage = Messaging.ConstructMessage("getheaders", NetworkEncoder.EncodeGetBlocksPayload(getHeadersPayload));
@@ -68,7 +68,7 @@ namespace BitSharp.Network
             await SendMessageAsync(getBlocksMessage);
         }
 
-        public async Task SendGetBlocks(ImmutableArray<UInt256> blockLocatorHashes, UInt256 hashStop)
+        public async Task SendGetBlocks(ImmutableList<UInt256> blockLocatorHashes, UInt256 hashStop)
         {
             var getBlocksPayload = Messaging.ConstructGetBlocksPayload(blockLocatorHashes, hashStop);
             var getBlocksMessage = Messaging.ConstructMessage("getblocks", NetworkEncoder.EncodeGetBlocksPayload(getBlocksPayload));

@@ -90,7 +90,7 @@ namespace BitSharp.Blockchain.Test
             var coinbaseTx = new Transaction
             (
                 version: 0,
-                inputs: ImmutableArray.Create
+                inputs: ImmutableList.Create
                 (
                     new TxInput
                     (
@@ -99,16 +99,16 @@ namespace BitSharp.Blockchain.Test
                             txHash: 0,
                             txOutputIndex: 0
                         ),
-                        scriptSignature: ImmutableArray.Create(random.NextBytes(100)),
+                        scriptSignature: ImmutableList.Create(random.NextBytes(100)),
                         sequence: 0
                     )
                 ),
-                outputs: ImmutableArray.Create
+                outputs: ImmutableList.Create
                 (
                     new TxOutput
                     (
                         value: 50 * SATOSHI_PER_BTC,
-                        scriptPublicKey: ImmutableArray.Create(TransactionManager.CreatePublicKeyScript(_coinbasePublicKey))
+                        scriptPublicKey: ImmutableList.Create(TransactionManager.CreatePublicKeyScript(_coinbasePublicKey))
                     )
                 ),
                 lockTime: 0
@@ -116,8 +116,8 @@ namespace BitSharp.Blockchain.Test
 
             //Debug.WriteLine("Coinbase Tx Created: {0}".Format2(coinbaseTx.Hash.ToHexNumberString()));
 
-            var transactions = ImmutableArray.Create(coinbaseTx);
-            var txHashes = ImmutableArray.Create(coinbaseTx.Hash);
+            var transactions = ImmutableList.Create(coinbaseTx);
+            var txHashes = ImmutableList.Create(coinbaseTx.Hash);
             var merkleRoot = DataCalculator.CalculateMerkleRoot(txHashes);
 
             var block = new Block

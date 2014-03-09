@@ -14,15 +14,15 @@ namespace BitSharp.Data
     public class Transaction
     {
         private readonly UInt32 _version;
-        private readonly ImmutableArray<TxInput> _inputs;
-        private readonly ImmutableArray<TxOutput> _outputs;
+        private readonly ImmutableList<TxInput> _inputs;
+        private readonly ImmutableList<TxOutput> _outputs;
         private readonly UInt32 _lockTime;
         private readonly UInt256 _hash;
         private readonly long _sizeEstimate;
 
         private readonly int hashCode;
 
-        public Transaction(UInt32 version, ImmutableArray<TxInput> inputs, ImmutableArray<TxOutput> outputs, UInt32 lockTime, UInt256 hash = null)
+        public Transaction(UInt32 version, ImmutableList<TxInput> inputs, ImmutableList<TxOutput> outputs, UInt32 lockTime, UInt256 hash = null)
         {
             this._version = version;
             this._inputs = inputs;
@@ -30,11 +30,11 @@ namespace BitSharp.Data
             this._lockTime = lockTime;
 
             var sizeEstimate = 0L;
-            for (var i = 0; i < inputs.Length; i++)
-                sizeEstimate += inputs[i].ScriptSignature.Length;
+            for (var i = 0; i < inputs.Count; i++)
+                sizeEstimate += inputs[i].ScriptSignature.Count;
 
-            for (var i = 0; i < outputs.Length; i++)
-                sizeEstimate += outputs[i].ScriptPublicKey.Length;
+            for (var i = 0; i < outputs.Count; i++)
+                sizeEstimate += outputs[i].ScriptPublicKey.Count;
             sizeEstimate = (long)(sizeEstimate * 1.5);
             this._sizeEstimate = sizeEstimate;
 
@@ -45,9 +45,9 @@ namespace BitSharp.Data
 
         public UInt32 Version { get { return this._version; } }
 
-        public ImmutableArray<TxInput> Inputs { get { return this._inputs; } }
+        public ImmutableList<TxInput> Inputs { get { return this._inputs; } }
 
-        public ImmutableArray<TxOutput> Outputs { get { return this._outputs; } }
+        public ImmutableList<TxOutput> Outputs { get { return this._outputs; } }
 
         public UInt32 LockTime { get { return this._lockTime; } }
 
@@ -55,7 +55,7 @@ namespace BitSharp.Data
 
         public long SizeEstimate { get { return this._sizeEstimate; } }
 
-        public Transaction With(UInt32? Version = null, ImmutableArray<TxInput>? Inputs = null, ImmutableArray<TxOutput>? Outputs = null, UInt32? LockTime = null)
+        public Transaction With(UInt32? Version = null, ImmutableList<TxInput> Inputs = null, ImmutableList<TxOutput> Outputs = null, UInt32? LockTime = null)
         {
             return new Transaction
             (

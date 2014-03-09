@@ -51,7 +51,7 @@ namespace BitSharp.Data
             return new UInt256(Crypto.DoubleSHA256(EncodeTransaction(tx)));
         }
 
-        public static UInt256 CalculateTransactionHash(UInt32 Version, ImmutableArray<TxInput> Inputs, ImmutableArray<TxOutput> Outputs, UInt32 LockTime)
+        public static UInt256 CalculateTransactionHash(UInt32 Version, ImmutableList<TxInput> Inputs, ImmutableList<TxOutput> Outputs, UInt32 LockTime)
         {
             return new UInt256(Crypto.DoubleSHA256(EncodeTransaction(Version, Inputs, Outputs, LockTime)));
         }
@@ -61,13 +61,13 @@ namespace BitSharp.Data
             return EncodeTransaction(tx.Version, tx.Inputs, tx.Outputs, tx.LockTime);
         }
 
-        public static byte[] EncodeTransaction(UInt32 Version, ImmutableArray<TxInput> Inputs, ImmutableArray<TxOutput> Outputs, UInt32 LockTime)
+        public static byte[] EncodeTransaction(UInt32 Version, ImmutableList<TxInput> Inputs, ImmutableList<TxOutput> Outputs, UInt32 LockTime)
         {
             var stream = new MemoryStream();
             using (var writer = new BinaryWriter(stream))
             {
                 writer.Write4Bytes(Version);
-                writer.WriteVarInt((UInt64)Inputs.Length);
+                writer.WriteVarInt((UInt64)Inputs.Count);
                 foreach (var input in Inputs)
                 {
                     writer.Write32Bytes(input.PreviousTxOutputKey.TxHash);
@@ -75,7 +75,7 @@ namespace BitSharp.Data
                     writer.WriteVarBytes(input.ScriptSignature.ToArray());
                     writer.Write4Bytes(input.Sequence);
                 }
-                writer.WriteVarInt((UInt64)Outputs.Length);
+                writer.WriteVarInt((UInt64)Outputs.Count);
                 foreach (var output in Outputs)
                 {
                     writer.Write8Bytes(output.Value);
@@ -87,17 +87,17 @@ namespace BitSharp.Data
             }
         }
 
-        public static UInt256 CalculateMerkleRoot(ImmutableArray<UInt256> txHashes)
+        public static UInt256 CalculateMerkleRoot(ImmutableList<UInt256> txHashes)
         {
-            ImmutableArray<ImmutableArray<byte>> merkleTree;
+            ImmutableList<ImmutableList<byte>> merkleTree;
             return CalculateMerkleRoot(txHashes, out merkleTree);
         }
 
-        public static UInt256 CalculateMerkleRoot(ImmutableArray<UInt256> txHashes, out ImmutableArray<ImmutableArray<byte>> merkleTree)
+        public static UInt256 CalculateMerkleRoot(ImmutableList<UInt256> txHashes, out ImmutableList<ImmutableList<byte>> merkleTree)
         {
-            var workingMerkleTree = new List<ImmutableArray<byte>>();
+            var workingMerkleTree = new List<ImmutableList<byte>>();
 
-            var hashes = txHashes.Select(tx => tx.ToByteArray().ToImmutableArray()).ToList();
+            var hashes = txHashes.Select(tx => tx.ToByteArray().ToImmutableList()).ToList();
 
             workingMerkleTree.AddRange(hashes);
             while (hashes.Count > 1)
@@ -114,12 +114,12 @@ namespace BitSharp.Data
                     Enumerable.Range(0, hashes.Count / 2)
                     .Select(i => hashes[i * 2].AddRange(hashes[i * 2 + 1]))
                     //.AsParallel().AsOrdered().WithExecutionMode(ParallelExecutionMode.ForceParallelism).WithDegreeOfParallelism(10)
-                    .Select(pair => Crypto.DoubleSHA256(pair.ToArray()).ToImmutableArray())
+                    .Select(pair => Crypto.DoubleSHA256(pair.ToArray()).ToImmutableList())
                     .ToList();
             }
             Debug.Assert(hashes.Count == 1);
 
-            merkleTree = workingMerkleTree.ToImmutableArray();
+            merkleTree = workingMerkleTree.ToImmutableList();
             return new UInt256(hashes[0].ToArray());
         }
 

@@ -122,7 +122,7 @@ namespace BitSharp.Test
         private void TestTransactionSignature(byte[][] expectedSignatures, Transaction tx, IDictionary<UInt256, Transaction> txLookup)
         {
             var scriptEngine = new ScriptEngine();
-            for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+            for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
             {
                 var input = tx.Inputs[inputIndex];
                 var prevOutput = txLookup[input.PreviousTxOutputKey.TxHash].Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
@@ -138,7 +138,7 @@ namespace BitSharp.Test
         {
             var scriptEngine = new ScriptEngine();
 
-            for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+            for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
             {
                 var input = tx.Inputs[inputIndex];
                 var prevOutput = txLookup[input.PreviousTxOutputKey.TxHash].Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
@@ -173,7 +173,7 @@ namespace BitSharp.Test
         {
             var scriptEngine = new ScriptEngine();
 
-            for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+            for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
             {
                 var input = tx.Inputs[inputIndex];
                 var prevOutput = txLookup[input.PreviousTxOutputKey.TxHash].Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
@@ -186,32 +186,32 @@ namespace BitSharp.Test
             }
         }
 
-        private static ImmutableArray<byte> GetSigFromScriptSig(ImmutableArray<byte> scriptSig)
+        private static ImmutableList<byte> GetSigFromScriptSig(ImmutableList<byte> scriptSig)
         {
             Debug.Assert(scriptSig[0] >= (int)ScriptOp.OP_PUSHBYTES1 && scriptSig[0] <= (int)ScriptOp.OP_PUSHBYTES75);
             // The first byte of scriptSig will be OP_PUSHBYTES, so the first byte indicates how many bytes to take to get sig from scriptSig
-            return scriptSig.Skip(1).Take(scriptSig[0]).ToImmutableArray();
+            return scriptSig.Skip(1).Take(scriptSig[0]).ToImmutableList();
         }
 
-        private static byte GetHashTypeFromScriptSig(ImmutableArray<byte> scriptSig)
+        private static byte GetHashTypeFromScriptSig(ImmutableList<byte> scriptSig)
         {
             return GetSigFromScriptSig(scriptSig).Last();
         }
 
-        private static ImmutableArray<byte> GetPubKeyFromScripts(ImmutableArray<byte> scriptSig, ImmutableArray<byte> pubKey)
+        private static ImmutableList<byte> GetPubKeyFromScripts(ImmutableList<byte> scriptSig, ImmutableList<byte> pubKey)
         {
-            if (scriptSig.Length > scriptSig[0] + 1)
+            if (scriptSig.Count > scriptSig[0] + 1)
             {
-                var result = scriptSig.Skip(1 + scriptSig[0] + 1).Take(scriptSig.Skip(1 + scriptSig[0]).First()).ToImmutableArray();
+                var result = scriptSig.Skip(1 + scriptSig[0] + 1).Take(scriptSig.Skip(1 + scriptSig[0]).First()).ToImmutableList();
                 return result;
             }
             else
             {
-                return pubKey.Skip(1).Take(pubKey.Length - 2).ToImmutableArray();
+                return pubKey.Skip(1).Take(pubKey.Count - 2).ToImmutableList();
             }
         }
 
-        private static ImmutableArray<byte> GetScriptFromInputPrevOutput(TxInput input, TxOutput prevOutput)
+        private static ImmutableList<byte> GetScriptFromInputPrevOutput(TxInput input, TxOutput prevOutput)
         {
             return input.ScriptSignature.AddRange(prevOutput.ScriptPublicKey);
         }

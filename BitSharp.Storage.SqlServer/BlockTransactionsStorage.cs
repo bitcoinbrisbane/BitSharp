@@ -43,7 +43,7 @@ namespace BitSharp.Storage.SqlServer
             }
         }
 
-        public IEnumerable<KeyValuePair<UInt256, ImmutableArray<UInt256>>> ReadAllValues()
+        public IEnumerable<KeyValuePair<UInt256, ImmutableList<UInt256>>> ReadAllValues()
         {
             using (var conn = this.OpenConnection())
             using (var cmd = conn.CreateCommand())
@@ -67,13 +67,13 @@ namespace BitSharp.Storage.SqlServer
                             txHashes[i] = new UInt256(txHashBytes);
                         }
 
-                        yield return new KeyValuePair<UInt256, ImmutableArray<UInt256>>(blockHash, txHashes.ToImmutableArray());
+                        yield return new KeyValuePair<UInt256, ImmutableList<UInt256>>(blockHash, txHashes.ToImmutableList());
                     }
                 }
             }
         }
 
-        public bool TryReadValue(UInt256 blockHash, out ImmutableArray<UInt256> blockTxHashes)
+        public bool TryReadValue(UInt256 blockHash, out ImmutableList<UInt256> blockTxHashes)
         {
             using (var conn = this.OpenConnection())
             using (var cmd = conn.CreateCommand())
@@ -99,19 +99,19 @@ namespace BitSharp.Storage.SqlServer
                             txHashes[i] = new UInt256(txHashBytes);
                         }
 
-                        blockTxHashes = txHashes.ToImmutableArray();
+                        blockTxHashes = txHashes.ToImmutableList();
                         return true;
                     }
                     else
                     {
-                        blockTxHashes = default(ImmutableArray<UInt256>);
+                        blockTxHashes = default(ImmutableList<UInt256>);
                         return false;
                     }
                 }
             }
         }
 
-        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<ImmutableArray<UInt256>>>> values)
+        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<ImmutableList<UInt256>>>> keyPairs)
         {
             var stopwatch = new Stopwatch();
             var count = 0;
@@ -134,12 +134,12 @@ namespace BitSharp.Storage.SqlServer
                     cmd.Parameters.Add(new SqlParameter { ParameterName = "@blockHash", DbType = DbType.Binary, Size = 32 });
                     cmd.Parameters.Add(new SqlParameter { ParameterName = "@txHashesBytes", DbType = DbType.Binary });
 
-                    foreach (var keyPair in values)
+                    foreach (var keyPair in keyPairs)
                     {
                         var blockHash = keyPair.Key;
 
-                        var txHashesBytes = new byte[keyPair.Value.Value.Length * 32];
-                        for (var i = 0; i < keyPair.Value.Value.Length; i++)
+                        var txHashesBytes = new byte[keyPair.Value.Value.Count * 32];
+                        for (var i = 0; i < keyPair.Value.Value.Count; i++)
                         {
                             Array.Copy(keyPair.Value.Value[i].ToByteArray(), 0, txHashesBytes, i * 32, 32);
                         }

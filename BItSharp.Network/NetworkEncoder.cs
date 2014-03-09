@@ -127,7 +127,7 @@ namespace BitSharp.Network
                         txHash: reader.Read32Bytes(),
                         txOutputIndex: reader.Read4Bytes()
                     ),
-                    scriptSignature: reader.ReadVarBytes().ToImmutableArray(),
+                    scriptSignature: reader.ReadVarBytes().ToImmutableList(),
                     sequence: reader.Read4Bytes()
                 );
             }
@@ -158,7 +158,7 @@ namespace BitSharp.Network
                 return new TxOutput
                 (
                     value: reader.Read8Bytes(),
-                    scriptPublicKey: reader.ReadVarBytes().ToImmutableArray()
+                    scriptPublicKey: reader.ReadVarBytes().ToImmutableList()
                 );
             }
         }
@@ -325,7 +325,7 @@ namespace BitSharp.Network
                 var command = reader.ReadFixedString(12);
                 var payloadSize = reader.Read4Bytes();
                 var payloadChecksum = reader.Read4Bytes();
-                var payload = reader.ReadBytes(payloadSize.ToIntChecked()).ToImmutableArray();
+                var payload = reader.ReadBytes(payloadSize.ToIntChecked()).ToImmutableList();
 
                 return new Message
                 (
@@ -364,7 +364,7 @@ namespace BitSharp.Network
                 return new NetworkAddress
                 (
                     Services: reader.Read8Bytes(),
-                    IPv6Address: reader.ReadBytes(16).ToImmutableArray(),
+                    IPv6Address: reader.ReadBytes(16).ToImmutableList(),
                     Port: reader.Read2BytesBE()
                 );
             }
@@ -399,19 +399,19 @@ namespace BitSharp.Network
             }
         }
 
-        public static void EncodeNetworkAddressWithTime(Stream stream, NetworkAddressWithTime networkAddress)
+        public static void EncodeNetworkAddressWithTime(Stream stream, NetworkAddressWithTime networkAddressWithTime)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write4Bytes(networkAddress.Time);
-                EncodeNetworkAddress(stream, networkAddress.NetworkAddress);
+                writer.Write4Bytes(networkAddressWithTime.Time);
+                EncodeNetworkAddress(stream, networkAddressWithTime.NetworkAddress);
             }
         }
 
-        public static byte[] EncodeNetworkAddressWithTime(NetworkAddressWithTime networkAddress)
+        public static byte[] EncodeNetworkAddressWithTime(NetworkAddressWithTime networkAddressWithTime)
         {
             var stream = new MemoryStream();
-            EncodeNetworkAddressWithTime(stream, networkAddress);
+            EncodeNetworkAddressWithTime(stream, networkAddressWithTime);
             return stream.ToArray();
         }
 
@@ -464,6 +464,34 @@ namespace BitSharp.Network
         {
             var stream = new MemoryStream();
             EncodeVersionPayload(stream, versionPayload, withRelay);
+            return stream.ToArray();
+        }
+
+        public static NetworkAddressKey DecodeNetworkAddressKey(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new NetworkAddressKey
+                (
+                    IPv6Address: reader.ReadVarBytes().ToImmutableList(),
+                    Port: reader.ReadUInt16()
+                );
+            }
+        }
+
+        public static void EncodeNetworkAddressKey(Stream stream, NetworkAddressKey networkAddressKey)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.WriteVarBytes(networkAddressKey.IPv6Address.ToArray());
+                writer.Write(networkAddressKey.Port);
+            }
+        }
+
+        public static byte[] EncodeNetworkAddressKey(NetworkAddressKey networkAddressKey)
+        {
+            var stream = new MemoryStream();
+            EncodeNetworkAddressKey(stream, networkAddressKey);
             return stream.ToArray();
         }
     }

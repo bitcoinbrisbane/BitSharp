@@ -717,7 +717,7 @@ namespace BitSharp.Node
             Interlocked.Increment(ref this.messageCount);
         }
 
-        private void OnInventoryVectors(ImmutableArray<InventoryVector> invVectors)
+        private void OnInventoryVectors(ImmutableList<InventoryVector> invVectors)
         {
             var connectedPeersLocal = this.connectedPeers.Values.SafeToList();
             if (connectedPeersLocal.Count == 0)
@@ -747,7 +747,7 @@ namespace BitSharp.Node
             if (this.requestedBlockTimes.TryAdd(blockHash, newRequestTime))
             {
                 this.requestedBlocks.TryAdd(blockHash);
-                var invVectors = ImmutableArray.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, blockHash));
+                var invVectors = ImmutableList.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, blockHash));
                 return remoteNode.Sender.SendGetData(invVectors);
             }
             else
@@ -761,7 +761,7 @@ namespace BitSharp.Node
                         this.requestedBlocks.TryAdd(blockHash);
                         this.requestedBlockTimes.AddOrUpdate(blockHash, newRequestTime, (existingKey, existingValue) => newRequestTime);
 
-                        var invVectors = ImmutableArray.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, blockHash));
+                        var invVectors = ImmutableList.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, blockHash));
                         return remoteNode.Sender.SendGetData(invVectors);
                     }
                 }
@@ -783,7 +783,7 @@ namespace BitSharp.Node
             if (this.requestedTransactionTimes.TryAdd(txHash, newRequestTime))
             {
                 this.requestedTransactions.TryAdd(txHash);
-                var invVectors = ImmutableArray.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_TRANSACTION, txHash));
+                var invVectors = ImmutableList.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_TRANSACTION, txHash));
                 return remoteNode.Sender.SendGetData(invVectors);
             }
             else
@@ -797,7 +797,7 @@ namespace BitSharp.Node
                         this.requestedTransactions.TryAdd(txHash);
                         this.requestedTransactionTimes.AddOrUpdate(txHash, newRequestTime, (existingKey, existingValue) => newRequestTime);
 
-                        var invVectors = ImmutableArray.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_TRANSACTION, txHash));
+                        var invVectors = ImmutableList.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_TRANSACTION, txHash));
                         return remoteNode.Sender.SendGetData(invVectors);
                     }
                 }
@@ -841,9 +841,9 @@ namespace BitSharp.Node
             }
         }
 
-        private void OnReceivedAddresses(ImmutableArray<NetworkAddressWithTime> addresses)
+        private void OnReceivedAddresses(ImmutableList<NetworkAddressWithTime> addresses)
         {
-            var ipEndpoints = new List<IPEndPoint>(addresses.Length);
+            var ipEndpoints = new List<IPEndPoint>(addresses.Count);
             foreach (var address in addresses)
             {
                 var ipEndpoint = address.NetworkAddress.ToIPEndPoint();
@@ -905,7 +905,7 @@ namespace BitSharp.Node
             remoteNode.Sender.SendMessageAsync(Messaging.ConstructMessage("headers", payloadStream.ToArray())).Wait();
         }
 
-        private void OnPing(RemoteNode remoteNode, ImmutableArray<byte> payload)
+        private void OnPing(RemoteNode remoteNode, ImmutableList<byte> payload)
         {
             remoteNode.Sender.SendMessageAsync(Messaging.ConstructMessage("pong", payload.ToArray())).Wait();
         }
@@ -952,7 +952,7 @@ namespace BitSharp.Node
 
                 //TODO shouldn't have to decode again
                 var versionMessage = versionTask.Result;
-                var versionPayload = NetworkEncoder.DecodeVersionPayload(versionMessage.Payload.ToArray().ToMemoryStream(), versionMessage.Payload.Length);
+                var versionPayload = NetworkEncoder.DecodeVersionPayload(versionMessage.Payload.ToArray().ToMemoryStream(), versionMessage.Payload.Count);
 
                 var remoteAddressWithTime = new NetworkAddressWithTime
                 (
@@ -1009,7 +1009,7 @@ namespace BitSharp.Node
         }
 
         //TODO move into p2p node
-        private static ImmutableArray<UInt256> CalculateBlockLocatorHashes(IImmutableList<ChainedBlock> blockHashes)
+        private static ImmutableList<UInt256> CalculateBlockLocatorHashes(IImmutableList<ChainedBlock> blockHashes)
         {
             var blockLocatorHashes = new List<UInt256>();
 
@@ -1027,7 +1027,7 @@ namespace BitSharp.Node
                 blockLocatorHashes.Add(blockHashes[0].BlockHash);
             }
 
-            return blockLocatorHashes.ToImmutableArray();
+            return blockLocatorHashes.ToImmutableList();
         }
     }
 

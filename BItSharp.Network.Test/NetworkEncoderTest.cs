@@ -212,14 +212,14 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeVersionPayloadWithoutRelay()
         {
-            var actual = NetworkEncoder.EncodeVersionPayload(NetworkEncoder.DecodeVersionPayload(VERSION_PAYLOAD_1_NO_RELAY_BYTES.ToArray().ToMemoryStream(), VERSION_PAYLOAD_1_NO_RELAY_BYTES.Length), withRelay: false);
+            var actual = NetworkEncoder.EncodeVersionPayload(NetworkEncoder.DecodeVersionPayload(VERSION_PAYLOAD_1_NO_RELAY_BYTES.ToArray().ToMemoryStream(), VERSION_PAYLOAD_1_NO_RELAY_BYTES.Count), withRelay: false);
             CollectionAssert.AreEqual(VERSION_PAYLOAD_1_NO_RELAY_BYTES.ToList(), actual.ToList());
         }
 
         [TestMethod]
         public void TestWireDecodeVersionPayloadWithRelay()
         {
-            var actual = NetworkEncoder.EncodeVersionPayload(NetworkEncoder.DecodeVersionPayload(VERSION_PAYLOAD_2_RELAY_BYTES.ToArray().ToMemoryStream(), VERSION_PAYLOAD_2_RELAY_BYTES.Length), withRelay: true);
+            var actual = NetworkEncoder.EncodeVersionPayload(NetworkEncoder.DecodeVersionPayload(VERSION_PAYLOAD_2_RELAY_BYTES.ToArray().ToMemoryStream(), VERSION_PAYLOAD_2_RELAY_BYTES.Count), withRelay: true);
             CollectionAssert.AreEqual(VERSION_PAYLOAD_2_RELAY_BYTES.ToList(), actual.ToList());
         }
     }

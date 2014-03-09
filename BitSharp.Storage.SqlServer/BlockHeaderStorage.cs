@@ -94,7 +94,7 @@ namespace BitSharp.Storage.SqlServer
             }
         }
 
-        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<BlockHeader>>> values)
+        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<BlockHeader>>> keyPairs)
         {
             try
             {
@@ -116,7 +116,7 @@ namespace BitSharp.Storage.SqlServer
                     cmd.Parameters.Add(new SqlParameter { ParameterName = "@headerBytes", SqlDbType = SqlDbType.Binary, Size = 80 });
 
                     cmd.CommandText = CREATE_QUERY;
-                    foreach (var keyPair in values.Where(x => x.Value.IsCreate))
+                    foreach (var keyPair in keyPairs.Where(x => x.Value.IsCreate))
                     {
                         var blockHeader = keyPair.Value.Value;
 
@@ -128,7 +128,7 @@ namespace BitSharp.Storage.SqlServer
                     }
 
                     cmd.CommandText = UPDATE_QUERY;
-                    foreach (var keyPair in values.Where(x => !x.Value.IsCreate))
+                    foreach (var keyPair in keyPairs.Where(x => !x.Value.IsCreate))
                     {
                         var blockHeader = keyPair.Value.Value;
 

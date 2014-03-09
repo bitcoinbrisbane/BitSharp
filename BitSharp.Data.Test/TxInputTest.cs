@@ -23,7 +23,7 @@ namespace BitSharp.Data.Test
                     txHash: randomTxInput.PreviousTxOutputKey.TxHash,
                     txOutputIndex: randomTxInput.PreviousTxOutputKey.TxOutputIndex
                 ),
-                scriptSignature: ImmutableArray.Create(randomTxInput.ScriptSignature.ToArray()),
+                scriptSignature: ImmutableList.Create(randomTxInput.ScriptSignature.ToArray()),
                 sequence: randomTxInput.Sequence
             );
 

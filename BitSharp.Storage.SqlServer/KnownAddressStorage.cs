@@ -35,7 +35,7 @@ namespace BitSharp.Storage.SqlServer
                 {
                     while (reader.Read())
                     {
-                        var ipAddress = reader.GetBytes(0).ToImmutableArray();
+                        var ipAddress = reader.GetBytes(0).ToImmutableList();
                         var port = reader.GetUInt16(1);
                         yield return new NetworkAddressKey(ipAddress, port);
                     }
@@ -56,7 +56,7 @@ namespace BitSharp.Storage.SqlServer
                 {
                     while (reader.Read())
                     {
-                        var ipAddress = reader.GetBytes(0).ToImmutableArray();
+                        var ipAddress = reader.GetBytes(0).ToImmutableList();
                         var port = reader.GetUInt16(1);
                         var services = reader.GetUInt64(2);
                         var time = reader.GetUInt32(3);
@@ -83,7 +83,7 @@ namespace BitSharp.Storage.SqlServer
                 {
                     if (reader.Read())
                     {
-                        var ipAddress = reader.GetBytes(0).ToImmutableArray();
+                        var ipAddress = reader.GetBytes(0).ToImmutableList();
                         var port = reader.GetUInt16(1);
                         var services = reader.GetUInt64(2);
                         var time = reader.GetUInt32(3);
@@ -101,7 +101,7 @@ namespace BitSharp.Storage.SqlServer
             }
         }
 
-        public bool TryWriteValues(IEnumerable<KeyValuePair<NetworkAddressKey, WriteValue<NetworkAddressWithTime>>> values)
+        public bool TryWriteValues(IEnumerable<KeyValuePair<NetworkAddressKey, WriteValue<NetworkAddressWithTime>>> keyPairs)
         {
             try
             {
@@ -119,7 +119,7 @@ namespace BitSharp.Storage.SqlServer
 
                     cmd.Transaction = trans;
 
-                    foreach (var keyPair in values)
+                    foreach (var keyPair in keyPairs)
                     {
                         cmd.CommandText = keyPair.Value.IsCreate ? CREATE_QUERY : UPDATE_QUERY;
 

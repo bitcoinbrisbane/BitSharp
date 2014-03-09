@@ -61,7 +61,7 @@ namespace BitSharp.Network
                 Command: command,
                 PayloadSize: (UInt32)payload.Length,
                 PayloadChecksum: CalculatePayloadChecksum(payload),
-                Payload: payload.ToImmutableArray()
+                Payload: payload.ToImmutableList()
             );
 
             return message;
@@ -100,7 +100,7 @@ namespace BitSharp.Network
             (
                 Services: 1, // 1 (NODE_NETWORK services)
                 // if address is IPv4, map it onto IPv6
-                IPv6Address: IPAddressToBytes(ip).ToImmutableArray(),
+                IPv6Address: IPAddressToBytes(ip).ToImmutableList(),
                 Port: (UInt16)port
             );
         }
@@ -130,7 +130,7 @@ namespace BitSharp.Network
             );
         }
 
-        public static InventoryPayload ConstructInventoryPayload(ImmutableArray<InventoryVector> invVectors)
+        public static InventoryPayload ConstructInventoryPayload(ImmutableList<InventoryVector> invVectors)
         {
             return new InventoryPayload
             (
@@ -138,7 +138,7 @@ namespace BitSharp.Network
             );
         }
 
-        public static GetBlocksPayload ConstructGetBlocksPayload(ImmutableArray<UInt256> blockLocatorHashes, UInt256 hashStop)
+        public static GetBlocksPayload ConstructGetBlocksPayload(ImmutableList<UInt256> blockLocatorHashes, UInt256 hashStop)
         {
             return new GetBlocksPayload
             (

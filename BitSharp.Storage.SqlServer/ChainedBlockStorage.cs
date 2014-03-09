@@ -112,7 +112,7 @@ namespace BitSharp.Storage.SqlServer
             }
         }
 
-        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<ChainedBlock>>> values)
+        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<ChainedBlock>>> keyPairs)
         {
             try
             {
@@ -135,7 +135,7 @@ namespace BitSharp.Storage.SqlServer
                     cmd.Parameters.Add(new SqlParameter { ParameterName = "@height", SqlDbType = SqlDbType.Int });
                     cmd.Parameters.Add(new SqlParameter { ParameterName = "@totalWork", SqlDbType = SqlDbType.Binary, Size = 64 });
 
-                    foreach (var keyPair in values)
+                    foreach (var keyPair in keyPairs)
                     {
                         cmd.CommandText = keyPair.Value.IsCreate ? CREATE_QUERY : UPDATE_QUERY;
 

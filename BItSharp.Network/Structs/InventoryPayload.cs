@@ -11,14 +11,14 @@ namespace BitSharp.Network
 {
     public class InventoryPayload
     {
-        public readonly ImmutableArray<InventoryVector> InventoryVectors;
+        public readonly ImmutableList<InventoryVector> InventoryVectors;
 
-        public InventoryPayload(ImmutableArray<InventoryVector> InventoryVectors)
+        public InventoryPayload(ImmutableList<InventoryVector> InventoryVectors)
         {
             this.InventoryVectors = InventoryVectors;
         }
 
-        public InventoryPayload With(ImmutableArray<InventoryVector>? InventoryVectors = null)
+        public InventoryPayload With(ImmutableList<InventoryVector> InventoryVectors = null)
         {
             return new InventoryPayload
             (

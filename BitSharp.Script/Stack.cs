@@ -12,12 +12,12 @@ namespace BitSharp.Script
 {
     public class Stack
     {
-        private Stack<ImmutableArray<byte>> stack = new Stack<ImmutableArray<byte>>();
+        private Stack<ImmutableList<byte>> stack = new Stack<ImmutableList<byte>>();
 
         public int Count { get { return stack.Count; } }
 
         // Peek
-        public ImmutableArray<byte> PeekBytes()
+        public ImmutableList<byte> PeekBytes()
         {
             return stack.Peek();
         }
@@ -33,7 +33,7 @@ namespace BitSharp.Script
         }
         
         // Pop
-        public ImmutableArray<byte> PopBytes()
+        public ImmutableList<byte> PopBytes()
         {
             return stack.Pop();
         }
@@ -51,10 +51,10 @@ namespace BitSharp.Script
         // Push
         public void PushBytes(byte[] value)
         {
-            stack.Push(value.ToImmutableArray());
+            stack.Push(value.ToImmutableList());
         }
 
-        public void PushBytes(ImmutableArray<byte> value)
+        public void PushBytes(ImmutableList<byte> value)
         {
             stack.Push(value);
         }
@@ -62,24 +62,24 @@ namespace BitSharp.Script
         public void PushBool(bool value)
         {
             if (value)
-                stack.Push(ImmutableArray.Create((byte)1));
+                stack.Push(ImmutableList.Create((byte)1));
             else
-                stack.Push(ImmutableArray.Create<byte>());
+                stack.Push(ImmutableList.Create<byte>());
         }
 
         public void PushBigInteger(BigInteger value)
         {
-            stack.Push(value.ToByteArray().ToImmutableArray());
+            stack.Push(value.ToByteArray().ToImmutableList());
         }
 
-        private bool CastToBool(ImmutableArray<byte> value)
+        private bool CastToBool(ImmutableList<byte> value)
         {
-            for (var i = 0; i < value.Length; i++)
+            for (var i = 0; i < value.Count; i++)
             {
                 if (value[i] != 0)
                 {
                     // Can be negative zero
-                    if (i == value.Length - 1 && value[i] == 0x80)
+                    if (i == value.Count - 1 && value[i] == 0x80)
                         return false;
                     
                     return true;
@@ -89,7 +89,7 @@ namespace BitSharp.Script
             return false;
         }
 
-        private BigInteger CastToBigInteger(ImmutableArray<byte> value)
+        private BigInteger CastToBigInteger(ImmutableList<byte> value)
         {
             return new BigInteger(value.ToArray());
         }

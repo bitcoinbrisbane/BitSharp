@@ -65,9 +65,9 @@ namespace BitSharp.Script
                     {
                         args[i] = ((byte[])args[i]).ToHexDataString();
                     }
-                    else if (args[i] is ImmutableArray<byte>)
+                    else if (args[i] is ImmutableList<byte>)
                     {
-                        args[i] = ((ImmutableArray<byte>)args[i]).ToHexDataString();
+                        args[i] = ((ImmutableList<byte>)args[i]).ToHexDataString();
                     }
                     else if (args[i] is BigIntegerBouncy)
                     {

@@ -1,6 +1,7 @@
 ﻿//#define SQLITE
 //#define FIREBIRD
-#define SQL_SERVER
+//#define SQL_SERVER
+#define ESENT
 
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Blockchain;
@@ -32,6 +33,8 @@ using BitSharp.Storage.SQLite;
 using BitSharp.Storage.Firebird;
 #elif SQL_SERVER
 using BitSharp.Storage.SqlServer;
+#elif ESENT
+using BitSharp.Storage.Esent;
 #endif
 
 namespace BitSharp.Client
@@ -68,6 +71,10 @@ namespace BitSharp.Client
 #elif SQL_SERVER
                 var storageContext = new SqlServerStorageContext();
                 var knownAddressStorage = new BitSharp.Storage.SqlServer.KnownAddressStorage(storageContext);
+                this.storageContext = storageContext;
+#elif ESENT
+                var storageContext = new EsentStorageContext();
+                var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
                 this.storageContext = storageContext;
 #endif
 

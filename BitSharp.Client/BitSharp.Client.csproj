@@ -66,7 +66,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable">
-      <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.12-beta\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
+      <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.30\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Numerics" />
@@ -158,6 +158,10 @@
     <ProjectReference Include="..\BitSharp.Script\BitSharp.Script.csproj">
       <Project>{b5419c45-7f0f-4dae-84bc-b6c206d8d753}</Project>
       <Name>BitSharp.Script</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BitSharp.Storage.Esent\BitSharp.Storage.Esent.csproj">
+      <Project>{6d4d2210-a54f-41f0-bca4-727b7ddb27c2}</Project>
+      <Name>BitSharp.Storage.Esent</Name>
     </ProjectReference>
     <ProjectReference Include="..\BitSharp.Storage.SQLite\BitSharp.Storage.SQLite.csproj">
       <Project>{992a748c-56d7-4521-93f1-a8ad8fb88e16}</Project>

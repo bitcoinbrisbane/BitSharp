@@ -30,12 +30,12 @@ namespace BitSharp.Storage
             }
         }
 
-        //public PersistentUtxoBuilder(UInt256 blockHash, PersistentUtxo utxo)
-        //{
-        //    this._blockHash = blockHash;
-        //    utxo.Duplicate(blockHash);
-        //    this._utxo = new PersistentDictionary<string, string>(PersistentUtxo.FolderPath(blockHash));
-        //}
+        public PersistentUtxoBuilder(UInt256 blockHash, PersistentUtxo utxo)
+        {
+            this._blockHash = blockHash;
+            utxo.Duplicate(blockHash);
+            this._utxo = new PersistentDictionary<string, string>(PersistentUtxo.FolderPath(blockHash));
+        }
 
         public bool ContainsKey(Common.UInt256 txHash)
         {

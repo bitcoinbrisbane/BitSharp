@@ -175,12 +175,12 @@ namespace BitSharp.Common.ExtensionMethods
             return string.Join(separator, enumerable);
         }
 
-        public static T RandomOrDefault<T>(this ImmutableArray<T> array)
+        public static T RandomOrDefault<T>(this ImmutableList<T> array)
         {
-            if (array.Length == 0)
+            if (array.Count == 0)
                 return default(T);
 
-            return array[random.Next(array.Length)];
+            return array[random.Next(array.Count)];
         }
 
         public static T RandomOrDefault<T>(this IList<T> list)

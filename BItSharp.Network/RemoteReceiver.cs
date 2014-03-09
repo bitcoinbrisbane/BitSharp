@@ -23,15 +23,15 @@ namespace BitSharp.Network
         public event Action<Message> OnMessage;
         public event Action<VersionPayload> OnVersion;
         public event Action OnVersionAcknowledged;
-        public event Action<ImmutableArray<InventoryVector>> OnInventoryVectors;
-        public event Action<ImmutableArray<InventoryVector>> OnNotFound;
+        public event Action<ImmutableList<InventoryVector>> OnInventoryVectors;
+        public event Action<ImmutableList<InventoryVector>> OnNotFound;
         public event Action<Block> OnBlock;
         public event Action<BlockHeader> OnBlockHeader;
         public event Action<Transaction> OnTransaction;
-        public event Action<ImmutableArray<NetworkAddressWithTime>> OnReceivedAddresses;
+        public event Action<ImmutableList<NetworkAddressWithTime>> OnReceivedAddresses;
         public event Action<GetBlocksPayload> OnGetBlocks;
         public event Action<GetBlocksPayload> OnGetHeaders;
-        public event Action<ImmutableArray<byte>> OnPing;
+        public event Action<ImmutableList<byte>> OnPing;
 
         private readonly Socket socket;
         private readonly bool persistent;
@@ -160,7 +160,7 @@ namespace BitSharp.Network
                     Command: command,
                     PayloadSize: payloadSize,
                     PayloadChecksum: payloadChecksum,
-                    Payload: payload.ToImmutableArray()
+                    Payload: payload.ToImmutableList()
                 );
             }
 
@@ -257,7 +257,7 @@ namespace BitSharp.Network
                     {
                         var handler = this.OnPing;
                         if (handler != null)
-                            handler(payload.ToImmutableArray());
+                            handler(payload.ToImmutableList());
                     }
                     break;
 

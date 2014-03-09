@@ -16,9 +16,9 @@ namespace BitSharp.Network
         public readonly string Command;
         public readonly UInt32 PayloadSize;
         public readonly UInt32 PayloadChecksum;
-        public readonly ImmutableArray<byte> Payload;
+        public readonly ImmutableList<byte> Payload;
 
-        public Message(UInt32 Magic, string Command, UInt32 PayloadSize, UInt32 PayloadChecksum, ImmutableArray<byte> Payload)
+        public Message(UInt32 Magic, string Command, UInt32 PayloadSize, UInt32 PayloadChecksum, ImmutableList<byte> Payload)
         {
             this.Magic = Magic;
             this.Command = Command;
@@ -27,7 +27,7 @@ namespace BitSharp.Network
             this.Payload = Payload;
         }
 
-        public Message With(UInt32? Magic = null, string Command = null, UInt32? PayloadSize = null, UInt32? PayloadChecksum = null, ImmutableArray<byte>? Payload = null)
+        public Message With(UInt32? Magic = null, string Command = null, UInt32? PayloadSize = null, UInt32? PayloadChecksum = null, ImmutableList<byte> Payload = null)
         {
             return new Message
             (

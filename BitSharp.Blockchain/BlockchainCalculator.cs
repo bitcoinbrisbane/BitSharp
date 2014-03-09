@@ -495,7 +495,7 @@ namespace BitSharp.Blockchain
                 var coinbaseTx = block.Transactions[0];
 
                 // add the coinbase outputs to the utxo
-                var coinbaseUnspentTx = new UnspentTx(coinbaseTx.Hash, new ImmutableBitArray(coinbaseTx.Outputs.Length, true));
+                var coinbaseUnspentTx = new UnspentTx(coinbaseTx.Hash, new ImmutableBitArray(coinbaseTx.Outputs.Count, true));
 
                 // add transaction output to to the utxo
                 if (utxoBuilder.ContainsKey(coinbaseTx.Hash))
@@ -520,12 +520,12 @@ namespace BitSharp.Blockchain
             }
 
             // check for double spends
-            for (var txIndex = 1; txIndex < block.Transactions.Length; txIndex++)
+            for (var txIndex = 1; txIndex < block.Transactions.Count; txIndex++)
             {
                 var tx = block.Transactions[txIndex];
                 txCount++;
 
-                for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+                for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
                 {
                     var input = tx.Inputs[inputIndex];
                     inputCount++;
@@ -560,7 +560,7 @@ namespace BitSharp.Blockchain
                 }
 
                 // add the output to the list to be added to the utxo
-                var unspentTx = new UnspentTx(tx.Hash, new ImmutableBitArray(tx.Outputs.Length, true));
+                var unspentTx = new UnspentTx(tx.Hash, new ImmutableBitArray(tx.Outputs.Count, true));
 
                 // add transaction output to to the utxo
                 if (utxoBuilder.ContainsKey(tx.Hash))
@@ -596,7 +596,7 @@ namespace BitSharp.Blockchain
             // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
             var coinbaseTx = block.Transactions[0];
 
-            for (var outputIndex = 0; outputIndex < coinbaseTx.Outputs.Length; outputIndex++)
+            for (var outputIndex = 0; outputIndex < coinbaseTx.Outputs.Count; outputIndex++)
             {
                 var txOutputKey = new TxOutputKey(coinbaseTx.Hash, (UInt32)outputIndex);
                 if (blockHeight > 0)
@@ -619,11 +619,11 @@ namespace BitSharp.Blockchain
                 }
             }
 
-            for (var txIndex = block.Transactions.Length - 1; txIndex >= 1; txIndex--)
+            for (var txIndex = block.Transactions.Count - 1; txIndex >= 1; txIndex--)
             {
                 var tx = block.Transactions[txIndex];
 
-                for (var outputIndex = tx.Outputs.Length - 1; outputIndex >= 0; outputIndex--)
+                for (var outputIndex = tx.Outputs.Count - 1; outputIndex >= 0; outputIndex--)
                 {
                     var output = tx.Outputs[outputIndex];
                     var txOutputKey = new TxOutputKey(tx.Hash, (UInt32)outputIndex);
@@ -648,7 +648,7 @@ namespace BitSharp.Blockchain
                     }
                 }
 
-                for (var inputIndex = tx.Inputs.Length - 1; inputIndex >= 0; inputIndex--)
+                for (var inputIndex = tx.Inputs.Count - 1; inputIndex >= 0; inputIndex--)
                 {
                     var input = tx.Inputs[inputIndex];
 
@@ -675,7 +675,7 @@ namespace BitSharp.Blockchain
                         var prevUnspentTx = this.CacheContext.GetTransaction(input.PreviousTxOutputKey.TxHash);
 
                         utxoBuilder[input.PreviousTxOutputKey.TxHash] =
-                            new UnspentTx(prevUnspentTx.Hash, new ImmutableBitArray(new BitArray(new bool[prevUnspentTx.Outputs.Length])).Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
+                            new UnspentTx(prevUnspentTx.Hash, new ImmutableBitArray(new BitArray(new bool[prevUnspentTx.Outputs.Count])).Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
                     }
 
                     //TODO

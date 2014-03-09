@@ -12,22 +12,22 @@ namespace BitSharp.Data
     public class Block
     {
         private readonly BlockHeader _header;
-        private readonly ImmutableArray<Transaction> _transactions;
+        private readonly ImmutableList<Transaction> _transactions;
         private readonly long _sizeEstimate;
 
-        public Block(BlockHeader header, ImmutableArray<Transaction> transactions)
+        public Block(BlockHeader header, ImmutableList<Transaction> transactions)
         {
             this._header = header;
             this._transactions = transactions;
 
             var sizeEstimate = BlockHeader.SizeEstimator(header);
-            for (var i = 0; i < transactions.Length; i++)
+            for (var i = 0; i < transactions.Count; i++)
             {
-                for (var j = 0; j < transactions[i].Inputs.Length; j++)
-                    sizeEstimate += transactions[i].Inputs[j].ScriptSignature.Length;
+                for (var j = 0; j < transactions[i].Inputs.Count; j++)
+                    sizeEstimate += transactions[i].Inputs[j].ScriptSignature.Count;
 
-                for (var j = 0; j < transactions[i].Outputs.Length; j++)
-                    sizeEstimate += transactions[i].Outputs[j].ScriptPublicKey.Length;
+                for (var j = 0; j < transactions[i].Outputs.Count; j++)
+                    sizeEstimate += transactions[i].Outputs[j].ScriptPublicKey.Count;
             }
             sizeEstimate = (long)(sizeEstimate * 1.5);
 
@@ -38,11 +38,11 @@ namespace BitSharp.Data
 
         public BlockHeader Header { get { return this._header; } }
 
-        public ImmutableArray<Transaction> Transactions { get { return this._transactions; } }
+        public ImmutableList<Transaction> Transactions { get { return this._transactions; } }
 
         public long SizeEstimate { get { return this._sizeEstimate; } }
 
-        public Block With(BlockHeader Header = null, ImmutableArray<Transaction>? Transactions = null)
+        public Block With(BlockHeader Header = null, ImmutableList<Transaction> Transactions = null)
         {
             return new Block
             (

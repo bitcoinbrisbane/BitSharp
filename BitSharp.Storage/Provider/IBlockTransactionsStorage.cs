@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public interface IBlockTransactionsStorage : IBoundedStorage<UInt256, ImmutableArray<UInt256>>
+    public interface IBlockTransactionsStorage : IBoundedStorage<UInt256, ImmutableList<UInt256>>
     {
     }
 }

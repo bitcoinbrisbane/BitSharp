@@ -31,7 +31,7 @@ namespace BitSharp.Data.Test
             return new Block
             (
                 header: RandomBlockHeader(),
-                transactions: Enumerable.Range(0, random.Next((options != null ? options.TransactionCount : null) ?? 100)).Select(x => RandomTransaction()).ToImmutableArray()
+                transactions: Enumerable.Range(0, random.Next((options != null ? options.TransactionCount : null) ?? 100)).Select(x => RandomTransaction()).ToImmutableList()
             );
         }
 
@@ -53,8 +53,8 @@ namespace BitSharp.Data.Test
             return new Transaction
             (
                 version: random.NextUInt32(),
-                inputs: Enumerable.Range(0, random.Next((options != null ? options.TxInputCount : null) ?? 100)).Select(x => RandomTxInput()).ToImmutableArray(),
-                outputs: Enumerable.Range(0, random.Next((options != null ? options.TxOutputCount : null) ?? 100)).Select(x => RandomTxOutput()).ToImmutableArray(),
+                inputs: Enumerable.Range(0, random.Next((options != null ? options.TxInputCount : null) ?? 100)).Select(x => RandomTxInput()).ToImmutableList(),
+                outputs: Enumerable.Range(0, random.Next((options != null ? options.TxOutputCount : null) ?? 100)).Select(x => RandomTxOutput()).ToImmutableList(),
                 lockTime: random.NextUInt32()
             );
         }
@@ -68,7 +68,7 @@ namespace BitSharp.Data.Test
                     txHash: random.NextUInt32(),
                     txOutputIndex: random.NextUInt32()
                 ),
-                scriptSignature: random.NextBytes(random.Next((options != null ? options.ScriptSignatureSize : null) ?? 100)).ToImmutableArray(),
+                scriptSignature: random.NextBytes(random.Next((options != null ? options.ScriptSignatureSize : null) ?? 100)).ToImmutableList(),
                 sequence: random.NextUInt32()
             );
         }
@@ -78,7 +78,7 @@ namespace BitSharp.Data.Test
             return new TxOutput
             (
                 value: random.NextUInt64(),
-                scriptPublicKey: random.NextBytes(random.Next((options != null ? options.ScriptPublicKeySize : null) ?? 100)).ToImmutableArray()
+                scriptPublicKey: random.NextBytes(random.Next((options != null ? options.ScriptPublicKeySize : null) ?? 100)).ToImmutableList()
             );
         }
 

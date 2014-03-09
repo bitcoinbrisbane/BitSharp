@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -79,6 +80,38 @@ namespace BitSharp.Storage
             return stream.ToArray();
         }
 
+        public static ChainedBlock DecodeChainedBlock(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new ChainedBlock
+                (
+                    blockHash: reader.Read32Bytes(),
+                    previousBlockHash: reader.Read32Bytes(),
+                    height: reader.ReadInt32(),
+                    totalWork: new BigInteger(reader.ReadVarBytes())
+                );
+            }
+        }
+
+        public static void EncodeChainedBlock(Stream stream, ChainedBlock chainedBlock)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.Write32Bytes(chainedBlock.BlockHash);
+                writer.Write32Bytes(chainedBlock.PreviousBlockHash);
+                writer.WriteInt32(chainedBlock.Height);
+                writer.WriteVarBytes(chainedBlock.TotalWork.ToByteArray());
+            }
+        }
+
+        public static byte[] EncodeChainedBlock(ChainedBlock chainedBlock)
+        {
+            var stream = new MemoryStream();
+            EncodeChainedBlock(stream, chainedBlock);
+            return stream.ToArray();
+        }
+
         public static Transaction DecodeTransaction(Stream stream, UInt256 txHash = null)
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
@@ -123,7 +156,7 @@ namespace BitSharp.Storage
                         txHash: reader.Read32Bytes(),
                         txOutputIndex: reader.Read4Bytes()
                     ),
-                    scriptSignature: DecodeVarBytes(reader).ToImmutableArray(),
+                    scriptSignature: DecodeVarBytes(reader).ToImmutableList(),
                     sequence: reader.Read4Bytes()
                 );
             }
@@ -154,7 +187,7 @@ namespace BitSharp.Storage
                 return new TxOutput
                 (
                     value: reader.Read8Bytes(),
-                    scriptPublicKey: DecodeVarBytes(reader).ToImmutableArray()
+                    scriptPublicKey: DecodeVarBytes(reader).ToImmutableList()
                 );
             }
         }
@@ -187,7 +220,7 @@ namespace BitSharp.Storage
             writer.WriteBytes(bytes);
         }
 
-        public static ImmutableArray<T> DecodeList<T>(BinaryReader reader, Func<T> decode)
+        public static ImmutableList<T> DecodeList<T>(BinaryReader reader, Func<T> decode)
         {
             var length = reader.ReadInt32();
 
@@ -197,14 +230,14 @@ namespace BitSharp.Storage
                 list[i] = decode();
             }
 
-            return list.ToImmutableArray();
+            return list.ToImmutableList();
         }
 
-        public static void EncodeList<T>(BinaryWriter writer, ImmutableArray<T> list, Action<T> encode)
+        public static void EncodeList<T>(BinaryWriter writer, ImmutableList<T> list, Action<T> encode)
         {
-            writer.WriteInt32(list.Length);
+            writer.WriteInt32(list.Count);
 
-            for (var i = 0; i < list.Length; i++)
+            for (var i = 0; i < list.Count; i++)
             {
                 encode(list[i]);
             }

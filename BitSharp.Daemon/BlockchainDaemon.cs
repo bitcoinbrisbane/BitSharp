@@ -588,7 +588,7 @@ namespace BitSharp.Daemon
                             var newBlockchain = Calculator.CalculateBlockchainFromExisting(blockchainBuilder, chainStateLocal.TargetBlock, utxoBuilder, chainStateLocal.TargetBlockchain, out missingData, cancelToken.Token,
                                 progressBlockchain =>
                                 {
-                                    if (startTime.Elapsed > TimeSpan.FromSeconds(5))
+                                    if (startTime.Elapsed > TimeSpan.FromSeconds(60))
                                     {
                                         //TODO
                                         //UpdateCurrentBlockchain(progressBlockchain);
@@ -796,7 +796,7 @@ namespace BitSharp.Daemon
         //    this.winningBlockchainLock.EnterWriteLock();
         //    try
         //    {
-        //        this._winningBlockchain = default(ImmutableArray<ChainedBlock>);
+        //        this._winningBlockchain = default(ImmutableList<ChainedBlock>);
         //    }
         //    finally
         //    {

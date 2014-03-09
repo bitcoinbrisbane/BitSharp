@@ -41,9 +41,9 @@ namespace BitSharp.Storage.Test
             return this._storage.TryGetValue(key, out value);
         }
 
-        public virtual bool TryWriteValues(IEnumerable<KeyValuePair<TKey, WriteValue<TValue>>> values)
+        public virtual bool TryWriteValues(IEnumerable<KeyValuePair<TKey, WriteValue<TValue>>> keyPairs)
         {
-            foreach (var keyPair in values)
+            foreach (var keyPair in keyPairs)
             {
                 this._storage.AddOrUpdate(
                     keyPair.Key,

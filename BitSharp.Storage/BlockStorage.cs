@@ -37,12 +37,12 @@ namespace BitSharp.Storage
         {
             foreach (var blockHeader in this.CacheContext.BlockHeaderCache.StreamAllValues())
             {
-                ImmutableArray<UInt256> blockTxHashes;
+                ImmutableList<UInt256> blockTxHashes;
                 if (this.StorageContext.BlockTransactionsStorage.TryReadValue(blockHeader.Value.Hash, out blockTxHashes))
                 {
                     if (blockHeader.Value.MerkleRoot == DataCalculator.CalculateMerkleRoot(blockTxHashes))
                     {
-                        var blockTransactions = new Transaction[blockTxHashes.Length];
+                        var blockTransactions = new Transaction[blockTxHashes.Count];
 
                         var success = true;
                         var txIndex = 0;
@@ -62,7 +62,7 @@ namespace BitSharp.Storage
                         }
 
                         if (success)
-                            yield return new KeyValuePair<UInt256, Block>(blockHeader.Value.Hash, new Block(blockHeader.Value, blockTransactions.ToImmutableArray()));
+                            yield return new KeyValuePair<UInt256, Block>(blockHeader.Value.Hash, new Block(blockHeader.Value, blockTransactions.ToImmutableList()));
                     }
                     else
                     {
@@ -77,12 +77,12 @@ namespace BitSharp.Storage
             BlockHeader blockHeader;
             if (this.CacheContext.BlockHeaderCache.TryGetValue(key, out blockHeader))
             {
-                ImmutableArray<UInt256> blockTxHashes;
+                ImmutableList<UInt256> blockTxHashes;
                 if (this.StorageContext.BlockTransactionsStorage.TryReadValue(blockHeader.Hash, out blockTxHashes))
                 {
                     if (blockHeader.MerkleRoot == DataCalculator.CalculateMerkleRoot(blockTxHashes))
                     {
-                        var blockTransactions = new Transaction[blockTxHashes.Length];
+                        var blockTransactions = new Transaction[blockTxHashes.Count];
 
                         var success = true;
                         var txIndex = 0;
@@ -103,7 +103,7 @@ namespace BitSharp.Storage
 
                         if (success)
                         {
-                            value = new Block(blockHeader, blockTransactions.ToImmutableArray());
+                            value = new Block(blockHeader, blockTransactions.ToImmutableList());
                             return true;
                         }
                     }
@@ -118,18 +118,18 @@ namespace BitSharp.Storage
             return false;
         }
 
-        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<Block>>> values)
+        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<Block>>> keyPairs)
         {
-            var writeBlockTransactions = new List<KeyValuePair<UInt256, WriteValue<ImmutableArray<Transaction>>>>();
+            var writeBlockTransactions = new List<KeyValuePair<UInt256, WriteValue<ImmutableList<Transaction>>>>();
             var writeTransactions = new List<KeyValuePair<UInt256, WriteValue<Transaction>>>();
 
-            foreach (var value in values)
+            foreach (var value in keyPairs)
             {
                 var block = value.Value.Value;
 
                 //TODO check return value
                 this.StorageContext.BlockTransactionsStorage.TryWriteValue(block.Hash,
-                    new WriteValue<ImmutableArray<UInt256>>(block.Transactions.Select(x => x.Hash).ToImmutableArray(), value.Value.IsCreate));
+                    new WriteValue<ImmutableList<UInt256>>(block.Transactions.Select(x => x.Hash).ToImmutableList(), value.Value.IsCreate));
 
                 //TODO check return value
                 this.StorageContext.TransactionStorage.TryWriteValues(

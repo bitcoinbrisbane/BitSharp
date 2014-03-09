@@ -93,7 +93,7 @@ namespace BitSharp.Storage.SqlServer
             }
         }
 
-        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<Transaction>>> values)
+        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<Transaction>>> keyPairs)
         {
             using (var conn = this.OpenConnection())
             using (var trans = conn.BeginTransaction())
@@ -105,7 +105,7 @@ namespace BitSharp.Storage.SqlServer
                 cmd.Parameters.Add(new SqlParameter { ParameterName = "@txBytes", SqlDbType = SqlDbType.Binary });
 
                 cmd.CommandText = CREATE_QUERY;
-                foreach (var keyPair in values.Where(x => x.Value.IsCreate))
+                foreach (var keyPair in keyPairs.Where(x => x.Value.IsCreate))
                 {
                     var transaction = keyPair.Value.Value;
 
@@ -117,7 +117,7 @@ namespace BitSharp.Storage.SqlServer
                 }
 
                 cmd.CommandText = UPDATE_QUERY;
-                foreach (var keyPair in values.Where(x => !x.Value.IsCreate))
+                foreach (var keyPair in keyPairs.Where(x => !x.Value.IsCreate))
                 {
                     var transaction = keyPair.Value.Value;
 

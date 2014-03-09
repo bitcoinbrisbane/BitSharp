@@ -20,8 +20,8 @@ namespace BitSharp.Data.Test
             var sameTransaction = new Transaction
             (
                 version: randomTransaction.Version,
-                inputs: ImmutableArray.Create(randomTransaction.Inputs.ToArray()),
-                outputs: ImmutableArray.Create(randomTransaction.Outputs.ToArray()),
+                inputs: ImmutableList.Create(randomTransaction.Inputs.ToArray()),
+                outputs: ImmutableList.Create(randomTransaction.Outputs.ToArray()),
                 lockTime: randomTransaction.LockTime
             );
 
@@ -36,7 +36,7 @@ namespace BitSharp.Data.Test
             var differentTransactionInputs = new Transaction
             (
                 version: randomTransaction.Version,
-                inputs: ImmutableArray.Create(randomTransaction.Inputs.Concat(randomTransaction.Inputs.Last()).ToArray()),
+                inputs: ImmutableList.Create(randomTransaction.Inputs.Concat(randomTransaction.Inputs.Last()).ToArray()),
                 outputs: randomTransaction.Outputs,
                 lockTime: randomTransaction.LockTime
             );
@@ -45,7 +45,7 @@ namespace BitSharp.Data.Test
             (
                 version: randomTransaction.Version,
                 inputs: randomTransaction.Inputs,
-                outputs: ImmutableArray.Create(randomTransaction.Outputs.Concat(randomTransaction.Outputs.Last()).ToArray()),
+                outputs: ImmutableList.Create(randomTransaction.Outputs.Concat(randomTransaction.Outputs.Last()).ToArray()),
                 lockTime: randomTransaction.LockTime
             );
 

@@ -19,7 +19,7 @@ namespace BitSharp.Data.Test
             var sameBlock = new Block
             (
                 header: new BlockHeader(randomBlock.Header.Version, randomBlock.Header.PreviousBlock, randomBlock.Header.MerkleRoot, randomBlock.Header.Time, randomBlock.Header.Bits, randomBlock.Header.Nonce),
-                transactions: ImmutableArray.Create(randomBlock.Transactions.ToArray())
+                transactions: ImmutableList.Create(randomBlock.Transactions.ToArray())
             );
 
             var differentBlock = randomBlock.With(Header: randomBlock.Header.With(Bits: ~randomBlock.Header.Bits));

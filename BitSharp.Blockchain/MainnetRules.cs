@@ -52,12 +52,12 @@ namespace BitSharp.Blockchain
                         bits: 486604799,
                         nonce: 2083236893
                     ),
-                    transactions: ImmutableArray.Create
+                    transactions: ImmutableList.Create
                     (
                         new Transaction
                         (
                             version: 1,
-                            inputs: ImmutableArray.Create
+                            inputs: ImmutableList.Create
                             (
                                 new TxInput
                                 (
@@ -66,7 +66,7 @@ namespace BitSharp.Blockchain
                                         txHash: 0,
                                         txOutputIndex: 0xFFFFFFFF
                                     ),
-                                    scriptSignature: ImmutableArray.Create<byte>
+                                    scriptSignature: ImmutableList.Create<byte>
                                     (
                                         0x04, 0xFF, 0xFF, 0x00, 0x1D, 0x01, 0x04, 0x45, 0x54, 0x68, 0x65, 0x20, 0x54, 0x69, 0x6D, 0x65,
                                         0x73, 0x20, 0x30, 0x33, 0x2F, 0x4A, 0x61, 0x6E, 0x2F, 0x32, 0x30, 0x30, 0x39, 0x20, 0x43, 0x68,
@@ -77,12 +77,12 @@ namespace BitSharp.Blockchain
                                     sequence: 0xFFFFFFFF
                                 )
                             ),
-                            outputs: ImmutableArray.Create
+                            outputs: ImmutableList.Create
                             (
                                 new TxOutput
                                 (
                                     value: 50 * SATOSHI_PER_BTC,
-                                    scriptPublicKey: ImmutableArray.Create<byte>
+                                    scriptPublicKey: ImmutableList.Create<byte>
                                     (
                                         0x41, 0x04, 0x67, 0x8A, 0xFD, 0xB0, 0xFE, 0x55, 0x48, 0x27, 0x19, 0x67, 0xF1, 0xA6, 0x71, 0x30,
                                         0xB7, 0x10, 0x5C, 0xD6, 0xA8, 0x28, 0xE0, 0x39, 0x09, 0xA6, 0x79, 0x62, 0xE0, 0xEA, 0x1F, 0x61,
@@ -253,7 +253,7 @@ namespace BitSharp.Blockchain
             }
 
             // ensure there is at least 1 transaction
-            if (block.Transactions.Length == 0)
+            if (block.Transactions.Count == 0)
             {
                 throw new ValidationException("Failing block {0} at height {1}: Zero transactions present".Format2(block.Hash.ToHexNumberString(), blockchain.Height));
             }
@@ -263,7 +263,7 @@ namespace BitSharp.Blockchain
             var coinbaseTx = block.Transactions[0];
 
             // check that coinbase has only one input
-            if (coinbaseTx.Inputs.Length != 1)
+            if (coinbaseTx.Inputs.Count != 1)
             {
                 throw new ValidationException("Failing block {0} at height {1}: Coinbase transaction does not have exactly one input".Format2(block.Hash.ToHexNumberString(), blockchain.Height));
             }
@@ -272,7 +272,7 @@ namespace BitSharp.Blockchain
             long unspentValue = 0L;
             try
             {
-                Parallel.For(1, block.Transactions.Length, (txIndex, loopState) =>
+                Parallel.For(1, block.Transactions.Count, (txIndex, loopState) =>
                 {
                     var tx = block.Transactions[txIndex];
 
@@ -328,7 +328,7 @@ namespace BitSharp.Blockchain
             // lookup all previous outputs
             var prevOutputMissing = false;
             var previousOutputs = new Dictionary<TxOutputKey, Tuple<TxInput, int, TxOutput>>();
-            for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+            for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
             {
                 var input = tx.Inputs[inputIndex];
 
@@ -336,7 +336,7 @@ namespace BitSharp.Blockchain
                 var prevTx = this.CacheContext.GetTransaction(input.PreviousTxOutputKey.TxHash);
 
                 // find previous transaction output
-                if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Length)
+                if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Count)
                     throw new ValidationException();
                 var prevOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
 
@@ -352,7 +352,7 @@ namespace BitSharp.Blockchain
             var txInputValue = (UInt64)0;
             var txOutputValue = (UInt64)0;
 
-            for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+            for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
             {
                 var input = tx.Inputs[inputIndex];
 
@@ -361,7 +361,7 @@ namespace BitSharp.Blockchain
                 txInputValue += prevOutput.Value;
             }
 
-            for (var outputIndex = 0; outputIndex < tx.Outputs.Length; outputIndex++)
+            for (var outputIndex = 0; outputIndex < tx.Outputs.Count; outputIndex++)
             {
                 // remove transactions spend value from unspent amount (used to calculate allowed coinbase reward)
                 var output = tx.Outputs[outputIndex];
@@ -395,10 +395,10 @@ namespace BitSharp.Blockchain
             // lookup all previous outputs
             var prevOutputMissing = false;
             var previousOutputs = new Dictionary<TxOutputKey, Tuple<Transaction, TxInput, int, TxOutput>>();
-            for (var txIndex = 1; txIndex < block.Transactions.Length; txIndex++)
+            for (var txIndex = 1; txIndex < block.Transactions.Count; txIndex++)
             {
                 var tx = block.Transactions[txIndex];
-                for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+                for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
                 {
                     var input = tx.Inputs[inputIndex];
 
@@ -406,7 +406,7 @@ namespace BitSharp.Blockchain
                     var prevTx = this.CacheContext.GetTransaction(input.PreviousTxOutputKey.TxHash);
 
                     // find previous transaction output
-                    if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Length)
+                    if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Count)
                         throw new ValidationException();
                     var prevOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
 

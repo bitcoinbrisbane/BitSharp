@@ -19,7 +19,7 @@ namespace BitSharp.Data.Test
             var sameTxOutput = new TxOutput
             (
                 value: randomTxOutput.Value,
-                scriptPublicKey: ImmutableArray.Create(randomTxOutput.ScriptPublicKey.ToArray())
+                scriptPublicKey: ImmutableList.Create(randomTxOutput.ScriptPublicKey.ToArray())
             );
 
             var differentTxOutputValue = new TxOutput

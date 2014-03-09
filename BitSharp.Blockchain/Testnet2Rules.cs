@@ -38,12 +38,12 @@ namespace BitSharp.Blockchain
                         bits: 0x207FFFFF,
                         nonce: 2
                     ),
-                    transactions: ImmutableArray.Create
+                    transactions: ImmutableList.Create
                     (
                         new Transaction
                         (
                             version: 1,
-                            inputs: ImmutableArray.Create
+                            inputs: ImmutableList.Create
                             (
                                 new TxInput
                                 (
@@ -52,7 +52,7 @@ namespace BitSharp.Blockchain
                                         txHash: 0,
                                         txOutputIndex: 0xFFFFFFFF
                                     ),
-                                    scriptSignature: ImmutableArray.Create<byte>
+                                    scriptSignature: ImmutableList.Create<byte>
                                     (
                                         0x04, 0xFF, 0xFF, 0x00, 0x1D, 0x01, 0x04, 0x45, 0x54, 0x68, 0x65, 0x20, 0x54, 0x69, 0x6D, 0x65,
                                         0x73, 0x20, 0x30, 0x33, 0x2F, 0x4A, 0x61, 0x6E, 0x2F, 0x32, 0x30, 0x30, 0x39, 0x20, 0x43, 0x68,
@@ -63,12 +63,12 @@ namespace BitSharp.Blockchain
                                     sequence: 0xFFFFFFFF
                                 )
                             ),
-                            outputs: ImmutableArray.Create
+                            outputs: ImmutableList.Create
                             (
                                 new TxOutput
                                 (
                                     value: (UInt64)(50L * 100.MILLION()),
-                                    scriptPublicKey: ImmutableArray.Create<byte>
+                                    scriptPublicKey: ImmutableList.Create<byte>
                                     (
                                         0x41, 0x04, 0x67, 0x8A, 0xFD, 0xB0, 0xFE, 0x55, 0x48, 0x27, 0x19, 0x67, 0xF1, 0xA6, 0x71, 0x30,
                                         0xB7, 0x10, 0x5C, 0xD6, 0xA8, 0x28, 0xE0, 0x39, 0x09, 0xA6, 0x79, 0x62, 0xE0, 0xEA, 0x1F, 0x61,

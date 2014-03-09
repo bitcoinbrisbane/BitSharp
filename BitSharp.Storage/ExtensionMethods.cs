@@ -11,7 +11,7 @@ namespace BitSharp.Storage.ExtensionMethods
     {
         public static ImmutableDictionary<TKey, TValue> Compact<TKey, TValue>(this ImmutableDictionary<TKey, TValue> dictionary)
         {
-            return ImmutableDictionary.Create(dictionary.ToArray());
+            return ImmutableDictionary.CreateRange(dictionary.ToArray());
         }
 
         public static ImmutableHashSet<T> Compact<T>(this ImmutableHashSet<T> set)
