@@ -24,7 +24,7 @@ namespace BitSharp.Storage
         static internal UnspentTx DeserializeUnspentTx(string key, string value)
         {
             var txHash = UInt256.Parse(key);
-            var unspentOutputs = new ImmutableBitArray(new BitArray(Convert.FromBase64String(value)));
+            var unspentOutputs = new ImmutableBitArray(Convert.FromBase64String(value));
 
             return new UnspentTx(txHash, unspentOutputs);
         }

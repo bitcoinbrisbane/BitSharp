@@ -684,7 +684,7 @@ namespace BitSharp.Blockchain
                         var prevUnspentTx = this.CacheContext.GetTransaction(input.PreviousTxOutputKey.TxHash);
 
                         utxoBuilder[input.PreviousTxOutputKey.TxHash] =
-                            new UnspentTx(prevUnspentTx.Hash, new ImmutableBitArray(new BitArray(new bool[prevUnspentTx.Outputs.Count])).Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
+                            new UnspentTx(prevUnspentTx.Hash, new ImmutableBitArray(prevUnspentTx.Outputs.Count, false).Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
                     }
 
                     //TODO

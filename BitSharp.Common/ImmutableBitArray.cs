@@ -22,6 +22,16 @@ namespace BitSharp.Common
             this.bitArray = (BitArray)bitArray.Clone();
         }
 
+        public ImmutableBitArray(bool[] values)
+        {
+            this.bitArray = new BitArray(values);
+        }
+
+        public ImmutableBitArray(byte[] bytes)
+        {
+            this.bitArray = new BitArray(bytes);
+        }
+
         private ImmutableBitArray(BitArray bitArray, bool clone)
         {
             this.bitArray = clone ? (BitArray)bitArray.Clone() : bitArray;
