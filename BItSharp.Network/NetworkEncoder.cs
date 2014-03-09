@@ -18,7 +18,7 @@ namespace BitSharp.Network
     /// </summary>
     public class NetworkEncoder
     {
-        public static Block DecodeBlock(Stream stream, UInt256 blockHash = null)
+        public static Block DecodeBlock(Stream stream, UInt256? blockHash = null)
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
@@ -46,7 +46,7 @@ namespace BitSharp.Network
             return stream.ToArray();
         }
 
-        public static BlockHeader DecodeBlockHeader(Stream stream, UInt256 blockHash = null)
+        public static BlockHeader DecodeBlockHeader(Stream stream, UInt256? blockHash = null)
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
@@ -83,7 +83,7 @@ namespace BitSharp.Network
             return stream.ToArray();
         }
 
-        public static Transaction DecodeTransaction(Stream stream, UInt256 txHash = null)
+        public static Transaction DecodeTransaction(Stream stream, UInt256? txHash = null)
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {

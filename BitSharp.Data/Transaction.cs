@@ -22,7 +22,7 @@ namespace BitSharp.Data
 
         private readonly int hashCode;
 
-        public Transaction(UInt32 version, ImmutableList<TxInput> inputs, ImmutableList<TxOutput> outputs, UInt32 lockTime, UInt256 hash = null)
+        public Transaction(UInt32 version, ImmutableList<TxInput> inputs, ImmutableList<TxOutput> outputs, UInt32 lockTime, UInt256? hash = null)
         {
             this._version = version;
             this._inputs = inputs;
