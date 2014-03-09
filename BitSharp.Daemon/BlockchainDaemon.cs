@@ -772,6 +772,12 @@ namespace BitSharp.Daemon
             get { return this.CacheContext.ChainedBlockCache.MaxCacheMemorySize; }
         }
 
+        public void AddMissingBlock(UInt256 blockHash)
+        {
+            if (!this.CacheContext.BlockCache.ContainsKey(blockHash))
+                this.missingBlocks.Add(blockHash);
+        }
+
         private void HandleMissingData(MissingDataException e)
         {
             switch (e.DataType)
