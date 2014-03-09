@@ -36,6 +36,11 @@ namespace BitSharp.Node
         private static readonly int CONNECTED_MAX = 10;
         private static readonly int PENDING_MAX = 10;
         private static readonly int HANDSHAKE_TIMEOUT_MS = 15000;
+
+        private static readonly int MAX_BLOCK_REQUESTS = 100;
+        private static readonly int MAX_TRANSACTION_REQUESTS = 100;
+        private static readonly int MAX_BLOCKCHAIN_LOOKAHEAD = 1000;
+
         private static readonly Random random = new Random();
 
         private readonly CancellationTokenSource shutdownToken;
@@ -63,7 +68,7 @@ namespace BitSharp.Node
 
         private readonly ConcurrentSet<UInt256> requestedBlocks = new ConcurrentSet<UInt256>();
         private readonly ConcurrentDictionary<UInt256, DateTime> requestedBlockTimes = new ConcurrentDictionary<UInt256, DateTime>();
-        private List<UInt256> newChainBlockList;
+        private List<ChainedBlock> newChainBlockList;
         private ChainedBlock lastTargetChainedBlock;
 
         private readonly ConcurrentSet<UInt256> requestedTransactions = new ConcurrentSet<UInt256>();
@@ -220,8 +225,7 @@ namespace BitSharp.Node
                 .Where(x => (now - x.Value) > TimeSpan.FromSeconds(600))
                 .Select(x => x.Key));
 
-            var requestAmount = 100;
-            if (this.requestedBlocks.Count > requestAmount)
+            if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
                 return;
 
             var requestTasks = new List<Task>();
@@ -232,9 +236,9 @@ namespace BitSharp.Node
             {
                 new MethodTimer().Time("newChainBlockList", () =>
                     {
-                        this.newChainBlockList = chainStateLocal.RewindBlocks.Select(x => x.BlockHash)
-                                        .Concat(chainStateLocal.ForwardBlocks.Select(x => x.BlockHash))
-                                        .Where(x => !this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(x))
+                        this.newChainBlockList = chainStateLocal.RewindBlocks
+                                        .Concat(chainStateLocal.ForwardBlocks)
+                                        .Where(x => !this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(x.BlockHash))
                                         .ToList();
                     });
 
@@ -245,7 +249,7 @@ namespace BitSharp.Node
             foreach (var block in this.blockchainDaemon.MissingBlocks)
             {
                 //if (requestTasks.Count > requestAmount)
-                if (this.requestedBlocks.Count > requestAmount)
+                if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
                     break;
 
                 // cooperative loop
@@ -258,27 +262,30 @@ namespace BitSharp.Node
 
             for (var i = 0; i < newChainBlockList.Count; i++)
             {
-                var requestBlockHash = newChainBlockList[i];
-                while (this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(requestBlockHash))
+                var requestBlock = newChainBlockList[i];
+                while (this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(requestBlock.BlockHash))
                 {
                     newChainBlockList.RemoveAt(i);
                     if (i < newChainBlockList.Count)
-                        requestBlockHash = newChainBlockList[i];
+                        requestBlock = newChainBlockList[i];
                     else
                     {
-                        requestBlockHash = UInt256.Zero;
+                        requestBlock = null;
                         break;
                     }
                 }
 
-                if (requestBlockHash != UInt256.Zero)
+                if (requestBlock != null)
                 {
-                    var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), requestBlockHash);
+                    if (requestBlock.Height - chainStateLocal.CurrentBlock.Height > MAX_BLOCKCHAIN_LOOKAHEAD)
+                        break;
+
+                    var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), requestBlock.BlockHash);
                     if (task != null)
                         requestTasks.Add(task);
 
                     //if (requestTasks.Count > requestAmount)
-                    if (this.requestedBlocks.Count > requestAmount)
+                    if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
                         break;
 
                     // cooperative loop
@@ -312,8 +319,7 @@ namespace BitSharp.Node
                 .Where(x => (now - x.Value) > TimeSpan.FromSeconds(600))
                 .Select(x => x.Key));
 
-            var requestAmount = 100;
-            if (this.requestedTransactions.Count > requestAmount)
+            if (this.requestedTransactions.Count > MAX_TRANSACTION_REQUESTS)
                 return;
 
             var requestTasks = new List<Task>();
@@ -322,7 +328,7 @@ namespace BitSharp.Node
             foreach (var transaction in this.blockchainDaemon.MissingTransactions)
             {
                 //if (requestTasks.Count > requestAmount)
-                if (this.requestedTransactions.Count > requestAmount)
+                if (this.requestedTransactions.Count > MAX_TRANSACTION_REQUESTS)
                     break;
 
                 // cooperative loop
