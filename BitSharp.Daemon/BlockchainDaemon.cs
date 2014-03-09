@@ -108,7 +108,7 @@ namespace BitSharp.Daemon
                 runOnStart: true, waitTime: TimeSpan.FromSeconds(10), maxIdleTime: TimeSpan.FromMinutes(5));
 
             this.blockchainWorker = new Worker("BlockchainDaemon.BlockchainWorker", BlockchainWorker,
-                runOnStart: true, waitTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromMinutes(5));
+                runOnStart: true, waitTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
 
             this.validateCurrentChainWorker = new Worker("BlockchainDaemon.ValidateCurrentChainWorker", ValidateCurrentChainWorker,
                 runOnStart: true, waitTime: TimeSpan.FromMinutes(30), maxIdleTime: TimeSpan.FromMinutes(30));
@@ -566,26 +566,40 @@ namespace BitSharp.Daemon
                 // check if the winning blockchain has changed
                 if (chainStateLocal.CurrentBlock.RootBlockHash != chainStateLocal.TargetBlock.BlockHash)
                 {
-                    using (var cancelToken = new CancellationTokenSource())
+                    // don't try processing if the first block that will be needed is missing
+                    if (chainStateLocal.RewindBlocks.Count > 0
+                        && this.missingBlocks.Contains(chainStateLocal.RewindBlocks.First().BlockHash))
                     {
-                        //TODO cleanup this design
-                        List<MissingDataException> missingData;
+                        return;
+                    }
+                    else if (chainStateLocal.RewindBlocks.Count == 0 && chainStateLocal.ForwardBlocks.Count > 0
+                        && this.missingBlocks.Contains(chainStateLocal.ForwardBlocks.First().BlockHash))
+                    {
+                        return;
+                    }
 
-                        var disposed = false;
-                        var utxoBuilder = chainStateLocal.CurrentBlock.Utxo.ToBuilder(chainStateLocal.TargetBlock.BlockHash);
-                        try
+                    //TODO cleanup this design
+                    List<MissingDataException> missingData;
+
+                    var disposed = false;
+                    var utxoBuilder = chainStateLocal.CurrentBlock.Utxo.ToBuilder(chainStateLocal.TargetBlock.BlockHash);
+                    try
+                    {
+                        var blockchainBuilder = new BlockchainBuilder
+                        (
+                            blockList: chainStateLocal.CurrentBlock.BlockList,
+                            blockListHashes: chainStateLocal.CurrentBlock.BlockListHashes,
+                            utxoBuilder: utxoBuilder
+                        );
+
+                        // try to advance the blockchain with the new winning block
+                        BlockchainBuilder newBlockchain;
+                        using (var cancelToken = new CancellationTokenSource())
                         {
-                            var blockchainBuilder = new BlockchainBuilder
-                            (
-                                blockList: chainStateLocal.CurrentBlock.BlockList,
-                                blockListHashes: chainStateLocal.CurrentBlock.BlockListHashes,
-                                utxoBuilder: utxoBuilder
-                            );
-
-                            // try to advance the blockchain with the new winning block
                             var startTime = new Stopwatch();
                             startTime.Start();
-                            var newBlockchain = Calculator.CalculateBlockchainFromExisting(blockchainBuilder, chainStateLocal.TargetBlock, utxoBuilder, chainStateLocal.TargetBlockchain, out missingData, cancelToken.Token,
+
+                            newBlockchain = Calculator.CalculateBlockchainFromExisting(blockchainBuilder, chainStateLocal.TargetBlock, utxoBuilder, chainStateLocal.TargetBlockchain, out missingData, cancelToken.Token,
                                 progressBlockchain =>
                                 {
                                     if (startTime.Elapsed > TimeSpan.FromSeconds(60))
@@ -599,39 +613,39 @@ namespace BitSharp.Daemon
                                     // let the blockchain writer know there is new work
                                     this.writeBlockchainWorker.NotifyWork();
                                 });
-
-                            utxoBuilder.ToImmutable().Dispose();
-                            disposed = true;
-
-                            if (chainStateLocal.CurrentBlock.RootBlockHash != newBlockchain.RootBlockHash)
-                            {
-                                //TODO obviously a stop gap here...
-                                var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", newBlockchain.RootBlockHash.ToString());
-                                if (Directory.Exists(destPath))
-                                    Directory.Delete(destPath, recursive: true);
-                                Directory.CreateDirectory(destPath);
-
-                                var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", chainStateLocal.TargetBlock.BlockHash.ToString());
-                                foreach (var srcFile in Directory.GetFiles(srcPath))
-                                    File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
-
-                                UpdateCurrentBlockchain(new Data.Blockchain(newBlockchain.BlockList, newBlockchain.BlockListHashes, new PersistentUtxo(newBlockchain.RootBlockHash)));
-                            }
                         }
-                        finally
+
+                        utxoBuilder.ToImmutable().Dispose();
+                        disposed = true;
+
+                        if (chainStateLocal.CurrentBlock.RootBlockHash != newBlockchain.RootBlockHash)
                         {
-                            if (!disposed)
-                                utxoBuilder.ToImmutable().DisposeDelete();
-                        }
+                            //TODO obviously a stop gap here...
+                            var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", newBlockchain.RootBlockHash.ToString());
+                            if (Directory.Exists(destPath))
+                                Directory.Delete(destPath, recursive: true);
+                            Directory.CreateDirectory(destPath);
 
-                        // collect after processing
-                        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
+                            var srcPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", chainStateLocal.TargetBlock.BlockHash.ToString());
+                            foreach (var srcFile in Directory.GetFiles(srcPath))
+                                File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
 
-                        // handle any missing data that prevented further processing
-                        foreach (var e in missingData)
-                        {
-                            HandleMissingData(e);
+                            UpdateCurrentBlockchain(new Data.Blockchain(newBlockchain.BlockList, newBlockchain.BlockListHashes, new PersistentUtxo(newBlockchain.RootBlockHash)));
                         }
+                    }
+                    finally
+                    {
+                        if (!disposed)
+                            utxoBuilder.ToImmutable().DisposeDelete();
+                    }
+
+                    // collect after processing
+                    GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
+
+                    // handle any missing data that prevented further processing
+                    foreach (var e in missingData)
+                    {
+                        HandleMissingData(e);
                     }
 
                     // whenever the chain is successfully advanced, keep looking for more
