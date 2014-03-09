@@ -94,6 +94,7 @@
     <Compile Include="MemoryCache.cs" />
     <Compile Include="MemoryUtxo.cs" />
     <Compile Include="MemoryUtxoBuilder.cs" />
+    <Compile Include="PersistentUInt256ByteDictionary.cs" />
     <Compile Include="PersistentByteDictionary.cs" />
     <Compile Include="PersistentUtxo.cs" />
     <Compile Include="PersistentUtxoBuilder.cs" />

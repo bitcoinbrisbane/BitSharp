@@ -24,14 +24,14 @@ namespace BitSharp.Storage.Esent
 
         public IEnumerable<UInt256> ReadAllKeys()
         {
-            return this.Data.Keys.Select(x => new UInt256(x));
+            return this.Data.Keys;
         }
 
         public IEnumerable<KeyValuePair<UInt256, ImmutableList<UInt256>>> ReadAllValues()
         {
             return this.Data.Select(x =>
                 {
-                    var blockHash = new UInt256(x.Key);
+                    var blockHash = x.Key;
                     var txHashesBytes = x.Value;
 
                     var txHashes = ImmutableList.CreateBuilder<UInt256>();
@@ -49,7 +49,7 @@ namespace BitSharp.Storage.Esent
         public bool TryReadValue(UInt256 blockHash, out ImmutableList<UInt256> blockTxHashes)
         {
             byte[] txHashesBytes;
-            if (this.Data.TryGetValue(blockHash.ToByteArray(), out txHashesBytes))
+            if (this.Data.TryGetValue(blockHash, out txHashesBytes))
             {
                 var txHashes = ImmutableList.CreateBuilder<UInt256>();
                 var txHashBytes = new byte[32];
@@ -79,7 +79,7 @@ namespace BitSharp.Storage.Esent
                     Buffer.BlockCopy(keyPair.Value.Value[i].ToByteArray(), 0, txHashesBytes, i * 32, 32);
                 }
 
-                this.Data[keyPair.Key.ToByteArray()] = txHashesBytes;
+                this.Data[keyPair.Key] = txHashesBytes;
             }
 
             return true;

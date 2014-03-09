@@ -22,19 +22,19 @@ namespace BitSharp.Storage.Esent
 
         public IEnumerable<UInt256> ReadAllKeys()
         {
-            return this.Data.Keys.Select(x => new UInt256(x));
+            return this.Data.Keys;
         }
 
         public IEnumerable<KeyValuePair<UInt256, Transaction>> ReadAllValues()
         {
             return this.Data.Select(x =>
-                new KeyValuePair<UInt256, Transaction>(new UInt256(x.Key), StorageEncoder.DecodeTransaction(x.Value.ToMemoryStream())));
+                new KeyValuePair<UInt256, Transaction>(x.Key, StorageEncoder.DecodeTransaction(x.Value.ToMemoryStream())));
         }
 
         public bool TryReadValue(UInt256 txHash, out Transaction transaction)
         {
             byte[] txBytes;
-            if (this.Data.TryGetValue(txHash.ToByteArray(), out txBytes))
+            if (this.Data.TryGetValue(txHash, out txBytes))
             {
                 transaction = StorageEncoder.DecodeTransaction(txBytes.ToMemoryStream(), txHash);
                 return true;
@@ -49,7 +49,7 @@ namespace BitSharp.Storage.Esent
         public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<Transaction>>> keyPairs)
         {
             foreach (var keyPair in keyPairs)
-                this.Data[keyPair.Key.ToByteArray()] = StorageEncoder.EncodeTransaction(keyPair.Value.Value);
+                this.Data[keyPair.Key] = StorageEncoder.EncodeTransaction(keyPair.Value.Value);
 
             return true;
         }

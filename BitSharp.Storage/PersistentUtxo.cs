@@ -14,16 +14,16 @@ namespace BitSharp.Storage
     public class PersistentUtxo : Utxo
     {
         private UInt256 _blockHash;
-        private PersistentByteDictionary _utxo;
+        private PersistentUInt256ByteDictionary _utxo;
 
         static internal string FolderPath(UInt256 blockHash)
         {
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", blockHash.ToString());
         }
 
-        static internal UnspentTx DeserializeUnspentTx(byte[] key, byte[] value)
+        static internal UnspentTx DeserializeUnspentTx(UInt256 key, byte[] value)
         {
-            var txHash = new UInt256(key);
+            var txHash = key;
             var unspentOutputs = new ImmutableBitArray(value);
 
             return new UnspentTx(txHash, unspentOutputs);
@@ -37,10 +37,10 @@ namespace BitSharp.Storage
         public PersistentUtxo(UInt256 blockHash)
         {
             this._blockHash = blockHash;
-            this._utxo = new PersistentByteDictionary(FolderPath(blockHash));
+            this._utxo = new PersistentUInt256ByteDictionary(FolderPath(blockHash));
         }
 
-        internal PersistentUtxo(UInt256 blockHash, PersistentByteDictionary utxo)
+        internal PersistentUtxo(UInt256 blockHash, PersistentUInt256ByteDictionary utxo)
         {
             this._blockHash = blockHash;
             this._utxo = utxo;
@@ -71,12 +71,12 @@ namespace BitSharp.Storage
 
         public bool ContainsKey(Common.UInt256 txHash)
         {
-            return _utxo.ContainsKey(txHash.ToByteArray());
+            return _utxo.ContainsKey(txHash);
         }
 
         public UnspentTx this[Common.UInt256 txHash]
         {
-            get { return DeserializeUnspentTx(txHash.ToByteArray(), this._utxo[txHash.ToByteArray()]); }
+            get { return DeserializeUnspentTx(txHash, this._utxo[txHash]); }
         }
 
         internal void Duplicate(UInt256 blockHash)
@@ -95,7 +95,7 @@ namespace BitSharp.Storage
             foreach (var srcFile in Directory.GetFiles(srcPath))
                 File.Copy(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
 
-            this._utxo = new PersistentByteDictionary(srcPath);
+            this._utxo = new PersistentUInt256ByteDictionary(srcPath);
         }
 
         public void Dispose()

@@ -21,14 +21,14 @@ namespace BitSharp.Storage.Esent
         private readonly EsentStorageContext _storageContext;
         private readonly string _name;
         private readonly string _dataPath;
-        private readonly PersistentByteDictionary _data;
+        private readonly PersistentUInt256ByteDictionary _data;
 
         public EsentDataStorage(EsentStorageContext storageContext, string name)
         {
             this._storageContext = storageContext;
             this._name = name;
             this._dataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "data", name);
-            this._data = new PersistentByteDictionary(this._dataPath);
+            this._data = new PersistentUInt256ByteDictionary(this._dataPath);
         }
 
         public EsentStorageContext StorageContext { get { return this._storageContext; } }
@@ -38,6 +38,6 @@ namespace BitSharp.Storage.Esent
             this._data.Dispose();
         }
 
-        protected PersistentByteDictionary Data { get { return this._data; } }
+        protected PersistentUInt256ByteDictionary Data { get { return this._data; } }
     }
 }

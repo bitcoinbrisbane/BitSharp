@@ -11,14 +11,31 @@ using System.Text;
 using System.Threading.Tasks;
 using BitSharp.Data;
 using System.Data.SqlClient;
+using System.IO;
 
 namespace BitSharp.Storage.Esent
 {
-    public class KnownAddressStorage : EsentDataStorage, IBoundedStorage<NetworkAddressKey, NetworkAddressWithTime>
+    public class KnownAddressStorage : IBoundedStorage<NetworkAddressKey, NetworkAddressWithTime>
     {
+        private readonly EsentStorageContext _storageContext;
+        private readonly string _name;
+        private readonly string _dataPath;
+        private readonly PersistentByteDictionary _data;
+
         public KnownAddressStorage(EsentStorageContext storageContext)
-            : base(storageContext, "knownAddresses")
-        { }
+        {
+            this._storageContext = storageContext;
+            this._name = "knownAddresses";
+            this._dataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "data", this._name);
+            this._data = new PersistentByteDictionary(this._dataPath);
+        }
+
+        public void Dispose()
+        {
+            this._data.Dispose();
+        }
+
+        public EsentStorageContext StorageContext { get { return this._storageContext; } }
 
         public IEnumerable<NetworkAddressKey> ReadAllKeys()
         {
@@ -58,5 +75,7 @@ namespace BitSharp.Storage.Esent
         {
             this.Data.Clear();
         }
+
+        protected PersistentByteDictionary Data { get { return this._data; } }
     }
 }
