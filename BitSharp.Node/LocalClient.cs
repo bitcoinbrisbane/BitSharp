@@ -255,7 +255,7 @@ namespace BitSharp.Node
 
             //TODO
             // request 60 seconds download worth of blocks
-            var requestAmount = 1 + (int)(receiveRateHz * 60);
+            var requestAmount = 100; //TODO 1 + (int)(receiveRateHz * 60);
 
 
             //Debug.WriteLine("b: {0:#,##0.000} s".Format2(stopwatch.ElapsedSecondsFloat()));
@@ -425,7 +425,7 @@ namespace BitSharp.Node
 
             //TODO
             // request 60 seconds download worth of transactions
-            var requestAmount = 1 + (int)(receiveRateHz * 60);
+            var requestAmount = 100; //TODO 1 + (int)(receiveRateHz * 60);
 
 
             //Debug.WriteLine("b: {0:#,##0.000} s".Format2(stopwatch.ElapsedSecondsFloat()));
