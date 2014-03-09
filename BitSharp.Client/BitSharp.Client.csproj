@@ -163,10 +163,6 @@
       <Project>{6d4d2210-a54f-41f0-bca4-727b7ddb27c2}</Project>
       <Name>BitSharp.Storage.Esent</Name>
     </ProjectReference>
-    <ProjectReference Include="..\BitSharp.Storage.SQLite\BitSharp.Storage.SQLite.csproj">
-      <Project>{992a748c-56d7-4521-93f1-a8ad8fb88e16}</Project>
-      <Name>BitSharp.Storage.SQLite</Name>
-    </ProjectReference>
     <ProjectReference Include="..\BitSharp.Storage.SqlServer\BitSharp.Storage.SqlServer.csproj">
       <Project>{4a352701-a741-48c9-9cbc-a9f4f54d7e6c}</Project>
       <Name>BitSharp.Storage.SqlServer</Name>
