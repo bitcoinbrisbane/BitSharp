@@ -36,6 +36,12 @@ namespace BitSharp.Storage
                 this.Add(item);
             }
         }
+
+        ~PersistentByteDictionary()
+        {
+            this.Dispose();
+        }
+
         public void Add(byte[] key, byte[] value)
         {
 #if BYTE_ARRAY_SUPPORTED
@@ -177,6 +183,7 @@ namespace BitSharp.Storage
         public void Dispose()
         {
             this.dict.Dispose();
+            GC.SuppressFinalize(this);
         }
 
         private static string Encode(byte[] bytes)
