@@ -23,8 +23,6 @@ namespace BitSharp.Blockchain
         private readonly IBlockchainRules _rules;
         private readonly CacheContext _cacheContext;
         private readonly CancellationToken shutdownToken;
-        //TODO
-        private readonly Stopwatch validateStopwatch = new Stopwatch();
 
         public BlockchainCalculator(IBlockchainRules rules, CacheContext cacheContext, CancellationToken shutdownToken)
         {
@@ -75,29 +73,15 @@ namespace BitSharp.Blockchain
             Debug.WriteLine("Searching for last common ancestor between current chainblock and winning chainblock");
 
             List<UInt256> newChainBlockList;
-            var lastCommonAncestorChain = RollbackToLastCommonAncestor(blockchainBuilder, targetChainedBlock, currentChain, cancelToken, out newChainBlockList);
+            RollbackToLastCommonAncestor(blockchainBuilder, targetChainedBlock, currentChain, cancelToken, out newChainBlockList);
 
             Debug.WriteLine("Last common ancestor found at block {0}, height {1:#,##0}, begin processing winning blockchain".Format2(blockchainBuilder.RootBlockHash.ToHexNumberString(), blockchainBuilder.Height));
 
-            // setup statistics
-            var totalTxCount = 0L;
-            var totalInputCount = 0L;
-            var totalStopwatch = new Stopwatch();
-
-            var currentBlockCount = 0L;
-            var currentTxCount = 0L;
-            var currentInputCount = 0L;
-            var currentRateStopwatch = new Stopwatch();
-
-            totalStopwatch.Start();
-            currentRateStopwatch.Start();
+            blockchainBuilder.Stats.totalStopwatch.Start();
+            blockchainBuilder.Stats.currentRateStopwatch.Start();
 
             // with last common ancestor found and utxo rolled back to that point, calculate the new blockchain
-            // use ImmutableList for BlockList during modification
-            blockchainBuilder.BlockList = lastCommonAncestorChain.BlockList;
-            blockchainBuilder.BlockListHashes = lastCommonAncestorChain.BlockListHashes;
-
-            var utxoSafe = true;
+            bool utxoSafe = true;
             try
             {
                 // start calculating new utxo
@@ -126,34 +110,40 @@ namespace BitSharp.Blockchain
 
                     // validate the block
                     // validation utxo includes all transactions added in the same block, any double spends will have failed the block above
-                    validateStopwatch.Start();
-                    new MethodTimer(false).Time("ValidateBlock", () =>
-                        this.Rules.ValidateBlock(nextBlock, blockchainBuilder, newTransactions));
-                    validateStopwatch.Stop();
+                    blockchainBuilder.Stats.validateStopwatch.Start();
+                    try
+                    {
+                        new MethodTimer(false).Time("ValidateBlock", () =>
+                            this.Rules.ValidateBlock(nextBlock, blockchainBuilder, newTransactions));
+                    }
+                    finally
+                    {
+                        blockchainBuilder.Stats.validateStopwatch.Stop();
+                    }
 
                     // create the next link in the new blockchain
                     if (onProgress != null)
                         onProgress();
 
                     // blockchain processing statistics
-                    currentBlockCount++;
-                    currentTxCount += txCount;
-                    currentInputCount += inputCount;
-                    totalTxCount += txCount;
-                    totalInputCount += inputCount;
+                    blockchainBuilder.Stats.currentBlockCount++;
+                    blockchainBuilder.Stats.currentTxCount += txCount;
+                    blockchainBuilder.Stats.currentInputCount += inputCount;
+                    blockchainBuilder.Stats.totalTxCount += txCount;
+                    blockchainBuilder.Stats.totalInputCount += inputCount;
 
                     var txInterval = 100.THOUSAND();
                     if (
                         blockchainBuilder.Height % 10.THOUSAND() == 0
-                        || (totalTxCount % txInterval < (totalTxCount - txCount) % txInterval || txCount >= txInterval))
+                        || (blockchainBuilder.Stats.totalTxCount % txInterval < (blockchainBuilder.Stats.totalTxCount - txCount) % txInterval || txCount >= txInterval))
                     {
-                        LogBlockchainProgress(blockchainBuilder, totalStopwatch, totalTxCount, totalInputCount, currentRateStopwatch, currentBlockCount, currentTxCount, currentInputCount);
+                        LogBlockchainProgress(blockchainBuilder);
 
-                        currentBlockCount = 0;
-                        currentTxCount = 0;
-                        currentInputCount = 0;
-                        currentRateStopwatch.Reset();
-                        currentRateStopwatch.Start();
+                        blockchainBuilder.Stats.currentBlockCount = 0;
+                        blockchainBuilder.Stats.currentTxCount = 0;
+                        blockchainBuilder.Stats.currentInputCount = 0;
+                        blockchainBuilder.Stats.currentRateStopwatch.Reset();
+                        blockchainBuilder.Stats.currentRateStopwatch.Start();
                     }
 
                     utxoSafe = true;
@@ -183,10 +173,12 @@ namespace BitSharp.Blockchain
             if (onProgress != null)
                 onProgress();
 
-            LogBlockchainProgress(blockchainBuilder, totalStopwatch, totalTxCount, totalInputCount, currentRateStopwatch, currentBlockCount, currentTxCount, currentInputCount);
+            LogBlockchainProgress(blockchainBuilder);
+            blockchainBuilder.Stats.totalStopwatch.Stop();
+            blockchainBuilder.Stats.currentRateStopwatch.Stop();
         }
 
-        public BlockchainBuilder RollbackToLastCommonAncestor(BlockchainBuilder blockchainBuilder, ChainedBlock targetChainedBlock, IImmutableList<ChainedBlock> currentChain, CancellationToken cancelToken, out List<UInt256> newChainBlockList)
+        public void RollbackToLastCommonAncestor(BlockchainBuilder blockchainBuilder, ChainedBlock targetChainedBlock, IImmutableList<ChainedBlock> currentChain, CancellationToken cancelToken, out List<UInt256> newChainBlockList)
         {
             // take snapshots
             var newChainedBlock = targetChainedBlock;
@@ -259,8 +251,6 @@ namespace BitSharp.Blockchain
 
             // work list will have last items added first, reverse
             newChainBlockList.Reverse();
-
-            return blockchainBuilder;
         }
 
         public List<ChainedBlock> FindBlocksPastLastCommonAncestor(Data.Blockchain currentBlockchain, ChainedBlock targetChainedBlock, IImmutableList<ChainedBlock> currentChain, CancellationToken cancelToken, out ImmutableList<ChainedBlock> rolledBackBlocks)
@@ -423,34 +413,33 @@ namespace BitSharp.Blockchain
             blockchainBuilder.BlockListHashes.Remove(blockchainBuilder.RootBlockHash);
         }
 
-        private void LogBlockchainProgress(BlockchainBuilder blockchain, Stopwatch totalStopwatch, long totalTxCount, long totalInputCount, Stopwatch currentRateStopwatch, long currentBlockCount, long currentTxCount, long currentInputCount)
+        private void LogBlockchainProgress(BlockchainBuilder blockchainBuilder)
         {
-            var currentBlockRate = (float)currentBlockCount / currentRateStopwatch.ElapsedSecondsFloat();
-            var currentTxRate = (float)currentTxCount / currentRateStopwatch.ElapsedSecondsFloat();
-            var currentInputRate = (float)currentInputCount / currentRateStopwatch.ElapsedSecondsFloat();
+            var currentBlockRate = (float)blockchainBuilder.Stats.currentBlockCount / blockchainBuilder.Stats.currentRateStopwatch.ElapsedSecondsFloat();
+            var currentTxRate = (float)blockchainBuilder.Stats.currentTxCount / blockchainBuilder.Stats.currentRateStopwatch.ElapsedSecondsFloat();
+            var currentInputRate = (float)blockchainBuilder.Stats.currentInputCount / blockchainBuilder.Stats.currentRateStopwatch.ElapsedSecondsFloat();
 
             Debug.WriteLine(
                 string.Join("\n",
                     new string('-', 80),
-                    "Height: {0,10} | Date: {1} | Duration: {7} hh:mm:ss | Validation: {8} hh:mm:ss | Blocks/s: {2,7} | Tx/s: {3,7} | Inputs/s: {4,7} | Total Tx: {5,7} | Total Inputs: {6,7} | Utxo Size: {9,7}",
-                    "GC Memory:      {10,10:#,##0.00} MB",
-                    "Process Memory: {11,10:#,##0.00} MB",
+                    "Height: {0,10} | Duration: {1} hh:mm:ss | Validation: {2} hh:mm:ss | Blocks/s: {3,7} | Tx/s: {4,7} | Inputs/s: {5,7} | Total Tx: {6,7} | Total Inputs: {7,7} | Utxo Size: {8,7}",
+                    "GC Memory:      {9,10:#,##0.00} MB",
+                    "Process Memory: {10,10:#,##0.00} MB",
                     new string('-', 80)
                 )
                 .Format2
                 (
-                    blockchain.Height.ToString("#,##0"),
-                    "",
-                    currentBlockRate.ToString("#,##0"),
-                    currentTxRate.ToString("#,##0"),
-                    currentInputRate.ToString("#,##0"),
-                    totalTxCount.ToString("#,##0"),
-                    totalInputCount.ToString("#,##0"),
-                    totalStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
-                    validateStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
-                    blockchain.UtxoBuilder.Count.ToString("#,##0"),
-                    (float)GC.GetTotalMemory(false) / 1.MILLION(),
-                    (float)Process.GetCurrentProcess().PrivateMemorySize64 / 1.MILLION()
+                /*0*/ blockchainBuilder.Height.ToString("#,##0"),
+                /*1*/ blockchainBuilder.Stats.totalStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
+                /*2*/ blockchainBuilder.Stats.validateStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
+                /*3*/ currentBlockRate.ToString("#,##0"),
+                /*4*/ currentTxRate.ToString("#,##0"),
+                /*5*/ currentInputRate.ToString("#,##0"),
+                /*6*/ blockchainBuilder.Stats.totalTxCount.ToString("#,##0"),
+                /*7*/ blockchainBuilder.Stats.totalInputCount.ToString("#,##0"),
+                /*8*/ blockchainBuilder.UtxoBuilder.Count.ToString("#,##0"),
+                /*9*/ (float)GC.GetTotalMemory(false) / 1.MILLION(),
+                /*10*/ (float)Process.GetCurrentProcess().PrivateMemorySize64 / 1.MILLION()
                 ));
         }
 

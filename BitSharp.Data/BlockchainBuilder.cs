@@ -16,6 +16,7 @@ namespace BitSharp.Data
         private ImmutableList<ChainedBlock>.Builder blockList;
         private ImmutableHashSet<UInt256>.Builder blockListHashes;
         private readonly UtxoBuilder utxoBuilder;
+        private readonly BuilderStats stats;
 
         public BlockchainBuilder(ImmutableList<ChainedBlock>.Builder blockList, ImmutableHashSet<UInt256>.Builder blockListHashes, UtxoBuilder utxoBuilder)
         {
@@ -24,6 +25,7 @@ namespace BitSharp.Data
             this.blockList = blockList;
             this.blockListHashes = blockListHashes;
             this.utxoBuilder = utxoBuilder;
+            this.stats = new BuilderStats();
         }
 
         ~BlockchainBuilder()
@@ -80,17 +82,33 @@ namespace BitSharp.Data
             GC.SuppressFinalize(this);
         }
 
-        private class UtxoComparer : IEqualityComparer<KeyValuePair<UInt256, UnspentTx>>
-        {
-            public bool Equals(KeyValuePair<UInt256, UnspentTx> x, KeyValuePair<UInt256, UnspentTx> y)
-            {
-                return x.Key == y.Key && x.Value == y.Value;
-            }
+        public BuilderStats Stats { get { return this.stats; } }
 
-            public int GetHashCode(KeyValuePair<UInt256, UnspentTx> obj)
-            {
-                return obj.Key.GetHashCode() ^ obj.Value.GetHashCode();
-            }
+        //private class UtxoComparer : IEqualityComparer<KeyValuePair<UInt256, UnspentTx>>
+        //{
+        //    public bool Equals(KeyValuePair<UInt256, UnspentTx> x, KeyValuePair<UInt256, UnspentTx> y)
+        //    {
+        //        return x.Key == y.Key && x.Value == y.Value;
+        //    }
+
+        //    public int GetHashCode(KeyValuePair<UInt256, UnspentTx> obj)
+        //    {
+        //        return obj.Key.GetHashCode() ^ obj.Value.GetHashCode();
+        //    }
+        //}
+
+        public sealed class BuilderStats
+        {
+            public long totalTxCount;
+            public long totalInputCount;
+            public Stopwatch totalStopwatch = new Stopwatch();
+            public Stopwatch currentRateStopwatch = new Stopwatch();
+            public Stopwatch validateStopwatch = new Stopwatch();
+            public long currentBlockCount;
+            public long currentTxCount;
+            public long currentInputCount;
+
+            internal BuilderStats() { }
         }
     }
 }
