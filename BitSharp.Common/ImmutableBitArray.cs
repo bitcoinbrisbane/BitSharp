@@ -27,9 +27,10 @@ namespace BitSharp.Common
             this.bitArray = new BitArray(values);
         }
 
-        public ImmutableBitArray(byte[] bytes)
+        public ImmutableBitArray(byte[] bytes, int length)
         {
             this.bitArray = new BitArray(bytes);
+            this.bitArray.Length = length;
         }
 
         private ImmutableBitArray(BitArray bitArray, bool clone)

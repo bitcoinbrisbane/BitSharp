@@ -28,14 +28,25 @@ namespace BitSharp.Storage
         static internal UnspentTx DeserializeUnspentTx(UInt256 key, byte[] value)
         {
             var txHash = key;
-            var unspentOutputs = new ImmutableBitArray(value);
+
+            var length = Bits.ToInt32(new ArraySegment<byte>(value, 0, 4).ToArray());
+            var unspentOutputsBytes = new ArraySegment<byte>(value, 4, value.Length - 4).ToArray();
+
+            var unspentOutputs = new ImmutableBitArray(unspentOutputsBytes, length);
 
             return new UnspentTx(txHash, unspentOutputs);
         }
 
         static internal byte[] SerializeUnspentTx(UnspentTx unspentTx)
         {
-            return unspentTx.UnspentOutputs.ToByteArray();
+            var lengthBytes = Bits.GetBytes(unspentTx.UnspentOutputs.Length);
+            var unspentOutputsBytes = unspentTx.UnspentOutputs.ToByteArray();
+
+            var bytes = new byte[lengthBytes.Length + unspentOutputsBytes.Length];
+            Buffer.BlockCopy(lengthBytes, 0, bytes, 0, lengthBytes.Length);
+            Buffer.BlockCopy(unspentOutputsBytes, 0, bytes, lengthBytes.Length, unspentOutputsBytes.Length);
+
+            return bytes;
         }
 
         public PersistentUtxo(UInt256 blockHash)
