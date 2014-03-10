@@ -10,7 +10,7 @@ namespace BitSharp.Storage.Test
     public class MemoryStorageContext : IStorageContext
     {
         private readonly MemoryBlockHeaderStorage _blockHeaderStorage;
-        private readonly MemoryBlockTransactionsStorage _blockTransactionsStorage;
+        private readonly MemoryBlockTxHashesStorage _blockTxHashesStorage;
         private readonly MemoryTransactionStorage _transactionStorage;
         private readonly MemoryChainedBlockStorage _chainedBlockStorage;
         private readonly MemoryBlockchainStorage _blockchainStorage;
@@ -18,7 +18,7 @@ namespace BitSharp.Storage.Test
         public MemoryStorageContext()
         {
             this._blockHeaderStorage = new MemoryBlockHeaderStorage(this);
-            this._blockTransactionsStorage = new MemoryBlockTransactionsStorage(this);
+            this._blockTxHashesStorage = new MemoryBlockTxHashesStorage(this);
             this._transactionStorage = new MemoryTransactionStorage(this);
             this._chainedBlockStorage = new MemoryChainedBlockStorage(this);
             this._blockchainStorage = new MemoryBlockchainStorage(this);
@@ -26,7 +26,7 @@ namespace BitSharp.Storage.Test
 
         public MemoryBlockHeaderStorage BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 
-        public MemoryBlockTransactionsStorage BlockTransactionsStorage { get { return this._blockTransactionsStorage; } }
+        public MemoryBlockTxHashesStorage BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
         public MemoryTransactionStorage TransactionStorage { get { return this._transactionStorage; } }
 
@@ -36,7 +36,7 @@ namespace BitSharp.Storage.Test
 
         IBlockHeaderStorage IStorageContext.BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 
-        IBlockTransactionsStorage IStorageContext.BlockTransactionsStorage { get { return this._blockTransactionsStorage; } }
+        IBlockTxHashesStorage IStorageContext.BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
         ITransactionStorage IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
 

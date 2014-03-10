@@ -15,8 +15,8 @@ namespace BitSharp.Storage
     {
         private readonly CacheContext _cacheContext;
 
-        public TransactionCache(CacheContext cacheContext, long maxCacheMemorySize)
-            : base("TransactionCache", cacheContext.StorageContext.TransactionStorage, 0, maxCacheMemorySize, Transaction.SizeEstimator)
+        public TransactionCache(CacheContext cacheContext, long maxFlushMemorySize, long maxCacheMemorySize)
+            : base("TransactionCache", cacheContext.StorageContext.TransactionStorage, maxFlushMemorySize, maxCacheMemorySize, Transaction.SizeEstimator)
         {
             this._cacheContext = cacheContext;
         }

@@ -17,9 +17,9 @@ using System.IO;
 
 namespace BitSharp.Storage.SqlServer
 {
-    public class BlockTransactionsStorage : SqlDataStorage, IBlockTransactionsStorage
+    public class BlockTxHashesStorage : SqlDataStorage, IBlockTxHashesStorage
     {
-        public BlockTransactionsStorage(SqlServerStorageContext storageContext)
+        public BlockTxHashesStorage(SqlServerStorageContext storageContext)
             : base(storageContext)
         { }
 
@@ -43,7 +43,7 @@ namespace BitSharp.Storage.SqlServer
             }
         }
 
-        public IEnumerable<KeyValuePair<UInt256, ImmutableList<UInt256>>> ReadAllValues()
+        public IEnumerable<KeyValuePair<UInt256, IImmutableList<UInt256>>> ReadAllValues()
         {
             using (var conn = this.OpenConnection())
             using (var cmd = conn.CreateCommand())
@@ -67,13 +67,13 @@ namespace BitSharp.Storage.SqlServer
                             txHashes.Add(new UInt256(txHashBytes));
                         }
 
-                        yield return new KeyValuePair<UInt256, ImmutableList<UInt256>>(blockHash, txHashes.ToImmutable());
+                        yield return new KeyValuePair<UInt256, IImmutableList<UInt256>>(blockHash, txHashes.ToImmutable());
                     }
                 }
             }
         }
 
-        public bool TryReadValue(UInt256 blockHash, out ImmutableList<UInt256> blockTxHashes)
+        public bool TryReadValue(UInt256 blockHash, out IImmutableList<UInt256> blockTxHashes)
         {
             using (var conn = this.OpenConnection())
             using (var cmd = conn.CreateCommand())
@@ -111,7 +111,7 @@ namespace BitSharp.Storage.SqlServer
             }
         }
 
-        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<ImmutableList<UInt256>>>> keyPairs)
+        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<IImmutableList<UInt256>>>> keyPairs)
         {
             var stopwatch = new Stopwatch();
             var count = 0;

@@ -73,7 +73,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BlockHeaderStorage.cs" />
-    <Compile Include="BlockTransactionsStorage.cs" />
+    <Compile Include="BlockTxHashesStorage.cs" />
     <Compile Include="ChainedBlockStorage.cs" />
     <Compile Include="KnownAddressStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

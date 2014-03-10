@@ -11,7 +11,7 @@ namespace BitSharp.Storage.SqlServer
     public class SqlServerStorageContext : IStorageContext
     {
         private readonly BlockHeaderStorage _blockHeaderStorage;
-        private readonly BlockTransactionsStorage _blockTransactionsStorage;
+        private readonly BlockTxHashesStorage _blockTxHashesStorage;
         private readonly TransactionStorage _transactionStorage;
         private readonly ChainedBlockStorage _chainedBlockStorage;
         private readonly BlockchainStorage _blockchainStorage;
@@ -19,7 +19,7 @@ namespace BitSharp.Storage.SqlServer
         public SqlServerStorageContext()
         {
             this._blockHeaderStorage = new BlockHeaderStorage(this);
-            this._blockTransactionsStorage = new BlockTransactionsStorage(this);
+            this._blockTxHashesStorage = new BlockTxHashesStorage(this);
             this._transactionStorage = new TransactionStorage(this);
             this._chainedBlockStorage = new ChainedBlockStorage(this);
             this._blockchainStorage = new BlockchainStorage(this);
@@ -27,7 +27,7 @@ namespace BitSharp.Storage.SqlServer
 
         public BlockHeaderStorage BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 
-        public BlockTransactionsStorage BlockTransactionsStorage { get { return this._blockTransactionsStorage; } }
+        public BlockTxHashesStorage BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
         public TransactionStorage Transactionstorage { get { return this._transactionStorage; } }
 
@@ -37,7 +37,7 @@ namespace BitSharp.Storage.SqlServer
 
         IBlockHeaderStorage IStorageContext.BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 
-        IBlockTransactionsStorage IStorageContext.BlockTransactionsStorage { get { return this._blockTransactionsStorage; } }
+        IBlockTxHashesStorage IStorageContext.BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
         ITransactionStorage IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
 
@@ -50,7 +50,7 @@ namespace BitSharp.Storage.SqlServer
             new IDisposable[]
             {
                 this._blockHeaderStorage,
-                this._blockTransactionsStorage,
+                this._blockTxHashesStorage,
                 this._chainedBlockStorage,
                 this._blockchainStorage
             }.DisposeList();

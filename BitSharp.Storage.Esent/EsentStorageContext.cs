@@ -11,21 +11,21 @@ namespace BitSharp.Storage.Esent
     public class EsentStorageContext : IStorageContext
     {
         private readonly BlockHeaderStorage _blockHeaderStorage;
-        private readonly BlockTransactionsStorage _blockTransactionsStorage;
+        private readonly BlockTxHashesStorage _blockTxHashesStorage;
         private readonly TransactionStorage _transactionStorage;
         private readonly ChainedBlockStorage _chainedBlockStorage;
 
         public EsentStorageContext()
         {
             this._blockHeaderStorage = new BlockHeaderStorage(this);
-            this._blockTransactionsStorage = new BlockTransactionsStorage(this);
+            this._blockTxHashesStorage = new BlockTxHashesStorage(this);
             this._transactionStorage = new TransactionStorage(this);
             this._chainedBlockStorage = new ChainedBlockStorage(this);
         }
 
         public BlockHeaderStorage BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 
-        public BlockTransactionsStorage BlockTransactionsStorage { get { return this._blockTransactionsStorage; } }
+        public BlockTxHashesStorage BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
         public TransactionStorage Transactionstorage { get { return this._transactionStorage; } }
 
@@ -33,7 +33,7 @@ namespace BitSharp.Storage.Esent
 
         IBlockHeaderStorage IStorageContext.BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 
-        IBlockTransactionsStorage IStorageContext.BlockTransactionsStorage { get { return this._blockTransactionsStorage; } }
+        IBlockTxHashesStorage IStorageContext.BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
         ITransactionStorage IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
 
@@ -46,7 +46,7 @@ namespace BitSharp.Storage.Esent
             new IDisposable[]
             {
                 this._blockHeaderStorage,
-                this._blockTransactionsStorage,
+                this._blockTxHashesStorage,
                 this._chainedBlockStorage
             }.DisposeList();
         }

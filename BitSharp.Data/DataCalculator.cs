@@ -87,13 +87,13 @@ namespace BitSharp.Data
             }
         }
 
-        public static UInt256 CalculateMerkleRoot(ImmutableList<UInt256> txHashes)
+        public static UInt256 CalculateMerkleRoot(IImmutableList<UInt256> txHashes)
         {
             ImmutableList<ImmutableList<byte>> merkleTree;
             return CalculateMerkleRoot(txHashes, out merkleTree);
         }
 
-        public static UInt256 CalculateMerkleRoot(ImmutableList<UInt256> txHashes, out ImmutableList<ImmutableList<byte>> merkleTree)
+        public static UInt256 CalculateMerkleRoot(IImmutableList<UInt256> txHashes, out ImmutableList<ImmutableList<byte>> merkleTree)
         {
             var workingMerkleTree = new List<ImmutableList<byte>>();
 

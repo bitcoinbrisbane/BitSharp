@@ -85,7 +85,7 @@
   <ItemGroup>
     <Compile Include="MemoryTransactionStorage.cs" />
     <Compile Include="MemoryBlockHeaderStorage.cs" />
-    <Compile Include="MemoryBlockTransactionsStorage.cs" />
+    <Compile Include="MemoryBlockTxHashesStorage.cs" />
     <Compile Include="MemoryBlockchainStorage.cs" />
     <Compile Include="MemoryChainedBlockStorage.cs" />
     <Compile Include="MemoryStorage.cs" />

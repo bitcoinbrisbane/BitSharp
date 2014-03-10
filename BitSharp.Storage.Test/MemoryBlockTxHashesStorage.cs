@@ -12,9 +12,9 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage.Test
 {
-    public class MemoryBlockTransactionsStorage : MemoryStorage<UInt256, ImmutableList<UInt256>>, IBlockTransactionsStorage
+    public class MemoryBlockTxHashesStorage : MemoryStorage<UInt256, IImmutableList<UInt256>>, IBlockTxHashesStorage
     {
-        public MemoryBlockTransactionsStorage(MemoryStorageContext storageContext)
+        public MemoryBlockTxHashesStorage(MemoryStorageContext storageContext)
             : base(storageContext)
         { }
     }

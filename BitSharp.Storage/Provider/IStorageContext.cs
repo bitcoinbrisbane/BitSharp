@@ -10,7 +10,7 @@ namespace BitSharp.Storage
     {
         IBlockHeaderStorage BlockHeaderStorage { get; }
 
-        IBlockTransactionsStorage BlockTransactionsStorage { get; }
+        IBlockTxHashesStorage BlockTxHashesStorage { get; }
 
         ITransactionStorage TransactionStorage { get; }
 

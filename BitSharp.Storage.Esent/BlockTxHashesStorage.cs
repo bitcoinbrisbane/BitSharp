@@ -16,9 +16,9 @@ using System.IO;
 
 namespace BitSharp.Storage.Esent
 {
-    public class BlockTransactionsStorage : EsentDataStorage, IBlockTransactionsStorage
+    public class BlockTxHashesStorage : EsentDataStorage, IBlockTxHashesStorage
     {
-        public BlockTransactionsStorage(EsentStorageContext storageContext)
+        public BlockTxHashesStorage(EsentStorageContext storageContext)
             : base(storageContext, "blockTxHashes")
         { }
 
@@ -27,26 +27,26 @@ namespace BitSharp.Storage.Esent
             return this.Data.Keys;
         }
 
-        public IEnumerable<KeyValuePair<UInt256, ImmutableList<UInt256>>> ReadAllValues()
+        public IEnumerable<KeyValuePair<UInt256, IImmutableList<UInt256>>> ReadAllValues()
         {
             return this.Data.Select(x =>
+            {
+                var blockHash = x.Key;
+                var txHashesBytes = x.Value;
+
+                var txHashes = ImmutableList.CreateBuilder<UInt256>();
+                var txHashBytes = new byte[32];
+                for (var i = 0; i < txHashesBytes.Length; i += 32)
                 {
-                    var blockHash = x.Key;
-                    var txHashesBytes = x.Value;
+                    Buffer.BlockCopy(txHashesBytes, i, txHashBytes, 0, 32);
+                    txHashes.Add(new UInt256(txHashBytes));
+                }
 
-                    var txHashes = ImmutableList.CreateBuilder<UInt256>();
-                    var txHashBytes = new byte[32];
-                    for (var i = 0; i < txHashesBytes.Length; i += 32)
-                    {
-                        Buffer.BlockCopy(txHashesBytes, i, txHashBytes, 0, 32);
-                        txHashes.Add(new UInt256(txHashBytes));
-                    }
-
-                    return new KeyValuePair<UInt256, ImmutableList<UInt256>>(blockHash, txHashes.ToImmutable());
-                });
+                return new KeyValuePair<UInt256, IImmutableList<UInt256>>(blockHash, txHashes.ToImmutable());
+            });
         }
 
-        public bool TryReadValue(UInt256 blockHash, out ImmutableList<UInt256> blockTxHashes)
+        public bool TryReadValue(UInt256 blockHash, out IImmutableList<UInt256> blockTxHashes)
         {
             byte[] txHashesBytes;
             if (this.Data.TryGetValue(blockHash, out txHashesBytes))
@@ -69,7 +69,7 @@ namespace BitSharp.Storage.Esent
             }
         }
 
-        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<ImmutableList<UInt256>>>> keyPairs)
+        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<IImmutableList<UInt256>>>> keyPairs)
         {
             foreach (var keyPair in keyPairs)
             {
