@@ -16,7 +16,6 @@ namespace BitSharp.Storage
     public class BoundedCache<TKey, TValue> : UnboundedCache<TKey, TValue>
     {
         // known keys
-        private readonly ReaderWriterLockSlim knownKeysLock;
         private ConcurrentSet<TKey> knownKeys;
 
         private readonly IBoundedStorage<TKey, TValue> _dataStorage;
@@ -24,7 +23,6 @@ namespace BitSharp.Storage
         public BoundedCache(string name, IBoundedStorage<TKey, TValue> dataStorage, long maxFlushMemorySize, long maxCacheMemorySize, Func<TValue, long> sizeEstimator)
             : base(name, dataStorage, maxFlushMemorySize, maxCacheMemorySize, sizeEstimator)
         {
-            this.knownKeysLock = new ReaderWriterLockSlim();
             this.knownKeys = new ConcurrentSet<TKey>();
 
             this._dataStorage = dataStorage;
@@ -147,10 +145,7 @@ namespace BitSharp.Storage
         private void ClearKnownKeys()
         {
             // clear known keys
-            this.knownKeysLock.DoWrite(() =>
-            {
-                this.knownKeys = new ConcurrentSet<TKey>();
-            });
+            this.knownKeys.Clear();
 
             // reload existing keys from storage
             LoadKeyFromStorage();
@@ -171,13 +166,8 @@ namespace BitSharp.Storage
         // add a key to the known list, fire event if new
         private void AddKnownKey(TKey key)
         {
-            var wasAdded = false;
-
-            this.knownKeysLock.DoRead(() =>
-            {
-                // add to the list of known keys
-                wasAdded = this.knownKeys.TryAdd(key);
-            });
+            // add to the list of known keys
+            var wasAdded = this.knownKeys.TryAdd(key);
 
             // fire addition event
             if (wasAdded)
@@ -190,10 +180,7 @@ namespace BitSharp.Storage
         private void RemoveKnownKey(TKey key)
         {
             // remove from the list of known keys
-            this.knownKeysLock.DoRead(() =>
-            {
-                this.knownKeys.TryRemove(key);
-            });
+            this.knownKeys.TryRemove(key);
         }
     }
 }
