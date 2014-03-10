@@ -33,12 +33,12 @@ namespace BitSharp.Node
     public class LocalClient : IDisposable
     {
         private static readonly int SERVER_BACKLOG = 10;
-        private static readonly int CONNECTED_MAX = 10;
+        private static readonly int CONNECTED_MAX = 25;
         private static readonly int PENDING_MAX = 10;
         private static readonly int HANDSHAKE_TIMEOUT_MS = 15000;
 
-        private static readonly int MAX_BLOCK_REQUESTS = 100;
-        private static readonly int MAX_TRANSACTION_REQUESTS = 100;
+        private static readonly int MAX_BLOCK_REQUESTS = 20 * CONNECTED_MAX;
+        private static readonly int MAX_TRANSACTION_REQUESTS = 20 * CONNECTED_MAX;
         private static readonly int MAX_BLOCKCHAIN_LOOKAHEAD = 1000;
         // don't limit the first 100,000 block downloading as they are so small it will slow down their processing
         private static readonly int MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT = 100.THOUSAND();
