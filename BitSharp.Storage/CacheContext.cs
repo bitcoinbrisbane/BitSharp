@@ -29,14 +29,6 @@ namespace BitSharp.Storage
         {
             this._storageContext = storageContext;
 
-            this._blockStorage = new BlockStorage(this);
-            this._blockCache = new BlockCache
-            (
-                cacheContext: this,
-                maxFlushMemorySize: 10.MILLION(),
-                maxCacheMemorySize: 0.MILLION()
-            );
-
             this._blockHeaderCache = new BlockHeaderCache
             (
                 cacheContext: this,
@@ -62,6 +54,14 @@ namespace BitSharp.Storage
             (
                 cacheContext: this,
                 maxFlushMemorySize: 0.MILLION(),
+                maxCacheMemorySize: 0.MILLION()
+            );
+
+            this._blockStorage = new BlockStorage(this);
+            this._blockCache = new BlockCache
+            (
+                cacheContext: this,
+                maxFlushMemorySize: 10.MILLION(),
                 maxCacheMemorySize: 0.MILLION()
             );
         }

@@ -30,7 +30,7 @@ namespace BitSharp.Storage
 
         public IEnumerable<UInt256> ReadAllKeys()
         {
-            return this.StorageContext.BlockTxHashesStorage.ReadAllKeys();
+            return this.CacheContext.BlockTxHashesCache.GetAllKeys();
         }
 
         public IEnumerable<KeyValuePair<UInt256, Block>> ReadAllValues()
@@ -108,6 +108,10 @@ namespace BitSharp.Storage
                         Debugger.Break();
                     }
                 }
+                else
+                {
+                    int i = 0;
+                }
             }
 
             value = default(Block);
@@ -116,19 +120,16 @@ namespace BitSharp.Storage
 
         public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<Block>>> keyPairs)
         {
-            foreach (var value in keyPairs)
+            foreach (var keyPair in keyPairs)
             {
-                var block = value.Value.Value;
+                var block = keyPair.Value.Value;
 
                 // write the block's transactions
-                if (!this.StorageContext.TransactionStorage.TryWriteValues(
-                    block.Transactions.Select(x => new KeyValuePair<UInt256, WriteValue<Transaction>>(x.Hash, new WriteValue<Transaction>(x, value.Value.IsCreate)))))
-                    return false;
+                foreach (var tx in block.Transactions)
+                    this.CacheContext.TransactionCache.CreateValue(tx.Hash, tx);
 
                 // then write the transaction hash list
-                if (!this.StorageContext.BlockTxHashesStorage.TryWriteValue(block.Hash,
-                    new WriteValue<IImmutableList<UInt256>>(block.Transactions.Select(x => x.Hash).ToImmutableList(), value.Value.IsCreate)))
-                    return false;
+                this.CacheContext.BlockTxHashesCache.CreateValue(block.Hash, block.Transactions.Select(x => x.Hash).ToImmutableList());
             }
 
             return true;
