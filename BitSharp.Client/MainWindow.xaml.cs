@@ -60,6 +60,8 @@ namespace BitSharp.Client
                 MainnetRules.BypassExecuteScript = true;
                 ScriptEngine.BypassVerifySignature = true;
 
+                Debug.WriteLine(DateTime.Now);
+
 #if SQLITE
                 var storageContext = new SQLiteStorageContext();
                 var knownAddressStorage = new BitSharp.Storage.SQLite.KnownAddressStorage(storageContext);
