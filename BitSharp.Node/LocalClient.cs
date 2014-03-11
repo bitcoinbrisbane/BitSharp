@@ -674,10 +674,12 @@ namespace BitSharp.Node
         private void OnTransaction(Transaction transaction)
         {
             //Debug.WriteLine("Received block header {0}".Format2(transaction.Hash);
-            if (this.blockchainDaemon.MissingTransactions.Contains(transaction.Hash))
-            {
-                this.blockchainDaemon.CacheContext.TransactionCache.CreateValue(transaction.Hash, transaction);
-            }
+            
+            DateTime ignore;
+            this.requestedTransactions.TryRemove(transaction.Hash, out ignore);
+            this.blockchainDaemon.CacheContext.TransactionCache.CreateValue(transaction.Hash, transaction);
+
+            this.requestTransactionsWorker.NotifyWork();
         }
 
         private void OnReceivedAddresses(ImmutableList<NetworkAddressWithTime> addresses)
