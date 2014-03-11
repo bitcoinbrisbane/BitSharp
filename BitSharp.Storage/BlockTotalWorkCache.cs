@@ -8,6 +8,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace BitSharp.Storage
@@ -16,13 +17,24 @@ namespace BitSharp.Storage
     {
         private readonly CacheContext _cacheContext;
 
-        private IImmutableList<UInt256> maxTotalWorkBlocks;
+        private BigInteger maxTotalWork;
+        private ImmutableList<UInt256> maxTotalWorkBlocks;
+        private readonly ReaderWriterLockSlim maxTotalWorkLock;
 
         public BlockTotalWorkCache(CacheContext cacheContext, long maxFlushMemorySize, long maxCacheMemorySize)
             : base("BlockTotalWorkCache", cacheContext.StorageContext.BlockTotalWorkStorage, maxFlushMemorySize, maxCacheMemorySize, sizeEstimator: x => 64)
         {
             this._cacheContext = cacheContext;
-            this.maxTotalWorkBlocks = null;
+            this.maxTotalWork = -1;
+            this.maxTotalWorkBlocks = ImmutableList.Create<UInt256>();
+            this.maxTotalWorkLock = new ReaderWriterLockSlim();
+
+            var checkThread = new Thread(() =>
+            {
+                foreach (var keyPair in this.StorageContext.BlockTotalWorkStorage.SelectMaxTotalWorkBlocks())
+                    CheckTotalWork(keyPair.Key, keyPair.Value);
+            });
+            checkThread.Start();
         }
 
         public CacheContext CacheContext { get { return this._cacheContext; } }
@@ -33,11 +45,36 @@ namespace BitSharp.Storage
         {
             get
             {
-                //TODO
-                //this.maxTotalWorkBlocks
-
-                return this.StorageContext.BlockTotalWorkStorage.SelectMaxTotalWorkBlocks().ToImmutableList();
+                return this.maxTotalWorkLock.DoRead(() => this.maxTotalWorkBlocks.ToImmutableList());
             }
+        }
+
+        public override void CreateValue(UInt256 blockHash, BigInteger totalWork)
+        {
+            CheckTotalWork(blockHash, totalWork);
+            base.CreateValue(blockHash, totalWork);
+        }
+
+        public override void UpdateValue(UInt256 blockHash, BigInteger totalWork)
+        {
+            CheckTotalWork(blockHash, totalWork);
+            base.UpdateValue(blockHash, totalWork);
+        }
+
+        private void CheckTotalWork(UInt256 blockHash, BigInteger totalWork)
+        {
+            this.maxTotalWorkLock.DoWrite(() =>
+            {
+                if (totalWork > this.maxTotalWork)
+                {
+                    this.maxTotalWork = totalWork;
+                    this.maxTotalWorkBlocks = ImmutableList.Create<UInt256>(blockHash);
+                }
+                else if (totalWork == this.maxTotalWork)
+                {
+                    this.maxTotalWorkBlocks = this.maxTotalWorkBlocks.Add(blockHash);
+                }
+            });
         }
     }
 }

@@ -60,11 +60,13 @@ namespace BitSharp.Storage.Esent
             this.Data.Clear();
         }
 
-        public IEnumerable<UInt256> SelectMaxTotalWorkBlocks()
+        public IEnumerable<KeyValuePair<UInt256, BigInteger>> SelectMaxTotalWorkBlocks()
         {
             var maxTotalWork = this.Data.PersistentDictionary.Values.Max();
             return this.Data.PersistentDictionary.Where(x => x.Value == maxTotalWork)
-                .Select(x => new UInt256(Convert.FromBase64String(x.Key)));
+                .Select(x => new KeyValuePair<UInt256, BigInteger>(
+                    key: new UInt256(Convert.FromBase64String(x.Key)),
+                    value: StorageEncoder.DecodeTotalWork(Convert.FromBase64String(x.Value).ToMemoryStream())));
         }
     }
 }

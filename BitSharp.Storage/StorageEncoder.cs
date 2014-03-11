@@ -98,9 +98,10 @@ namespace BitSharp.Storage
                     throw new ArgumentOutOfRangeException();
 
                 var totalWorkBytes64 = new byte[64];
-                Buffer.BlockCopy(totalWorkBytes, 0, totalWorkBytes64, 64 - totalWorkBytes.Length, totalWorkBytes.Length);
+                Buffer.BlockCopy(totalWorkBytes, 0, totalWorkBytes64, 0, totalWorkBytes.Length);
 
                 writer.WriteBytes(totalWorkBytes64);
+                Debug.Assert(new BigInteger(totalWorkBytes64) == totalWork);
             }
         }
 

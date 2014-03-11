@@ -17,7 +17,7 @@ namespace BitSharp.Storage.Test
             : base(storageContext)
         { }
 
-        public IEnumerable<UInt256> SelectMaxTotalWorkBlocks()
+        public IEnumerable<KeyValuePair<UInt256, BigInteger>> SelectMaxTotalWorkBlocks()
         {
             throw new NotImplementedException();
         }

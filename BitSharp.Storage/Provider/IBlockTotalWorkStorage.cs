@@ -11,6 +11,6 @@ namespace BitSharp.Storage
 {
     public interface IBlockTotalWorkStorage : IBoundedStorage<UInt256, BigInteger>
     {
-        IEnumerable<UInt256> SelectMaxTotalWorkBlocks();
+        IEnumerable<KeyValuePair<UInt256, BigInteger>> SelectMaxTotalWorkBlocks();
     }
 }

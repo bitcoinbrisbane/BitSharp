@@ -577,14 +577,6 @@ namespace BitSharp.Daemon
         {
             try
             {
-                new MethodTimer().Time("MaxTotalWorkBlocks", () =>
-                {
-                    foreach (var blockHash in this.CacheContext.BlockTotalWorkCache.MaxTotalWorkBlocks)
-                    {
-                        Debug.WriteLine(blockHash.ToHexNumberString());
-                    }
-                });
-
                 var chainStateLocal = this.chainState;
 
                 if (this.currentBlockBuilder != null
