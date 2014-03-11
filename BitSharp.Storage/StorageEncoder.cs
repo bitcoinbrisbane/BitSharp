@@ -80,6 +80,37 @@ namespace BitSharp.Storage
             return stream.ToArray();
         }
 
+        public static BigInteger DecodeTotalWork(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                var totalWorkBytes = reader.ReadBytes(64);
+                return new BigInteger(totalWorkBytes);
+            }
+        }
+
+        public static void EncodeTotalWork(Stream stream, BigInteger totalWork)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                var totalWorkBytes = totalWork.ToByteArray();
+                if (totalWorkBytes.Length > 64)
+                    throw new ArgumentOutOfRangeException();
+
+                var totalWorkBytes64 = new byte[64];
+                Buffer.BlockCopy(totalWorkBytes, 0, totalWorkBytes64, 64 - totalWorkBytes.Length, totalWorkBytes.Length);
+
+                writer.WriteBytes(totalWorkBytes64);
+            }
+        }
+
+        public static byte[] EncodeTotalWork(BigInteger totalWork)
+        {
+            var stream = new MemoryStream();
+            EncodeTotalWork(stream, totalWork);
+            return stream.ToArray();
+        }
+
         public static ChainedBlock DecodeChainedBlock(Stream stream)
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))

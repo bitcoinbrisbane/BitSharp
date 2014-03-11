@@ -83,6 +83,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="MemoryBlockTotalWorkStorage.cs" />
     <Compile Include="MemoryTransactionStorage.cs" />
     <Compile Include="MemoryBlockHeaderStorage.cs" />
     <Compile Include="MemoryBlockTxHashesStorage.cs" />

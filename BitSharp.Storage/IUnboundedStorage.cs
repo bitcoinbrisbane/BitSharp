@@ -9,7 +9,7 @@ namespace BitSharp.Storage
     public interface IUnboundedStorage<TKey, TValue> : IDisposable
     {
         bool TryReadValue(TKey key, out TValue value);
-        
+
         bool TryWriteValues(IEnumerable<KeyValuePair<TKey, WriteValue<TValue>>> keyPairs);
     }
 
@@ -18,6 +18,11 @@ namespace BitSharp.Storage
         public static bool TryWriteValue<TKey, TValue>(this IUnboundedStorage<TKey, TValue> storage, TKey key, WriteValue<TValue> value)
         {
             return storage.TryWriteValues(new KeyValuePair<TKey, WriteValue<TValue>>[] { new KeyValuePair<TKey, WriteValue<TValue>>(key, value) });
+        }
+
+        public static bool TryCreateValue<TKey, TValue>(this IUnboundedStorage<TKey, TValue> storage, TKey key, TValue value)
+        {
+            return storage.TryWriteValues(new KeyValuePair<TKey, WriteValue<TValue>>[] { new KeyValuePair<TKey, WriteValue<TValue>>(key, new WriteValue<TValue>(value, IsCreate: true)) });
         }
     }
 }

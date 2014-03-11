@@ -176,7 +176,7 @@ namespace BitSharp.Client
                     {
                         // TODO this is abusing rollback a bit just to get the transactions that exist in a target block that's already known
                         // TODO make a better api for get the net output of a block
-                        List<TxOutputKey> spendOutputs, receiveOutputs;
+                        //List<TxOutputKey> spendOutputs, receiveOutputs;
                         //TODO
                         //this.blockchainDaemon.Calculator.RollbackBlockchain(this.viewBlockchain, block, out spendOutputs, out receiveOutputs);
 

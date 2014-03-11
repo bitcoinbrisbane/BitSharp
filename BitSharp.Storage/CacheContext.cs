@@ -21,6 +21,7 @@ namespace BitSharp.Storage
         private readonly BlockStorage _blockStorage;
         private readonly BlockCache _blockCache;
         private readonly BlockHeaderCache _blockHeaderCache;
+        private readonly BlockTotalWorkCache _blockTotalWorkCache;
         private readonly ChainedBlockCache _chainedBlockCache;
         private readonly BlockTxHashesCache _blockTxHashesCache;
         private readonly TransactionCache _transactionCache;
@@ -32,14 +33,21 @@ namespace BitSharp.Storage
             this._blockHeaderCache = new BlockHeaderCache
             (
                 cacheContext: this,
-                maxFlushMemorySize: 10.MILLION(),
+                maxFlushMemorySize: 0.MILLION(),
+                maxCacheMemorySize: 0.MILLION()
+            );
+
+            this._blockTotalWorkCache = new BlockTotalWorkCache
+            (
+                cacheContext: this,
+                maxFlushMemorySize: 0.MILLION(),
                 maxCacheMemorySize: 0.MILLION()
             );
 
             this._chainedBlockCache = new ChainedBlockCache
             (
                 cacheContext: this,
-                maxFlushMemorySize: 1.MILLION(),
+                maxFlushMemorySize: 0.MILLION(),
                 maxCacheMemorySize: 0.MILLION()
             );
 
@@ -61,7 +69,7 @@ namespace BitSharp.Storage
             this._blockCache = new BlockCache
             (
                 cacheContext: this,
-                maxFlushMemorySize: 10.MILLION(),
+                maxFlushMemorySize: 0.MILLION(),
                 maxCacheMemorySize: 0.MILLION()
             );
         }
@@ -73,6 +81,8 @@ namespace BitSharp.Storage
         public BlockCache BlockCache { get { return this._blockCache; } }
 
         public BlockHeaderCache BlockHeaderCache { get { return this._blockHeaderCache; } }
+
+        public BlockTotalWorkCache BlockTotalWorkCache { get { return this._blockTotalWorkCache; } }
 
         public ChainedBlockCache ChainedBlockCache { get { return this._chainedBlockCache; } }
 

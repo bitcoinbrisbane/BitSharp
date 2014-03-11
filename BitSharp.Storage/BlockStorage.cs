@@ -122,13 +122,13 @@ namespace BitSharp.Storage
 
                 // write the block's transactions
                 if (!this.StorageContext.TransactionStorage.TryWriteValues(
-                    block.Transactions.Select(x =>  new KeyValuePair<UInt256, WriteValue<Transaction>>(x.Hash, new WriteValue<Transaction>(x, keyPair.Value.IsCreate)))))
+                    block.Transactions.Select(x => new KeyValuePair<UInt256, WriteValue<Transaction>>(x.Hash, new WriteValue<Transaction>(x, keyPair.Value.IsCreate)))))
                 {
                     return false;
                 }
 
                 // then write the transaction hash list
-                if (!this.StorageContext.BlockTxHashesStorage.TryWriteValue(block.Hash, new WriteValue<IImmutableList<UInt256>>(block.Transactions.Select(x => x.Hash).ToImmutableList(), keyPair.Value.IsCreate)));
+                if (!this.StorageContext.BlockTxHashesStorage.TryWriteValue(block.Hash, new WriteValue<IImmutableList<UInt256>>(block.Transactions.Select(x => x.Hash).ToImmutableList(), keyPair.Value.IsCreate)))
                 {
                     return false;
                 }

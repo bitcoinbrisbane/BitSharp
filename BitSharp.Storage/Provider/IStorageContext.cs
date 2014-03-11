@@ -16,6 +16,8 @@ namespace BitSharp.Storage
 
         IChainedBlockStorage ChainedBlockStorage { get; }
 
+        IBlockTotalWorkStorage BlockTotalWorkStorage { get; }
+
         IBlockchainStorage BlockchainStorage { get; }
     }
 }

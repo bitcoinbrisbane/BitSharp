@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BitSharp.Common;
+using System.Linq.Expressions;
 
 namespace BitSharp.Storage
 {
@@ -42,6 +43,8 @@ namespace BitSharp.Storage
         {
             this.Dispose();
         }
+
+        public PersistentDictionary<string, string> PersistentDictionary { get { return this.dict; } }
 
         public void Add(UInt256 key, byte[] value)
         {

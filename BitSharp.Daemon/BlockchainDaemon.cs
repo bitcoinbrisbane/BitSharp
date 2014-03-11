@@ -449,6 +449,15 @@ namespace BitSharp.Daemon
                     );
                     this.CacheContext.ChainedBlockCache.CreateValue(newChainedBlock.BlockHash, newChainedBlock);
 
+                    new MethodTimer().Time("MaxTotalWorkBlocks", () =>
+                    {
+                        this.StorageContext.BlockTotalWorkStorage.TryCreateValue(newChainedBlock.BlockHash, newChainedBlock.TotalWork);
+                        foreach (var blockHash in this.CacheContext.BlockTotalWorkCache.MaxTotalWorkBlocks)
+                        {
+                            Debug.WriteLine(blockHash.ToHexNumberString());
+                        }
+                    });
+
                     // and finally add the newly chained block to the list of chained blocks so that an attempt will be made to chain off of it
                     chainedBlocks.Add(newChainedBlock);
 
@@ -549,7 +558,7 @@ namespace BitSharp.Daemon
                 {
                     Calculator.RevalidateBlockchain(chainStateLocal.CurrentBlock, this.Rules.GenesisBlock);
                 }
-                catch (ValidationException e)
+                catch (ValidationException)
                 {
                     //TODO this does not cancel a blockchain that is currently being processed
 
@@ -647,7 +656,7 @@ namespace BitSharp.Daemon
                                 });
                         }
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         this.currentBlockBuilder.Dispose();
                         this.currentBlockBuilder = null;
@@ -670,7 +679,7 @@ namespace BitSharp.Daemon
                     this.validateCurrentChainWorker.NotifyWork();
                 }
             }
-            catch (ValidationException e)
+            catch (ValidationException)
             {
                 //TODO
                 // an invalid blockchain with winning work will just keep trying over and over again until this is implemented
