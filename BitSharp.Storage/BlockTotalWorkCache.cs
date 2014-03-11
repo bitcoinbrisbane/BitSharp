@@ -29,6 +29,7 @@ namespace BitSharp.Storage
             this.maxTotalWorkBlocks = ImmutableList.Create<UInt256>();
             this.maxTotalWorkLock = new ReaderWriterLockSlim();
 
+            //TODO period rescan
             var checkThread = new Thread(() =>
             {
                 foreach (var keyPair in this.StorageContext.BlockTotalWorkStorage.SelectMaxTotalWorkBlocks())
