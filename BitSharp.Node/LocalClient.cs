@@ -264,19 +264,20 @@ namespace BitSharp.Node
             for (var i = 0; i < newChainBlockList.Count; i++)
             {
                 var requestBlock = newChainBlockList[i];
-                while (this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(requestBlock.BlockHash))
-                {
-                    newChainBlockList.RemoveAt(i);
-                    if (i < newChainBlockList.Count)
-                        requestBlock = newChainBlockList[i];
-                    else
-                    {
-                        requestBlock = null;
-                        break;
-                    }
-                }
+                //while (this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(requestBlock.BlockHash))
+                //{
+                //    newChainBlockList.RemoveAt(i);
+                //    if (i < newChainBlockList.Count)
+                //        requestBlock = newChainBlockList[i];
+                //    else
+                //    {
+                //        requestBlock = null;
+                //        break;
+                //    }
+                //}
 
-                if (requestBlock != null)
+                //if (requestBlock != null)
+                if (!this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(requestBlock.BlockHash))
                 {
                     // limit how far ahead the target blockchain will be downloaded
                     if (requestBlock.Height >= MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT
