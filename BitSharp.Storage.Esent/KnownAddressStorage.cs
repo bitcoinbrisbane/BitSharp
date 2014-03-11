@@ -68,6 +68,7 @@ namespace BitSharp.Storage.Esent
             foreach (var keyPair in keyPairs)
                 this.Data[NetworkEncoder.EncodeNetworkAddressKey(keyPair.Key).ToArray()] = NetworkEncoder.EncodeNetworkAddressWithTime(keyPair.Value.Value);
 
+            this.Data.Flush();
             return true;
         }
 

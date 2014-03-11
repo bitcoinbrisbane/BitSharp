@@ -186,6 +186,11 @@ namespace BitSharp.Storage
             GC.SuppressFinalize(this);
         }
 
+        public void Flush()
+        {
+            this.dict.Flush();
+        }
+
         private static string Encode(byte[] bytes)
         {
             return Convert.ToBase64String(bytes);

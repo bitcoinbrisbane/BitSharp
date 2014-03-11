@@ -52,6 +52,7 @@ namespace BitSharp.Storage.Esent
             foreach (var keyPair in keyPairs)
                 this.Data[keyPair.Key] = StorageEncoder.EncodeTotalWork(keyPair.Value.Value);
 
+            this.Data.Flush();
             return true;
         }
 

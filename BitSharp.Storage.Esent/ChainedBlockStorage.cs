@@ -51,6 +51,7 @@ namespace BitSharp.Storage.Esent
             foreach (var keyPair in keyPairs)
                 this.Data[keyPair.Key] = StorageEncoder.EncodeChainedBlock(keyPair.Value.Value);
 
+            this.Data.Flush();
             return true;
         }
 

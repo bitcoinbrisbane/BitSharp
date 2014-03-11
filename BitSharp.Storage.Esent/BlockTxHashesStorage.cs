@@ -82,6 +82,7 @@ namespace BitSharp.Storage.Esent
                 this.Data[keyPair.Key] = txHashesBytes;
             }
 
+            this.Data.Flush();
             return true;
         }
 
