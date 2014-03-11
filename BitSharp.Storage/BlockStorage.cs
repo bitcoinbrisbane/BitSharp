@@ -108,10 +108,6 @@ namespace BitSharp.Storage
                         Debugger.Break();
                     }
                 }
-                else
-                {
-                    int i = 0;
-                }
             }
 
             value = default(Block);
@@ -125,12 +121,22 @@ namespace BitSharp.Storage
                 var block = keyPair.Value.Value;
 
                 // write the block's transactions
-                foreach (var tx in block.Transactions)
-                    this.CacheContext.TransactionCache.CreateValue(tx.Hash, tx);
+                if (!this.StorageContext.TransactionStorage.TryWriteValues(
+                    block.Transactions.Select(x =>  new KeyValuePair<UInt256, WriteValue<Transaction>>(x.Hash, new WriteValue<Transaction>(x, keyPair.Value.IsCreate)))))
+                {
+                    return false;
+                }
 
                 // then write the transaction hash list
-                this.CacheContext.BlockTxHashesCache.CreateValue(block.Hash, block.Transactions.Select(x => x.Hash).ToImmutableList());
+                if (!this.StorageContext.BlockTxHashesStorage.TryWriteValue(block.Hash, new WriteValue<IImmutableList<UInt256>>(block.Transactions.Select(x => x.Hash).ToImmutableList(), keyPair.Value.IsCreate)));
+                {
+                    return false;
+                }
             }
+
+            //TODO
+            //this.StorageContext.TransactionStorage.Flush();
+            //this.StorageContext.BlockTxHashesStorage.Flush();
 
             return true;
         }
