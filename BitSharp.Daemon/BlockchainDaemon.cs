@@ -448,16 +448,8 @@ namespace BitSharp.Daemon
                         chainedBlock.TotalWork + unchainedBlock.CalculateWork()
                     );
                     this.CacheContext.ChainedBlockCache.CreateValue(newChainedBlock.BlockHash, newChainedBlock);
-
-                    new MethodTimer().Time("MaxTotalWorkBlocks", () =>
-                    {
-                        this.StorageContext.BlockTotalWorkStorage.TryCreateValue(newChainedBlock.BlockHash, newChainedBlock.TotalWork);
-                        foreach (var blockHash in this.CacheContext.BlockTotalWorkCache.MaxTotalWorkBlocks)
-                        {
-                            Debug.WriteLine(blockHash.ToHexNumberString());
-                        }
-                    });
-
+                    this.CacheContext.BlockTotalWorkCache.CreateValue(newChainedBlock.BlockHash, newChainedBlock.TotalWork);
+ 
                     // and finally add the newly chained block to the list of chained blocks so that an attempt will be made to chain off of it
                     chainedBlocks.Add(newChainedBlock);
 
@@ -585,6 +577,14 @@ namespace BitSharp.Daemon
         {
             try
             {
+                new MethodTimer().Time("MaxTotalWorkBlocks", () =>
+                {
+                    foreach (var blockHash in this.CacheContext.BlockTotalWorkCache.MaxTotalWorkBlocks)
+                    {
+                        Debug.WriteLine(blockHash.ToHexNumberString());
+                    }
+                });
+
                 var chainStateLocal = this.chainState;
 
                 if (this.currentBlockBuilder != null
