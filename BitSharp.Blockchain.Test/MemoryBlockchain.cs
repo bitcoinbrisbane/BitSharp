@@ -224,35 +224,36 @@ namespace BitSharp.Blockchain.Test
 
             //TODO when there is a tie this method is not deterministic, causing TestSimpleBlockchainSplit to fail
 
-            var leafChainedBlocks =
-                this.CacheContext.ChainedBlockCache.FindLeafChainedBlocks()
-                 .ToDictionary(x => x.BlockHash, x => x);
+            throw new NotImplementedException();
+            //var leafChainedBlocks =
+            //    this.CacheContext.ChainedBlockCache.FindLeafChainedBlocks()
+            //     .ToDictionary(x => x.BlockHash, x => x);
 
-            while (true)
-            {
-                var newWinner = this._rules.SelectWinningChainedBlock(leafChainedBlocks.Values.ToList());
-                if (newWinner == null)
-                    break;
+            //while (true)
+            //{
+            //    var newWinner = this._rules.SelectWinningChainedBlock(leafChainedBlocks.Values.ToList());
+            //    if (newWinner == null)
+            //        break;
 
-                leafChainedBlocks.Remove(newWinner.BlockHash);
-                try
-                {
-                    // try to use the blockchain
-                    using (var cancelToken = new CancellationTokenSource())
-                    {
-                        //List<MissingDataException> missingData;
-                        throw new NotImplementedException();
-                        //TODO
-                        //this._currentBlockchain = this._calculator.CalculateBlockchainFromExisting(this._currentBlockchain, newWinner, null, out missingData, cancelToken.Token);
-                    }
+            //    leafChainedBlocks.Remove(newWinner.BlockHash);
+            //    try
+            //    {
+            //        // try to use the blockchain
+            //        using (var cancelToken = new CancellationTokenSource())
+            //        {
+            //            //List<MissingDataException> missingData;
+            //            throw new NotImplementedException();
+            //            //TODO
+            //            //this._currentBlockchain = this._calculator.CalculateBlockchainFromExisting(this._currentBlockchain, newWinner, null, out missingData, cancelToken.Token);
+            //        }
 
-                    // success, exit
-                    return;
-                }
-                catch (ValidationException) { }
+            //        // success, exit
+            //        return;
+            //    }
+            //    catch (ValidationException) { }
 
-                // failure, try another candidate if present
-            }
+            //    // failure, try another candidate if present
+            //}
         }
     }
 }

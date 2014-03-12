@@ -17,7 +17,6 @@ namespace BitSharp.Storage
     public class ChainedBlockCache : BoundedCache<UInt256, ChainedBlock>
     {
         private readonly CacheContext _cacheContext;
-        private readonly ConcurrentSetBuilder<UInt256> leafChainedBlocks;
         private readonly ConcurrentDictionary<UInt256, ConcurrentSet<UInt256>> chainedBlocksByPrevious;
 
         private BigInteger maxTotalWork;
@@ -29,7 +28,6 @@ namespace BitSharp.Storage
         {
             this._cacheContext = cacheContext;
 
-            this.leafChainedBlocks = new ConcurrentSetBuilder<UInt256>();
             this.chainedBlocksByPrevious = new ConcurrentDictionary<UInt256, ConcurrentSet<UInt256>>();
 
             this.OnAddition += blockHash => UpdatePreviousIndex(blockHash);
@@ -141,36 +139,6 @@ namespace BitSharp.Storage
             return true;
         }
 
-        public IEnumerable<ChainedBlock> FindLeafChainedBlocks()
-        {
-            var leafChainedBlocksLocal = this.leafChainedBlocks.ToImmutable();
-
-            foreach (var leafChainedBlockHash in leafChainedBlocks)
-            {
-                ChainedBlock leafChainedBlock;
-                if (this.TryGetValue(leafChainedBlockHash, out leafChainedBlock)
-                    /*&& this.IsChainIntact(leafChainedBlock)*/)
-                {
-                    yield return leafChainedBlock;
-                }
-            }
-        }
-
-        public IEnumerable<List<ChainedBlock>> FindLeafChains()
-        {
-            var leafChainedBlocks = new HashSet<UInt256>(this.GetAllKeys());
-            leafChainedBlocks.ExceptWith(this.chainedBlocksByPrevious.Keys);
-
-            foreach (var leafChainedBlock in leafChainedBlocks)
-            {
-                List<ChainedBlock> leafChain;
-                if (this.TryGetChain(leafChainedBlock, out leafChain))
-                {
-                    yield return leafChain;
-                }
-            }
-        }
-
         public HashSet<UInt256> FindByPreviousBlockHash(UInt256 previousBlockHash)
         {
             ConcurrentSet<UInt256> set;
@@ -236,19 +204,6 @@ namespace BitSharp.Storage
                 (existingKey, existingValue) => existingValue
             )
             .Add(chainedBlock.BlockHash);
-
-            //TODO better thread safety
-            if (!this.chainedBlocksByPrevious.ContainsKey(chainedBlock.BlockHash))
-            {
-                this.leafChainedBlocks.Add(chainedBlock.BlockHash);
-                if (this.chainedBlocksByPrevious.ContainsKey(chainedBlock.BlockHash))
-                {
-                    this.leafChainedBlocks.Remove(chainedBlock.BlockHash);
-                    Debugger.Break();
-                }
-            }
-
-            this.leafChainedBlocks.Remove(chainedBlock.PreviousBlockHash);
         }
     }
 }

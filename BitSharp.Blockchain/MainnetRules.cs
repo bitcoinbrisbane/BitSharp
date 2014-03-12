@@ -450,18 +450,5 @@ namespace BitSharp.Blockchain
             if (exceptions.Count > 0)
                 throw new AggregateException(exceptions.ToArray());
         }
-
-        public virtual ChainedBlock SelectWinningChainedBlock(IList<ChainedBlock> leafChainedBlocks)
-        {
-            if (leafChainedBlocks.Count > 0)
-            {
-                var maxTotalWork = leafChainedBlocks.Max(x => x.TotalWork);
-                return leafChainedBlocks.FirstOrDefault(x => x.TotalWork == maxTotalWork);
-            }
-            else
-            {
-                return default(ChainedBlock);
-            }
-        }
     }
 }
