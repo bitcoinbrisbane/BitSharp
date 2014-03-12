@@ -72,7 +72,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BlockTotalWorkStorage.cs" />
     <Compile Include="BlockHeaderStorage.cs" />
     <Compile Include="BlockTxHashesStorage.cs" />
     <Compile Include="ChainedBlockStorage.cs" />

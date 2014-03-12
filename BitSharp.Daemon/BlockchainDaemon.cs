@@ -448,7 +448,6 @@ namespace BitSharp.Daemon
                         chainedBlock.TotalWork + unchainedBlock.CalculateWork()
                     );
                     this.CacheContext.ChainedBlockCache.CreateValue(newChainedBlock.BlockHash, newChainedBlock);
-                    this.CacheContext.BlockTotalWorkCache.CreateValue(newChainedBlock.BlockHash, newChainedBlock.TotalWork);
 
                     // and finally add the newly chained block to the list of chained blocks so that an attempt will be made to chain off of it
                     chainedBlocks.Add(newChainedBlock);
@@ -491,7 +490,7 @@ namespace BitSharp.Daemon
         private void WinnerWorker()
         {
             var chainStateLocal = this.chainState;
-            var maxTotalWorkBlocksLocal = this.CacheContext.BlockTotalWorkCache.MaxTotalWorkBlocks;
+            var maxTotalWorkBlocksLocal = this.CacheContext.ChainedBlockCache.MaxTotalWorkBlocks;
 
             // check if winning block has changed
             if (!maxTotalWorkBlocksLocal.Contains(chainStateLocal.TargetBlock.BlockHash))

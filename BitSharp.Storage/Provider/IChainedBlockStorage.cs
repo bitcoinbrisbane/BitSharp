@@ -10,5 +10,6 @@ namespace BitSharp.Storage
 {
     public interface IChainedBlockStorage : IBoundedStorage<UInt256, ChainedBlock>
     {
+        IEnumerable<KeyValuePair<UInt256, ChainedBlock>> SelectMaxTotalWorkBlocks();
     }
 }

@@ -87,7 +87,6 @@
   </Choose>
   <ItemGroup>
     <Compile Include="BlockCache.cs" />
-    <Compile Include="BlockTotalWorkCache.cs" />
     <Compile Include="BlockStorage.cs" />
     <Compile Include="BlockTxHashesCache.cs" />
     <Compile Include="ChainedBlockCache.cs" />
@@ -100,7 +99,6 @@
     <Compile Include="PersistentByteDictionary.cs" />
     <Compile Include="PersistentUtxo.cs" />
     <Compile Include="PersistentUtxoBuilder.cs" />
-    <Compile Include="Provider\IBlockTotalWorkStorage.cs" />
     <Compile Include="Provider\IBlockHeaderStorage.cs" />
     <Compile Include="Provider\ITransactionStorage.cs" />
     <Compile Include="Provider\IBlockTxHashesStorage.cs" />

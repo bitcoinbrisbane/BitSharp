@@ -4,9 +4,12 @@ using BitSharp.Data;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace BitSharp.Storage
@@ -16,6 +19,10 @@ namespace BitSharp.Storage
         private readonly CacheContext _cacheContext;
         private readonly ConcurrentSetBuilder<UInt256> leafChainedBlocks;
         private readonly ConcurrentDictionary<UInt256, ConcurrentSet<UInt256>> chainedBlocksByPrevious;
+
+        private BigInteger maxTotalWork;
+        private ImmutableList<UInt256> maxTotalWorkBlocks;
+        private readonly ReaderWriterLockSlim maxTotalWorkLock;
 
         public ChainedBlockCache(CacheContext cacheContext, long maxFlushMemorySize, long maxCacheMemorySize)
             : base("ChainedBlockCache", cacheContext.StorageContext.ChainedBlockStorage, maxFlushMemorySize, maxCacheMemorySize, ChainedBlock.SizeEstimator)
@@ -31,6 +38,18 @@ namespace BitSharp.Storage
 
             foreach (var value in this.StreamAllValues())
                 UpdatePreviousIndex(value.Value);
+
+            this.maxTotalWork = -1;
+            this.maxTotalWorkBlocks = ImmutableList.Create<UInt256>();
+            this.maxTotalWorkLock = new ReaderWriterLockSlim();
+
+            //TODO period rescan
+            var checkThread = new Thread(() =>
+            {
+                foreach (var keyPair in this._cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
+                    CheckTotalWork(keyPair.Key, keyPair.Value);
+            });
+            checkThread.Start();
         }
 
         public CacheContext CacheContext { get { return this._cacheContext; } }
@@ -163,6 +182,42 @@ namespace BitSharp.Storage
             {
                 return new HashSet<UInt256>();
             }
+        }
+
+        public IImmutableList<UInt256> MaxTotalWorkBlocks
+        {
+            get
+            {
+                return this.maxTotalWorkLock.DoRead(() => this.maxTotalWorkBlocks.ToImmutableList());
+            }
+        }
+
+        public override void CreateValue(UInt256 blockHash, ChainedBlock chainedBlock)
+        {
+            CheckTotalWork(blockHash, chainedBlock);
+            base.CreateValue(blockHash, chainedBlock);
+        }
+
+        public override void UpdateValue(UInt256 blockHash, ChainedBlock chainedBlock)
+        {
+            CheckTotalWork(blockHash, chainedBlock);
+            base.UpdateValue(blockHash, chainedBlock);
+        }
+
+        private void CheckTotalWork(UInt256 blockHash, ChainedBlock chainedBlock)
+        {
+            this.maxTotalWorkLock.DoWrite(() =>
+            {
+                if (chainedBlock.TotalWork > this.maxTotalWork)
+                {
+                    this.maxTotalWork = chainedBlock.TotalWork;
+                    this.maxTotalWorkBlocks = ImmutableList.Create<UInt256>(blockHash);
+                }
+                else if (chainedBlock.TotalWork == this.maxTotalWork)
+                {
+                    this.maxTotalWorkBlocks = this.maxTotalWorkBlocks.Add(blockHash);
+                }
+            });
         }
 
         private void UpdatePreviousIndex(UInt256 blockHash)

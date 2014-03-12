@@ -15,5 +15,11 @@ namespace BitSharp.Storage.Test
         public MemoryChainedBlockStorage(MemoryStorageContext storageContext)
             : base(storageContext)
         { }
+
+        public IEnumerable<KeyValuePair<UInt256, ChainedBlock>> SelectMaxTotalWorkBlocks()
+        {
+            var maxTotalWork = this.Storage.Max(x => x.Value.TotalWork);
+            return this.Storage.Where(x => x.Value.TotalWork == maxTotalWork);
+        }
     }
 }
