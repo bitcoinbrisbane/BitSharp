@@ -449,7 +449,7 @@ namespace BitSharp.Daemon
                     );
                     this.CacheContext.ChainedBlockCache.CreateValue(newChainedBlock.BlockHash, newChainedBlock);
                     this.CacheContext.BlockTotalWorkCache.CreateValue(newChainedBlock.BlockHash, newChainedBlock.TotalWork);
- 
+
                     // and finally add the newly chained block to the list of chained blocks so that an attempt will be made to chain off of it
                     chainedBlocks.Add(newChainedBlock);
 
@@ -490,41 +490,22 @@ namespace BitSharp.Daemon
 
         private void WinnerWorker()
         {
-            try
-            {
-                // get winning chain metadata
-                var leafChainedBlocks = this.CacheContext.ChainedBlockCache.FindLeafChainedBlocks().ToList();
+            var chainStateLocal = this.chainState;
+            var maxTotalWorkBlocksLocal = this.CacheContext.BlockTotalWorkCache.MaxTotalWorkBlocks;
 
-                //TODO ordering will need to follow actual bitcoin rules to ensure the same winning chaing is always selected
-                var winningBlock = this._rules.SelectWinningChainedBlock(leafChainedBlocks);
-
-                this.chainStateLock.EnterUpgradeableReadLock();
-                try
-                {
-                    var chainStateLocal = this.chainState;
-                    if (winningBlock != null && winningBlock.BlockHash != chainStateLocal.TargetBlock.BlockHash)
-                    {
-                        UpdateWinningBlockchain(winningBlock);
-                    }
-                }
-                finally
-                {
-                    this.chainStateLock.ExitUpgradeableReadLock();
-                }
-            }
-            catch (MissingDataException e)
+            // check if winning block has changed
+            if (!maxTotalWorkBlocksLocal.Contains(chainStateLocal.TargetBlock.BlockHash))
             {
-                HandleMissingData(e);
-            }
-            catch (AggregateException e)
-            {
-                foreach (var missingDataException in e.InnerExceptions.OfType<MissingDataException>())
-                {
-                    HandleMissingData(missingDataException);
-                }
+                //TODO pick properly when more than one
+                var maxTotalWorkBlockHash = maxTotalWorkBlocksLocal.FirstOrDefault();
 
-                if (e.InnerExceptions.Any(x => !(x is MissingDataException)))
-                    throw;
+                // get winning chained block
+                ChainedBlock maxTotalWorkBlock;
+                if (maxTotalWorkBlockHash != null
+                    && this.CacheContext.ChainedBlockCache.TryGetValue(maxTotalWorkBlockHash, out maxTotalWorkBlock))
+                {
+                    UpdateWinningBlockchain(maxTotalWorkBlock);
+                }
             }
         }
 
@@ -910,32 +891,49 @@ namespace BitSharp.Daemon
 
         private void UpdateWinningBlockchain(ChainedBlock targetBlock)
         {
-            this.chainStateLock.EnterWriteLock();
             try
             {
-                var chainStateLocal = this.chainState;
-
-                ImmutableList<ChainedBlock> forwardBlocks;
-                ImmutableList<ChainedBlock> rolledBackBlocks;
-                using (var cancelToken = new CancellationTokenSource())
+                this.chainStateLock.EnterWriteLock();
+                try
                 {
-                    forwardBlocks = this.Calculator.FindBlocksPastLastCommonAncestor(chainStateLocal.CurrentBlock, targetBlock, chainStateLocal.TargetBlockchain, cancelToken.Token, out rolledBackBlocks)
-                        .ToImmutableList();
+                    var chainStateLocal = this.chainState;
+
+                    ImmutableList<ChainedBlock> forwardBlocks;
+                    ImmutableList<ChainedBlock> rolledBackBlocks;
+                    using (var cancelToken = new CancellationTokenSource())
+                    {
+                        forwardBlocks = this.Calculator.FindBlocksPastLastCommonAncestor(chainStateLocal.CurrentBlock, targetBlock, chainStateLocal.TargetBlockchain, cancelToken.Token, out rolledBackBlocks)
+                            .ToImmutableList();
+                    }
+
+                    var targetBlockchain = chainStateLocal.CurrentBlock.BlockList.GetRange(0, chainStateLocal.CurrentBlock.BlockList.Count - rolledBackBlocks.Count).Concat(forwardBlocks).ToImmutableList();
+
+                    Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetBlock.BlockHash.ToHexNumberString(), targetBlock.Height, targetBlock.TotalWork.ToString("X")));
+                    this.chainState = new ChainState(chainStateLocal.CurrentBlock, targetBlock, targetBlockchain, rolledBackBlocks);
+                }
+                finally
+                {
+                    this.chainStateLock.ExitWriteLock();
                 }
 
-                var targetBlockchain = chainStateLocal.CurrentBlock.BlockList.GetRange(0, chainStateLocal.CurrentBlock.BlockList.Count - rolledBackBlocks.Count).Concat(forwardBlocks).ToImmutableList();
-
-                Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetBlock.BlockHash.ToHexNumberString(), targetBlock.Height, targetBlock.TotalWork.ToString("X")));
-                this.chainState = new ChainState(chainStateLocal.CurrentBlock, targetBlock, targetBlockchain, rolledBackBlocks);
+                var handler = this.OnWinningBlockChanged;
+                if (handler != null)
+                    handler(this, targetBlock);
             }
-            finally
+            catch (MissingDataException e)
             {
-                this.chainStateLock.ExitWriteLock();
+                HandleMissingData(e);
             }
+            catch (AggregateException e)
+            {
+                foreach (var missingDataException in e.InnerExceptions.OfType<MissingDataException>())
+                {
+                    HandleMissingData(missingDataException);
+                }
 
-            var handler = this.OnWinningBlockChanged;
-            if (handler != null)
-                handler(this, targetBlock);
+                if (e.InnerExceptions.Any(x => !(x is MissingDataException)))
+                    throw;
+            }
         }
     }
 }
