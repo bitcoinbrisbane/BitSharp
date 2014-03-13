@@ -666,10 +666,7 @@ namespace BitSharp.Node
         private void OnBlockHeader(BlockHeader blockHeader)
         {
             //Debug.WriteLine("Received block header {0}".Format2(blockHeader.Hash);
-            if (!this.blockchainDaemon.CacheContext.BlockHeaderCache.ContainsKey(blockHeader.Hash))
-            {
-                this.blockchainDaemon.CacheContext.BlockHeaderCache.CreateValue(blockHeader.Hash, blockHeader);
-            }
+            this.blockchainDaemon.CacheContext.BlockHeaderCache.CreateValue(blockHeader.Hash, blockHeader);
         }
 
         private void OnTransaction(Transaction transaction)

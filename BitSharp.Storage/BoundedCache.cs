@@ -27,7 +27,7 @@ namespace BitSharp.Storage
 
             this._dataStorage = dataStorage;
 
-            this.OnAddition += key => AddKnownKey(key);
+            this.OnAddition += (key, value) => AddKnownKey(key);
             this.OnModification += (key, value) => AddKnownKey(key);
             this.OnRetrieved += (key, value) => AddKnownKey(key);
             this.OnMissing += key => RemoveKnownKey(key);
@@ -75,8 +75,16 @@ namespace BitSharp.Storage
 
         public override void CreateValue(TKey key, TValue value)
         {
-            if (!this.ContainsKey(key))
+            if (this.knownKeys.TryAdd(key))
+            {
                 base.CreateValue(key, value);
+            }
+        }
+
+        public override void UpdateValue(TKey key, TValue value)
+        {
+            this.knownKeys.TryAdd(key);
+            base.UpdateValue(key, value);
         }
 
         public override bool TryGetValue(TKey key, out TValue value, bool saveInCache = true)
@@ -172,7 +180,7 @@ namespace BitSharp.Storage
             // fire addition event
             if (wasAdded)
             {
-                RaiseOnAddition(key);
+                RaiseOnAddition(key, default(TValue));
             }
         }
 

@@ -17,7 +17,7 @@ namespace BitSharp.Storage
 
     public class UnboundedCache<TKey, TValue> : IDisposable
     {
-        public event Action<TKey> OnAddition;
+        public event Action<TKey, TValue> OnAddition;
         public event Action<TKey, TValue> OnModification;
         public event Action<TKey, TValue> OnRetrieved;
         public event Action<TKey> OnMissing;
@@ -194,11 +194,11 @@ namespace BitSharp.Storage
             this.memoryCache.CacheValue(key, value);
         }
 
-        protected void RaiseOnAddition(TKey key)
+        protected void RaiseOnAddition(TKey key, TValue value)
         {
             var handler = this.OnAddition;
             if (handler != null)
-                handler(key);
+                handler(key, value);
         }
 
         private bool IsPendingOversized
@@ -293,7 +293,7 @@ namespace BitSharp.Storage
                     {
                         var handler = this.OnAddition;
                         if (handler != null)
-                            handler(key);
+                            handler(key, value);
                     }
                     else
                     {

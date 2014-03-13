@@ -46,11 +46,11 @@ namespace BitSharp.Storage.Esent
         public IEnumerable<KeyValuePair<UInt256, ChainedBlock>> ReadAllValues()
         {
             return this.data.Select(keyPair =>
-                {
-                    var blockHash = DecodeKey(keyPair.Key);
-                    var chainedBlock = DecodeValue(blockHash, keyPair.Value);
-                    return new KeyValuePair<UInt256, ChainedBlock>(blockHash, chainedBlock);
-                });
+            {
+                var blockHash = DecodeKey(keyPair.Key);
+                var chainedBlock = DecodeValue(blockHash, keyPair.Value);
+                return new KeyValuePair<UInt256, ChainedBlock>(blockHash, chainedBlock);
+            });
         }
 
         public bool TryReadValue(UInt256 blockHash, out ChainedBlock chainedBlock)
@@ -84,10 +84,11 @@ namespace BitSharp.Storage.Esent
 
         public IEnumerable<KeyValuePair<UInt256, ChainedBlock>> SelectMaxTotalWorkBlocks()
         {
-            var maxTotalWork = this.data.Values.Max(x => x.TotalWork);
+            var maxTotalWork = this.data.Values.Max(x => StorageEncoder.DecodeTotalWork(Convert.FromBase64String(x.TotalWork).ToMemoryStream()));
+            var maxTotalWorkString = Convert.ToBase64String(StorageEncoder.EncodeTotalWork(maxTotalWork));
 
             return this.data
-                .Where(x => x.Value.TotalWork == maxTotalWork)
+                .Where(x => x.Value.TotalWork == maxTotalWorkString)
                 .Select(keyPair =>
                 {
                     var blockHash = DecodeKey(keyPair.Key);

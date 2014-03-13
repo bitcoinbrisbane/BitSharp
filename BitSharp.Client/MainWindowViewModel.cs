@@ -44,7 +44,7 @@ namespace BitSharp.Client
             this.DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockCache.Count;
 
             this.blockchainDaemon.CacheContext.BlockCache.OnAddition +=
-                blockHash =>
+                (blockHash, block) =>
                     DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockCache.Count;
 
             this.blockchainDaemon.OnWinningBlockChanged +=
