@@ -62,6 +62,10 @@ namespace BitSharp.Storage
             }
         }
 
+        public void Flush()
+        {
+        }
+
         public Utxo Close(UInt256 blockHash)
         {
             return new MemoryUtxo(blockHash, this.utxo.ToImmutable());

@@ -21,6 +21,8 @@ namespace BitSharp.Data
 
         UnspentTx this[UInt256 txHash] { get; set; }
 
+        void Flush();
+
         Utxo Close(UInt256 blockHash);
     }
 }

@@ -121,6 +121,9 @@ namespace BitSharp.Blockchain
                         blockchainBuilder.Stats.validateStopwatch.Stop();
                     }
 
+                    // flush utxo progress
+                    blockchainBuilder.UtxoBuilder.Flush();
+
                     // create the next link in the new blockchain
                     if (onProgress != null)
                         onProgress();

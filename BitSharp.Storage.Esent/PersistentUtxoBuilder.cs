@@ -74,6 +74,11 @@ namespace BitSharp.Storage.Esent
             }
         }
 
+        public void Flush()
+        {
+            this.utxo.Flush();
+        }
+
         public Utxo Close(UInt256 blockHash)
         {
             this.closed = true;
@@ -103,7 +108,7 @@ namespace BitSharp.Storage.Esent
             {
                 this.utxo.Dispose();
             }
-            
+
             GC.SuppressFinalize(this);
         }
 
