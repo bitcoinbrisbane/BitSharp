@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Storage
+namespace BitSharp.Storage.Esent
 {
     public class PersistentUtxoBuilder : UtxoBuilder
     {

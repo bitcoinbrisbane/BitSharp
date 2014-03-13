@@ -56,9 +56,6 @@
     <Reference Include="BouncyCastle.Crypto">
       <HintPath>..\packages\BouncyCastle.1.7.0\lib\Net40-Client\BouncyCastle.Crypto.dll</HintPath>
     </Reference>
-    <Reference Include="Esent.Collections">
-      <HintPath>..\packages\ManagedEsent.1.9.0.1\lib\net40\Esent.Collections.dll</HintPath>
-    </Reference>
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.2.0.1.2\lib\net45\NLog.dll</HintPath>
     </Reference>
@@ -95,10 +92,6 @@
     <Compile Include="MemoryCache.cs" />
     <Compile Include="MemoryUtxo.cs" />
     <Compile Include="MemoryUtxoBuilder.cs" />
-    <Compile Include="PersistentUInt256ByteDictionary.cs" />
-    <Compile Include="PersistentByteDictionary.cs" />
-    <Compile Include="PersistentUtxo.cs" />
-    <Compile Include="PersistentUtxoBuilder.cs" />
     <Compile Include="Provider\IBlockHeaderStorage.cs" />
     <Compile Include="Provider\ITransactionStorage.cs" />
     <Compile Include="Provider\IBlockTxHashesStorage.cs" />

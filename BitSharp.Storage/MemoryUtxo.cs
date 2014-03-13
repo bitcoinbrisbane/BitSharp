@@ -14,11 +14,6 @@ namespace BitSharp.Storage
         private UInt256 _blockHash;
         private ImmutableDictionary<UInt256, UnspentTx> _utxo;
 
-        static public MemoryUtxo Genesis(UInt256 blockHash)
-        {
-            return new MemoryUtxo(blockHash, ImmutableDictionary.Create<UInt256, UnspentTx>());
-        }
-
         public MemoryUtxo(UInt256 blockHash, ImmutableDictionary<UInt256, UnspentTx> utxo)
         {
             this._blockHash = blockHash;
@@ -44,8 +39,7 @@ namespace BitSharp.Storage
 
         public UtxoBuilder ToBuilder()
         {
-            return new PersistentUtxoBuilder(this);
-            //return new MemoryUtxoBuilder(this);
+            return new MemoryUtxoBuilder(this);
         }
 
         public bool ContainsKey(UInt256 txHash)

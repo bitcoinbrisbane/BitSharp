@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BitSharp.Storage
+namespace BitSharp.Storage.Esent
 {
     public class PersistentUtxo : Utxo
     {

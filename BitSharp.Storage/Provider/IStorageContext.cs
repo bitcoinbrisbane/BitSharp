@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BitSharp.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,5 +18,7 @@ namespace BitSharp.Storage
         IChainedBlockStorage ChainedBlockStorage { get; }
 
         IBlockchainStorage BlockchainStorage { get; }
+
+        UtxoBuilder ToUtxoBuilder(Utxo utxo);
     }
 }

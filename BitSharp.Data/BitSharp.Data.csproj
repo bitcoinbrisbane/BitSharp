@@ -78,6 +78,7 @@
     <Compile Include="ChainedBlock.cs" />
     <Compile Include="ChainState.cs" />
     <Compile Include="DataCalculator.cs" />
+    <Compile Include="GenesisUtxo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Block.cs" />
     <Compile Include="BlockHeader.cs" />

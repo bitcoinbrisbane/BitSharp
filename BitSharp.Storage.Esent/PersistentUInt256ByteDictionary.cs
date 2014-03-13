@@ -8,10 +8,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BitSharp.Common;
+using System.Linq.Expressions;
 
-namespace BitSharp.Storage
+namespace BitSharp.Storage.Esent
 {
-    public class PersistentByteDictionary : IDictionary<byte[], byte[]>, IDisposable
+    public class PersistentUInt256ByteDictionary : IDictionary<UInt256, byte[]>, IDisposable
     {
 
 #if BYTE_ARRAY_SUPPORTED
@@ -19,7 +21,7 @@ namespace BitSharp.Storage
 #else
         private PersistentDictionary<string, string> dict;
 #endif
-        public PersistentByteDictionary(string directory)
+        public PersistentUInt256ByteDictionary(string directory)
         {
 #if BYTE_ARRAY_SUPPORTED
             this.dict = new PersistentDictionary<string, byte[]>(directory);
@@ -28,7 +30,7 @@ namespace BitSharp.Storage
 #endif
         }
 
-        public PersistentByteDictionary(IEnumerable<KeyValuePair<byte[], byte[]>> dictionary, string directory)
+        public PersistentUInt256ByteDictionary(IEnumerable<KeyValuePair<UInt256, byte[]>> dictionary, string directory)
             : this(directory)
         {
             foreach (var item in dictionary)
@@ -37,12 +39,14 @@ namespace BitSharp.Storage
             }
         }
 
-        ~PersistentByteDictionary()
+        ~PersistentUInt256ByteDictionary()
         {
             this.Dispose();
         }
 
-        public void Add(byte[] key, byte[] value)
+        public PersistentDictionary<string, string> PersistentDictionary { get { return this.dict; } }
+
+        public void Add(UInt256 key, byte[] value)
         {
 #if BYTE_ARRAY_SUPPORTED
             this.dict.Add(Encode(key), value);
@@ -51,26 +55,26 @@ namespace BitSharp.Storage
 #endif
         }
 
-        public bool ContainsKey(byte[] key)
+        public bool ContainsKey(UInt256 key)
         {
             return this.dict.ContainsKey(Encode(key));
         }
 
-        public ICollection<byte[]> Keys
+        public ICollection<UInt256> Keys
         {
 #if BYTE_ARRAY_SUPPORTED
-            get { return new PersistentByteDictionaryKeyCollection(this.dict.Keys); }
+            get { return new PersistentUInt256ByteDictionaryKeyCollection(this.dict.Keys); }
 #else
-            get { return new PersistentByteDictionaryKeyCollection(this.dict.Keys); }
+            get { return new PersistentUInt256ByteDictionaryKeyCollection(this.dict.Keys); }
 #endif
         }
 
-        public bool Remove(byte[] key)
+        public bool Remove(UInt256 key)
         {
             return this.dict.Remove(Encode(key));
         }
 
-        public bool TryGetValue(byte[] key, out byte[] value)
+        public bool TryGetValue(UInt256 key, out byte[] value)
         {
 #if BYTE_ARRAY_SUPPORTED
             return this.dict.TryGetValue(Encode(key), out value);
@@ -94,11 +98,11 @@ namespace BitSharp.Storage
 #if BYTE_ARRAY_SUPPORTED
             get { return this.dict.Values; }
 #else
-            get { return new PersistentByteDictionaryValueCollection(this.dict.Values); }
+            get { return new PersistentUInt256ByteDictionaryValueCollection(this.dict.Values); }
 #endif
         }
 
-        public byte[] this[byte[] key]
+        public byte[] this[UInt256 key]
         {
             get
             {
@@ -118,7 +122,7 @@ namespace BitSharp.Storage
             }
         }
 
-        public void Add(KeyValuePair<byte[], byte[]> item)
+        public void Add(KeyValuePair<UInt256, byte[]> item)
         {
             this.Add(item.Key, item.Value);
         }
@@ -128,17 +132,17 @@ namespace BitSharp.Storage
             this.dict.Clear();
         }
 
-        public bool Contains(KeyValuePair<byte[], byte[]> item)
+        public bool Contains(KeyValuePair<UInt256, byte[]> item)
         {
             //TODO not sure what the override semantics should be on Contains(KeyValuePair)
             return this.ContainsKey(item.Key);
         }
 
-        public void CopyTo(KeyValuePair<byte[], byte[]>[] array, int arrayIndex)
+        public void CopyTo(KeyValuePair<UInt256, byte[]>[] array, int arrayIndex)
         {
             foreach (var keyPair in this)
             {
-                array[arrayIndex] = new KeyValuePair<byte[], byte[]>(keyPair.Key, keyPair.Value);
+                array[arrayIndex] = new KeyValuePair<UInt256, byte[]>(keyPair.Key, keyPair.Value);
                 arrayIndex++;
             }
         }
@@ -153,22 +157,22 @@ namespace BitSharp.Storage
             get { return false; }
         }
 
-        public bool Remove(KeyValuePair<byte[], byte[]> item)
+        public bool Remove(KeyValuePair<UInt256, byte[]> item)
         {
             return this.Remove(item.Key);
         }
 
-        public IEnumerator<KeyValuePair<byte[], byte[]>> GetEnumerator()
+        public IEnumerator<KeyValuePair<UInt256, byte[]>> GetEnumerator()
         {
 #if BYTE_ARRAY_SUPPORTED
             foreach (var item in
-                this.dict.Select(x => new KeyValuePair<byte[], byte[]>(Decode(x.Key), x.Value)))
+                this.dict.Select(x => new KeyValuePair<UInt256, byte[]>(Decode(x.Key), x.Value)))
             {
                 yield return item;
             }
 #else
             foreach (var item in
-                this.dict.Select(x => new KeyValuePair<byte[], byte[]>(Decode(x.Key), Decode(x.Value))))
+                this.dict.Select(x => new KeyValuePair<UInt256, byte[]>(DecodeUInt256(x.Key), Decode(x.Value))))
             {
                 yield return item;
             }
@@ -196,12 +200,22 @@ namespace BitSharp.Storage
             return Convert.ToBase64String(bytes);
         }
 
+        private static string Encode(UInt256 value)
+        {
+            return Encode(value.ToByteArray());
+        }
+
         private static byte[] Decode(string s)
         {
             return Convert.FromBase64String(s);
         }
 
-        public class PersistentByteDictionaryKeyCollection : ICollection<byte[]>
+        private static UInt256 DecodeUInt256(string s)
+        {
+            return new UInt256(Decode(s));
+        }
+
+        public class PersistentUInt256ByteDictionaryKeyCollection : ICollection<UInt256>
         {
 #if BYTE_ARRAY_SUPPORTED
             PersistentDictionaryKeyCollection<string, byte[]> keyCollection;
@@ -210,15 +224,15 @@ namespace BitSharp.Storage
 #endif
 
 #if BYTE_ARRAY_SUPPORTED
-            public PersistentByteDictionaryKeyCollection(PersistentDictionaryKeyCollection<string, byte[]> keyCollection)
+            public PersistentUInt256ByteDictionaryKeyCollection(PersistentDictionaryKeyCollection<string, byte[]> keyCollection)
 #else
-            public PersistentByteDictionaryKeyCollection(PersistentDictionaryKeyCollection<string, string> keyCollection)
+            public PersistentUInt256ByteDictionaryKeyCollection(PersistentDictionaryKeyCollection<string, string> keyCollection)
 #endif
             {
                 this.keyCollection = keyCollection;
             }
 
-            public void Add(byte[] item)
+            public void Add(UInt256 item)
             {
                 this.keyCollection.Add(Encode(item));
             }
@@ -228,12 +242,12 @@ namespace BitSharp.Storage
                 this.keyCollection.Clear();
             }
 
-            public bool Contains(byte[] item)
+            public bool Contains(UInt256 item)
             {
                 return this.keyCollection.Contains(Encode(item));
             }
 
-            public void CopyTo(byte[][] array, int arrayIndex)
+            public void CopyTo(UInt256[] array, int arrayIndex)
             {
                 foreach (var key in this)
                 {
@@ -252,15 +266,15 @@ namespace BitSharp.Storage
                 get { return this.keyCollection.IsReadOnly; }
             }
 
-            public bool Remove(byte[] item)
+            public bool Remove(UInt256 item)
             {
                 return this.keyCollection.Remove(Encode(item));
             }
 
-            public IEnumerator<byte[]> GetEnumerator()
+            public IEnumerator<UInt256> GetEnumerator()
             {
                 foreach (var key in this.keyCollection)
-                    yield return Decode(key);
+                    yield return DecodeUInt256(key);
 
             }
 
@@ -270,7 +284,7 @@ namespace BitSharp.Storage
             }
         }
 
-        public class PersistentByteDictionaryValueCollection : ICollection<byte[]>
+        public class PersistentUInt256ByteDictionaryValueCollection : ICollection<byte[]>
         {
 #if BYTE_ARRAY_SUPPORTED
             PersistentDictionaryValueCollection<string, byte[]> valueCollection;
@@ -279,9 +293,9 @@ namespace BitSharp.Storage
 #endif
 
 #if BYTE_ARRAY_SUPPORTED
-            public PersistentByteDictionaryValueCollection(PersistentDictionaryValueCollection<string, byte[]> valueCollection)
+            public PersistentUInt256ByteDictionaryValueCollection(PersistentDictionaryValueCollection<string, byte[]> valueCollection)
 #else
-            public PersistentByteDictionaryValueCollection(PersistentDictionaryValueCollection<string, string> valueCollection)
+            public PersistentUInt256ByteDictionaryValueCollection(PersistentDictionaryValueCollection<string, string> valueCollection)
 #endif
             {
                 this.valueCollection = valueCollection;

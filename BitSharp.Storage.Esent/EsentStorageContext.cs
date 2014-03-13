@@ -1,4 +1,5 @@
 ﻿using BitSharp.Common.ExtensionMethods;
+using BitSharp.Data;
 using BitSharp.Storage.Esent;
 using System;
 using System.Collections.Generic;
@@ -40,6 +41,11 @@ namespace BitSharp.Storage.Esent
         IChainedBlockStorage IStorageContext.ChainedBlockStorage { get { return this._chainedBlockStorage; } }
 
         IBlockchainStorage IStorageContext.BlockchainStorage { get { return null; } }
+
+        public UtxoBuilder ToUtxoBuilder(Utxo utxo)
+        {
+            return new PersistentUtxoBuilder(utxo);
+        }
 
         public void Dispose()
         {

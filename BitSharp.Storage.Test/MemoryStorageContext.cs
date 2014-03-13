@@ -1,4 +1,5 @@
 ﻿using BitSharp.Common.ExtensionMethods;
+using BitSharp.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -43,6 +44,11 @@ namespace BitSharp.Storage.Test
         IChainedBlockStorage IStorageContext.ChainedBlockStorage { get { return this._chainedBlockStorage; } }
 
         IBlockchainStorage IStorageContext.BlockchainStorage { get { return this._blockchainStorage; } }
+
+        public UtxoBuilder ToUtxoBuilder(Utxo utxo)
+        {
+            return new MemoryUtxoBuilder(utxo);
+        }
 
         public void Dispose()
         {
