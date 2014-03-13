@@ -25,31 +25,7 @@ namespace BitSharp.Storage.Esent
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", blockHash.ToString());
         }
 
-        static internal UnspentTx DeserializeUnspentTx(UInt256 key, byte[] value)
-        {
-            var txHash = key;
-
-            var length = Bits.ToInt32(new ArraySegment<byte>(value, 0, 4).ToArray());
-            var unspentOutputsBytes = new ArraySegment<byte>(value, 4, value.Length - 4).ToArray();
-
-            var unspentOutputs = new ImmutableBitArray(unspentOutputsBytes, length);
-
-            return new UnspentTx(txHash, unspentOutputs);
-        }
-
-        static internal byte[] SerializeUnspentTx(UnspentTx unspentTx)
-        {
-            var lengthBytes = Bits.GetBytes(unspentTx.UnspentOutputs.Length);
-            var unspentOutputsBytes = unspentTx.UnspentOutputs.ToByteArray();
-
-            var bytes = new byte[lengthBytes.Length + unspentOutputsBytes.Length];
-            Buffer.BlockCopy(lengthBytes, 0, bytes, 0, lengthBytes.Length);
-            Buffer.BlockCopy(unspentOutputsBytes, 0, bytes, lengthBytes.Length, unspentOutputsBytes.Length);
-
-            return bytes;
-        }
-
-        public PersistentUtxo(UInt256 blockHash)
+        internal PersistentUtxo(UInt256 blockHash)
         {
             this.blockHash = blockHash;
             this.directory = GetDirectory(blockHash);
@@ -74,7 +50,7 @@ namespace BitSharp.Storage.Esent
             {
                 foreach (var rawUnspentTx in utxo)
                 {
-                    yield return DeserializeUnspentTx(rawUnspentTx.Key, rawUnspentTx.Value);
+                    yield return StorageEncoder.DecodeUnspentTx(rawUnspentTx.Key, rawUnspentTx.Value.ToMemoryStream());
                 }
             }
             finally
@@ -95,7 +71,7 @@ namespace BitSharp.Storage.Esent
 
         public UnspentTx this[Common.UInt256 txHash]
         {
-            get { return this.utxoLock.DoRead(() => DeserializeUnspentTx(txHash, this.utxo[txHash])); }
+            get { return this.utxoLock.DoRead(() => StorageEncoder.DecodeUnspentTx(txHash, this.utxo[txHash].ToMemoryStream())); }
         }
 
         internal void Duplicate(string destDirectory)

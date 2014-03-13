@@ -240,6 +240,35 @@ namespace BitSharp.Storage
             return stream.ToArray();
         }
 
+        public static UnspentTx DecodeUnspentTx(UInt256 txHash, Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new UnspentTx(
+                    txHash: txHash,
+                    unspentOutputs: new ImmutableBitArray(
+                        bytes: reader.ReadVarBytes(),
+                        length: reader.ReadInt32())
+                );
+            }
+        }
+
+        public static void EncodeUnspentTx(Stream stream, UnspentTx unspentTx)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.WriteVarBytes(unspentTx.UnspentOutputs.ToByteArray());
+                writer.WriteInt32(unspentTx.UnspentOutputs.Length);
+            }
+        }
+
+        public static byte[] EncodeUnspentTx(UnspentTx unspentTx)
+        {
+            var stream = new MemoryStream();
+            EncodeUnspentTx(stream, unspentTx);
+            return stream.ToArray();
+        }
+
         public static byte[] DecodeVarBytes(BinaryReader reader)
         {
             var length = reader.ReadInt32();

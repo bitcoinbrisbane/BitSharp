@@ -1,4 +1,5 @@
 ﻿using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using Microsoft.Isam.Esent.Collections.Generic;
 using System;
@@ -14,23 +15,24 @@ namespace BitSharp.Storage.Esent
     {
         private readonly string directory;
         private readonly PersistentUInt256ByteDictionary utxo;
-        private bool disposed = false;
+        private bool closed = false;
 
-        public PersistentUtxoBuilder(Utxo utxo)
+        public PersistentUtxoBuilder(Utxo parentUtxo)
         {
             this.directory = GetDirectory();
-            this.utxo = new PersistentUInt256ByteDictionary(this.directory);
-            foreach (var unspentTx in utxo.UnspentTransactions())
+            if (parentUtxo is PersistentUtxo)
             {
-                this.utxo.Add(unspentTx.TxHash, PersistentUtxo.SerializeUnspentTx(unspentTx));
+                ((PersistentUtxo)parentUtxo).Duplicate(this.directory);
+                this.utxo = new PersistentUInt256ByteDictionary(this.directory);
             }
-        }
-
-        public PersistentUtxoBuilder(PersistentUtxo parentUtxo)
-        {
-            this.directory = GetDirectory();
-            parentUtxo.Duplicate(this.directory);
-            this.utxo = new PersistentUInt256ByteDictionary(this.directory);
+            else
+            {
+                this.utxo = new PersistentUInt256ByteDictionary(this.directory);
+                foreach (var unspentTx in parentUtxo.UnspentTransactions())
+                {
+                    this.Add(unspentTx.TxHash, unspentTx);
+                }
+            }
         }
 
         ~PersistentUtxoBuilder()
@@ -52,10 +54,10 @@ namespace BitSharp.Storage.Esent
         {
             this.utxo.Clear();
         }
-        
+
         public void Add(Common.UInt256 txHash, UnspentTx unspentTx)
         {
-            this.utxo.Add(txHash, PersistentUtxo.SerializeUnspentTx(unspentTx));
+            this.utxo.Add(txHash, StorageEncoder.EncodeUnspentTx(unspentTx));
         }
 
         public int Count { get { return this.utxo.Count; } }
@@ -64,18 +66,18 @@ namespace BitSharp.Storage.Esent
         {
             get
             {
-                return PersistentUtxo.DeserializeUnspentTx(txHash, this.utxo[txHash]);
+                return StorageEncoder.DecodeUnspentTx(txHash, this.utxo[txHash].ToMemoryStream());
             }
             set
             {
-                this.utxo[txHash] = PersistentUtxo.SerializeUnspentTx(value);
+                this.utxo[txHash] = StorageEncoder.EncodeUnspentTx(value);
             }
         }
 
         public Utxo Close(UInt256 blockHash)
         {
-            this.utxo.Dispose();
-            this.disposed = true;
+            this.closed = true;
+            this.Dispose();
 
             //TODO obviously a stop gap here...
             var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", PersistentUtxo.GetDirectory(blockHash));
@@ -92,14 +94,17 @@ namespace BitSharp.Storage.Esent
 
         public void Dispose()
         {
-            if (!this.disposed)
+            if (!this.closed)
             {
                 this.utxo.Dispose();
-                this.disposed = true;
-                GC.SuppressFinalize(this);
-                
                 Directory.Delete(this.directory, recursive: true);
             }
+            else
+            {
+                this.utxo.Dispose();
+            }
+            
+            GC.SuppressFinalize(this);
         }
 
         private string GetDirectory()
