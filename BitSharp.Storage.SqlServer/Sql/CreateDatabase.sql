@@ -24,6 +24,8 @@ CREATE TABLE ChainedBlocks
 		BlockHash
 	)
 );
+IF NOT EXISTS(SELECT * FROM sysindexes WHERE name = 'IX_ChainedBlocks_TotalWork')
+CREATE INDEX IX_ChainedBlocks_TotalWork ON ChainedBlocks ( TotalWork );
 
 IF OBJECT_ID('KnownAddresses') IS NULL
 CREATE TABLE KnownAddresses
@@ -57,6 +59,19 @@ CREATE TABLE Transactions
 	TxBytes VARBINARY(MAX) NOT NULL,
 	CONSTRAINT PK_Transactions PRIMARY KEY NONCLUSTERED
 	(
+		TxHash
+	)
+);
+
+IF OBJECT_ID('Utxo') IS NULL
+CREATE TABLE Utxo
+(
+	Id UNIQUEIDENTIFIER NOT NULL,
+	TxHash BINARY(32) NOT NULL,
+	UnspentOutputs BINARY(100) NOT NULL,
+	CONSTRAINT PK_Utxo PRIMARY KEY NONCLUSTERED
+	(
+		Id,
 		TxHash
 	)
 );

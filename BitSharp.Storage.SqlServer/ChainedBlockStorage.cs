@@ -177,6 +177,40 @@ namespace BitSharp.Storage.SqlServer
             }
         }
 
+        public IEnumerable<KeyValuePair<UInt256, ChainedBlock>> SelectMaxTotalWorkBlocks()
+        {
+            using (var conn = this.OpenConnection())
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT BlockHash, PreviousBlockHash, Height, TotalWork
+                    FROM ChainedBlocks
+                    WHERE TotalWork = (SELECT MAX(TotalWork) FROM ChainedBlocks)";
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        var blockHash = reader.GetUInt256(0);
+                        var previousBlockHash = reader.GetUInt256(1);
+                        var height = reader.GetInt32(2);
+                        var totalWork = reader.GetBigInteger(3);
+
+                        yield return new KeyValuePair<UInt256, ChainedBlock>
+                        (
+                            blockHash,
+                            new ChainedBlock
+                            (
+                                blockHash,
+                                previousBlockHash,
+                                height,
+                                totalWork
+                            ));
+                    }
+                }
+            }
+        }
+
         private const string CREATE_QUERY = @"
             MERGE ChainedBlocks AS target
             USING (SELECT @blockHash) AS source (BlockHash)

@@ -84,6 +84,7 @@
     <Compile Include="BlockchainStorage.cs" />
     <Compile Include="BlockHeaderStorage.cs" />
     <Compile Include="BlockTxHashesStorage.cs" />
+    <Compile Include="SqlBase.cs" />
     <Compile Include="SqlServerStorageContext.cs" />
     <Compile Include="KnownAddressStorage.cs" />
     <Compile Include="ExtensionMethods.cs" />
@@ -91,6 +92,8 @@
     <Compile Include="ChainedBlockStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TransactionStorage.cs" />
+    <Compile Include="UtxoBuilderStorage.cs" />
+    <Compile Include="UtxoStorage.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BitSharp.Common\BitSharp.Common.csproj">
