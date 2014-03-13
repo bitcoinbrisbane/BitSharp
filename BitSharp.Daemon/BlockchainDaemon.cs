@@ -819,6 +819,8 @@ namespace BitSharp.Daemon
                     this.chainStateLock.ExitWriteLock();
                 }
 
+                this.blockchainWorker.NotifyWork();
+
                 var handler = this.OnWinningBlockChanged;
                 if (handler != null)
                     handler(this, targetBlock);
