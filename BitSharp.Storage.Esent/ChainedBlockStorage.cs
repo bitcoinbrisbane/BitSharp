@@ -84,17 +84,24 @@ namespace BitSharp.Storage.Esent
 
         public IEnumerable<KeyValuePair<UInt256, ChainedBlock>> SelectMaxTotalWorkBlocks()
         {
-            var maxTotalWork = this.data.Values.Max(x => StorageEncoder.DecodeTotalWork(Convert.FromBase64String(x.TotalWork).ToMemoryStream()));
-            var maxTotalWorkString = Convert.ToBase64String(StorageEncoder.EncodeTotalWork(maxTotalWork));
+            try
+            {
+                var maxTotalWork = this.data.Values.Max(x => StorageEncoder.DecodeTotalWork(Convert.FromBase64String(x.TotalWork).ToMemoryStream()));
+                var maxTotalWorkString = Convert.ToBase64String(StorageEncoder.EncodeTotalWork(maxTotalWork));
 
-            return this.data
-                .Where(x => x.Value.TotalWork == maxTotalWorkString)
-                .Select(keyPair =>
-                {
-                    var blockHash = DecodeKey(keyPair.Key);
-                    var chainedBlock = DecodeValue(blockHash, keyPair.Value);
-                    return new KeyValuePair<UInt256, ChainedBlock>(blockHash, chainedBlock);
-                });
+                return this.data
+                    .Where(x => x.Value.TotalWork == maxTotalWorkString)
+                    .Select(keyPair =>
+                    {
+                        var blockHash = DecodeKey(keyPair.Key);
+                        var chainedBlock = DecodeValue(blockHash, keyPair.Value);
+                        return new KeyValuePair<UInt256, ChainedBlock>(blockHash, chainedBlock);
+                    });
+            }
+            catch (InvalidOperationException)
+            {
+                return Enumerable.Empty<KeyValuePair<UInt256, ChainedBlock>>();
+            }
         }
 
         private static ChainedBlockSerial EncodeValue(ChainedBlock chainedBlock)
