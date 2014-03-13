@@ -89,13 +89,14 @@ namespace BitSharp.Storage
 
         public override bool TryGetValue(TKey key, out TValue value, bool saveInCache = true)
         {
-            if (this.ContainsKey(key))
+            if (base.TryGetValue(key, out value, saveInCache))
             {
-                return base.TryGetValue(key, out value, saveInCache);
+                AddKnownKey(key);
+                return true;
             }
             else
             {
-                value = default(TValue);
+                RemoveKnownKey(key);
                 return false;
             }
         }
