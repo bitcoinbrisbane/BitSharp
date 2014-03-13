@@ -521,7 +521,7 @@ namespace BitSharp.Daemon
                                 {
                                     if (startTime.Elapsed > TimeSpan.FromSeconds(60))
                                     {
-                                        this.writeBlockchainWorker.NotifyWork();
+                                        this.blockchainWorker.NotifyWork();
                                         cancelToken.Cancel();
                                     }
 
