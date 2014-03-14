@@ -87,6 +87,7 @@ namespace BitSharp.Storage
                 this._blockCache,
                 this._blockHeaderCache,
                 this._chainedBlockCache,
+                this._blockTxHashesCache,
                 this._transactionCache
             }.DisposeList();
         }
