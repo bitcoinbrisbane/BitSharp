@@ -12,7 +12,64 @@ namespace BitSharp.Common
 {
     public static class LookAheadMethods
     {
-        public static IEnumerable<T> LookAhead<T>(Func<IEnumerable<T>> values, CancellationToken cancelToken)
+        public static IEnumerable<T> LookAhead<T>(IEnumerable<T> values, CancellationToken cancelToken)
+        {
+            T currentValue = default(T);
+
+            var finished = false;
+            var abortToken = new CancellationTokenSource();
+
+            var valueReadEvent = new AutoResetEvent(true);
+            var valueAvailableEvent = new AutoResetEvent(false);
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    foreach (var value in values)
+                    {
+                        valueReadEvent.WaitOne();
+                        cancelToken.ThrowIfCancellationRequested();
+                        abortToken.Token.ThrowIfCancellationRequested();
+
+                        currentValue = value;
+
+                        valueAvailableEvent.Set();
+                    }
+                    finished = true;
+                    valueAvailableEvent.Set();
+                }
+                catch (Exception)
+                {
+                    abortToken.Cancel();
+                    valueAvailableEvent.Set();
+                }
+            });
+
+            thread.Start();
+            try
+            {
+                while (true)
+                {
+                    valueAvailableEvent.WaitOne();
+                    cancelToken.ThrowIfCancellationRequested();
+                    abortToken.Token.ThrowIfCancellationRequested();
+
+                    if (finished)
+                        yield break;
+                    else
+                        yield return currentValue;
+
+                    valueReadEvent.Set();
+                }
+            }
+            finally
+            {
+                abortToken.Cancel();
+                valueReadEvent.Set();
+            }
+        }
+
+        public static IEnumerable<T> LookAhead___<T>(Func<IEnumerable<T>> values, CancellationToken cancelToken)
         {
             // setup task completion sources to read results of look ahead
             using (var resultWriteEvent = new AutoResetEvent(false))

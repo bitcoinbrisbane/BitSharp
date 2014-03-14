@@ -742,11 +742,11 @@ namespace BitSharp.Blockchain
         public IEnumerable<Tuple<Block, ChainedBlock>> BlockLookAhead(IList<UInt256> blockHashes)
         {
             var blockLookAhead = LookAheadMethods.LookAhead(
-                () => blockHashes.Select(blockHash => this.CacheContext.GetBlock(blockHash, saveInCache: false)),
+                blockHashes.Select(blockHash => this.CacheContext.GetBlock(blockHash, saveInCache: false)),
                 this.shutdownToken);
 
             var chainedBlockLookAhead = LookAheadMethods.LookAhead(
-                () => blockHashes.Select(blockHash => this.CacheContext.GetChainedBlock(blockHash, saveInCache: false)),
+                blockHashes.Select(blockHash => this.CacheContext.GetChainedBlock(blockHash, saveInCache: false)),
                 this.shutdownToken);
 
             return blockLookAhead.Zip(chainedBlockLookAhead, (block, chainedBlock) => Tuple.Create(block, chainedBlock));
@@ -755,7 +755,7 @@ namespace BitSharp.Blockchain
         public IEnumerable<Tuple<Block, ChainedBlock /*, ImmutableDictionary<UInt256, Transaction>*/>> BlockAndTxLookAhead(IList<UInt256> blockHashes)
         {
             var blockLookAhead = LookAheadMethods.LookAhead(
-                () => blockHashes.Select(
+                blockHashes.Select(
                     blockHash =>
                     {
                         var block = new MethodTimer(false).Time("GetBlock", () =>
@@ -783,7 +783,7 @@ namespace BitSharp.Blockchain
                 this.shutdownToken);
 
             var chainedBlockLookAhead = LookAheadMethods.LookAhead(
-                () => blockHashes.Select(blockHash => this.CacheContext.GetChainedBlock(blockHash, saveInCache: false)),
+                blockHashes.Select(blockHash => this.CacheContext.GetChainedBlock(blockHash, saveInCache: false)),
                 this.shutdownToken);
 
             return blockLookAhead.Zip(chainedBlockLookAhead, (block, chainedBlock) => Tuple.Create(block, chainedBlock));
@@ -793,7 +793,7 @@ namespace BitSharp.Blockchain
         {
             using (var cancelToken = new CancellationTokenSource())
             {
-                foreach (var tuple in LookAheadMethods.LookAhead(() => PreviousBlocks(firstBlock, currentChain), cancelToken.Token))
+                foreach (var tuple in LookAheadMethods.LookAhead(PreviousBlocks(firstBlock, currentChain), cancelToken.Token))
                 {
                     yield return tuple;
                 }
