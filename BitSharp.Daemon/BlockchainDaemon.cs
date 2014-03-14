@@ -115,7 +115,9 @@ namespace BitSharp.Daemon
             this.writeBlockchainWorker = new Worker("BlockchainDaemon.WriteBlockchainWorker", WriteBlockchainWorker,
                 runOnStart: true, waitTime: TimeSpan.FromMinutes(5), maxIdleTime: TimeSpan.FromMinutes(30));
 
-            ChainMissingBlocks();
+            new Thread(
+                () => ChainMissingBlocks())
+                .Start();
         }
 
         public IBlockchainRules Rules { get { return this._rules; } }
