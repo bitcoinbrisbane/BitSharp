@@ -393,23 +393,32 @@ namespace BitSharp.Node
 
         private async void StartListening()
         {
-            switch (this.Type)
+            try
             {
-                case LocalClientType.MainNet:
-                case LocalClientType.TestNet3:
-                    var externalIPAddress = Messaging.GetExternalIPAddress();
-                    var localhost = Dns.GetHostEntry(Dns.GetHostName());
+                switch (this.Type)
+                {
+                    case LocalClientType.MainNet:
+                    case LocalClientType.TestNet3:
+                        var externalIPAddress = Messaging.GetExternalIPAddress();
+                        var localhost = Dns.GetHostEntry(Dns.GetHostName());
 
-                    this.listenSocket = new Socket(externalIPAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                    this.listenSocket.Bind(new IPEndPoint(localhost.AddressList.Where(x => x.AddressFamily == externalIPAddress.AddressFamily).First(), Messaging.Port));
-                    this.listenSocket.Listen(SERVER_BACKLOG);
-                    break;
+                        this.listenSocket = new Socket(externalIPAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                        this.listenSocket.Bind(new IPEndPoint(localhost.AddressList.Where(x => x.AddressFamily == externalIPAddress.AddressFamily).First(), Messaging.Port));
+                        break;
 
-                case LocalClientType.ComparisonToolTestNet:
-                    this.listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                    this.listenSocket.Bind(new IPEndPoint(IPAddress.Parse("127.0.0.1"), Messaging.Port));
-                    this.listenSocket.Listen(SERVER_BACKLOG);
-                    break;
+                    case LocalClientType.ComparisonToolTestNet:
+                        this.listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                        this.listenSocket.Bind(new IPEndPoint(IPAddress.Parse("127.0.0.1"), Messaging.Port));
+                        break;
+                }
+                this.listenSocket.Listen(SERVER_BACKLOG);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e.Message);
+                if (this.listenSocket != null)
+                    this.listenSocket.Dispose();
+                return;
             }
 
             try
@@ -451,8 +460,10 @@ namespace BitSharp.Node
                 }
             }
             catch (OperationCanceledException) { }
-
-            this.listenSocket.Dispose();
+            finally
+            {
+                this.listenSocket.Dispose();
+            }
         }
 
         private async Task PeerStartup(RemoteNode remoteNode)
@@ -672,7 +683,7 @@ namespace BitSharp.Node
         private void OnTransaction(Transaction transaction)
         {
             //Debug.WriteLine("Received block header {0}".Format2(transaction.Hash);
-            
+
             DateTime ignore;
             this.requestedTransactions.TryRemove(transaction.Hash, out ignore);
             this.blockchainDaemon.CacheContext.TransactionCache.CreateValue(transaction.Hash, transaction);
