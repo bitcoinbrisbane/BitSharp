@@ -194,7 +194,7 @@ namespace BitSharp.Node
                 }
 
                 // wait for pending connection attempts to complete
-                Task.WaitAll(connectTasks.ToArray());
+                Task.WaitAll(connectTasks.ToArray(), this.shutdownToken.Token);
             }
 
             // check if there are too many peers connected
