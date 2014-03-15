@@ -11,7 +11,7 @@ using BitSharp.Storage;
 
 namespace BitSharp.Blockchain.ExtensionMethods
 {
-    internal static class BlockchainExtensionMethods
+    public static class BlockchainExtensionMethods
     {
         public static Block GetBlock(this CacheContext cacheContext, UInt256 blockHash, bool saveInCache = true)
         {
