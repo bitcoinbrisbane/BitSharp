@@ -73,6 +73,7 @@ namespace BitSharp.Node
         private readonly ConcurrentDictionary<UInt256, DateTime> requestedBlocks = new ConcurrentDictionary<UInt256, DateTime>();
         private List<ChainedBlock> newChainBlockList;
         private ChainedBlock lastTargetChainedBlock;
+        private IImmutableList<ChainedBlock> fullBlockchain;
 
         private readonly ConcurrentDictionary<UInt256, DateTime> requestedTransactions = new ConcurrentDictionary<UInt256, DateTime>();
 
@@ -237,14 +238,21 @@ namespace BitSharp.Node
             if (this.newChainBlockList == null
                 || targetBlockPathLocal.ToBlock.BlockHash != this.lastTargetChainedBlock.BlockHash)
             {
+                //TODO stop gap for now, slow, do this properly
+                new MethodTimer().Time("fullBlockchain Stop Gap", () =>
+                {
+                    var fullBlockchainPath = new BlockchainWalker().GetBlockchainPath(this.blockchainDaemon.Rules.GenesisChainedBlock, targetBlockPathLocal.ToBlock, blockHash => this.blockchainDaemon.CacheContext.GetChainedBlock(blockHash));
+                    this.fullBlockchain = ImmutableList.Create<ChainedBlock>(this.blockchainDaemon.Rules.GenesisChainedBlock).AddRange(fullBlockchainPath.AdvanceBlocks);
+                });
+
                 new MethodTimer().Time("newChainBlockList", () =>
-                    {
-                        this.newChainBlockList = targetBlockPathLocal.RewindBlocks
-                                        .Concat(targetBlockPathLocal.AdvanceBlocks)
-                                        //TODO
-                                        //.Where(x => !this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(x.BlockHash))
-                                        .ToList();
-                    });
+                {
+                    this.newChainBlockList = targetBlockPathLocal.RewindBlocks
+                        .Concat(targetBlockPathLocal.AdvanceBlocks)
+                        //TODO
+                        //.Where(x => !this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(x.BlockHash))
+                        .ToList();
+                });
 
                 this.lastTargetChainedBlock = targetBlockPathLocal.ToBlock;
             }
@@ -476,18 +484,24 @@ namespace BitSharp.Node
 
         private async Task SendGetHeaders(RemoteNode remoteNode)
         {
-            //TODO
-            //var blockLocatorHashes = CalculateBlockLocatorHashes(this.blockchainDaemon.WinningBlockchain);
+            var fullBlockchainLocal = this.fullBlockchain;
+            if (fullBlockchainLocal != null)
+            {
+                var blockLocatorHashes = CalculateBlockLocatorHashes(fullBlockchainLocal);
 
-            //await remoteNode.Sender.SendGetHeaders(blockLocatorHashes, hashStop: 0);
+                await remoteNode.Sender.SendGetHeaders(blockLocatorHashes, hashStop: 0);
+            }
         }
 
         private async Task SendGetBlocks(RemoteNode remoteNode)
         {
-            //TODO
-            //var blockLocatorHashes = CalculateBlockLocatorHashes(this.blockchainDaemon.WinningBlockchain);
+            var fullBlockchainLocal = this.fullBlockchain;
+            if (fullBlockchainLocal != null)
+            {
+                var blockLocatorHashes = CalculateBlockLocatorHashes(fullBlockchainLocal);
 
-            //await remoteNode.Sender.SendGetBlocks(blockLocatorHashes, hashStop: 0);
+                await remoteNode.Sender.SendGetBlocks(blockLocatorHashes, hashStop: 0);
+            }
         }
 
         private void AddSeedPeers()
