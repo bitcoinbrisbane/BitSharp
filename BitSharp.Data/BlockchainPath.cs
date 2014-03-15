@@ -7,17 +7,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Blockchain
+namespace BitSharp.Data
 {
     public class BlockchainPath
     {
         private readonly ChainedBlock fromBlock;
         private readonly ChainedBlock toBlock;
         private readonly ChainedBlock lastCommonBlock;
-        private readonly IImmutableList<ChainedBlock> rewindBlocks;
-        private readonly IImmutableList<ChainedBlock> advanceBlocks;
+        private readonly ImmutableList<ChainedBlock> rewindBlocks;
+        private readonly ImmutableList<ChainedBlock> advanceBlocks;
 
-        public BlockchainPath(ChainedBlock fromBlock, ChainedBlock toBlock, ChainedBlock lastCommonBlock, IImmutableList<ChainedBlock> rewindBlocks, IImmutableList<ChainedBlock> advanceBlocks)
+        public BlockchainPath(ChainedBlock fromBlock, ChainedBlock toBlock, ChainedBlock lastCommonBlock, ImmutableList<ChainedBlock> rewindBlocks, ImmutableList<ChainedBlock> advanceBlocks)
         {
             this.fromBlock = fromBlock;
             this.toBlock = toBlock;
@@ -32,8 +32,13 @@ namespace BitSharp.Blockchain
 
         public ChainedBlock LastCommonBlock { get { return this.lastCommonBlock; } }
 
-        public IImmutableList<ChainedBlock> RewindBlocks { get { return this.rewindBlocks; } }
+        public ImmutableList<ChainedBlock> RewindBlocks { get { return this.rewindBlocks; } }
 
-        public IImmutableList<ChainedBlock> AdvanceBlocks { get { return this.advanceBlocks; } }
+        public ImmutableList<ChainedBlock> AdvanceBlocks { get { return this.advanceBlocks; } }
+
+        public static BlockchainPath CreateSingleBlockPath(ChainedBlock block)
+        {
+            return new BlockchainPath(block, block, block, ImmutableList.Create<ChainedBlock>(), ImmutableList.Create<ChainedBlock>());
+        }
     }
 }
