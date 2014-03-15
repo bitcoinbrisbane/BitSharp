@@ -88,7 +88,6 @@
   </Choose>
   <ItemGroup>
     <Compile Include="BlockchainCalculator.cs" />
-    <Compile Include="BlockchainPath.cs" />
     <Compile Include="BlockchainWalker.cs" />
     <Compile Include="Testnet2Rules.cs" />
     <Compile Include="ExtensionMethods.cs" />

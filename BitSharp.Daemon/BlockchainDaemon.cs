@@ -1,6 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Blockchain;
+using BitSharp.Blockchain.ExtensionMethods;
 using BitSharp.Script;
 using BitSharp.Storage;
 using BitSharp.Storage.ExtensionMethods;
@@ -43,8 +44,11 @@ namespace BitSharp.Daemon
 
         private ChainState chainState;
         private readonly ReaderWriterLockSlim chainStateLock;
+
         private BlockchainBuilder currentBlockBuilder;
         private DateTime currentBlockBuilderTime;
+
+        private BlockchainPathBuilder targetBlockPath;
 
         private readonly Dictionary<UInt256, Dictionary<UInt256, BlockHeader>> unchainedBlocksByPrevious;
         private readonly ReaderWriterLockSlim unchainedBlocksLock;
@@ -71,6 +75,8 @@ namespace BitSharp.Daemon
 
             this.chainState = new ChainState(this._rules.GenesisBlockchain);
             this.chainStateLock = new ReaderWriterLockSlim();
+
+            this.targetBlockPath = new BlockchainPathBuilder(BlockchainPath.CreateSingleBlockPath(this._rules.GenesisChainedBlock));
 
             this.unchainedBlocksByPrevious = new Dictionary<UInt256, Dictionary<UInt256, BlockHeader>>();
             this.unchainedBlocksLock = new ReaderWriterLockSlim();
@@ -130,9 +136,12 @@ namespace BitSharp.Daemon
 
         public ChainState ChainState { get { return this.chainState; } }
 
-        public ChainedBlock WinningBlock { get { return this.chainState.TargetBlock; } }
+        public BlockchainPath TargetBlockPath { get { return this.targetBlockPath.ToImmutable(); } }
 
-        public IImmutableList<ChainedBlock> WinningBlockchain { get { return this.chainState.TargetBlockchain; } }
+        public ChainedBlock WinningBlock { get { return this.targetBlockPath.ToBlock; } }
+
+        //TODO
+        //public IImmutableList<ChainedBlock> WinningBlockchain { get { return this.chainState.TargetBlockchain; } }
 
         public Data.Blockchain CurrentBlockchain { get { return this.chainState.CurrentBlock; } }
 
@@ -395,11 +404,11 @@ namespace BitSharp.Daemon
 
         private void WinnerWorker()
         {
-            var chainStateLocal = this.chainState;
             var maxTotalWorkBlocksLocal = this.CacheContext.ChainedBlockCache.MaxTotalWorkBlocks;
+            var targetBlockLocal = this.WinningBlock;
 
             // check if winning block has changed
-            if (!maxTotalWorkBlocksLocal.Contains(chainStateLocal.TargetBlock.BlockHash))
+            if (!maxTotalWorkBlocksLocal.Contains(targetBlockLocal.BlockHash))
             {
                 //TODO pick properly when more than one
                 var maxTotalWorkBlockHash = maxTotalWorkBlocksLocal.FirstOrDefault();
@@ -473,24 +482,23 @@ namespace BitSharp.Daemon
 
                     this.currentBlockBuilder.Dispose();
                     this.currentBlockBuilder = null;
+                    //this.currentBlockchainPathBuilder = null;
 
                     UpdateCurrentBlockchain(new Data.Blockchain(blockList, blockListHashes, utxo));
                     chainStateLocal = this.chainState;
                 }
 
+                var nextBlockTuple = this.targetBlockPath.PeekFromBlock();
+
                 // check if the winning blockchain has changed
-                if (chainStateLocal.CurrentBlock.RootBlockHash != chainStateLocal.TargetBlock.BlockHash)
+                if (nextBlockTuple != null)
                 {
+                    var nextBlockDirection = nextBlockTuple.Item1;
+                    var nextBlock = nextBlockTuple.Item2;
+
                     // don't try processing if the first block that will be needed is missing
                     this.missingBlocks.ExceptWith(this.CacheContext.BlockCache.GetAllKeys());
-                    if (chainStateLocal.RewindBlocks.Count > 0
-                        && this.missingBlocks.Contains(chainStateLocal.RewindBlocks.First().BlockHash))
-                    {
-                        this.blockchainWorker.NotifyWork();
-                        return;
-                    }
-                    else if (chainStateLocal.RewindBlocks.Count == 0 && chainStateLocal.ForwardBlocks.Count > 0
-                        && this.missingBlocks.Contains(chainStateLocal.ForwardBlocks.First().BlockHash))
+                    if (this.missingBlocks.Contains(nextBlock.BlockHash))
                     {
                         this.blockchainWorker.NotifyWork();
                         return;
@@ -508,6 +516,7 @@ namespace BitSharp.Daemon
                             blockListHashes: chainStateLocal.CurrentBlock.BlockListHashes.ToBuilder(),
                             utxoBuilder: chainStateLocal.CurrentBlock.Utxo.ToBuilder()
                         );
+                        //this.currentBlockchainPathBuilder = new BlockchainPathBuilder(chainStateLocal.TargetBlockPath);
                     }
 
                     try
@@ -518,7 +527,7 @@ namespace BitSharp.Daemon
                             var startTime = new Stopwatch();
                             startTime.Start();
 
-                            Calculator.CalculateBlockchainFromExisting(this.currentBlockBuilder, chainStateLocal.TargetBlock, chainStateLocal.TargetBlockchain, out missingData, cancelToken.Token,
+                            Calculator.CalculateBlockchainFromExisting(this.currentBlockBuilder, this.targetBlockPath, out missingData, cancelToken.Token,
                                 () =>
                                 {
                                     if (startTime.Elapsed > TimeSpan.FromSeconds(60))
@@ -536,6 +545,7 @@ namespace BitSharp.Daemon
                     {
                         this.currentBlockBuilder.Dispose();
                         this.currentBlockBuilder = null;
+                        //this.currentBlockchainPathBuilder = null;
                         throw;
                     }
 
@@ -749,9 +759,10 @@ namespace BitSharp.Daemon
             if (handler1 != null)
                 handler1(this, newChainState.CurrentBlock);
 
-            var handler2 = this.OnWinningBlockChanged;
-            if (handler2 != null)
-                handler2(this, newChainState.TargetBlock);
+            //TODO
+            //var handler2 = this.OnWinningBlockChanged;
+            //if (handler2 != null)
+            //    handler2(this, newChainState.TargetBlock);
         }
 
         private void UpdateCurrentBlockchain(Data.Blockchain newBlockchain)
@@ -761,21 +772,9 @@ namespace BitSharp.Daemon
             {
                 var chainStateLocal = this.chainState;
 
-                ImmutableList<ChainedBlock> rolledBackBlocks;
-                if (chainStateLocal.TargetBlockchain.Count >= newBlockchain.BlockList.Count
-                    && chainStateLocal.TargetBlockchain[newBlockchain.BlockList.Count - 1].BlockHash == newBlockchain.RootBlockHash)
-                {
-                    rolledBackBlocks = ImmutableList.Create<ChainedBlock>();
-                }
-                else
-                {
-                    using (var cancelToken = new CancellationTokenSource())
-                    {
-                        this.Calculator.FindBlocksPastLastCommonAncestor(newBlockchain, chainStateLocal.TargetBlock, chainStateLocal.TargetBlockchain, cancelToken.Token, out rolledBackBlocks);
-                    }
-                }
+                //var newTargetBlockPath = new BlockchainWalker().GetBlockchainPath(newBlockchain.RootBlock, chainStateLocal.TargetBlockPath.ToBlock, blockHash => this.CacheContext.GetChainedBlock(blockHash), this.shutdownToken.Token);
 
-                this.chainState = new ChainState(newBlockchain, chainStateLocal.TargetBlock, chainStateLocal.TargetBlockchain, rolledBackBlocks);
+                this.chainState = new ChainState(newBlockchain); //, newTargetBlockPath);
 
                 //TODO stop gap
                 chainStateLocal.CurrentBlock.Utxo.DisposeDelete();
@@ -802,19 +801,19 @@ namespace BitSharp.Daemon
                 try
                 {
                     var chainStateLocal = this.chainState;
+                    var targetBlockPathLocal = this.targetBlockPath;
 
-                    ImmutableList<ChainedBlock> forwardBlocks;
-                    ImmutableList<ChainedBlock> rolledBackBlocks;
-                    using (var cancelToken = new CancellationTokenSource())
-                    {
-                        forwardBlocks = this.Calculator.FindBlocksPastLastCommonAncestor(chainStateLocal.CurrentBlock, targetBlock, chainStateLocal.TargetBlockchain, cancelToken.Token, out rolledBackBlocks)
-                            .ToImmutableList();
-                    }
+                    var deltaBlockPath = new BlockchainWalker().GetBlockchainPath(targetBlockPathLocal.ToBlock, targetBlock, blockHash => this.CacheContext.GetChainedBlock(blockHash));
 
-                    var targetBlockchain = chainStateLocal.CurrentBlock.BlockList.GetRange(0, chainStateLocal.CurrentBlock.BlockList.Count - rolledBackBlocks.Count).Concat(forwardBlocks).ToImmutableList();
+                    foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
+                        targetBlockPathLocal.RemoveToBlock(rewindBlock);
+                    foreach (var rewindBlock in deltaBlockPath.AdvanceBlocks)
+                        targetBlockPathLocal.AddToBlock(rewindBlock);
 
                     Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetBlock.BlockHash.ToHexNumberString(), targetBlock.Height, targetBlock.TotalWork.ToString("X")));
-                    this.chainState = new ChainState(chainStateLocal.CurrentBlock, targetBlock, targetBlockchain, rolledBackBlocks);
+
+                    //var targetBlockchain = chainStateLocal.CurrentBlock.BlockList.GetRange(0, chainStateLocal.CurrentBlock.BlockList.Count - rolledBackBlocks.Count).Concat(forwardBlocks).ToImmutableList();
+                    //this.chainState = new ChainState(chainStateLocal.CurrentBlock, targetBlock, targetBlockchain, rolledBackBlocks);
                 }
                 finally
                 {

@@ -37,55 +37,21 @@ namespace BitSharp.Blockchain
 
         public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
 
-        public void CalculateBlockchainFromExisting(BlockchainBuilder blockchainBuilder, ChainedBlock targetChainedBlock, IImmutableList<ChainedBlock> currentChain, out List<MissingDataException> missingData, CancellationToken cancelToken, Action onProgress = null)
+        public void CalculateBlockchainFromExisting(BlockchainBuilder blockchainBuilder, BlockchainPathBuilder targetBlockPathBuilder, out List<MissingDataException> missingData, CancellationToken cancelToken, Action onProgress = null)
         {
-            // if the target block is at height 0 don't use currentBlockchain as-is, set it to be the genesis chain for the target block
-            if (targetChainedBlock.Height == 0)
-            {
-                blockchainBuilder.BlockList = ImmutableList.CreateBuilder<ChainedBlock>();
-                blockchainBuilder.BlockList.Add(targetChainedBlock);
-                blockchainBuilder.BlockListHashes = ImmutableHashSet.CreateBuilder<UInt256>();
-                blockchainBuilder.BlockListHashes.Add(targetChainedBlock.BlockHash);
-                blockchainBuilder.UtxoBuilder.Clear();
-            }
-            // if currentBlockchain is not present find the genesis block for the target block and use it as the current chain
-            else if (blockchainBuilder == null)
-            {
-                var genesisBlock = targetChainedBlock;
-                foreach (var prevBlock in PreviousChainedBlocks(targetChainedBlock, currentChain))
-                {
-                    // cooperative loop
-                    this.shutdownToken.ThrowIfCancellationRequested();
-                    cancelToken.ThrowIfCancellationRequested();
-
-                    genesisBlock = prevBlock;
-                }
-
-                blockchainBuilder.BlockList = ImmutableList.CreateBuilder<ChainedBlock>();
-                blockchainBuilder.BlockList.Add(genesisBlock);
-                blockchainBuilder.BlockListHashes = ImmutableHashSet.CreateBuilder<UInt256>();
-                blockchainBuilder.BlockListHashes.Add(genesisBlock.BlockHash);
-                blockchainBuilder.UtxoBuilder.Clear();
-            }
-
             missingData = new List<MissingDataException>();
-
-            Debug.WriteLine("Searching for last common ancestor between current chainblock and winning chainblock");
-
-            List<UInt256> newChainBlockList;
-            RollbackToLastCommonAncestor(blockchainBuilder, targetChainedBlock, currentChain, cancelToken, out newChainBlockList);
-
-            Debug.WriteLine("Last common ancestor found at block {0}, height {1:#,##0}, begin processing winning blockchain".Format2(blockchainBuilder.RootBlockHash.ToHexNumberString(), blockchainBuilder.Height));
 
             blockchainBuilder.Stats.totalStopwatch.Start();
             blockchainBuilder.Stats.currentRateStopwatch.Start();
 
-            // with last common ancestor found and utxo rolled back to that point, calculate the new blockchain
+            // calculate the new blockchain along the target path
             bool utxoSafe = true;
             try
             {
-                // start calculating new utxo
-                foreach (var tuple in BlockAndTxLookAhead(newChainBlockList))
+                //TODO make this work with look-ahead again
+                //foreach (var tuple in BlockAndTxLookAhead(targetBlockPathBuilder.RewindBlocks.Select(x => x.BlockHash).ToList()))
+                Tuple<int, ChainedBlock> pathElement;
+                while ((pathElement = targetBlockPathBuilder.PopFromBlock()) != null)
                 {
                     utxoSafe = false;
 
@@ -96,59 +62,73 @@ namespace BitSharp.Blockchain
                         break;
 
                     // get block and metadata for next link in blockchain
-                    var nextBlock = tuple.Item1;
-                    var nextChainedBlock = tuple.Item2;
+                    var direction = pathElement.Item1;
+                    var chainedBlock = pathElement.Item2;
+                    //TODO make this work with look-ahead again
+                    var block = this.CacheContext.GetBlock(chainedBlock.BlockHash);
 
-                    // calculate the new block utxo, double spends will be checked for
-                    ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions = ImmutableDictionary.Create<UInt256, ImmutableHashSet<int>>();
-                    long txCount = 0, inputCount = 0;
-                    new MethodTimer(false).Time("CalculateUtxo", () =>
-                        CalculateUtxo(nextChainedBlock.Height, nextBlock, blockchainBuilder.UtxoBuilder, out newTransactions, out txCount, out inputCount));
-
-                    blockchainBuilder.BlockList.Add(nextChainedBlock);
-                    blockchainBuilder.BlockListHashes.Add(nextChainedBlock.BlockHash);
-
-                    // validate the block
-                    // validation utxo includes all transactions added in the same block, any double spends will have failed the block above
-                    blockchainBuilder.Stats.validateStopwatch.Start();
-                    try
+                    if (direction < 0)
                     {
-                        new MethodTimer(false).Time("ValidateBlock", () =>
-                            this.Rules.ValidateBlock(nextBlock, blockchainBuilder, newTransactions));
+                        List<TxOutputKey> spendOutputs, receiveOutputs;
+                        RollbackUtxo(blockchainBuilder, block, out spendOutputs, out receiveOutputs);
+
+                        blockchainBuilder.BlockList.RemoveAt(blockchainBuilder.BlockList.Count - 1);
+                        blockchainBuilder.BlockListHashes.Remove(blockchainBuilder.RootBlockHash);
                     }
-                    finally
+                    else if (direction > 0)
                     {
-                        blockchainBuilder.Stats.validateStopwatch.Stop();
+                        // calculate the new block utxo, double spends will be checked for
+                        ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions = ImmutableDictionary.Create<UInt256, ImmutableHashSet<int>>();
+                        long txCount = 0, inputCount = 0;
+                        new MethodTimer(false).Time("CalculateUtxo", () =>
+                            CalculateUtxo(chainedBlock.Height, block, blockchainBuilder.UtxoBuilder, out newTransactions, out txCount, out inputCount));
+
+                        blockchainBuilder.BlockList.Add(chainedBlock);
+                        blockchainBuilder.BlockListHashes.Add(chainedBlock.BlockHash);
+
+                        // validate the block
+                        // validation utxo includes all transactions added in the same block, any double spends will have failed the block above
+                        blockchainBuilder.Stats.validateStopwatch.Start();
+                        try
+                        {
+                            new MethodTimer(false).Time("ValidateBlock", () =>
+                                this.Rules.ValidateBlock(block, blockchainBuilder, newTransactions));
+                        }
+                        finally
+                        {
+                            blockchainBuilder.Stats.validateStopwatch.Stop();
+                        }
+
+                        // flush utxo progress
+                        blockchainBuilder.UtxoBuilder.Flush();
+
+                        // create the next link in the new blockchain
+                        if (onProgress != null)
+                            onProgress();
+
+                        // blockchain processing statistics
+                        blockchainBuilder.Stats.currentBlockCount++;
+                        blockchainBuilder.Stats.currentTxCount += txCount;
+                        blockchainBuilder.Stats.currentInputCount += inputCount;
+                        blockchainBuilder.Stats.totalTxCount += txCount;
+                        blockchainBuilder.Stats.totalInputCount += inputCount;
+
+                        var txInterval = 100.THOUSAND();
+                        if (
+                            blockchainBuilder.Height % 10.THOUSAND() == 0
+                            || (blockchainBuilder.Stats.totalTxCount % txInterval < (blockchainBuilder.Stats.totalTxCount - txCount) % txInterval || txCount >= txInterval))
+                        {
+                            LogBlockchainProgress(blockchainBuilder);
+
+                            blockchainBuilder.Stats.currentBlockCount = 0;
+                            blockchainBuilder.Stats.currentTxCount = 0;
+                            blockchainBuilder.Stats.currentInputCount = 0;
+                            blockchainBuilder.Stats.currentRateStopwatch.Reset();
+                            blockchainBuilder.Stats.currentRateStopwatch.Start();
+                        }
                     }
-
-                    // flush utxo progress
-                    blockchainBuilder.UtxoBuilder.Flush();
-
-                    // create the next link in the new blockchain
-                    if (onProgress != null)
-                        onProgress();
-
-                    // blockchain processing statistics
-                    blockchainBuilder.Stats.currentBlockCount++;
-                    blockchainBuilder.Stats.currentTxCount += txCount;
-                    blockchainBuilder.Stats.currentInputCount += inputCount;
-                    blockchainBuilder.Stats.totalTxCount += txCount;
-                    blockchainBuilder.Stats.totalInputCount += inputCount;
-
-                    var txInterval = 100.THOUSAND();
-                    if (
-                        blockchainBuilder.Height % 10.THOUSAND() == 0
-                        || (blockchainBuilder.Stats.totalTxCount % txInterval < (blockchainBuilder.Stats.totalTxCount - txCount) % txInterval || txCount >= txInterval))
-                    {
-                        LogBlockchainProgress(blockchainBuilder);
-
-                        blockchainBuilder.Stats.currentBlockCount = 0;
-                        blockchainBuilder.Stats.currentTxCount = 0;
-                        blockchainBuilder.Stats.currentInputCount = 0;
-                        blockchainBuilder.Stats.currentRateStopwatch.Reset();
-                        blockchainBuilder.Stats.currentRateStopwatch.Start();
-                    }
-
+                    else
+                        throw new InvalidOperationException();
                     utxoSafe = true;
                 }
             }

@@ -1,4 +1,5 @@
 ﻿using BitSharp.Blockchain;
+using BitSharp.Blockchain.ExtensionMethods;
 using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Daemon;
@@ -232,18 +233,20 @@ namespace BitSharp.Node
             var requestTasks = new List<Task>();
 
             var chainStateLocal = this.blockchainDaemon.ChainState;
+            var targetBlockPathLocal = this.blockchainDaemon.TargetBlockPath;
             if (this.newChainBlockList == null
-                || chainStateLocal.TargetBlock.BlockHash != this.lastTargetChainedBlock.BlockHash)
+                || targetBlockPathLocal.ToBlock.BlockHash != this.lastTargetChainedBlock.BlockHash)
             {
                 new MethodTimer().Time("newChainBlockList", () =>
                     {
-                        this.newChainBlockList = chainStateLocal.RewindBlocks
-                                        .Concat(chainStateLocal.ForwardBlocks)
-                                        .Where(x => !this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(x.BlockHash))
+                        this.newChainBlockList = targetBlockPathLocal.RewindBlocks
+                                        .Concat(targetBlockPathLocal.AdvanceBlocks)
+                                        //TODO
+                                        //.Where(x => !this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(x.BlockHash))
                                         .ToList();
                     });
 
-                this.lastTargetChainedBlock = chainStateLocal.TargetBlock;
+                this.lastTargetChainedBlock = targetBlockPathLocal.ToBlock;
             }
 
             // send out requests for any missing blocks
@@ -473,16 +476,18 @@ namespace BitSharp.Node
 
         private async Task SendGetHeaders(RemoteNode remoteNode)
         {
-            var blockLocatorHashes = CalculateBlockLocatorHashes(this.blockchainDaemon.WinningBlockchain);
+            //TODO
+            //var blockLocatorHashes = CalculateBlockLocatorHashes(this.blockchainDaemon.WinningBlockchain);
 
-            await remoteNode.Sender.SendGetHeaders(blockLocatorHashes, hashStop: 0);
+            //await remoteNode.Sender.SendGetHeaders(blockLocatorHashes, hashStop: 0);
         }
 
         private async Task SendGetBlocks(RemoteNode remoteNode)
         {
-            var blockLocatorHashes = CalculateBlockLocatorHashes(this.blockchainDaemon.WinningBlockchain);
+            //TODO
+            //var blockLocatorHashes = CalculateBlockLocatorHashes(this.blockchainDaemon.WinningBlockchain);
 
-            await remoteNode.Sender.SendGetBlocks(blockLocatorHashes, hashStop: 0);
+            //await remoteNode.Sender.SendGetBlocks(blockLocatorHashes, hashStop: 0);
         }
 
         private void AddSeedPeers()

@@ -75,6 +75,8 @@
     <Compile Include="Blockchain.cs" />
     <Compile Include="BlockchainKey.cs" />
     <Compile Include="BlockchainMetadata.cs" />
+    <Compile Include="BlockchainPathBuilder.cs" />
+    <Compile Include="BlockchainPath.cs" />
     <Compile Include="ChainedBlock.cs" />
     <Compile Include="ChainState.cs" />
     <Compile Include="DataCalculator.cs" />
