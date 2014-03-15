@@ -63,25 +63,33 @@ namespace BitSharp.Blockchain
                 // cooperative loop
                 cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
 
-                // if no further rollback is possible, chain mismatch
-                if (currentFromBlock.Height == 0 || currentToBlock.Height == 0)
-                    throw new InvalidOperationException();
-
                 // from chain is longer, rewind it
                 if (currentFromBlock.Height > currentToBlock.BlockHash)
                 {
+                    // if no further rollback is possible, chain mismatch
+                    if (currentFromBlock.Height == 0)
+                        throw new InvalidOperationException();
+
                     yield return new PathElement(PathChain.From, currentFromBlock);
                     currentFromBlock = getChainedBlock(currentFromBlock.PreviousBlockHash);
                 }
                 // to chain is longer, rewind it
                 else if (currentToBlock.Height > currentFromBlock.Height)
                 {
+                    // if no further rollback is possible, chain mismatch
+                    if (currentToBlock.Height == 0)
+                        throw new InvalidOperationException();
+
                     yield return new PathElement(PathChain.To, currentToBlock);
                     currentToBlock = getChainedBlock(currentToBlock.PreviousBlockHash);
                 }
                 // chains are same height, rewind both
                 else
                 {
+                    // if no further rollback is possible, chain mismatch
+                    if (currentFromBlock.Height == 0 || currentToBlock.Height == 0)
+                        throw new InvalidOperationException();
+
                     yield return new PathElement(PathChain.From, currentFromBlock);
                     yield return new PathElement(PathChain.To, currentToBlock);
 

@@ -70,6 +70,26 @@ namespace BitSharp.Blockchain.Test
         }
 
         [TestMethod]
+        public void TestAdvanceFromGenesis()
+        {
+            var walker = new BlockchainWalker();
+
+            var path = walker.GetBlockchainPath(this.chainedBlock0, this.chainedBlockA4, this.getChainedBlock);
+
+            Assert.AreEqual(this.chainedBlock0, path.FromBlock);
+            Assert.AreEqual(this.chainedBlockA4, path.ToBlock);
+            Assert.AreEqual(this.chainedBlock0, path.LastCommonBlock);
+
+            Assert.AreEqual(0, path.RewindBlocks.Count);
+
+            Assert.AreEqual(4, path.AdvanceBlocks.Count);
+            Assert.AreEqual(this.chainedBlock1, path.AdvanceBlocks[0]);
+            Assert.AreEqual(this.chainedBlockA2, path.AdvanceBlocks[1]);
+            Assert.AreEqual(this.chainedBlockA3, path.AdvanceBlocks[2]);
+            Assert.AreEqual(this.chainedBlockA4, path.AdvanceBlocks[3]);
+        }
+
+        [TestMethod]
         public void TestAdvanceOnly()
         {
             var walker = new BlockchainWalker();
