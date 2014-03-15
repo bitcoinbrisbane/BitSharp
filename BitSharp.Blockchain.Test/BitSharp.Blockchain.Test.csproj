@@ -86,6 +86,7 @@
   </Choose>
   <ItemGroup>
     <Compile Include="BlockchainTest.cs" />
+    <Compile Include="BlockchainWalkerTest.cs" />
     <Compile Include="MainnetRulesTest.cs" />
     <Compile Include="MemoryBlockchain.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
