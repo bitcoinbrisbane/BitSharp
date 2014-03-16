@@ -59,6 +59,7 @@ namespace BitSharp.Node
 
         private readonly BlockchainDaemon blockchainDaemon;
 
+        private IBoundedStorage<NetworkAddressKey, NetworkAddressWithTime> knownAddressStorage;
         private readonly BoundedCache<NetworkAddressKey, NetworkAddressWithTime> knownAddressCache;
 
         private Stopwatch messageStopwatch = new Stopwatch();
@@ -82,14 +83,8 @@ namespace BitSharp.Node
             this.blockchainDaemon = blockchainDaemon;
             this.shutdownToken = new CancellationTokenSource();
 
-            this.knownAddressCache = new BoundedCache<NetworkAddressKey, NetworkAddressWithTime>
-            (
-                "KnownAddressCache",
-                dataStorage: knownAddressStorage,
-                maxFlushMemorySize: 5.THOUSAND(),
-                maxCacheMemorySize: 500.THOUSAND(),
-                sizeEstimator: knownAddress => 40
-            );
+            this.knownAddressStorage = knownAddressStorage;
+            this.knownAddressCache = new BoundedCache<NetworkAddressKey, NetworkAddressWithTime>("KnownAddressCache", knownAddressStorage);
 
             this.connectWorker = new Worker("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
             this.requestBlocksWorker = new Worker("LocalClient.RequestBlocksWorker", RequestBlocksWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
@@ -150,7 +145,7 @@ namespace BitSharp.Node
                 this.requestTransactionsWorker,
                 this.connectWorker,
                 this.statsWorker,
-                this.knownAddressCache,
+                this.knownAddressStorage,
                 this.shutdownToken
             }.DisposeList();
         }

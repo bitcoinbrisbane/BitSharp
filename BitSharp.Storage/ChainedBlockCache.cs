@@ -24,8 +24,8 @@ namespace BitSharp.Storage
         private ImmutableList<UInt256> maxTotalWorkBlocks;
         private readonly ReaderWriterLockSlim maxTotalWorkLock;
 
-        public ChainedBlockCache(CacheContext cacheContext, long maxFlushMemorySize, long maxCacheMemorySize)
-            : base("ChainedBlockCache", cacheContext.StorageContext.ChainedBlockStorage, maxFlushMemorySize, maxCacheMemorySize, ChainedBlock.SizeEstimator)
+        public ChainedBlockCache(CacheContext cacheContext)
+            : base("ChainedBlockCache", cacheContext.StorageContext.ChainedBlockStorage)
         {
             this._cacheContext = cacheContext;
 

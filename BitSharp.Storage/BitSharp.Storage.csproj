@@ -89,7 +89,6 @@
     <Compile Include="ChainedBlockCache.cs" />
     <Compile Include="BlockHeaderCache.cs" />
     <Compile Include="IUnboundedStorage.cs" />
-    <Compile Include="MemoryCache.cs" />
     <Compile Include="MemoryUtxo.cs" />
     <Compile Include="MemoryUtxoBuilder.cs" />
     <Compile Include="Provider\IBlockHeaderStorage.cs" />

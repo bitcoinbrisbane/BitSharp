@@ -13,10 +13,10 @@ namespace BitSharp.Blockchain.ExtensionMethods
 {
     public static class BlockchainExtensionMethods
     {
-        public static Block GetBlock(this CacheContext cacheContext, UInt256 blockHash, bool saveInCache = true)
+        public static Block GetBlock(this CacheContext cacheContext, UInt256 blockHash)
         {
             Block block;
-            if (!cacheContext.BlockCache.TryGetValue(blockHash, out block, saveInCache))
+            if (!cacheContext.BlockCache.TryGetValue(blockHash, out block))
             {
                 throw new MissingDataException(DataType.Block, blockHash);
             }
@@ -24,10 +24,10 @@ namespace BitSharp.Blockchain.ExtensionMethods
             return block;
         }
 
-        public static BlockHeader GetBlockHeader(this CacheContext cacheContext, UInt256 blockHash, bool saveInCache = true)
+        public static BlockHeader GetBlockHeader(this CacheContext cacheContext, UInt256 blockHash)
         {
             BlockHeader blockHeader;
-            if (!cacheContext.BlockHeaderCache.TryGetValue(blockHash, out blockHeader, saveInCache))
+            if (!cacheContext.BlockHeaderCache.TryGetValue(blockHash, out blockHeader))
             {
                 throw new MissingDataException(DataType.BlockHeader, blockHash);
             }
@@ -35,10 +35,10 @@ namespace BitSharp.Blockchain.ExtensionMethods
             return blockHeader;
         }
 
-        public static ChainedBlock GetChainedBlock(this CacheContext cacheContext, UInt256 blockHash, bool saveInCache = true)
+        public static ChainedBlock GetChainedBlock(this CacheContext cacheContext, UInt256 blockHash)
         {
             ChainedBlock chainedBlock;
-            if (!cacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock, saveInCache))
+            if (!cacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
             {
                 throw new MissingDataException(DataType.ChainedBlock, blockHash);
             }
@@ -46,10 +46,10 @@ namespace BitSharp.Blockchain.ExtensionMethods
             return chainedBlock;
         }
 
-        public static Transaction GetTransaction(this CacheContext cacheContext, UInt256 txHash, bool saveInCache = true)
+        public static Transaction GetTransaction(this CacheContext cacheContext, UInt256 txHash)
         {
             Transaction transaction;
-            if (!cacheContext.TransactionCache.TryGetValue(txHash, out transaction, saveInCache))
+            if (!cacheContext.TransactionCache.TryGetValue(txHash, out transaction))
             {
                 throw new MissingDataException(DataType.Transaction, txHash);
             }

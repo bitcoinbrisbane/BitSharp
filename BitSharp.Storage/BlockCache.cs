@@ -13,8 +13,8 @@ namespace BitSharp.Storage
     {
         private readonly CacheContext _cacheContext;
 
-        public BlockCache(CacheContext cacheContext, long maxFlushMemorySize, long maxCacheMemorySize)
-            : base("BlockCache", cacheContext.BlockStorage, maxFlushMemorySize, maxCacheMemorySize, Block.SizeEstimator)
+        public BlockCache(CacheContext cacheContext)
+            : base("BlockCache", cacheContext.BlockStorage)
         {
             this._cacheContext = cacheContext;
 

@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class CacheContext : IDisposable
+    public class CacheContext
     {
         private readonly IStorageContext _storageContext;
 
@@ -29,41 +29,12 @@ namespace BitSharp.Storage
         {
             this._storageContext = storageContext;
 
-            this._blockHeaderCache = new BlockHeaderCache
-            (
-                cacheContext: this,
-                maxFlushMemorySize: 0.MILLION(),
-                maxCacheMemorySize: 0.MILLION()
-            );
-
-            this._chainedBlockCache = new ChainedBlockCache
-            (
-                cacheContext: this,
-                maxFlushMemorySize: 0.MILLION(),
-                maxCacheMemorySize: 0.MILLION()
-            );
-
-            this._blockTxHashesCache = new BlockTxHashesCache
-            (
-                cacheContext: this,
-                maxFlushMemorySize: 0.MILLION(),
-                maxCacheMemorySize: 0.MILLION()
-            );
-
-            this._transactionCache = new TransactionCache
-            (
-                cacheContext: this,
-                maxFlushMemorySize: 0.MILLION(),
-                maxCacheMemorySize: 0.MILLION()
-            );
-
+            this._blockHeaderCache = new BlockHeaderCache(this);
+            this._chainedBlockCache = new ChainedBlockCache(this);
+            this._blockTxHashesCache = new BlockTxHashesCache(this);
+            this._transactionCache = new TransactionCache(this);
             this._blockStorage = new BlockStorage(this);
-            this._blockCache = new BlockCache
-            (
-                cacheContext: this,
-                maxFlushMemorySize: 0.MILLION(),
-                maxCacheMemorySize: 0.MILLION()
-            );
+            this._blockCache = new BlockCache(this);
         }
 
         public IStorageContext StorageContext { get { return this._storageContext; } }
@@ -79,22 +50,5 @@ namespace BitSharp.Storage
         public BlockTxHashesCache BlockTxHashesCache { get { return this._blockTxHashesCache; } }
 
         public TransactionCache TransactionCache { get { return this._transactionCache; } }
-
-        public void Dispose()
-        {
-            new IDisposable[]
-            {
-                this._blockCache,
-                this._blockHeaderCache,
-                this._chainedBlockCache,
-                this._blockTxHashesCache,
-                this._transactionCache
-            }.DisposeList();
-        }
-
-        //TODO
-        public void WaitForFlush()
-        {
-        }
     }
 }

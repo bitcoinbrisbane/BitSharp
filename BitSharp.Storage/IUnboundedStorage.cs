@@ -15,14 +15,19 @@ namespace BitSharp.Storage
 
     public static class IUnboundedStorageExtensionMethods
     {
-        public static bool TryWriteValue<TKey, TValue>(this IUnboundedStorage<TKey, TValue> storage, TKey key, WriteValue<TValue> value)
+        public static bool TryWriteValue<TKey, TValue>(this IUnboundedStorage<TKey, TValue> storage, TKey key, TValue value, bool isCreate)
         {
-            return storage.TryWriteValues(new KeyValuePair<TKey, WriteValue<TValue>>[] { new KeyValuePair<TKey, WriteValue<TValue>>(key, value) });
+            return storage.TryWriteValues(new KeyValuePair<TKey, WriteValue<TValue>>[] { new KeyValuePair<TKey, WriteValue<TValue>>(key, new WriteValue<TValue>(value, isCreate)) });
         }
 
         public static bool TryCreateValue<TKey, TValue>(this IUnboundedStorage<TKey, TValue> storage, TKey key, TValue value)
         {
-            return storage.TryWriteValues(new KeyValuePair<TKey, WriteValue<TValue>>[] { new KeyValuePair<TKey, WriteValue<TValue>>(key, new WriteValue<TValue>(value, IsCreate: true)) });
+            return storage.TryWriteValue(key, value, isCreate: true);
+        }
+
+        public static bool TryUpdateValue<TKey, TValue>(this IUnboundedStorage<TKey, TValue> storage, TKey key, TValue value)
+        {
+            return storage.TryWriteValue(key, value, isCreate: false);
         }
     }
 }

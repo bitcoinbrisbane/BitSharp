@@ -210,63 +210,6 @@ namespace BitSharp.Client
             }
         }
 
-        public long BlockCacheSizeMB
-        {
-            get
-            {
-                return this.blockchainDaemon.CacheContext.BlockCache.MaxCacheMemorySize / 1.MILLION();
-            }
-            set
-            {
-                var newValue = value * 1.MILLION();
-                if (newValue != this.blockchainDaemon.CacheContext.BlockCache.MaxCacheMemorySize)
-                {
-                    this.blockchainDaemon.CacheContext.BlockCache.MaxCacheMemorySize = newValue;
-                    var handler = this.PropertyChanged;
-                    if (handler != null)
-                        handler(this, new PropertyChangedEventArgs("BlockCacheSizeMB"));
-                }
-            }
-        }
-
-        public long HeaderCacheSizeMB
-        {
-            get
-            {
-                return this.blockchainDaemon.CacheContext.BlockHeaderCache.MaxCacheMemorySize / 1.MILLION();
-            }
-            set
-            {
-                var newValue = value * 1.MILLION();
-                if (newValue != this.blockchainDaemon.CacheContext.BlockHeaderCache.MaxCacheMemorySize)
-                {
-                    this.blockchainDaemon.CacheContext.BlockHeaderCache.MaxCacheMemorySize = newValue;
-                    var handler = this.PropertyChanged;
-                    if (handler != null)
-                        handler(this, new PropertyChangedEventArgs("HeaderCacheSizeMB"));
-                }
-            }
-        }
-
-        public long ChainedBlockCacheSizeMB
-        {
-            get
-            {
-                return this.blockchainDaemon.CacheContext.ChainedBlockCache.MaxCacheMemorySize / 1.MILLION();
-            }
-            set
-            {
-                var newValue = value * 1.MILLION();
-                if (newValue != this.blockchainDaemon.CacheContext.ChainedBlockCache.MaxCacheMemorySize)
-                {
-                    this.blockchainDaemon.CacheContext.ChainedBlockCache.MaxCacheMemorySize = newValue;
-                    var handler = this.PropertyChanged;
-                    if (handler != null)
-                        handler(this, new PropertyChangedEventArgs("ChainedBlockSizeMB"));
-                }
-            }
-        }
-
         private void SetValue<T>(ref T currentValue, T newValue, [CallerMemberName] string propertyName = "") where T : IEquatable<T>
         {
             if (!currentValue.Equals(newValue))

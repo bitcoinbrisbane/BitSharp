@@ -94,10 +94,5 @@ namespace BitSharp.Data
         {
             return !(left == right);
         }
-
-        public static long SizeEstimator(BlockHeader blockHeader)
-        {
-            return 80;
-        }
     }
 }

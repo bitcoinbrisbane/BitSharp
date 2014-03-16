@@ -128,7 +128,7 @@ namespace BitSharp.Storage
                 }
 
                 // then write the transaction hash list
-                if (!this.StorageContext.BlockTxHashesStorage.TryWriteValue(block.Hash, new WriteValue<IImmutableList<UInt256>>(block.Transactions.Select(x => x.Hash).ToImmutableList(), keyPair.Value.IsCreate)))
+                if (!this.StorageContext.BlockTxHashesStorage.TryWriteValue(block.Hash, block.Transactions.Select(x => x.Hash).ToImmutableList(), keyPair.Value.IsCreate))
                 {
                     return false;
                 }

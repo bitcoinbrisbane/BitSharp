@@ -20,8 +20,8 @@ namespace BitSharp.Storage
 
         private readonly IBoundedStorage<TKey, TValue> _dataStorage;
 
-        public BoundedCache(string name, IBoundedStorage<TKey, TValue> dataStorage)
-            : base(name, dataStorage)
+        public BoundedCache(string name, IBoundedStorage<TKey, TValue> dataStorage, long maxFlushMemorySize, long maxCacheMemorySize, Func<TValue, long> sizeEstimator)
+            : base(name, dataStorage, maxFlushMemorySize, maxCacheMemorySize, sizeEstimator)
         {
             this.knownKeys = new ConcurrentSet<TKey>();
 
@@ -87,9 +87,9 @@ namespace BitSharp.Storage
             base.UpdateValue(key, value);
         }
 
-        public override bool TryGetValue(TKey key, out TValue value)
+        public override bool TryGetValue(TKey key, out TValue value, bool saveInCache = true)
         {
-            if (base.TryGetValue(key, out value))
+            if (base.TryGetValue(key, out value, saveInCache))
             {
                 AddKnownKey(key);
                 return true;
@@ -101,11 +101,40 @@ namespace BitSharp.Storage
             }
         }
 
+        public void FillCache()
+        {
+            foreach (var value in StreamAllValues())
+            {
+                var valueSize = this.sizeEstimator(value.Value);
+
+                if (this.MemoryCacheSize + valueSize < this.MaxCacheMemorySize)
+                {
+                    CacheValue(value.Key, value.Value);
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
         // get all values, reads everything from storage
         public IEnumerable<KeyValuePair<TKey, TValue>> StreamAllValues()
         {
             var keys = new HashSet<TKey>(this.GetAllKeys());
             var returnedKeys = new HashSet<TKey>();
+
+            // return and track items from flush pending list
+            // ensure a key is never returned twice in case modifications are made during the enumeration
+            foreach (var key in keys)
+            {
+                TValue value;
+                if (TryGetPendingValue(key, out value))
+                {
+                    returnedKeys.Add(key);
+                    yield return new KeyValuePair<TKey, TValue>(key, value);
+                }
+            }
 
             // return items from storage, still ensuring a key is never returned twice
             // storage doesn't need to add to returnedKeys as storage items will always be returned uniquely

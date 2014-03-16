@@ -79,7 +79,6 @@ namespace BitSharp.Client
                 var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
                 this.storageContext = storageContext;
 #endif
-
                 this.cacheContext = new CacheContext(this.storageContext);
                 this.rules = new MainnetRules(this.cacheContext);
                 this.blockchainDaemon = new BlockchainDaemon(this.rules, this.cacheContext);
@@ -118,7 +117,6 @@ namespace BitSharp.Client
             {
                 this.localClient,
                 this.blockchainDaemon,
-                this.cacheContext,
                 this.storageContext
             }.DisposeList();
         }

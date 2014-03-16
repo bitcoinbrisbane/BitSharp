@@ -21,8 +21,8 @@ namespace BitSharp.Node.Test
             ScriptEngine.BypassVerifySignature = true;
 
             using (var storageContext = new MemoryStorageContext())
-            using (var cacheContext = new CacheContext(storageContext))
             {
+                var cacheContext = new CacheContext(storageContext);
                 var rules = new Testnet2Rules(cacheContext);
 
                 using (var blockchainDaemon = new BlockchainDaemon(rules, cacheContext))

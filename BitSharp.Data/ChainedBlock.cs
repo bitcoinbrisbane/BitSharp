@@ -57,10 +57,5 @@ namespace BitSharp.Data
         {
             return !(left == right);
         }
-
-        public static long SizeEstimator(ChainedBlock chainedBlock)
-        {
-            return 100;
-        }
     }
 }

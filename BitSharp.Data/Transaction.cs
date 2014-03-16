@@ -88,10 +88,5 @@ namespace BitSharp.Data
         {
             return !(left == right);
         }
-
-        public static long SizeEstimator(Transaction tx)
-        {
-            return tx.SizeEstimate;
-        }
     }
 }

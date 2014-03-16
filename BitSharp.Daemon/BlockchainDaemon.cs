@@ -91,14 +91,6 @@ namespace BitSharp.Daemon
             this._cacheContext.BlockCache.UpdateValue(this._rules.GenesisBlock.Hash, this._rules.GenesisBlock);
             this._cacheContext.ChainedBlockCache.UpdateValue(this._rules.GenesisChainedBlock.BlockHash, this._rules.GenesisChainedBlock);
 
-            // wait for genesis block to be flushed
-            this._cacheContext.BlockCache.WaitForStorageFlush();
-            this._cacheContext.ChainedBlockCache.WaitForStorageFlush();
-
-            // pre-fill the chained block and header caches
-            //this._cacheContext.BlockHeaderCache.FillCache();
-            this._cacheContext.ChainedBlockCache.FillCache();
-
             // wire up cache events
             this._cacheContext.BlockHeaderCache.OnAddition += OnBlockHeaderAddition;
             this._cacheContext.BlockHeaderCache.OnModification += OnBlockHeaderModification;
@@ -595,9 +587,9 @@ namespace BitSharp.Daemon
             //Debug.WriteLine("WriteBlockchainWorker: {0:#,##0.000}s".Format2(stopwatch.ElapsedSecondsFloat()));
         }
 
-        public bool TryGetBlock(UInt256 blockHash, out Block block, bool saveInCache = true)
+        public bool TryGetBlock(UInt256 blockHash, out Block block)
         {
-            if (this.CacheContext.BlockCache.TryGetValue(blockHash, out block, saveInCache))
+            if (this.CacheContext.BlockCache.TryGetValue(blockHash, out block))
             {
                 this.missingBlocks.Remove(blockHash);
                 return true;
@@ -610,15 +602,15 @@ namespace BitSharp.Daemon
             }
         }
 
-        public bool TryGetBlockHeader(UInt256 blockHash, out BlockHeader blockHeader, bool saveInCache = true)
+        public bool TryGetBlockHeader(UInt256 blockHash, out BlockHeader blockHeader)
         {
             Block block;
-            if (this.CacheContext.BlockHeaderCache.TryGetValue(blockHash, out blockHeader, saveInCache))
+            if (this.CacheContext.BlockHeaderCache.TryGetValue(blockHash, out blockHeader))
             {
                 this.missingBlocks.Remove(blockHash);
                 return true;
             }
-            else if (this.CacheContext.BlockCache.TryGetValue(blockHash, out block, saveInCache))
+            else if (this.CacheContext.BlockCache.TryGetValue(blockHash, out block))
             {
                 blockHeader = block.Header;
                 this.missingBlocks.Remove(blockHash);
@@ -632,9 +624,9 @@ namespace BitSharp.Daemon
             }
         }
 
-        public bool TryGetChainedBlock(UInt256 blockHash, out ChainedBlock chainedBlock, bool saveInCache = true)
+        public bool TryGetChainedBlock(UInt256 blockHash, out ChainedBlock chainedBlock)
         {
-            if (this.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock, saveInCache))
+            if (this.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
             {
                 this.missingChainedBlocks.TryRemove(blockHash);
                 return true;
@@ -650,7 +642,7 @@ namespace BitSharp.Daemon
             }
         }
 
-        public bool TryGetTransaction(UInt256 txHash, out Transaction transaction, bool saveInCache = true)
+        public bool TryGetTransaction(UInt256 txHash, out Transaction transaction)
         {
             if (this.CacheContext.TransactionCache.TryGetValue(txHash, out transaction))
             {
@@ -663,21 +655,6 @@ namespace BitSharp.Daemon
                 transaction = default(Transaction);
                 return false;
             }
-        }
-
-        public long BlockCacheMemorySize
-        {
-            get { return this.CacheContext.BlockCache.MaxCacheMemorySize; }
-        }
-
-        public long HeaderCacheMemorySize
-        {
-            get { return this.CacheContext.BlockHeaderCache.MaxCacheMemorySize; }
-        }
-
-        public long ChainedBlockCacheMemorySize
-        {
-            get { return this.CacheContext.ChainedBlockCache.MaxCacheMemorySize; }
         }
 
         public void AddMissingBlock(UInt256 blockHash)

@@ -13,25 +13,11 @@ namespace BitSharp.Data
     {
         private readonly BlockHeader _header;
         private readonly ImmutableList<Transaction> _transactions;
-        private readonly long _sizeEstimate;
 
         public Block(BlockHeader header, ImmutableList<Transaction> transactions)
         {
             this._header = header;
             this._transactions = transactions;
-
-            var sizeEstimate = BlockHeader.SizeEstimator(header);
-            for (var i = 0; i < transactions.Count; i++)
-            {
-                for (var j = 0; j < transactions[i].Inputs.Count; j++)
-                    sizeEstimate += transactions[i].Inputs[j].ScriptSignature.Count;
-
-                for (var j = 0; j < transactions[i].Outputs.Count; j++)
-                    sizeEstimate += transactions[i].Outputs[j].ScriptPublicKey.Count;
-            }
-            sizeEstimate = (long)(sizeEstimate * 1.5);
-
-            this._sizeEstimate = sizeEstimate;
         }
 
         public UInt256 Hash { get { return this.Header.Hash; } }
@@ -39,8 +25,6 @@ namespace BitSharp.Data
         public BlockHeader Header { get { return this._header; } }
 
         public ImmutableList<Transaction> Transactions { get { return this._transactions; } }
-
-        public long SizeEstimate { get { return this._sizeEstimate; } }
 
         public Block With(BlockHeader Header = null, ImmutableList<Transaction> Transactions = null)
         {
@@ -73,11 +57,6 @@ namespace BitSharp.Data
         public static bool operator !=(Block left, Block right)
         {
             return !(left == right);
-        }
-
-        public static long SizeEstimator(Block block)
-        {
-            return block.SizeEstimate;
         }
     }
 }
