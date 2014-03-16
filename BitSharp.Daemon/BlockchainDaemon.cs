@@ -37,6 +37,8 @@ namespace BitSharp.Daemon
         public event EventHandler<ChainedBlock> OnWinningBlockChanged;
         public event EventHandler<ChainState> OnCurrentBlockchainChanged;
 
+        private static readonly int MAX_BUILDER_LIFETIME_SECONDS = 60;
+
         private readonly CacheContext _cacheContext;
 
         private readonly IBlockchainRules _rules;
@@ -149,9 +151,9 @@ namespace BitSharp.Daemon
                 var chainStateBuilderLocal = this.chainStateBuilder;
 
                 if (chainStateBuilderLocal != null)
-                    return chainStateLocal.CurrentBlock.Height;
-                else
                     return chainStateBuilderLocal.ChainedBlocks.Height;
+                else
+                    return chainStateLocal.CurrentBlock.Height;
             }
         }
 
@@ -479,7 +481,7 @@ namespace BitSharp.Daemon
 
                 if (this.chainStateBuilder != null
                     && this.chainStateBuilder.ChainedBlocks.LastBlock.BlockHash != chainStateLocal.CurrentBlock.BlockHash
-                    && DateTime.UtcNow - this.chainStateBuilderTime > TimeSpan.FromSeconds(60))
+                    && DateTime.UtcNow - this.chainStateBuilderTime > TimeSpan.FromSeconds(MAX_BUILDER_LIFETIME_SECONDS))
                 {
                     var newChainedBlocks = this.chainStateBuilder.ChainedBlocks.ToImmutable();
                     var newUtxo = this.chainStateBuilder.Utxo.Close(newChainedBlocks.LastBlock.BlockHash);
@@ -511,7 +513,7 @@ namespace BitSharp.Daemon
                         Calculator.CalculateBlockchainFromExisting(this.chainStateBuilder, () => this.targetChainedBlocks, out missingData, cancelToken.Token,
                             () =>
                             {
-                                if (startTime.Elapsed > TimeSpan.FromSeconds(60))
+                                if (startTime.Elapsed > TimeSpan.FromSeconds(MAX_BUILDER_LIFETIME_SECONDS))
                                 {
                                     this.blockchainWorker.NotifyWork();
                                     cancelToken.Cancel();
