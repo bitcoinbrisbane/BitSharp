@@ -92,7 +92,7 @@ namespace BitSharp.Blockchain
                         }
 
                         // flush utxo progress
-                        chainStateBuilder.Utxo.Flush();
+                        //chainStateBuilder.Utxo.Flush();
 
                         // create the next link in the new blockchain
                         if (onProgress != null)
