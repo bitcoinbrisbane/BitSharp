@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -426,6 +427,12 @@ namespace BitSharp.Common.ExtensionMethods
         public static ImmutableBitArray ToImmutableBitArray(this BitArray bitArray)
         {
             return new ImmutableBitArray(bitArray);
+        }
+
+        public static void EnqueueRange<T>(this ConcurrentQueue<T> queue, IEnumerable<T> values)
+        {
+            foreach (var value in values)
+                queue.Enqueue(value);
         }
     }
 }

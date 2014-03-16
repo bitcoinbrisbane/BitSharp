@@ -34,7 +34,7 @@ namespace BitSharp.Client
         {
             this.blockchainDaemon = blockchainDaemon;
 
-            var winningBlockLocal = this.blockchainDaemon.WinningBlock;
+            var winningBlockLocal = this.blockchainDaemon.TargetChainWorker.WinningBlock;
             var chainStateLocal = this.blockchainDaemon.ChainState;
 
             this.viewChainState = chainStateLocal;
@@ -47,7 +47,7 @@ namespace BitSharp.Client
                 (blockHash, block) =>
                     DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockCache.Count;
 
-            this.blockchainDaemon.OnWinningBlockChanged +=
+            this.blockchainDaemon.TargetChainWorker.OnWinningBlockChanged +=
                 (sender, block) =>
                     WinningBlockchainHeight = block.Height;
 

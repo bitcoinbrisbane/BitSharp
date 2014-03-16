@@ -91,7 +91,7 @@ namespace BitSharp.Node
             this.requestTransactionsWorker = new Worker("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
             this.statsWorker = new Worker("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
-            this.blockchainDaemon.OnWinningBlockChanged += OnWinningBlockChanged;
+            this.blockchainDaemon.TargetChainWorker.OnWinningBlockChanged += OnWinningBlockChanged;
 
             switch (this.Type)
             {
@@ -131,7 +131,7 @@ namespace BitSharp.Node
 
         public void Dispose()
         {
-            this.blockchainDaemon.OnWinningBlockChanged -= OnWinningBlockChanged;
+            this.blockchainDaemon.TargetChainWorker.OnWinningBlockChanged -= OnWinningBlockChanged;
 
             this.shutdownToken.Cancel();
 
@@ -253,7 +253,7 @@ namespace BitSharp.Node
                 }
 
                 var chainStateLocal = this.blockchainDaemon.ChainState;
-                var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
+                var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainWorker.TargetChainedBlocks;
                 var targetBlockHash = targetChainedBlocksLocal.LastBlock.BlockHash;
 
                 foreach (var requestBlockTuple in chainStateLocal.CurrentChainedBlocks.NavigateTowards(targetChainedBlocksLocal))
@@ -459,7 +459,7 @@ namespace BitSharp.Node
 
         private async Task SendGetHeaders(RemoteNode remoteNode)
         {
-            var fullBlockchainLocal = this.blockchainDaemon.TargetChainedBlocks.BlockList;
+            var fullBlockchainLocal = this.blockchainDaemon.TargetChainWorker.TargetChainedBlocks.BlockList;
             if (fullBlockchainLocal != null)
             {
                 var blockLocatorHashes = CalculateBlockLocatorHashes(fullBlockchainLocal);
@@ -470,7 +470,7 @@ namespace BitSharp.Node
 
         private async Task SendGetBlocks(RemoteNode remoteNode)
         {
-            var fullBlockchainLocal = this.blockchainDaemon.TargetChainedBlocks.BlockList;
+            var fullBlockchainLocal = this.blockchainDaemon.TargetChainWorker.TargetChainedBlocks.BlockList;
             if (fullBlockchainLocal != null)
             {
                 var blockLocatorHashes = CalculateBlockLocatorHashes(fullBlockchainLocal);
