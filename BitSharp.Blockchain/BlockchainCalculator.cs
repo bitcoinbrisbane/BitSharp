@@ -127,25 +127,28 @@ namespace BitSharp.Blockchain
                     utxoSafe = true;
                 }
             }
-            catch (MissingDataException e)
+            catch (OperationCanceledException)
             {
-                // if there is missing data once blockchain processing has started, return the current progress
-                missingData.Add(e);
                 if (!utxoSafe)
                     throw;
             }
+            catch (MissingDataException e)
+            {
+                if (!utxoSafe)
+                    throw;
+                else
+                    // if there is missing data once blockchain processing has started, return the current progress
+                    missingData.Add(e);
+            }
             catch (AggregateException e)
             {
-                if (e.InnerExceptions.Any(x => !(x is MissingDataException)))
-                {
+                if (!utxoSafe)
                     throw;
-                }
+                
+                if (e.InnerExceptions.Any(x => !(x is MissingDataException)))
+                    throw;
                 else
-                {
                     missingData.AddRange(e.InnerExceptions.OfType<MissingDataException>());
-                    if (!utxoSafe)
-                        throw;
-                }
             }
 
             if (onProgress != null)
