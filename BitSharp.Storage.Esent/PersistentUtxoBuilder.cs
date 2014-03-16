@@ -40,12 +40,12 @@ namespace BitSharp.Storage.Esent
             this.Dispose();
         }
 
-        public bool ContainsKey(Common.UInt256 txHash)
+        public bool ContainsKey(UInt256 txHash)
         {
             return this.utxo.ContainsKey(txHash);
         }
 
-        public bool Remove(Common.UInt256 txHash)
+        public bool Remove(UInt256 txHash)
         {
             return this.utxo.Remove(txHash);
         }
@@ -55,14 +55,14 @@ namespace BitSharp.Storage.Esent
             this.utxo.Clear();
         }
 
-        public void Add(Common.UInt256 txHash, UnspentTx unspentTx)
+        public void Add(UInt256 txHash, UnspentTx unspentTx)
         {
             this.utxo.Add(txHash, StorageEncoder.EncodeUnspentTx(unspentTx));
         }
 
         public int Count { get { return this.utxo.Count; } }
 
-        public UnspentTx this[Common.UInt256 txHash]
+        public UnspentTx this[UInt256 txHash]
         {
             get
             {
