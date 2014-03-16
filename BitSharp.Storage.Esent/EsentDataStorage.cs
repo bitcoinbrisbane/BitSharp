@@ -84,10 +84,15 @@ namespace BitSharp.Storage.Esent
 
         public bool TryAdd(UInt256 key, TValue value)
         {
-            this.dict.Add(key, this.encoder(value));
-            this.dict.Add(key, this.encoder(value));
-            Debugger.Break();
-            return true;
+            try
+            {
+                this.dict.Add(key, this.encoder(value));
+                return true;
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
         }
 
         public TValue this[UInt256 key]

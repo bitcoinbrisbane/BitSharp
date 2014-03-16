@@ -75,8 +75,15 @@ namespace BitSharp.Storage.Esent
 
         public bool TryAdd(UInt256 blockHash, ChainedBlock chainedBlock)
         {
-            this.dict[EncodeKey(blockHash)] = EncodeValue(chainedBlock);
-            return true;
+            try
+            {
+                this.dict.Add(EncodeKey(blockHash), EncodeValue(chainedBlock));
+                return true;
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
         }
 
         public ChainedBlock this[UInt256 blockHash]

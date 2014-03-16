@@ -74,8 +74,15 @@ namespace BitSharp.Storage.Esent
 
         public bool TryAdd(NetworkAddressKey networkAddressKey, NetworkAddressWithTime networkAddressWithTime)
         {
-            this.dict.Add(NetworkEncoder.EncodeNetworkAddressKey(networkAddressKey).ToArray(), NetworkEncoder.EncodeNetworkAddressWithTime(networkAddressWithTime));
-            return true;
+            try
+            {
+                this.dict.Add(NetworkEncoder.EncodeNetworkAddressKey(networkAddressKey).ToArray(), NetworkEncoder.EncodeNetworkAddressWithTime(networkAddressWithTime));
+                return true;
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
         }
 
         public NetworkAddressWithTime this[NetworkAddressKey networkAddressKey]
