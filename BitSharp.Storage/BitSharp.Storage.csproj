@@ -107,7 +107,6 @@
     <Compile Include="CacheContext.cs" />
     <Compile Include="Structs\CacheKey.cs" />
     <Compile Include="Structs\WriteValue.cs" />
-    <Compile Include="Provider\ITxKeyStorage.cs" />
     <Compile Include="StorageEncoder.cs" />
   </ItemGroup>
   <ItemGroup>

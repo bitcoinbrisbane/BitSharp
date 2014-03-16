@@ -24,15 +24,5 @@ namespace BitSharp.Storage
         public CacheContext CacheContext { get { return this._cacheContext; } }
 
         public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
-
-        //TODO public?
-        public void CacheBlock(Block block)
-        {
-            //for (var txIndex = 0; txIndex < block.Transactions.Length; txIndex++)
-            //{
-            //    var tx = block.Transactions[txIndex];
-            //    CacheValue(new TxKey(block.Hash, (UInt32)txIndex, tx.Hash), tx);
-            //}
-        }
     }
 }
