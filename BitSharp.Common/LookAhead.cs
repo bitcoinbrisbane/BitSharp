@@ -12,9 +12,9 @@ namespace BitSharp.Common
 {
     public static class LookAheadMethods
     {
-        public static IEnumerable<T> LookAhead<T>(IEnumerable<T> values, CancellationToken cancelToken)
+        public static IEnumerable<T> LookAhead<T>(IEnumerable<T> values, int maxLookAhead, CancellationToken? cancelToken = null)
         {
-            T currentValue = default(T);
+            var readValues = new ConcurrentQueue<T>();
 
             var finished = false;
             var abortToken = new CancellationTokenSource();
@@ -25,17 +25,44 @@ namespace BitSharp.Common
             {
                 try
                 {
-                    foreach (var value in values)
+                    var currentLookAhead = 1;
+                    using (var valuesEnumerator = values.GetEnumerator())
                     {
-                        valueReadEvent.WaitOne();
-                        cancelToken.ThrowIfCancellationRequested();
-                        abortToken.Token.ThrowIfCancellationRequested();
+                        while (!finished)
+                        {
+                            // cooperative loop
+                            cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
+                            abortToken.Token.ThrowIfCancellationRequested();
 
-                        currentValue = value;
+                            var value = valuesEnumerator.Current;
 
-                        valueAvailableEvent.Set();
+                            if (readValues.Count < 1 + currentLookAhead)
+                            {
+                                if (valuesEnumerator.MoveNext())
+                                {
+                                    readValues.Enqueue(valuesEnumerator.Current);
+                                    valueAvailableEvent.Set();
+                                }
+                                else
+                                {
+                                    finished = true;
+                                }
+                            }
+                            else
+                            {
+                                if (currentLookAhead < maxLookAhead
+                                    && valueReadEvent.WaitOne(0))
+                                {
+                                    Debug.WriteLine("Increasing look ahead to: {0}".Format2(currentLookAhead));
+                                    currentLookAhead++;
+                                }
+                                else
+                                {
+                                    valueReadEvent.WaitOne();
+                                }
+                            }
+                        }
                     }
-                    finished = true;
                     valueAvailableEvent.Set();
                 }
                 catch (Exception)
@@ -48,16 +75,15 @@ namespace BitSharp.Common
             thread.Start();
             try
             {
-                while (true)
+                while (!finished || readValues.Count > 0)
                 {
                     valueAvailableEvent.WaitOne();
-                    cancelToken.ThrowIfCancellationRequested();
+                    cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
                     abortToken.Token.ThrowIfCancellationRequested();
 
-                    if (finished)
-                        yield break;
-                    else
-                        yield return currentValue;
+                    T value;
+                    if (readValues.TryDequeue(out value))
+                        yield return value;
 
                     valueReadEvent.Set();
                 }
