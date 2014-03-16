@@ -36,6 +36,7 @@ namespace BitSharp.Daemon
     {
         public event EventHandler<ChainedBlock> OnWinningBlockChanged;
         public event EventHandler<ChainState> OnCurrentBlockchainChanged;
+        public event EventHandler<int> OnCurrentBuilderHeightChanged;
 
         private static readonly int MAX_BUILDER_LIFETIME_SECONDS = 60;
 
@@ -505,6 +506,10 @@ namespace BitSharp.Daemon
                         Calculator.CalculateBlockchainFromExisting(this.chainStateBuilder, () => this.targetChainedBlocks, out missingData, cancelToken.Token,
                             () =>
                             {
+                                var handler = this.OnCurrentBuilderHeightChanged;
+                                if (handler != null)
+                                    handler(this, this.chainStateBuilder.ChainedBlocks.Height);
+
                                 if (startTime.Elapsed > TimeSpan.FromSeconds(MAX_BUILDER_LIFETIME_SECONDS))
                                 {
                                     this.blockchainWorker.NotifyWork();
@@ -520,7 +525,11 @@ namespace BitSharp.Daemon
                 {
                     this.chainStateBuilder.Dispose();
                     this.chainStateBuilder = null;
-                    //this.currentBlockchainPathBuilder = null;
+
+                    var handler = this.OnCurrentBuilderHeightChanged;
+                    if (handler != null)
+                        handler(this, this.chainState.CurrentChainedBlocks.Height);
+
                     throw;
                 }
 
@@ -737,7 +746,8 @@ namespace BitSharp.Daemon
 
                 var newTargetChainedBlocks = this.targetChainedBlocks.ToBuilder();
 
-                var deltaBlockPath = new BlockchainWalker().GetBlockchainPath(newTargetChainedBlocks.LastBlock, targetBlock, blockHash => this.CacheContext.GetChainedBlock(blockHash));
+                var deltaBlockPath = new MethodTimer().Time("deltaBlockPath", () =>
+                    new BlockchainWalker().GetBlockchainPath(newTargetChainedBlocks.LastBlock, targetBlock, blockHash => this.CacheContext.GetChainedBlock(blockHash)));
 
                 foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
                     newTargetChainedBlocks.RemoveBlock(rewindBlock);
