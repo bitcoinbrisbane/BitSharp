@@ -15,25 +15,23 @@ namespace BitSharp.Storage
 
         public MemoryUtxoBuilder(Utxo parentUtxo)
         {
-            this.utxo = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
-
-            foreach (var unspentTx in parentUtxo.UnspentTransactions())
+            if (parentUtxo is MemoryUtxo)
             {
-                this.utxo.Add(unspentTx.TxHash, unspentTx);
+                this.utxo = ((MemoryUtxo)parentUtxo).Dictionary.ToBuilder();
+            }
+            else
+            {
+                this.utxo = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
+                this.utxo.AddRange(parentUtxo.UnspentTransactions().Select(x => new KeyValuePair<UInt256, UnspentTx>(x.TxHash, x)));
             }
         }
 
-        public MemoryUtxoBuilder(MemoryUtxo parentUtxo)
-        {
-            this.utxo = parentUtxo.Dictionary.ToBuilder();
-        }
-
-        public bool ContainsKey(Common.UInt256 txHash)
+        public bool ContainsKey(UInt256 txHash)
         {
             return this.utxo.ContainsKey(txHash);
         }
 
-        public bool Remove(Common.UInt256 txHash)
+        public bool Remove(UInt256 txHash)
         {
             return this.utxo.Remove(txHash);
         }
@@ -43,14 +41,14 @@ namespace BitSharp.Storage
             this.utxo.Clear();
         }
 
-        public void Add(Common.UInt256 txHash, UnspentTx unspentTx)
+        public void Add(UInt256 txHash, UnspentTx unspentTx)
         {
             this.utxo.Add(txHash, unspentTx);
         }
 
         public int Count { get { return this.utxo.Count; } }
 
-        public UnspentTx this[Common.UInt256 txHash]
+        public UnspentTx this[UInt256 txHash]
         {
             get
             {
