@@ -36,8 +36,14 @@ namespace BitSharp.Storage
             //TODO periodic rescan
             var checkThread = new Thread(() =>
             {
-                foreach (var keyPair in this._cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
-                    CheckTotalWork(keyPair.Key, keyPair.Value);
+                new MethodTimer().Time("SelectMaxTotalWorkBlocks", () =>
+                {
+                    //foreach (var keyPair in this._cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
+                    foreach (var keyPair in this._cacheContext.StorageContext.ChainedBlockStorage.ReadAllValues())
+                        CheckTotalWork(keyPair.Key, keyPair.Value);
+                });
+
+                //Debugger.Break();
             });
             checkThread.Start();
         }
@@ -82,7 +88,7 @@ namespace BitSharp.Storage
                 else if (chainedBlock.TotalWork == this.maxTotalWork)
                 {
                     this.maxTotalWorkBlocks = this.maxTotalWorkBlocks.Add(blockHash);
- 
+
                     var handler = this.OnMaxTotalWorkBlocksChanged;
                     if (handler != null)
                         handler();
