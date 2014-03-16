@@ -481,24 +481,30 @@ namespace BitSharp.Blockchain
 
         public IEnumerable<Tuple<int, ChainedBlock, Block, ImmutableDictionary<UInt256, Transaction>>> BlockAndInputsLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chainedBlocks, int maxLookAhead)
         {
-            foreach (var chainedBlockTuple in LookAheadMethods.LookAhead(chainedBlocks, maxLookAhead, this.shutdownToken))
-            {
-                var chainedBlockDirection = chainedBlockTuple.Item1;
-                var chainedBlock = chainedBlockTuple.Item2;
+            return chainedBlocks
+                .Select(
+                    chainedBlockTuple =>
+                    {
+                        var chainedBlockDirection = chainedBlockTuple.Item1;
+                        var chainedBlock = chainedBlockTuple.Item2;
 
-                var block = new MethodTimer(false).Time("GetBlock", () =>
-                    this.CacheContext.GetBlock(chainedBlock.BlockHash));
+                        var block = new MethodTimer(false).Time("GetBlock", () =>
+                            this.CacheContext.GetBlock(chainedBlock.BlockHash));
 
-                var prevInputTxes = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
-                foreach (var prevInput in block.Transactions.Skip(1).SelectMany(x => x.Inputs))
-                {
-                    var prevInputTxHash = prevInput.PreviousTxOutputKey.TxHash;
-                    if (!prevInputTxes.ContainsKey(prevInputTxHash))
-                        prevInputTxes.Add(prevInputTxHash, this.CacheContext.GetTransaction(prevInputTxHash));
-                }
+                        var prevInputTxes = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
+                        new MethodTimer(false).Time("GetPrevInputTxes", () =>
+                        {
+                            foreach (var prevInput in block.Transactions.Skip(1).SelectMany(x => x.Inputs))
+                            {
+                                var prevInputTxHash = prevInput.PreviousTxOutputKey.TxHash;
+                                if (!prevInputTxes.ContainsKey(prevInputTxHash))
+                                    prevInputTxes.Add(prevInputTxHash, this.CacheContext.GetTransaction(prevInputTxHash));
+                            }
+                        });
 
-                yield return Tuple.Create(chainedBlockDirection, chainedBlock, block, prevInputTxes.ToImmutable());
-            }
+                        return Tuple.Create(chainedBlockDirection, chainedBlock, block, prevInputTxes.ToImmutable());
+                    })
+                .LookAhead(maxLookAhead, this.shutdownToken);
         }
 
         private UInt256 CalculateHash(BlockHeader blockHeader)
