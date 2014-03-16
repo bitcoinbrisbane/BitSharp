@@ -207,6 +207,10 @@ namespace BitSharp.Daemon
             BlockHeader workBlock;
             while (this.chainBlocksPending.TryDequeue(out workBlock))
             {
+                // cooperative loop
+                if (this.shutdownToken.IsCancellationRequested)
+                    return;
+
                 if (!this.CacheContext.ChainedBlockCache.ContainsKey(workBlock.Hash))
                 {
                     ChainedBlock prevChainedBlock;
