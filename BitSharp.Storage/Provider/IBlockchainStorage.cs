@@ -8,14 +8,14 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public interface IBlockchainStorage : IDisposable
-    {
-        IEnumerable<Tuple<BlockchainKey, BlockchainMetadata>> ListBlockchains();
+    //public interface IBlockchainStorage : IDisposable
+    //{
+    //    IEnumerable<Tuple<BlockchainKey, BlockchainMetadata>> ListBlockchains();
 
-        Data.Blockchain ReadBlockchain(BlockchainKey chainedBlock);
+    //    Data.Blockchain ReadBlockchain(BlockchainKey chainedBlock);
 
-        BlockchainKey WriteBlockchain(Data.Blockchain blockchain);
+    //    BlockchainKey WriteBlockchain(Data.Blockchain blockchain);
 
-        void RemoveBlockchains(BigInteger lessThanTotalWork);
-    }
+    //    void RemoveBlockchains(BigInteger lessThanTotalWork);
+    //}
 }

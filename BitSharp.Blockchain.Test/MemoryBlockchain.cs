@@ -33,8 +33,6 @@ namespace BitSharp.Blockchain.Test
         private readonly UnitTestRules _rules;
         private readonly BlockchainCalculator _calculator;
 
-        private Data.Blockchain _currentBlockchain;
-
         private readonly ECPrivateKeyParameters _coinbasePrivateKey;
         private readonly ECPublicKeyParameters _coinbasePublicKey;
 
@@ -63,7 +61,6 @@ namespace BitSharp.Blockchain.Test
 
             // update genesis blockchain and add to storage
             this._rules.SetGenesisBlock(this._genesisBlock);
-            this._currentBlockchain = this._rules.GenesisBlockchain;
             this._genesisChainedBlock = AddBlock(this._genesisBlock, null).Item2;
         }
 
@@ -78,8 +75,6 @@ namespace BitSharp.Blockchain.Test
         public Block GenesisBlock { get { return this._genesisBlock; } }
 
         public ChainedBlock GenesisChainedBlock { get { return this._genesisChainedBlock; } }
-
-        public Data.Blockchain CurrentBlockchain { get { return this._currentBlockchain; } }
 
         public ECPrivateKeyParameters CoinbasePrivateKey { get { return this._coinbasePrivateKey; } }
 

@@ -63,39 +63,39 @@ namespace BitSharp.Data.Test
         //    Assert.IsTrue(randomBlockchain != differentBlockchainUtxo);
         //}
 
-        [TestMethod]
-        public void TestBlockchainBlockCount()
-        {
-            var randomBlockchain = RandomData.RandomBlockchain();
-            Assert.AreEqual(randomBlockchain.BlockList.Count, randomBlockchain.BlockCount);
-        }
+        //[TestMethod]
+        //public void TestBlockchainBlockCount()
+        //{
+        //    var randomBlockchain = RandomData.RandomBlockchain();
+        //    Assert.AreEqual(randomBlockchain.BlockList.Count, randomBlockchain.BlockCount);
+        //}
 
-        [TestMethod]
-        public void TestBlockchainHeight()
-        {
-            var randomBlockchain = RandomData.RandomBlockchain();
-            Assert.AreEqual(randomBlockchain.BlockList.Count - 1, randomBlockchain.Height);
-        }
+        //[TestMethod]
+        //public void TestBlockchainHeight()
+        //{
+        //    var randomBlockchain = RandomData.RandomBlockchain();
+        //    Assert.AreEqual(randomBlockchain.BlockList.Count - 1, randomBlockchain.Height);
+        //}
 
-        [TestMethod]
-        public void TestBlockchainTotalWork()
-        {
-            var randomBlockchain = RandomData.RandomBlockchain();
-            Assert.AreEqual(randomBlockchain.BlockList.Last().TotalWork, randomBlockchain.TotalWork);
-        }
+        //[TestMethod]
+        //public void TestBlockchainTotalWork()
+        //{
+        //    var randomBlockchain = RandomData.RandomBlockchain();
+        //    Assert.AreEqual(randomBlockchain.BlockList.Last().TotalWork, randomBlockchain.TotalWork);
+        //}
 
-        [TestMethod]
-        public void TestBlockchainRootBlock()
-        {
-            var randomBlockchain = RandomData.RandomBlockchain();
-            Assert.AreEqual(randomBlockchain.BlockList.Last(), randomBlockchain.RootBlock);
-        }
+        //[TestMethod]
+        //public void TestBlockchainRootBlock()
+        //{
+        //    var randomBlockchain = RandomData.RandomBlockchain();
+        //    Assert.AreEqual(randomBlockchain.BlockList.Last(), randomBlockchain.RootBlock);
+        //}
 
-        [TestMethod]
-        public void TestBlockchainRootBlockHash()
-        {
-            var randomBlockchain = RandomData.RandomBlockchain();
-            Assert.AreEqual(randomBlockchain.BlockList.Last().BlockHash, randomBlockchain.RootBlockHash);
-        }
+        //[TestMethod]
+        //public void TestBlockchainRootBlockHash()
+        //{
+        //    var randomBlockchain = RandomData.RandomBlockchain();
+        //    Assert.AreEqual(randomBlockchain.BlockList.Last().BlockHash, randomBlockchain.RootBlockHash);
+        //}
     }
 }

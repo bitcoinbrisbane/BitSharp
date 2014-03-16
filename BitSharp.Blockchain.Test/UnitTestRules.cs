@@ -22,7 +22,6 @@ namespace BitSharp.Blockchain.Test
         private UInt256 _highestTarget;
         private Block _genesisBlock;
         private ChainedBlock _genesisChainedBlock;
-        private Data.Blockchain _genesisBlockchain;
 
         public UnitTestRules(CacheContext cacheContext)
             : base(cacheContext)
@@ -36,8 +35,6 @@ namespace BitSharp.Blockchain.Test
 
         public override ChainedBlock GenesisChainedBlock { get { return this._genesisChainedBlock; } }
 
-        public override Data.Blockchain GenesisBlockchain { get { return this._genesisBlockchain; } }
-
         public void SetGenesisBlock(Block genesisBlock)
         {
             this._genesisBlock = genesisBlock;
@@ -49,14 +46,6 @@ namespace BitSharp.Blockchain.Test
                     previousBlockHash: this._genesisBlock.Header.PreviousBlock,
                     height: 0,
                     totalWork: this._genesisBlock.Header.CalculateWork()
-                );
-
-            this._genesisBlockchain =
-                new Data.Blockchain
-                (
-                    blockList: ImmutableList.Create(this._genesisChainedBlock),
-                    blockListHashes: ImmutableHashSet.Create(this._genesisBlock.Hash),
-                    utxo: new GenesisUtxo(this._genesisBlock.Hash, utxo => new MemoryUtxoBuilder(utxo))
                 );
         }
 

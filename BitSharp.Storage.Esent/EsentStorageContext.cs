@@ -40,7 +40,7 @@ namespace BitSharp.Storage.Esent
 
         IChainedBlockStorage IStorageContext.ChainedBlockStorage { get { return this._chainedBlockStorage; } }
 
-        IBlockchainStorage IStorageContext.BlockchainStorage { get { return null; } }
+        //IBlockchainStorage IStorageContext.BlockchainStorage { get { return null; } }
 
         public UtxoBuilder ToUtxoBuilder(Utxo utxo)
         {

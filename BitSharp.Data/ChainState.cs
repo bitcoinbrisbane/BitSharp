@@ -9,27 +9,32 @@ namespace BitSharp.Data
 {
     public class ChainState
     {
-        private readonly Blockchain currentBlock;
-        //private readonly ChainedBlock targetBlock;
-        //private readonly BlockchainPath targetBlockPath;
+        private readonly ChainedBlocks currentChainedBlocks;
+        private readonly Utxo currentUtxo;
 
-        public ChainState(Blockchain currentBlock)
+        public ChainState(ChainedBlocks currentChainedBlocks, Utxo currentUtxo)
         {
-            this.currentBlock = currentBlock;
-            //this.targetBlock = currentBlock.RootBlock;
-            //this.targetBlockPath = new BlockchainPath(currentBlock.RootBlock, currentBlock.RootBlock, currentBlock.RootBlock, ImmutableList.Create<ChainedBlock>(), ImmutableList.Create<ChainedBlock>());
+            this.currentChainedBlocks = currentChainedBlocks;
+            this.currentUtxo = currentUtxo;
         }
 
-        //public ChainState(Blockchain currentBlock, BlockchainPath targetBlockPath)
-        //{
-        //    this.currentBlock = currentBlock;
-        //    //this.targetBlockPath = targetBlockPath;
-        //}
+        public ChainedBlocks CurrentChainedBlocks { get { return this.currentChainedBlocks; } }
 
-        public Blockchain CurrentBlock { get { return this.currentBlock; } }
+        public Utxo CurrentUtxo { get { return this.currentUtxo; } }
 
-        //public ChainedBlock TargetBlock { get { return this.targetBlockPath.ToBlock; } }
+        public ChainedBlock CurrentBlock { get { return this.currentChainedBlocks.LastBlock; } }
 
-        //public BlockchainPath TargetBlockPath { get { return this.targetBlockPath; } }
+        public ChainStateBuilder ToBuilder(Func<Utxo, UtxoBuilder> utxoBuilderFactory)
+        {
+            return new ChainStateBuilder(this.currentChainedBlocks.ToBuilder(), utxoBuilderFactory(this.currentUtxo));
+        }
+
+        public static ChainState CreateForGenesisBlock(ChainedBlock genesisBlock, Func<Utxo, UtxoBuilder> utxoBuilderFactory)
+        {
+            return new ChainState(
+                ChainedBlocks.CreateForGenesisBlock(genesisBlock),
+                new GenesisUtxo(genesisBlock.BlockHash, utxoBuilderFactory)
+            );
+        }
     }
 }

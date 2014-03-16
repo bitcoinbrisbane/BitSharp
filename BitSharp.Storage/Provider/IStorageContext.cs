@@ -17,7 +17,7 @@ namespace BitSharp.Storage
 
         IChainedBlockStorage ChainedBlockStorage { get; }
 
-        IBlockchainStorage BlockchainStorage { get; }
+        //IBlockchainStorage BlockchainStorage { get; }
 
         UtxoBuilder ToUtxoBuilder(Utxo utxo);
     }

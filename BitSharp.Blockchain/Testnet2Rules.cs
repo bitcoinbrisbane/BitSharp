@@ -21,7 +21,6 @@ namespace BitSharp.Blockchain
     {
         private readonly Block _genesisBlock;
         private readonly ChainedBlock _genesisChainedBlock;
-        private readonly Data.Blockchain _genesisBlockchain;
 
         public Testnet2Rules(CacheContext cacheContext)
             : base(cacheContext)
@@ -93,20 +92,10 @@ namespace BitSharp.Blockchain
                     height: 0,
                     totalWork: this._genesisBlock.Header.CalculateWork()
                 );
-
-            this._genesisBlockchain =
-                new Data.Blockchain
-                (
-                    blockList: ImmutableList.Create(this._genesisChainedBlock),
-                    blockListHashes: ImmutableHashSet.Create(this._genesisBlock.Hash),
-                    utxo: new GenesisUtxo(this._genesisBlock.Hash, utxo => this.StorageContext.ToUtxoBuilder(utxo))
-                );
         }
 
         public override Block GenesisBlock { get { return this._genesisBlock; } }
 
         public override ChainedBlock GenesisChainedBlock { get { return this._genesisChainedBlock; } }
-
-        public override Data.Blockchain GenesisBlockchain { get { return this._genesisBlockchain; } }
     }
 }

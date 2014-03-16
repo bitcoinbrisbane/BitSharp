@@ -71,10 +71,6 @@ namespace BitSharp.Node
         private ConcurrentDictionary<IPEndPoint, RemoteNode> connectedPeers = new ConcurrentDictionary<IPEndPoint, RemoteNode>();
 
         private readonly ConcurrentDictionary<UInt256, DateTime> requestedBlocks = new ConcurrentDictionary<UInt256, DateTime>();
-        private List<ChainedBlock> newChainBlockList;
-        private ChainedBlock lastTargetChainedBlock;
-        private IImmutableList<ChainedBlock> fullBlockchain;
-
         private readonly ConcurrentDictionary<UInt256, DateTime> requestedTransactions = new ConcurrentDictionary<UInt256, DateTime>();
 
         private Socket listenSocket;
@@ -216,97 +212,78 @@ namespace BitSharp.Node
 
         private void RequestBlocksWorker()
         {
-            var connectedPeersLocal = this.connectedPeers.Values.SafeToList();
-            if (connectedPeersLocal.Count == 0)
-                return;
-
-            var now = DateTime.UtcNow;
-
-            // remove old requests
-            this.requestedBlocks.RemoveRange(
-                this.requestedBlocks
-                .Where(x => (now - x.Value) > TimeSpan.FromSeconds(REQUEST_LIFETIME_SECONDS))
-                .Select(x => x.Key));
-
-            if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
-                return;
-
-            var requestTasks = new List<Task>();
-
-            var chainStateLocal = this.blockchainDaemon.ChainState;
-            var targetBlockPathLocal = this.blockchainDaemon.TargetBlockPath;
-            if (this.newChainBlockList == null
-                || targetBlockPathLocal.ToBlock.BlockHash != this.lastTargetChainedBlock.BlockHash)
+            new MethodTimer(false).Time("RequestBlocksWorker", () =>
             {
-                //TODO stop gap for now, slow, do this properly
-                new MethodTimer().Time("fullBlockchain Stop Gap", () =>
-                {
-                    var fullBlockchainPath = new BlockchainWalker().GetBlockchainPath(this.blockchainDaemon.Rules.GenesisChainedBlock, targetBlockPathLocal.ToBlock, blockHash => this.blockchainDaemon.CacheContext.GetChainedBlock(blockHash));
-                    this.fullBlockchain = ImmutableList.Create<ChainedBlock>(this.blockchainDaemon.Rules.GenesisChainedBlock).AddRange(fullBlockchainPath.AdvanceBlocks);
-                });
+                var connectedPeersLocal = this.connectedPeers.Values.SafeToList();
+                if (connectedPeersLocal.Count == 0)
+                    return;
 
-                new MethodTimer().Time("newChainBlockList", () =>
-                {
-                    this.newChainBlockList = targetBlockPathLocal.RewindBlocks
-                        .Concat(targetBlockPathLocal.AdvanceBlocks)
-                        //TODO
-                        //.Where(x => !this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(x.BlockHash))
-                        .ToList();
-                });
+                var now = DateTime.UtcNow;
 
-                this.lastTargetChainedBlock = targetBlockPathLocal.ToBlock;
-            }
+                // remove old requests
+                this.requestedBlocks.RemoveRange(
+                    this.requestedBlocks
+                    .Where(x => (now - x.Value) > TimeSpan.FromSeconds(REQUEST_LIFETIME_SECONDS))
+                    .Select(x => x.Key));
 
-            // send out requests for any missing blocks
-            foreach (var block in this.blockchainDaemon.MissingBlocks)
-            {
-                //if (requestTasks.Count > requestAmount)
                 if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
-                    break;
+                    return;
 
-                // cooperative loop
-                this.shutdownToken.Token.ThrowIfCancellationRequested();
+                var requestTasks = new List<Task>();
 
-                var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), block);
-                if (task != null)
-                    requestTasks.Add(task);
-            }
-
-            for (var i = 0; i < newChainBlockList.Count; i++)
-            {
-                var requestBlock = newChainBlockList[i];
-                //while (this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(requestBlock.BlockHash))
+                //BlockHeader targetBlockHeader;
+                //if (!this.blockchainDaemon.CacheContext.BlockHeaderCache.TryGetValue(targetBlockHash, out targetBlockHeader)
+                //    || DateTime.UtcNow - targetBlockHeader.Time.UnixTimeToDateTime() > TimeSpan.FromDays(1))
                 //{
-                //    newChainBlockList.RemoveAt(i);
-                //    if (i < newChainBlockList.Count)
-                //        requestBlock = newChainBlockList[i];
-                //    else
-                //    {
-                //        requestBlock = null;
-                //        break;
-                //    }
+                //    Debug.WriteLine(targetBlockHeader.Time.UnixTimeToDateTime());
+                //    return;
                 //}
 
-                //if (requestBlock != null)
-                if (!this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(requestBlock.BlockHash))
+                // send out requests for any missing blocks
+                foreach (var block in this.blockchainDaemon.MissingBlocks)
                 {
-                    // limit how far ahead the target blockchain will be downloaded
-                    if (requestBlock.Height >= MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT
-                        && requestBlock.Height - this.blockchainDaemon.CurrentBuilderHeight > MAX_BLOCKCHAIN_LOOKAHEAD)
-                        break;
-
-                    var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), requestBlock.BlockHash);
-                    if (task != null)
-                        requestTasks.Add(task);
-
                     //if (requestTasks.Count > requestAmount)
                     if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
                         break;
 
                     // cooperative loop
                     this.shutdownToken.Token.ThrowIfCancellationRequested();
+
+                    var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), block);
+                    if (task != null)
+                        requestTasks.Add(task);
                 }
-            }
+
+                var chainStateLocal = this.blockchainDaemon.ChainState;
+                var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
+                var targetBlockHash = targetChainedBlocksLocal.LastBlock.BlockHash;
+
+                foreach (var requestBlockTuple in chainStateLocal.CurrentChainedBlocks.NavigateTowards(targetChainedBlocksLocal))
+                {
+                    var requestBlockDirection = requestBlockTuple.Item1;
+                    var requestBlock = requestBlockTuple.Item2;
+
+                    if (!this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(requestBlock.BlockHash))
+                    {
+                        // limit how far ahead the target blockchain will be downloaded
+                        if (requestBlockDirection > 0
+                            && requestBlock.Height >= MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT
+                            && requestBlock.Height - this.blockchainDaemon.CurrentBuilderHeight > MAX_BLOCKCHAIN_LOOKAHEAD)
+                            break;
+
+                        var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), requestBlock.BlockHash);
+                        if (task != null)
+                            requestTasks.Add(task);
+
+                        //if (requestTasks.Count > requestAmount)
+                        if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
+                            break;
+
+                        // cooperative loop
+                        this.shutdownToken.Token.ThrowIfCancellationRequested();
+                    }
+                }
+            });
         }
 
         private void RequestHeadersWorker()
@@ -484,7 +461,7 @@ namespace BitSharp.Node
 
         private async Task SendGetHeaders(RemoteNode remoteNode)
         {
-            var fullBlockchainLocal = this.fullBlockchain;
+            var fullBlockchainLocal = this.blockchainDaemon.TargetChainedBlocks.BlockList;
             if (fullBlockchainLocal != null)
             {
                 var blockLocatorHashes = CalculateBlockLocatorHashes(fullBlockchainLocal);
@@ -495,7 +472,7 @@ namespace BitSharp.Node
 
         private async Task SendGetBlocks(RemoteNode remoteNode)
         {
-            var fullBlockchainLocal = this.fullBlockchain;
+            var fullBlockchainLocal = this.blockchainDaemon.TargetChainedBlocks.BlockList;
             if (fullBlockchainLocal != null)
             {
                 var blockLocatorHashes = CalculateBlockLocatorHashes(fullBlockchainLocal);
@@ -743,8 +720,8 @@ namespace BitSharp.Node
             if (this.Type == LocalClientType.ComparisonToolTestNet)
                 this.blockchainDaemon.WaitForFullUpdate();
 
-            var currentBlockchainLocal = this.blockchainDaemon.CurrentBlockchain;
-            var blockHeaders = new List<BlockHeader>(currentBlockchainLocal.BlockCount);
+            var currentBlockchainLocal = this.blockchainDaemon.ChainState.CurrentChainedBlocks;
+            var blockHeaders = new List<BlockHeader>(currentBlockchainLocal.BlockList.Count());
             foreach (var chainedBlock in currentBlockchainLocal.BlockList)
             {
                 BlockHeader blockHeader;
@@ -811,9 +788,8 @@ namespace BitSharp.Node
                 // send our local version
                 var nodeId = (((UInt64)random.Next()) << 32) + (UInt64)random.Next(); //TODO should be generated and verified on version message
 
-                var currentBlockchainLocal = this.blockchainDaemon.CurrentBlockchain;
-                var currentHeight = currentBlockchainLocal != null ? (UInt32)currentBlockchainLocal.Height : 0;
-                await remoteNode.Sender.SendVersion(Messaging.GetExternalIPEndPoint(), remoteNode.RemoteEndPoint, nodeId, currentHeight);
+                var currentHeight = this.blockchainDaemon.ChainState.CurrentChainedBlocks.Height;
+                await remoteNode.Sender.SendVersion(Messaging.GetExternalIPEndPoint(), remoteNode.RemoteEndPoint, nodeId, (UInt32)currentHeight);
 
                 // wait for our local version to be acknowledged by the remote peer
                 // wait for remote peer to send their version

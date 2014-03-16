@@ -16,6 +16,8 @@ namespace BitSharp.Storage
 {
     public class ChainedBlockCache : BoundedCache<UInt256, ChainedBlock>
     {
+        public event Action OnMaxTotalWorkBlocksChanged;
+
         private readonly CacheContext _cacheContext;
 
         private BigInteger maxTotalWork;
@@ -72,10 +74,18 @@ namespace BitSharp.Storage
                 {
                     this.maxTotalWork = chainedBlock.TotalWork;
                     this.maxTotalWorkBlocks = ImmutableList.Create<UInt256>(blockHash);
+
+                    var handler = this.OnMaxTotalWorkBlocksChanged;
+                    if (handler != null)
+                        handler();
                 }
                 else if (chainedBlock.TotalWork == this.maxTotalWork)
                 {
                     this.maxTotalWorkBlocks = this.maxTotalWorkBlocks.Add(blockHash);
+ 
+                    var handler = this.OnMaxTotalWorkBlocksChanged;
+                    if (handler != null)
+                        handler();
                 }
             });
         }

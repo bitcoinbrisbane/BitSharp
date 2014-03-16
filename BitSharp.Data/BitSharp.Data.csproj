@@ -71,14 +71,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BlockchainBuilder.cs" />
-    <Compile Include="Blockchain.cs" />
     <Compile Include="BlockchainKey.cs" />
     <Compile Include="BlockchainMetadata.cs" />
     <Compile Include="BlockchainPathBuilder.cs" />
     <Compile Include="BlockchainPath.cs" />
     <Compile Include="ChainedBlock.cs" />
+    <Compile Include="ChainStateBuilder.cs" />
     <Compile Include="ChainState.cs" />
+    <Compile Include="ChainedBlocks.cs" />
     <Compile Include="DataCalculator.cs" />
     <Compile Include="GenesisUtxo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
