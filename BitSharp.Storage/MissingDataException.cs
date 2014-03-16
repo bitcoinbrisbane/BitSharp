@@ -17,17 +17,12 @@ namespace BitSharp.Storage
 
     public class MissingDataException : Exception
     {
-        private readonly DataType dataType;
-        private readonly UInt256 dataKey;
+        private readonly object key;
 
-        public MissingDataException(DataType dataType, UInt256 dataKey)
+        public MissingDataException(object key)
         {
-            this.dataType = dataType;
-            this.dataKey = dataKey;
         }
 
-        public DataType DataType { get { return this.dataType; } }
-
-        public UInt256 DataKey { get { return this.dataKey; } }
+        public object Key { get { return this.key; } }
     }
 }

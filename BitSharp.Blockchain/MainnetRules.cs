@@ -1,5 +1,4 @@
-﻿using BitSharp.Blockchain.ExtensionMethods;
-using BitSharp.Common;
+﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Script;
@@ -167,7 +166,7 @@ namespace BitSharp.Blockchain
                 if (chainedBlocks.Height == 0)
                 {
                     // lookup genesis block header
-                    var genesisBlockHeader = this.CacheContext.GetBlockHeader(chainedBlocks.BlockList[0].BlockHash);
+                    var genesisBlockHeader = this.CacheContext.BlockHeaderCache[chainedBlocks.BlockList[0].BlockHash];
 
                     return genesisBlockHeader.CalculateTarget();
                 }
@@ -175,7 +174,7 @@ namespace BitSharp.Blockchain
                 else if (chainedBlocks.Height % DifficultyInternal != 0)
                 {
                     // lookup the previous block on the current blockchain
-                    var prevBlockHeader = this.CacheContext.GetBlockHeader(chainedBlocks.LastBlock.PreviousBlockHash);
+                    var prevBlockHeader = this.CacheContext.BlockHeaderCache[chainedBlocks.LastBlock.PreviousBlockHash];
 
                     return prevBlockHeader.CalculateTarget();
                 }
@@ -183,11 +182,11 @@ namespace BitSharp.Blockchain
                 else
                 {
                     // lookup the previous block on the current blockchain
-                    var prevBlockHeader = this.CacheContext.GetBlockHeader(chainedBlocks.LastBlock.PreviousBlockHash);
+                    var prevBlockHeader = this.CacheContext.BlockHeaderCache[chainedBlocks.LastBlock.PreviousBlockHash];
 
                     // get the block difficultyInterval blocks ago
                     var startChainedBlock = chainedBlocks.BlockList.Reverse().Skip(DifficultyInternal).First();
-                    var startBlockHeader = this.CacheContext.GetBlockHeader(startChainedBlock.BlockHash);
+                    var startBlockHeader = this.CacheContext.BlockHeaderCache[startChainedBlock.BlockHash];
                     //Debug.Assert(startChainedBlock.Height == blockchain.Height - DifficultyInternal);
 
                     var actualTimespan = (long)prevBlockHeader.Time - (long)startBlockHeader.Time;
@@ -323,7 +322,7 @@ namespace BitSharp.Blockchain
 
                 // find previous transaction
                 var prevTx = prevInputTxes != null ? prevInputTxes[input.PreviousTxOutputKey.TxHash]
-                    : this.CacheContext.GetTransaction(input.PreviousTxOutputKey.TxHash);
+                    : this.CacheContext.TransactionCache[input.PreviousTxOutputKey.TxHash];
 
                 // find previous transaction output
                 if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Count)
@@ -394,7 +393,7 @@ namespace BitSharp.Blockchain
 
                     // find previous transaction
                     var prevTx = prevInputTxes != null ? prevInputTxes[input.PreviousTxOutputKey.TxHash]
-                        : this.CacheContext.GetTransaction(input.PreviousTxOutputKey.TxHash);
+                        : this.CacheContext.TransactionCache[input.PreviousTxOutputKey.TxHash];
 
                     // find previous transaction output
                     if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Count)

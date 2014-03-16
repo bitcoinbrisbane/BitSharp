@@ -1,6 +1,5 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
-using BitSharp.Blockchain.ExtensionMethods;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -37,10 +36,8 @@ namespace BitSharp.Blockchain
 
         public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
 
-        public void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<ChainedBlocks> getTargetChainedBlocks, out List<MissingDataException> missingData, CancellationToken cancelToken, Action onProgress = null)
+        public void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<ChainedBlocks> getTargetChainedBlocks, CancellationToken cancelToken, Action onProgress = null)
         {
-            missingData = new List<MissingDataException>();
-
             chainStateBuilder.Stats.totalStopwatch.Start();
             chainStateBuilder.Stats.currentRateStopwatch.Start();
 
@@ -127,28 +124,10 @@ namespace BitSharp.Blockchain
                     utxoSafe = true;
                 }
             }
-            catch (OperationCanceledException)
+            catch (Exception)
             {
                 if (!utxoSafe)
                     throw;
-            }
-            catch (MissingDataException e)
-            {
-                if (!utxoSafe)
-                    throw;
-                else
-                    // if there is missing data once blockchain processing has started, return the current progress
-                    missingData.Add(e);
-            }
-            catch (AggregateException e)
-            {
-                if (!utxoSafe)
-                    throw;
-                
-                if (e.InnerExceptions.Any(x => !(x is MissingDataException)))
-                    throw;
-                else
-                    missingData.AddRange(e.InnerExceptions.OfType<MissingDataException>());
             }
 
             if (onProgress != null)
@@ -382,7 +361,7 @@ namespace BitSharp.Blockchain
                     else
                     {
                         // fully spent transaction being added back in during roll back
-                        var prevUnspentTx = this.CacheContext.GetTransaction(input.PreviousTxOutputKey.TxHash);
+                        var prevUnspentTx = this.CacheContext.TransactionCache[input.PreviousTxOutputKey.TxHash];
 
                         utxoBuilder[input.PreviousTxOutputKey.TxHash] =
                             new UnspentTx(prevUnspentTx.Hash, new ImmutableBitArray(prevUnspentTx.Outputs.Count, false).Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
@@ -424,7 +403,7 @@ namespace BitSharp.Blockchain
                     throw new ValidationException();
 
                 // get genesis block header
-                var chainGenesisBlockHeader = this.CacheContext.GetBlockHeader(blockchain.BlockList[0].BlockHash);
+                var chainGenesisBlockHeader = this.CacheContext.BlockHeaderCache[blockchain.BlockList[0].BlockHash];
 
                 // verify genesis block header
                 if (
@@ -459,7 +438,7 @@ namespace BitSharp.Blockchain
                         throw new ValidationException();
 
                     // verify block exists
-                    var blockHeader = this.CacheContext.GetBlockHeader(chainedBlock.BlockHash);
+                    var blockHeader = this.CacheContext.BlockHeaderCache[chainedBlock.BlockHash];
 
                     // verify block metadata matches header values
                     if (blockHeader.PreviousBlock != chainedBlock.PreviousBlockHash)
@@ -492,7 +471,7 @@ namespace BitSharp.Blockchain
                         var chainedBlock = chainedBlockTuple.Item2;
 
                         var block = new MethodTimer(false).Time("GetBlock", () =>
-                            this.CacheContext.GetBlock(chainedBlock.BlockHash));
+                            this.CacheContext.BlockCache[chainedBlock.BlockHash]);
 
                         var prevInputTxes = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
                         new MethodTimer(false).Time("GetPrevInputTxes", () =>
@@ -501,7 +480,7 @@ namespace BitSharp.Blockchain
                             {
                                 var prevInputTxHash = prevInput.PreviousTxOutputKey.TxHash;
                                 if (!prevInputTxes.ContainsKey(prevInputTxHash))
-                                    prevInputTxes.Add(prevInputTxHash, this.CacheContext.GetTransaction(prevInputTxHash));
+                                    prevInputTxes.Add(prevInputTxHash, this.CacheContext.TransactionCache[prevInputTxHash]);
                             }
                         });
 

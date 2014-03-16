@@ -4,6 +4,7 @@ using BitSharp.Storage.ExtensionMethods;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
@@ -23,13 +24,18 @@ namespace BitSharp.Storage
         private readonly string name;
         private readonly IUnboundedStorage<TKey, TValue> dataStorage;
 
+        private readonly ConcurrentSetBuilder<TKey> missingData;
+
         public UnboundedCache(string name, IUnboundedStorage<TKey, TValue> dataStorage)
         {
             this.name = name;
             this.dataStorage = dataStorage;
+            this.missingData = new ConcurrentSetBuilder<TKey>();
         }
 
         public string Name { get { return this.name; } }
+
+        public ImmutableHashSet<TKey> MissingData { get { return this.missingData.ToImmutable(); } }
 
         public virtual bool ContainsKey(TKey key)
         {
@@ -42,6 +48,8 @@ namespace BitSharp.Storage
             // look in storage
             if (this.dataStorage.TryGetValue(key, out value))
             {
+                this.missingData.Remove(key);
+
                 // value found, fire retrieved event
                 var handler = this.OnRetrieved;
                 if (handler != null)
@@ -62,16 +70,15 @@ namespace BitSharp.Storage
 
         public virtual bool TryAdd(TKey key, TValue value)
         {
-            if (this.dataStorage.TryAdd(key, value))
-            {
-                var handler = this.OnAddition;
-                if (handler != null)
-                    handler(key, value);
+            var result = this.dataStorage.TryAdd(key, value);
 
-                return true;
-            }
-            else
-                return false;
+            this.missingData.Remove(key);
+
+            var handler = this.OnAddition;
+            if (handler != null)
+                handler(key, value);
+
+            return result;
         }
 
         public virtual TValue this[TKey key]
@@ -82,11 +89,17 @@ namespace BitSharp.Storage
                 if (this.TryGetValue(key, out value))
                     return value;
                 else
-                    throw new KeyNotFoundException();
+                {
+                    this.missingData.Add(key);
+
+                    throw new MissingDataException(key);
+                }
             }
             set
             {
                 this.dataStorage[key] = value;
+
+                this.missingData.Remove(key);
 
                 var handler = this.OnModification;
                 if (handler != null)

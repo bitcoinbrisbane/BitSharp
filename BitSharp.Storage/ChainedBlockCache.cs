@@ -18,19 +18,19 @@ namespace BitSharp.Storage
     {
         public event Action OnMaxTotalWorkBlocksChanged;
 
-        private readonly CacheContext _cacheContext;
+        private readonly CacheContext cacheContext;
 
         private BigInteger maxTotalWork;
-        private ImmutableList<UInt256> maxTotalWorkBlocks;
+        private ImmutableList<ChainedBlock> maxTotalWorkBlocks;
         private readonly ReaderWriterLockSlim maxTotalWorkLock;
 
         public ChainedBlockCache(CacheContext cacheContext)
             : base("ChainedBlockCache", cacheContext.StorageContext.ChainedBlockStorage)
         {
-            this._cacheContext = cacheContext;
+            this.cacheContext = cacheContext;
 
             this.maxTotalWork = -1;
-            this.maxTotalWorkBlocks = ImmutableList.Create<UInt256>();
+            this.maxTotalWorkBlocks = ImmutableList.Create<ChainedBlock>();
             this.maxTotalWorkLock = new ReaderWriterLockSlim();
 
             //TODO periodic rescan
@@ -38,8 +38,8 @@ namespace BitSharp.Storage
             {
                 new MethodTimer().Time("SelectMaxTotalWorkBlocks", () =>
                 {
-                    foreach (var keyPair in this._cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
-                        CheckTotalWork(keyPair.Key, keyPair.Value);
+                    foreach (var chainedBlock in this.cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
+                        CheckTotalWork(chainedBlock);
                 });
 
                 //Debugger.Break();
@@ -47,11 +47,11 @@ namespace BitSharp.Storage
             checkThread.Start();
         }
 
-        public CacheContext CacheContext { get { return this._cacheContext; } }
+        public CacheContext CacheContext { get { return this.cacheContext; } }
 
         public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
 
-        public IImmutableList<UInt256> MaxTotalWorkBlocks
+        public IImmutableList<ChainedBlock> MaxTotalWorkBlocks
         {
             get
             {
@@ -62,7 +62,7 @@ namespace BitSharp.Storage
         public override bool TryAdd(UInt256 blockHash, ChainedBlock chainedBlock)
         {
             var result = base.TryAdd(blockHash, chainedBlock);
-            CheckTotalWork(blockHash, chainedBlock);
+            CheckTotalWork(chainedBlock);
             return result;
         }
 
@@ -75,18 +75,18 @@ namespace BitSharp.Storage
             set
             {
                 base[blockHash] = value;
-                CheckTotalWork(blockHash, value);
+                CheckTotalWork(value);
             }
         }
 
-        private void CheckTotalWork(UInt256 blockHash, ChainedBlock chainedBlock)
+        private void CheckTotalWork(ChainedBlock chainedBlock)
         {
             this.maxTotalWorkLock.DoWrite(() =>
             {
                 if (chainedBlock.TotalWork > this.maxTotalWork)
                 {
                     this.maxTotalWork = chainedBlock.TotalWork;
-                    this.maxTotalWorkBlocks = ImmutableList.Create<UInt256>(blockHash);
+                    this.maxTotalWorkBlocks = ImmutableList.Create<ChainedBlock>(chainedBlock);
 
                     var handler = this.OnMaxTotalWorkBlocksChanged;
                     if (handler != null)
@@ -94,7 +94,7 @@ namespace BitSharp.Storage
                 }
                 else if (chainedBlock.TotalWork == this.maxTotalWork)
                 {
-                    this.maxTotalWorkBlocks = this.maxTotalWorkBlocks.Add(blockHash);
+                    this.maxTotalWorkBlocks = this.maxTotalWorkBlocks.Add(chainedBlock);
 
                     var handler = this.OnMaxTotalWorkBlocksChanged;
                     if (handler != null)

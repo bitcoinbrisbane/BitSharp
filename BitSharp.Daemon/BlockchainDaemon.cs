@@ -1,7 +1,6 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Blockchain;
-using BitSharp.Blockchain.ExtensionMethods;
 using BitSharp.Script;
 using BitSharp.Storage;
 using BitSharp.Storage.ExtensionMethods;
@@ -56,10 +55,6 @@ namespace BitSharp.Daemon
         private readonly Dictionary<UInt256, Dictionary<UInt256, BlockHeader>> unchainedBlocksByPrevious;
         private readonly ReaderWriterLockSlim unchainedBlocksLock;
 
-        private readonly ConcurrentSetBuilder<UInt256> missingBlocks;
-        private readonly ConcurrentSet<UInt256> missingChainedBlocks;
-        private readonly ConcurrentSetBuilder<UInt256> missingTransactions;
-
         private readonly CancellationTokenSource shutdownToken;
 
         private readonly Worker winnerWorker;
@@ -83,10 +78,6 @@ namespace BitSharp.Daemon
 
             this.unchainedBlocksByPrevious = new Dictionary<UInt256, Dictionary<UInt256, BlockHeader>>();
             this.unchainedBlocksLock = new ReaderWriterLockSlim();
-
-            this.missingBlocks = new ConcurrentSetBuilder<UInt256>();
-            this.missingChainedBlocks = new ConcurrentSet<UInt256>();
-            this.missingTransactions = new ConcurrentSetBuilder<UInt256>();
 
             // write genesis block out to storage
             this._cacheContext.BlockCache[this._rules.GenesisBlock.Hash] = this._rules.GenesisBlock;
@@ -147,22 +138,6 @@ namespace BitSharp.Daemon
                     return chainStateBuilderLocal.ChainedBlocks.Height;
                 else
                     return chainStateLocal.CurrentBlock.Height;
-            }
-        }
-
-        public ImmutableHashSet<UInt256> MissingBlocks
-        {
-            get
-            {
-                return this.missingBlocks.ToImmutable();
-            }
-        }
-
-        public ImmutableHashSet<UInt256> MissingTransactions
-        {
-            get
-            {
-                return this.missingTransactions.ToImmutable();
             }
         }
 
@@ -240,8 +215,6 @@ namespace BitSharp.Daemon
 
         private void OnBlockAddition(UInt256 blockHash, Block block)
         {
-            this.missingBlocks.Remove(blockHash);
-
             ChainBlockHeader(blockHash, null);
 
             this.blockchainWorker.NotifyWork();
@@ -254,8 +227,6 @@ namespace BitSharp.Daemon
 
         private void OnChainedBlockAddition(UInt256 blockHash, ChainedBlock chainedBlock)
         {
-            this.missingChainedBlocks.TryRemove(blockHash);
-
             this.blockchainWorker.NotifyWork();
             this.winnerWorker.NotifyWork();
         }
@@ -402,20 +373,27 @@ namespace BitSharp.Daemon
 
         private void WinnerWorker()
         {
-            var maxTotalWorkBlocksLocal = this.CacheContext.ChainedBlockCache.MaxTotalWorkBlocks;
-            var targetBlockLocal = this.WinningBlock;
-
-            // check if winning block has changed
-            if (!maxTotalWorkBlocksLocal.Contains(targetBlockLocal.BlockHash))
+            try
             {
-                //TODO pick properly when more than one
-                var maxTotalWorkBlockHash = maxTotalWorkBlocksLocal.FirstOrDefault();
+                var maxTotalWorkBlocksLocal = this.CacheContext.ChainedBlockCache.MaxTotalWorkBlocks;
+                var targetBlockLocal = this.WinningBlock;
 
-                // get winning chained block
-                if (maxTotalWorkBlockHash != null)
+                // check if winning block has changed
+                if (!maxTotalWorkBlocksLocal.Contains(targetBlockLocal))
                 {
-                    UpdateWinningBlockchain(maxTotalWorkBlockHash);
+                    //TODO pick properly when more than one
+                    var maxTotalWorkBlock = maxTotalWorkBlocksLocal.FirstOrDefault();
+
+                    // get winning chained block
+                    if (maxTotalWorkBlock != null)
+                    {
+                        UpdateWinningBlockchain(maxTotalWorkBlock);
+                    }
                 }
+            }
+            catch (Exception)
+            {
+                //TODO log
             }
         }
 
@@ -486,94 +464,60 @@ namespace BitSharp.Daemon
                     chainStateLocal = this.chainState;
                 }
 
-                //TODO cleanup this design
-                List<MissingDataException> missingData;
-
                 if (this.chainStateBuilder == null)
                 {
                     this.chainStateBuilderTime = DateTime.UtcNow;
                     this.chainStateBuilder = chainStateLocal.ToBuilder(this.StorageContext.ToUtxoBuilder);
                 }
 
-                try
+                // try to advance the blockchain with the new winning block
+                using (var cancelToken = new CancellationTokenSource())
                 {
-                    // try to advance the blockchain with the new winning block
-                    using (var cancelToken = new CancellationTokenSource())
-                    {
-                        var startTime = new Stopwatch();
-                        startTime.Start();
+                    var startTime = new Stopwatch();
+                    startTime.Start();
 
-                        Calculator.CalculateBlockchainFromExisting(this.chainStateBuilder, () => this.targetChainedBlocks, out missingData, cancelToken.Token,
-                            () =>
+                    Calculator.CalculateBlockchainFromExisting(this.chainStateBuilder, () => this.targetChainedBlocks, cancelToken.Token,
+                        () =>
+                        {
+                            var handler = this.OnCurrentBuilderHeightChanged;
+                            if (handler != null)
+                                handler(this, this.chainStateBuilder.ChainedBlocks.Height);
+
+                            if (startTime.Elapsed > TimeSpan.FromSeconds(MAX_BUILDER_LIFETIME_SECONDS))
                             {
-                                var handler = this.OnCurrentBuilderHeightChanged;
-                                if (handler != null)
-                                    handler(this, this.chainStateBuilder.ChainedBlocks.Height);
+                                this.blockchainWorker.NotifyWork();
+                                cancelToken.Cancel();
+                            }
 
-                                if (startTime.Elapsed > TimeSpan.FromSeconds(MAX_BUILDER_LIFETIME_SECONDS))
-                                {
-                                    this.blockchainWorker.NotifyWork();
-                                    cancelToken.Cancel();
-                                }
-
-                                // let the blockchain writer know there is new work
-                                this.writeBlockchainWorker.NotifyWork();
-                            });
-                    }
+                            // let the blockchain writer know there is new work
+                            this.writeBlockchainWorker.NotifyWork();
+                        });
                 }
-                catch (Exception)
+            }
+            catch (Exception)
+            {
+                if (this.chainStateBuilder != null)
                 {
                     this.chainStateBuilder.Dispose();
                     this.chainStateBuilder = null;
-
-                    this.blockchainWorker.NotifyWork();
-
-                    var handler = this.OnCurrentBuilderHeightChanged;
-                    if (handler != null)
-                        handler(this, this.chainState.CurrentChainedBlocks.Height);
-
-                    throw;
                 }
 
-                // collect after processing
-                //GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
+                // try again on failure
+                this.blockchainWorker.NotifyWork();
 
-                // handle any missing data that prevented further processing
-                foreach (var e in missingData)
-                {
-                    HandleMissingData(e);
-                }
-
-                // whenever the chain is successfully advanced, keep looking for more
-                //this.blockchainWorker.NotifyWork();
-
-                // kick off a blockchain revalidate after update
-                this.validateCurrentChainWorker.NotifyWork();
+                var handler = this.OnCurrentBuilderHeightChanged;
+                if (handler != null)
+                    handler(this, this.chainState.CurrentChainedBlocks.Height);
             }
-            catch (ValidationException)
-            {
-                //TODO
-                // an invalid blockchain with winning work will just keep trying over and over again until this is implemented
-            }
-            catch (MissingDataException e)
-            {
-                HandleMissingData(e);
-            }
-            catch (AggregateException e)
-            {
-                foreach (var missingDataException in e.InnerExceptions.OfType<MissingDataException>())
-                {
-                    HandleMissingData(missingDataException);
-                }
 
-                //TODO
-                //var validationException = e.InnerExceptions.FirstOrDefault(x => x is ValidationException);
-                //if (validationException != null)
-                //    throw validationException;
+            // collect after processing
+            //GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
 
-                //TODO
-                //throw;
-            }
+            // whenever the chain is successfully advanced, keep looking for more
+            //this.blockchainWorker.NotifyWork();
+
+            // kick off a blockchain revalidate after update
+            this.validateCurrentChainWorker.NotifyWork();
         }
 
         private void WriteBlockchainWorker()
@@ -598,123 +542,6 @@ namespace BitSharp.Daemon
             //Debug.WriteLine("WriteBlockchainWorker: {0:#,##0.000}s".Format2(stopwatch.ElapsedSecondsFloat()));
         }
 
-        public bool TryGetBlock(UInt256 blockHash, out Block block)
-        {
-            if (this.CacheContext.BlockCache.TryGetValue(blockHash, out block))
-            {
-                this.missingBlocks.Remove(blockHash);
-                return true;
-            }
-            else
-            {
-                this.missingBlocks.Add(blockHash);
-                block = default(Block);
-                return false;
-            }
-        }
-
-        public bool TryGetBlockHeader(UInt256 blockHash, out BlockHeader blockHeader)
-        {
-            Block block;
-            if (this.CacheContext.BlockHeaderCache.TryGetValue(blockHash, out blockHeader))
-            {
-                this.missingBlocks.Remove(blockHash);
-                return true;
-            }
-            else if (this.CacheContext.BlockCache.TryGetValue(blockHash, out block))
-            {
-                blockHeader = block.Header;
-                this.missingBlocks.Remove(blockHash);
-                return true;
-            }
-            else
-            {
-                this.missingBlocks.Add(blockHash);
-                blockHeader = default(BlockHeader);
-                return false;
-            }
-        }
-
-        public bool TryGetChainedBlock(UInt256 blockHash, out ChainedBlock chainedBlock)
-        {
-            if (this.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
-            {
-                this.missingChainedBlocks.TryRemove(blockHash);
-                return true;
-            }
-            else
-            {
-                this.missingChainedBlocks.TryAdd(blockHash);
-                if (!this.CacheContext.BlockCache.ContainsKey(blockHash))
-                    this.missingBlocks.Add(blockHash);
-
-                chainedBlock = default(ChainedBlock);
-                return false;
-            }
-        }
-
-        public bool TryGetTransaction(UInt256 txHash, out Transaction transaction)
-        {
-            if (this.CacheContext.TransactionCache.TryGetValue(txHash, out transaction))
-            {
-                this.missingTransactions.Remove(txHash);
-                return true;
-            }
-            else
-            {
-                this.missingTransactions.Add(txHash);
-                transaction = default(Transaction);
-                return false;
-            }
-        }
-
-        public void AddMissingBlock(UInt256 blockHash)
-        {
-            if (!this.CacheContext.BlockCache.ContainsKey(blockHash))
-                this.missingBlocks.Add(blockHash);
-        }
-
-        private void HandleMissingData(MissingDataException e)
-        {
-            switch (e.DataType)
-            {
-                case DataType.Block:
-                case DataType.BlockHeader:
-                    this.missingBlocks.Add(e.DataKey);
-                    break;
-
-                case DataType.ChainedBlock:
-                    this.missingChainedBlocks.TryAdd(e.DataKey);
-                    break;
-
-                case DataType.Transaction:
-                    this.missingTransactions.Add(e.DataKey);
-                    break;
-            }
-        }
-
-        //private void UpdateWinningBlock(ChainedBlock winningBlock)
-        //{
-        //    this.winningBlockchainLock.EnterWriteLock();
-        //    try
-        //    {
-        //        this._winningBlockchain = default(ImmutableList<ChainedBlock>);
-        //    }
-        //    finally
-        //    {
-        //        this.winningBlockchainLock.ExitWriteLock();
-        //    }
-
-        //    this._winningBlock = winningBlock;
-
-        //    // notify the blockchain worker after updating winning block
-        //    this.blockchainWorker.NotifyWork();
-
-        //    var handler = this.OnWinningBlockChanged;
-        //    if (handler != null)
-        //        handler(this, winningBlock);
-        //}
-
         private void UpdateCurrentBlockchain(ChainState newChainState)
         {
             this.chainStateLock.EnterWriteLock();
@@ -738,47 +565,26 @@ namespace BitSharp.Daemon
                 handler(this, newChainState);
         }
 
-        private void UpdateWinningBlockchain(UInt256 targetBlockHash)
+        private void UpdateWinningBlockchain(ChainedBlock targetBlock)
         {
-            try
-            {
-                ChainedBlock targetBlock;
-                if (!this.CacheContext.ChainedBlockCache.TryGetValue(targetBlockHash, out targetBlock))
-                    return;
+            var newTargetChainedBlocks = this.targetChainedBlocks.ToBuilder();
 
-                var newTargetChainedBlocks = this.targetChainedBlocks.ToBuilder();
+            var deltaBlockPath = new MethodTimer().Time("deltaBlockPath", () =>
+                new BlockchainWalker().GetBlockchainPath(newTargetChainedBlocks.LastBlock, targetBlock, blockHash => this.CacheContext.ChainedBlockCache[blockHash]));
 
-                var deltaBlockPath = new MethodTimer().Time("deltaBlockPath", () =>
-                    new BlockchainWalker().GetBlockchainPath(newTargetChainedBlocks.LastBlock, targetBlock, blockHash => this.CacheContext.GetChainedBlock(blockHash)));
+            foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
+                newTargetChainedBlocks.RemoveBlock(rewindBlock);
+            foreach (var rewindBlock in deltaBlockPath.AdvanceBlocks)
+                newTargetChainedBlocks.AddBlock(rewindBlock);
 
-                foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
-                    newTargetChainedBlocks.RemoveBlock(rewindBlock);
-                foreach (var rewindBlock in deltaBlockPath.AdvanceBlocks)
-                    newTargetChainedBlocks.AddBlock(rewindBlock);
+            //Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetBlock.BlockHash.ToHexNumberString(), targetBlock.Height, targetBlock.TotalWork.ToString("X")));
+            this.targetChainedBlocks = newTargetChainedBlocks.ToImmutable();
 
-                //Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetBlock.BlockHash.ToHexNumberString(), targetBlock.Height, targetBlock.TotalWork.ToString("X")));
-                this.targetChainedBlocks = newTargetChainedBlocks.ToImmutable();
+            this.blockchainWorker.NotifyWork();
 
-                this.blockchainWorker.NotifyWork();
-
-                var handler = this.OnWinningBlockChanged;
-                if (handler != null)
-                    handler(this, targetBlock);
-            }
-            catch (MissingDataException e)
-            {
-                HandleMissingData(e);
-            }
-            catch (AggregateException e)
-            {
-                foreach (var missingDataException in e.InnerExceptions.OfType<MissingDataException>())
-                {
-                    HandleMissingData(missingDataException);
-                }
-
-                if (e.InnerExceptions.Any(x => !(x is MissingDataException)))
-                    throw;
-            }
+            var handler = this.OnWinningBlockChanged;
+            if (handler != null)
+                handler(this, targetBlock);
         }
     }
 }

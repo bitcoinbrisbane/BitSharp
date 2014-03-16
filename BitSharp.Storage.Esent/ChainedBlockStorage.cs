@@ -117,23 +117,23 @@ namespace BitSharp.Storage.Esent
             return this.GetEnumerator();
         }
 
-        public IEnumerable<KeyValuePair<UInt256, ChainedBlock>> SelectMaxTotalWorkBlocks()
+        public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
         {
             try
             {
                 var maxTotalWork = new BigInteger(-1);
-                var maxTotalWorkBlocks = new Dictionary<UInt256, ChainedBlock>();
+                var maxTotalWorkBlocks = new List<ChainedBlock>();
 
-                foreach (var keyPair in this)
+                foreach (var block in this.Values)
                 {
-                    if (keyPair.Value.TotalWork > maxTotalWork)
+                    if (block.TotalWork > maxTotalWork)
                     {
-                        maxTotalWorkBlocks = new Dictionary<UInt256, ChainedBlock>();
-                        maxTotalWorkBlocks[keyPair.Key] = keyPair.Value;
+                        maxTotalWorkBlocks = new List<ChainedBlock>();
+                        maxTotalWorkBlocks.Add(block);
                     }
-                    else if (keyPair.Value.TotalWork == maxTotalWork)
+                    else if (block.TotalWork == maxTotalWork)
                     {
-                        maxTotalWorkBlocks[keyPair.Key] = keyPair.Value;
+                        maxTotalWorkBlocks.Add(block);
                     }
                 }
 
@@ -141,7 +141,7 @@ namespace BitSharp.Storage.Esent
             }
             catch (InvalidOperationException)
             {
-                return Enumerable.Empty<KeyValuePair<UInt256, ChainedBlock>>();
+                return Enumerable.Empty<ChainedBlock>();
             }
         }
 

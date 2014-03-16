@@ -1,5 +1,4 @@
 ﻿using BitSharp.Blockchain;
-using BitSharp.Blockchain.ExtensionMethods;
 using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Daemon;
@@ -235,7 +234,7 @@ namespace BitSharp.Node
                 //}
 
                 // send out requests for any missing blocks
-                foreach (var block in this.blockchainDaemon.MissingBlocks)
+                foreach (var block in this.blockchainDaemon.CacheContext.BlockCache.MissingData)
                 {
                     //if (requestTasks.Count > requestAmount)
                     if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
@@ -316,7 +315,7 @@ namespace BitSharp.Node
             var requestTasks = new List<Task>();
 
             // send out requests for any missing transactions
-            foreach (var transaction in this.blockchainDaemon.MissingTransactions)
+            foreach (var transaction in this.blockchainDaemon.CacheContext.TransactionCache.MissingData)
             {
                 //if (requestTasks.Count > requestAmount)
                 if (this.requestedTransactions.Count > MAX_TRANSACTION_REQUESTS)
@@ -610,16 +609,17 @@ namespace BitSharp.Node
             if (connectedPeersLocal.Count == 0)
                 return;
 
-            foreach (var invVector in invVectors)
-            {
-                if (
-                    invVector.Type == InventoryVector.TYPE_MESSAGE_BLOCK
-                    && !this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(invVector.Hash)
-                    && (/*TODO properly handle comparison blockchain*/ this.Type == LocalClientType.ComparisonToolTestNet || this.blockchainDaemon.MissingBlocks.Contains(invVector.Hash)))
-                {
-                    this.blockchainDaemon.AddMissingBlock(invVector.Hash);
-                }
-            }
+            //TODO
+            //foreach (var invVector in invVectors)
+            //{
+            //    if (
+            //        invVector.Type == InventoryVector.TYPE_MESSAGE_BLOCK
+            //        && !this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(invVector.Hash)
+            //        && (/*TODO properly handle comparison blockchain*/ this.Type == LocalClientType.ComparisonToolTestNet || this.blockchainDaemon.MissingBlocks.Contains(invVector.Hash)))
+            //    {
+            //        this.blockchainDaemon.AddMissingBlock(invVector.Hash);
+            //    }
+            //}
         }
 
         private Task RequestBlock(RemoteNode remoteNode, UInt256 blockHash)

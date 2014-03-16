@@ -16,10 +16,10 @@ namespace BitSharp.Storage.Test
             : base(storageContext)
         { }
 
-        public IEnumerable<KeyValuePair<UInt256, ChainedBlock>> SelectMaxTotalWorkBlocks()
+        public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
         {
-            var maxTotalWork = this.Storage.Max(x => x.Value.TotalWork);
-            return this.Storage.Where(x => x.Value.TotalWork == maxTotalWork);
+            var maxTotalWork = this.Storage.Values.Max(x => x.TotalWork);
+            return this.Storage.Values.Where(x => x.TotalWork == maxTotalWork);
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using BitSharp.Blockchain.ExtensionMethods;
-using BitSharp.Common;
+﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Script;

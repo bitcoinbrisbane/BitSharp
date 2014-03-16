@@ -175,19 +175,16 @@ namespace BitSharp.Client
             {
                 if (chainState.CurrentChainedBlocks.Height > 0)
                 {
-                    Block block;
-                    if (this.blockchainDaemon.TryGetBlock(this.viewChainState.CurrentChainedBlocks.LastBlock.BlockHash, out block))
-                    {
-                        // TODO this is abusing rollback a bit just to get the transactions that exist in a target block that's already known
-                        // TODO make a better api for get the net output of a block
-                        //List<TxOutputKey> spendOutputs, receiveOutputs;
-                        //TODO
-                        //this.blockchainDaemon.Calculator.RollbackBlockchain(this.viewBlockchain, block, out spendOutputs, out receiveOutputs);
+                    var block = this.blockchainDaemon.CacheContext.BlockCache[this.viewChainState.CurrentChainedBlocks.LastBlock.BlockHash];
+                    // TODO this is abusing rollback a bit just to get the transactions that exist in a target block that's already known
+                    // TODO make a better api for get the net output of a block
+                    //List<TxOutputKey> spendOutputs, receiveOutputs;
+                    //TODO
+                    //this.blockchainDaemon.Calculator.RollbackBlockchain(this.viewBlockchain, block, out spendOutputs, out receiveOutputs);
 
-                        //TODO
-                        //ViewBlockchainSpendOutputs = spendOutputs;
-                        //ViewBlockchainReceiveOutputs = receiveOutputs;
-                    }
+                    //TODO
+                    //ViewBlockchainSpendOutputs = spendOutputs;
+                    //ViewBlockchainReceiveOutputs = receiveOutputs;
                 }
                 else
                 {
