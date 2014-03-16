@@ -48,8 +48,7 @@ namespace BitSharp.Blockchain
             bool utxoSafe = true;
             try
             {
-                //TODO make this work with look-ahead again
-                foreach (var pathElement in BlockAndTxLookAhead(chainStateBuilder.ChainedBlocks.NavigateTowards(getTargetChainedBlocks)))
+                foreach (var pathElement in BlockAndTxLookAhead(chainStateBuilder.ChainedBlocks.NavigateTowards(getTargetChainedBlocks), maxLookAhead: 100))
                 {
                     utxoSafe = false;
 
@@ -154,42 +153,6 @@ namespace BitSharp.Blockchain
             LogBlockchainProgress(chainStateBuilder);
             chainStateBuilder.Stats.totalStopwatch.Stop();
             chainStateBuilder.Stats.currentRateStopwatch.Stop();
-        }
-
-        public ChainedBlock RollbackChainedBlockToHeight(ChainedBlock chainedBlock, int targetHeight, IImmutableList<ChainedBlock> currentChain, out List<ChainedBlock> rolledBackChainedBlocks, CancellationToken cancelToken)
-        {
-            if (targetHeight > chainedBlock.Height || targetHeight < 0)
-                throw new ArgumentOutOfRangeException("targetHeight");
-
-            rolledBackChainedBlocks = new List<ChainedBlock>();
-
-            var targetChainedBlock = chainedBlock;
-            var expectedHeight = targetChainedBlock.Height;
-            while (targetChainedBlock.Height > targetHeight)
-            {
-                // cooperative loop
-                cancelToken.ThrowIfCancellationRequested();
-
-                // keep track of rolled back data on the new blockchain
-                rolledBackChainedBlocks.Add(targetChainedBlock);
-
-                // roll back
-                if (currentChain != null && currentChain.Count > targetChainedBlock.Height && currentChain[targetChainedBlock.Height - 1].BlockHash == targetChainedBlock.PreviousBlockHash)
-                {
-                    targetChainedBlock = currentChain[targetChainedBlock.Height - 1];
-                }
-                else
-                {
-                    targetChainedBlock = this.CacheContext.GetChainedBlock(targetChainedBlock.PreviousBlockHash);
-                }
-
-                // ensure that height is as expected while looking up previous blocks
-                expectedHeight--;
-                if (targetChainedBlock.Height != expectedHeight)
-                    throw new ValidationException();
-            }
-
-            return targetChainedBlock;
         }
 
         private void LogBlockchainProgress(ChainStateBuilder chainStateBuilder)
@@ -515,22 +478,9 @@ namespace BitSharp.Blockchain
             }
         }
 
-        public IEnumerable<Tuple<Block, ChainedBlock>> BlockLookAhead(IList<UInt256> blockHashes)
+        public IEnumerable<Tuple<int, ChainedBlock, Block /*, ImmutableDictionary<UInt256, Transaction>*/>> BlockAndTxLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chainedBlocks, int maxLookAhead)
         {
-            var blockLookAhead = LookAheadMethods.LookAhead(
-                blockHashes.Select(blockHash => this.CacheContext.GetBlock(blockHash, saveInCache: false)),
-                this.shutdownToken);
-
-            var chainedBlockLookAhead = LookAheadMethods.LookAhead(
-                blockHashes.Select(blockHash => this.CacheContext.GetChainedBlock(blockHash, saveInCache: false)),
-                this.shutdownToken);
-
-            return blockLookAhead.Zip(chainedBlockLookAhead, (block, chainedBlock) => Tuple.Create(block, chainedBlock));
-        }
-
-        public IEnumerable<Tuple<int, ChainedBlock, Block /*, ImmutableDictionary<UInt256, Transaction>*/>> BlockAndTxLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chainedBlocks)
-        {
-            foreach (var chainedBlockTuple in LookAheadMethods.LookAhead(chainedBlocks, this.shutdownToken))
+            foreach (var chainedBlockTuple in LookAheadMethods.LookAhead(chainedBlocks, maxLookAhead, this.shutdownToken))
             {
                 var chainedBlockDirection = chainedBlockTuple.Item1;
                 var chainedBlock = chainedBlockTuple.Item2;
@@ -555,63 +505,6 @@ namespace BitSharp.Blockchain
                 //}
 
                 //return Tuple.Create(block, transactionsBuilder.ToImmutable());
-            }
-        }
-
-        public IEnumerable<Tuple<ChainedBlock, Block>> PreviousBlocksLookAhead(ChainedBlock firstBlock, IImmutableList<ChainedBlock> currentChain)
-        {
-            using (var cancelToken = new CancellationTokenSource())
-            {
-                foreach (var tuple in LookAheadMethods.LookAhead(PreviousBlocks(firstBlock, currentChain), cancelToken.Token))
-                {
-                    yield return tuple;
-                }
-            }
-        }
-
-
-        public IEnumerable<Tuple<ChainedBlock, Block>> PreviousBlocks(ChainedBlock firstBlock, IImmutableList<ChainedBlock> currentChain)
-        {
-            var prevChainedBlock = firstBlock;
-            //TODO some kind of hard stop
-            while (true)
-            {
-                var prevBlock = this.CacheContext.GetBlock(prevChainedBlock.BlockHash);
-
-                yield return Tuple.Create(prevChainedBlock, prevBlock);
-
-                var prevBlockHash = prevChainedBlock.PreviousBlockHash;
-                if (prevBlockHash == 0)
-                {
-                    break;
-                }
-
-                prevChainedBlock = this.CacheContext.GetChainedBlock(prevBlockHash);
-            }
-        }
-
-        public IEnumerable<ChainedBlock> PreviousChainedBlocks(ChainedBlock firstBlock, IImmutableList<ChainedBlock> currentChain)
-        {
-            var prevChainedBlock = firstBlock;
-            //TODO some kind of hard stop
-            while (true)
-            {
-                yield return prevChainedBlock;
-
-                var prevBlockHash = prevChainedBlock.PreviousBlockHash;
-                if (prevBlockHash == 0)
-                {
-                    break;
-                }
-
-                if (currentChain != null && currentChain.Count > prevChainedBlock.Height && currentChain[prevChainedBlock.Height - 1].BlockHash == prevBlockHash)
-                {
-                    prevChainedBlock = currentChain[prevChainedBlock.Height - 1];
-                }
-                else
-                {
-                    prevChainedBlock = this.CacheContext.GetChainedBlock(prevBlockHash);
-                }
             }
         }
 
