@@ -19,12 +19,15 @@ namespace BitSharp.Data
             this.chainedBlocks = chainedBlocks;
             this.utxo = utxo;
             this.stats = new BuilderStats();
+            this.IsConsistent = true;
         }
 
         ~ChainStateBuilder()
         {
             this.Dispose();
         }
+
+        public bool IsConsistent { get; set; }
 
         public ChainedBlocksBuilder ChainedBlocks { get { return this.chainedBlocks; } }
 

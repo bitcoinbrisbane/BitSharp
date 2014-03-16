@@ -42,92 +42,85 @@ namespace BitSharp.Blockchain
             chainStateBuilder.Stats.currentRateStopwatch.Start();
 
             // calculate the new blockchain along the target path
-            bool utxoSafe = true;
-            try
+            chainStateBuilder.IsConsistent = true;
+            foreach (var pathElement in BlockAndInputsLookAhead(chainStateBuilder.ChainedBlocks.NavigateTowards(getTargetChainedBlocks), maxLookAhead: 100))
             {
-                foreach (var pathElement in BlockAndInputsLookAhead(chainStateBuilder.ChainedBlocks.NavigateTowards(getTargetChainedBlocks), maxLookAhead: 100))
+                chainStateBuilder.IsConsistent = false;
+
+                // cooperative loop
+                if (this.shutdownToken.IsCancellationRequested)
+                    break;
+                if (cancelToken.IsCancellationRequested)
+                    break;
+
+                // get block and metadata for next link in blockchain
+                var direction = pathElement.Item1;
+                var chainedBlock = pathElement.Item2;
+                var block = pathElement.Item3;
+                var prevInputTxes = pathElement.Item4;
+
+                if (direction < 0)
                 {
-                    utxoSafe = false;
+                    List<TxOutputKey> spendOutputs, receiveOutputs;
+                    RollbackUtxo(chainStateBuilder, block, out spendOutputs, out receiveOutputs);
 
-                    // cooperative loop
-                    if (this.shutdownToken.IsCancellationRequested)
-                        break;
-                    if (cancelToken.IsCancellationRequested)
-                        break;
-
-                    // get block and metadata for next link in blockchain
-                    var direction = pathElement.Item1;
-                    var chainedBlock = pathElement.Item2;
-                    var block = pathElement.Item3;
-                    var prevInputTxes = pathElement.Item4;
-
-                    if (direction < 0)
-                    {
-                        List<TxOutputKey> spendOutputs, receiveOutputs;
-                        RollbackUtxo(chainStateBuilder, block, out spendOutputs, out receiveOutputs);
-
-                        chainStateBuilder.ChainedBlocks.RemoveBlock(chainedBlock);
-                    }
-                    else if (direction > 0)
-                    {
-                        // calculate the new block utxo, double spends will be checked for
-                        ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions = ImmutableDictionary.Create<UInt256, ImmutableHashSet<int>>();
-                        long txCount = 0, inputCount = 0;
-                        new MethodTimer(false).Time("CalculateUtxo", () =>
-                            CalculateUtxo(chainedBlock.Height, block, chainStateBuilder.Utxo, out newTransactions, out txCount, out inputCount));
-
-                        chainStateBuilder.ChainedBlocks.AddBlock(chainedBlock);
-
-                        // validate the block
-                        // validation utxo includes all transactions added in the same block, any double spends will have failed the block above
-                        chainStateBuilder.Stats.validateStopwatch.Start();
-                        try
-                        {
-                            new MethodTimer(false).Time("ValidateBlock", () =>
-                                this.Rules.ValidateBlock(block, chainStateBuilder, newTransactions, prevInputTxes));
-                        }
-                        finally
-                        {
-                            chainStateBuilder.Stats.validateStopwatch.Stop();
-                        }
-
-                        // flush utxo progress
-                        //chainStateBuilder.Utxo.Flush();
-
-                        // create the next link in the new blockchain
-                        if (onProgress != null)
-                            onProgress();
-
-                        // blockchain processing statistics
-                        chainStateBuilder.Stats.currentBlockCount++;
-                        chainStateBuilder.Stats.currentTxCount += txCount;
-                        chainStateBuilder.Stats.currentInputCount += inputCount;
-                        chainStateBuilder.Stats.totalTxCount += txCount;
-                        chainStateBuilder.Stats.totalInputCount += inputCount;
-
-                        var txInterval = 100.THOUSAND();
-                        if (
-                            chainStateBuilder.ChainedBlocks.Height % 10.THOUSAND() == 0
-                            || (chainStateBuilder.Stats.totalTxCount % txInterval < (chainStateBuilder.Stats.totalTxCount - txCount) % txInterval || txCount >= txInterval))
-                        {
-                            LogBlockchainProgress(chainStateBuilder);
-
-                            chainStateBuilder.Stats.currentBlockCount = 0;
-                            chainStateBuilder.Stats.currentTxCount = 0;
-                            chainStateBuilder.Stats.currentInputCount = 0;
-                            chainStateBuilder.Stats.currentRateStopwatch.Reset();
-                            chainStateBuilder.Stats.currentRateStopwatch.Start();
-                        }
-                    }
-                    else
-                        throw new InvalidOperationException();
-                    utxoSafe = true;
+                    chainStateBuilder.ChainedBlocks.RemoveBlock(chainedBlock);
                 }
-            }
-            catch (Exception)
-            {
-                if (!utxoSafe)
-                    throw;
+                else if (direction > 0)
+                {
+                    // calculate the new block utxo, double spends will be checked for
+                    ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions = ImmutableDictionary.Create<UInt256, ImmutableHashSet<int>>();
+                    long txCount = 0, inputCount = 0;
+                    new MethodTimer(false).Time("CalculateUtxo", () =>
+                        CalculateUtxo(chainedBlock.Height, block, chainStateBuilder.Utxo, out newTransactions, out txCount, out inputCount));
+
+                    chainStateBuilder.ChainedBlocks.AddBlock(chainedBlock);
+
+                    // validate the block
+                    // validation utxo includes all transactions added in the same block, any double spends will have failed the block above
+                    chainStateBuilder.Stats.validateStopwatch.Start();
+                    try
+                    {
+                        new MethodTimer(false).Time("ValidateBlock", () =>
+                            this.Rules.ValidateBlock(block, chainStateBuilder, newTransactions, prevInputTxes));
+                    }
+                    finally
+                    {
+                        chainStateBuilder.Stats.validateStopwatch.Stop();
+                    }
+
+                    // flush utxo progress
+                    //chainStateBuilder.Utxo.Flush();
+
+                    // create the next link in the new blockchain
+                    if (onProgress != null)
+                        onProgress();
+
+                    // blockchain processing statistics
+                    chainStateBuilder.Stats.currentBlockCount++;
+                    chainStateBuilder.Stats.currentTxCount += txCount;
+                    chainStateBuilder.Stats.currentInputCount += inputCount;
+                    chainStateBuilder.Stats.totalTxCount += txCount;
+                    chainStateBuilder.Stats.totalInputCount += inputCount;
+
+                    var txInterval = 100.THOUSAND();
+                    if (
+                        chainStateBuilder.ChainedBlocks.Height % 10.THOUSAND() == 0
+                        || (chainStateBuilder.Stats.totalTxCount % txInterval < (chainStateBuilder.Stats.totalTxCount - txCount) % txInterval || txCount >= txInterval))
+                    {
+                        LogBlockchainProgress(chainStateBuilder);
+
+                        chainStateBuilder.Stats.currentBlockCount = 0;
+                        chainStateBuilder.Stats.currentTxCount = 0;
+                        chainStateBuilder.Stats.currentInputCount = 0;
+                        chainStateBuilder.Stats.currentRateStopwatch.Reset();
+                        chainStateBuilder.Stats.currentRateStopwatch.Start();
+                    }
+                }
+                else
+                    throw new InvalidOperationException();
+
+                chainStateBuilder.IsConsistent = true;
             }
 
             if (onProgress != null)

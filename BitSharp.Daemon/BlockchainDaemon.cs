@@ -496,7 +496,7 @@ namespace BitSharp.Daemon
             }
             catch (Exception)
             {
-                if (this.chainStateBuilder != null)
+                if (this.chainStateBuilder != null && !this.chainStateBuilder.IsConsistent)
                 {
                     this.chainStateBuilder.Dispose();
                     this.chainStateBuilder = null;
