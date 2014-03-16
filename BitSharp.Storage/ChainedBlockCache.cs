@@ -38,8 +38,7 @@ namespace BitSharp.Storage
             {
                 new MethodTimer().Time("SelectMaxTotalWorkBlocks", () =>
                 {
-                    //foreach (var keyPair in this._cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
-                    foreach (var keyPair in this._cacheContext.StorageContext.ChainedBlockStorage)
+                    foreach (var keyPair in this._cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
                         CheckTotalWork(keyPair.Key, keyPair.Value);
                 });
 

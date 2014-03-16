@@ -13,6 +13,7 @@ using BitSharp.Data;
 using System.Data.SqlClient;
 using System.IO;
 using Microsoft.Isam.Esent.Collections.Generic;
+using System.Numerics;
 
 namespace BitSharp.Storage.Esent
 {
@@ -120,17 +121,23 @@ namespace BitSharp.Storage.Esent
         {
             try
             {
-                var maxTotalWork = this.dict.Values.Max(x => StorageEncoder.DecodeTotalWork(Convert.FromBase64String(x.TotalWork).ToMemoryStream()));
-                var maxTotalWorkString = Convert.ToBase64String(StorageEncoder.EncodeTotalWork(maxTotalWork));
+                var maxTotalWork = new BigInteger(-1);
+                var maxTotalWorkBlocks = new Dictionary<UInt256, ChainedBlock>();
 
-                return this.dict
-                    .Where(x => x.Value.TotalWork == maxTotalWorkString)
-                    .Select(keyPair =>
+                foreach (var keyPair in this)
+                {
+                    if (keyPair.Value.TotalWork > maxTotalWork)
                     {
-                        var blockHash = DecodeKey(keyPair.Key);
-                        var chainedBlock = DecodeValue(blockHash, keyPair.Value);
-                        return new KeyValuePair<UInt256, ChainedBlock>(blockHash, chainedBlock);
-                    });
+                        maxTotalWorkBlocks = new Dictionary<UInt256, ChainedBlock>();
+                        maxTotalWorkBlocks[keyPair.Key] = keyPair.Value;
+                    }
+                    else if (keyPair.Value.TotalWork == maxTotalWork)
+                    {
+                        maxTotalWorkBlocks[keyPair.Key] = keyPair.Value;
+                    }
+                }
+
+                return maxTotalWorkBlocks;
             }
             catch (InvalidOperationException)
             {
