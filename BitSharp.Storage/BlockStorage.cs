@@ -111,12 +111,17 @@ namespace BitSharp.Storage
                 // write the block header
                 this.cacheContext.BlockHeaderCache[value.Hash] = value.Header;
 
+                var txHashesList = ImmutableList.CreateBuilder<UInt256>();
+
                 // write the block's transactions
                 foreach (var tx in value.Transactions)
+                {
                     this.cacheContext.TransactionCache[tx.Hash] = tx;
+                    txHashesList.Add(tx.Hash);
+                }
 
                 // write the transaction hash list
-                this.cacheContext.BlockTxHashesCache[value.Hash] = value.Transactions.Select(x => x.Hash).ToImmutableList();
+                this.cacheContext.BlockTxHashesCache[value.Hash] = txHashesList.ToImmutableList();
             }
         }
 

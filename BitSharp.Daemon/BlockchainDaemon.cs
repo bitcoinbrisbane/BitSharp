@@ -241,7 +241,7 @@ namespace BitSharp.Daemon
         {
             this.missingBlocks.Remove(blockHash);
 
-            ChainBlockHeader(blockHash, block.Header);
+            ChainBlockHeader(blockHash, null);
 
             this.blockchainWorker.NotifyWork();
         }

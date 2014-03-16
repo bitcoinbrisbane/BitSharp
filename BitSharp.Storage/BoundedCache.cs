@@ -27,9 +27,9 @@ namespace BitSharp.Storage
 
             this.dataStorage = dataStorage;
 
-            this.OnAddition += (key, value) => AddKnownKey(key);
-            this.OnModification += (key, value) => AddKnownKey(key);
-            this.OnRetrieved += (key, value) => AddKnownKey(key);
+            this.OnAddition += (key, value) => AddKnownKey(key, value);
+            this.OnModification += (key, value) => AddKnownKey(key, value);
+            this.OnRetrieved += (key, value) => AddKnownKey(key, value);
             this.OnMissing += key => RemoveKnownKey(key);
 
             // load existing keys from storage
@@ -63,7 +63,7 @@ namespace BitSharp.Storage
         {
             if (base.TryGetValue(key, out value))
             {
-                AddKnownKey(key);
+                AddKnownKey(key, value);
                 return true;
             }
             else
@@ -76,9 +76,22 @@ namespace BitSharp.Storage
         public override bool TryAdd(TKey key, TValue value)
         {
             var result = base.TryAdd(key, value);
-            AddKnownKey(key);
+            AddKnownKey(key, value);
 
             return result;
+        }
+
+        public override TValue this[TKey key]
+        {
+            get
+            {
+                return base[key];
+            }
+            set
+            {
+                base[key] = value;
+                AddKnownKey(key, value);
+            }
         }
 
         // clear all state and reload
@@ -97,18 +110,18 @@ namespace BitSharp.Storage
             var count = 0;
             foreach (var key in this.DataStorage.Keys)
             {
-                AddKnownKey(key);
+                AddKnownKey(key, default(TValue));
                 count++;
             }
             Debug.WriteLine("{0}: Finished loading from storage: {1:#,##0}".Format2(this.Name, count));
         }
 
         // add a key to the known list, fire event if new
-        private void AddKnownKey(TKey key)
+        private void AddKnownKey(TKey key, TValue value)
         {
             // add to the list of known keys
             if (this.knownKeys.TryAdd(key))
-                RaiseOnAddition(key, default(TValue));
+                RaiseOnAddition(key, value);
         }
 
         // remove a key from the known list, fire event if deleted
@@ -122,7 +135,7 @@ namespace BitSharp.Storage
         {
             foreach (var keyPair in this.dataStorage)
             {
-                AddKnownKey(keyPair.Key);
+                AddKnownKey(keyPair.Key, keyPair.Value);
                 yield return new KeyValuePair<TKey, TValue>(keyPair.Key, keyPair.Value);
             }
         }
@@ -131,7 +144,7 @@ namespace BitSharp.Storage
         {
             foreach (var key in this.dataStorage.Keys)
             {
-                AddKnownKey(key);
+                AddKnownKey(key, default(TValue));
                 yield return key;
             }
         }
