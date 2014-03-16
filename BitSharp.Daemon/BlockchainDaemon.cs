@@ -526,6 +526,8 @@ namespace BitSharp.Daemon
                     this.chainStateBuilder.Dispose();
                     this.chainStateBuilder = null;
 
+                    this.blockchainWorker.NotifyWork();
+
                     var handler = this.OnCurrentBuilderHeightChanged;
                     if (handler != null)
                         handler(this, this.chainState.CurrentChainedBlocks.Height);
