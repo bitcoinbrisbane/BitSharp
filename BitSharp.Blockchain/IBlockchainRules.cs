@@ -19,6 +19,6 @@ namespace BitSharp.Blockchain
 
         ChainedBlock GenesisChainedBlock { get; }
 
-        void ValidateBlock(Block block, ChainStateBuilder chainStateBuilder, ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions /*, ImmutableDictionary<UInt256, Transaction> transactions*/);
+        void ValidateBlock(Block block, ChainStateBuilder chainStateBuilder, ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions, ImmutableDictionary<UInt256, Transaction> prevInputTxes);
     }
 }

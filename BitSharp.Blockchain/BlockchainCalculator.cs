@@ -48,7 +48,7 @@ namespace BitSharp.Blockchain
             bool utxoSafe = true;
             try
             {
-                foreach (var pathElement in BlockAndTxLookAhead(chainStateBuilder.ChainedBlocks.NavigateTowards(getTargetChainedBlocks), maxLookAhead: 100))
+                foreach (var pathElement in BlockAndInputsLookAhead(chainStateBuilder.ChainedBlocks.NavigateTowards(getTargetChainedBlocks), maxLookAhead: 100))
                 {
                     utxoSafe = false;
 
@@ -62,6 +62,7 @@ namespace BitSharp.Blockchain
                     var direction = pathElement.Item1;
                     var chainedBlock = pathElement.Item2;
                     var block = pathElement.Item3;
+                    var prevInputTxes = pathElement.Item4;
 
                     if (direction < 0)
                     {
@@ -86,7 +87,7 @@ namespace BitSharp.Blockchain
                         try
                         {
                             new MethodTimer(false).Time("ValidateBlock", () =>
-                                this.Rules.ValidateBlock(block, chainStateBuilder, newTransactions));
+                                this.Rules.ValidateBlock(block, chainStateBuilder, newTransactions, prevInputTxes));
                         }
                         finally
                         {
@@ -478,7 +479,7 @@ namespace BitSharp.Blockchain
             }
         }
 
-        public IEnumerable<Tuple<int, ChainedBlock, Block /*, ImmutableDictionary<UInt256, Transaction>*/>> BlockAndTxLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chainedBlocks, int maxLookAhead)
+        public IEnumerable<Tuple<int, ChainedBlock, Block, ImmutableDictionary<UInt256, Transaction>>> BlockAndInputsLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chainedBlocks, int maxLookAhead)
         {
             foreach (var chainedBlockTuple in LookAheadMethods.LookAhead(chainedBlocks, maxLookAhead, this.shutdownToken))
             {
@@ -488,23 +489,15 @@ namespace BitSharp.Blockchain
                 var block = new MethodTimer(false).Time("GetBlock", () =>
                     this.CacheContext.GetBlock(chainedBlock.BlockHash, saveInCache: false));
 
-                yield return Tuple.Create(chainedBlockDirection, chainedBlock, block);
+                var prevInputTxes = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
+                foreach (var prevInput in block.Transactions.Skip(1).SelectMany(x => x.Inputs))
+                {
+                    var prevInputTxHash = prevInput.PreviousTxOutputKey.TxHash;
+                    if (!prevInputTxes.ContainsKey(prevInputTxHash))
+                        prevInputTxes.Add(prevInputTxHash, this.CacheContext.GetTransaction(prevInputTxHash));
+                }
 
-                //var transactionsBuilder = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
-                //var inputTxHashList = block.Transactions.Skip(1).SelectMany(x => x.Inputs).Select(x => x.PreviousTxOutputKey.TxHash).Distinct();
-
-                //// pre-cache input transactions
-                ////Parallel.ForEach(inputTxHashList, inputTxHash =>
-                //foreach (var inputTxHash in inputTxHashList)
-                //{
-                //    Transaction inputTx;
-                //    if (this.CacheContext.TransactionCache.TryGetValue(inputTxHash, out inputTx, saveInCache: false))
-                //    {
-                //        transactionsBuilder.Add(inputTxHash, inputTx);
-                //    }
-                //}
-
-                //return Tuple.Create(block, transactionsBuilder.ToImmutable());
+                yield return Tuple.Create(chainedBlockDirection, chainedBlock, block, prevInputTxes.ToImmutable());
             }
         }
 
