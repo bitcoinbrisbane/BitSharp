@@ -125,7 +125,7 @@ namespace BitSharp.Data
 
         public ChainedBlock LastBlock { get { return this.blockList.Last(); } }
 
-        public int Height { get { return this.blockList.Count(); } }
+        public int Height { get { return this.blockList.Count() - 1; } }
 
         public ImmutableList<ChainedBlock> BlockList { get { return this.blockList.ToImmutable(); } }
 
