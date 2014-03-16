@@ -88,8 +88,8 @@ namespace BitSharp.Daemon
             this.missingTransactions = new ConcurrentSetBuilder<UInt256>();
 
             // write genesis block out to storage
-            this._cacheContext.BlockCache.UpdateValue(this._rules.GenesisBlock.Hash, this._rules.GenesisBlock);
-            this._cacheContext.ChainedBlockCache.UpdateValue(this._rules.GenesisChainedBlock.BlockHash, this._rules.GenesisChainedBlock);
+            this._cacheContext.BlockCache[this._rules.GenesisBlock.Hash] = this._rules.GenesisBlock;
+            this._cacheContext.ChainedBlockCache[this._rules.GenesisChainedBlock.BlockHash] = this._rules.GenesisChainedBlock;
 
             // wire up cache events
             this._cacheContext.BlockHeaderCache.OnAddition += OnBlockHeaderAddition;
@@ -272,8 +272,8 @@ namespace BitSharp.Daemon
         private void ChainMissingBlocks()
         {
             foreach (var unchainedBlockHash in
-                this.CacheContext.BlockHeaderCache.GetAllKeys()
-                .Except(this.CacheContext.ChainedBlockCache.GetAllKeys()))
+                this.CacheContext.BlockHeaderCache.Keys
+                .Except(this.CacheContext.ChainedBlockCache.Keys))
             {
                 BlockHeader unchainedBlockHeader;
                 if (this.CacheContext.BlockHeaderCache.TryGetValue(unchainedBlockHash, out unchainedBlockHeader))
@@ -312,7 +312,7 @@ namespace BitSharp.Daemon
                                 totalWork: prevChainedBlock.TotalWork + workBlock.CalculateWork()
                             );
 
-                            this.CacheContext.ChainedBlockCache.CreateValue(workBlock.Hash, newChainedBlock);
+                            this.CacheContext.ChainedBlockCache[workBlock.Hash] = newChainedBlock;
 
                             if (this.unchainedBlocksByPrevious.ContainsKey(workBlock.Hash))
                             {

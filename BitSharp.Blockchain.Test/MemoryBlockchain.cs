@@ -189,9 +189,9 @@ namespace BitSharp.Blockchain.Test
                 prevChainedBlock != null ? prevChainedBlock.TotalWork + block.Header.CalculateWork() : block.Header.CalculateWork()
             );
 
-            this.CacheContext.BlockCache.CreateValue(block.Hash, block);
+            this.CacheContext.BlockCache[block.Hash] = block;
 
-            this.CacheContext.ChainedBlockCache.CreateValue(block.Hash, chainedBlock);
+            this.CacheContext.ChainedBlockCache[block.Hash] = chainedBlock;
 
             ChooseNewWinner();
 

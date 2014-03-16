@@ -528,7 +528,7 @@ namespace BitSharp.Node
         private void AddKnownPeers()
         {
             var count = 0;
-            foreach (var knownAddress in this.knownAddressCache.StreamAllValues().Select(x => x.Value))
+            foreach (var knownAddress in this.knownAddressCache.Values)
             {
                 this.unconnectedPeers.TryAdd(knownAddress.NetworkAddress.ToIPEndPoint());
                 count++;
@@ -660,7 +660,7 @@ namespace BitSharp.Node
 
             DateTime ignore;
             this.requestedBlocks.TryRemove(block.Hash, out ignore);
-            this.blockchainDaemon.CacheContext.BlockCache.CreateValue(block.Hash, block);
+            this.blockchainDaemon.CacheContext.BlockCache[block.Hash] = block;
 
             this.requestBlocksWorker.NotifyWork();
         }
@@ -668,7 +668,7 @@ namespace BitSharp.Node
         private void OnBlockHeader(BlockHeader blockHeader)
         {
             //Debug.WriteLine("Received block header {0}".Format2(blockHeader.Hash);
-            this.blockchainDaemon.CacheContext.BlockHeaderCache.CreateValue(blockHeader.Hash, blockHeader);
+            this.blockchainDaemon.CacheContext.BlockHeaderCache[blockHeader.Hash] = blockHeader;
         }
 
         private void OnTransaction(Transaction transaction)
@@ -677,7 +677,7 @@ namespace BitSharp.Node
 
             DateTime ignore;
             this.requestedTransactions.TryRemove(transaction.Hash, out ignore);
-            this.blockchainDaemon.CacheContext.TransactionCache.CreateValue(transaction.Hash, transaction);
+            this.blockchainDaemon.CacheContext.TransactionCache[transaction.Hash] = transaction;
 
             this.requestTransactionsWorker.NotifyWork();
         }
@@ -806,7 +806,7 @@ namespace BitSharp.Node
                 );
 
                 if (!isIncoming)
-                    this.knownAddressCache.UpdateValue(remoteAddressWithTime.GetKey(), remoteAddressWithTime);
+                    this.knownAddressCache[remoteAddressWithTime.GetKey()] = remoteAddressWithTime;
 
                 // acknowledge their version
                 await remoteNode.Sender.SendVersionAcknowledge();

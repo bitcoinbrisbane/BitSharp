@@ -13,19 +13,19 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class BoundedCache<TKey, TValue> : UnboundedCache<TKey, TValue>
+    public class BoundedCache<TKey, TValue> : UnboundedCache<TKey, TValue>, IEnumerable<KeyValuePair<TKey, TValue>>
     {
         // known keys
         private ConcurrentSet<TKey> knownKeys;
 
-        private readonly IBoundedStorage<TKey, TValue> _dataStorage;
+        private readonly IBoundedStorage<TKey, TValue> dataStorage;
 
         public BoundedCache(string name, IBoundedStorage<TKey, TValue> dataStorage)
             : base(name, dataStorage)
         {
             this.knownKeys = new ConcurrentSet<TKey>();
 
-            this._dataStorage = dataStorage;
+            this.dataStorage = dataStorage;
 
             this.OnAddition += (key, value) => AddKnownKey(key);
             this.OnModification += (key, value) => AddKnownKey(key);
@@ -33,58 +33,30 @@ namespace BitSharp.Storage
             this.OnMissing += key => RemoveKnownKey(key);
 
             // load existing keys from storage
-            LoadKeyFromStorage();
+            LoadKeysFromStorage();
         }
 
-        public IBoundedStorage<TKey, TValue> DataStorage { get { return this._dataStorage; } }
+        public IBoundedStorage<TKey, TValue> DataStorage { get { return this.dataStorage; } }
 
         // get count of known items
         public int Count
         {
-            get { return this.knownKeys.Count; }
+            get { return this.dataStorage.Count; }
         }
 
-        public bool ContainsKey(TKey key)
+        public ICollection<TKey> Keys
+        {
+            get { return new SimpleCollection<TKey>(() => this.Count, () => this.GetKeysEnumerator()); }
+        }
+
+        public ICollection<TValue> Values
+        {
+            get { return new SimpleCollection<TValue>(() => this.Count, () => this.Select(x => x.Value).GetEnumerator()); }
+        }
+
+        public override bool ContainsKey(TKey key)
         {
             return this.knownKeys.Contains(key);
-        }
-
-        // get all known item keys
-        public IEnumerable<TKey> GetAllKeys()
-        {
-            return this.knownKeys;
-        }
-
-        // get all known item keys, reads everything from storage
-        public IEnumerable<TKey> GetAllKeysFromStorage()
-        {
-            var returnedKeys = new HashSet<TKey>();
-
-            foreach (var key in this._dataStorage.ReadAllKeys())
-            {
-                returnedKeys.Add(key);
-                AddKnownKey(key);
-                yield return key;
-            }
-
-            // ensure that any keys not returned from storage are returned as well, pending items
-            var pendingKeys = this.knownKeys.Except(returnedKeys);
-            foreach (var key in pendingKeys)
-                yield return key;
-        }
-
-        public override void CreateValue(TKey key, TValue value)
-        {
-            if (this.knownKeys.TryAdd(key))
-            {
-                base.CreateValue(key, value);
-            }
-        }
-
-        public override void UpdateValue(TKey key, TValue value)
-        {
-            this.knownKeys.TryAdd(key);
-            base.UpdateValue(key, value);
         }
 
         public override bool TryGetValue(TKey key, out TValue value)
@@ -101,24 +73,12 @@ namespace BitSharp.Storage
             }
         }
 
-        // get all values, reads everything from storage
-        public IEnumerable<KeyValuePair<TKey, TValue>> StreamAllValues()
+        public override bool TryAdd(TKey key, TValue value)
         {
-            var keys = new HashSet<TKey>(this.GetAllKeys());
-            var returnedKeys = new HashSet<TKey>();
+            var result = base.TryAdd(key, value);
+            AddKnownKey(key);
 
-            // return items from storage, still ensuring a key is never returned twice
-            // storage doesn't need to add to returnedKeys as storage items will always be returned uniquely
-            foreach (var storageKeyPair in this.DataStorage.ReadAllValues())
-            {
-                if (!returnedKeys.Contains(storageKeyPair.Key))
-                {
-                    // make sure any keys found in storage become known
-                    AddKnownKey(storageKeyPair.Key);
-
-                    yield return storageKeyPair;
-                }
-            }
+            return result;
         }
 
         // clear all state and reload
@@ -128,14 +88,14 @@ namespace BitSharp.Storage
             this.knownKeys.Clear();
 
             // reload existing keys from storage
-            LoadKeyFromStorage();
+            LoadKeysFromStorage();
         }
 
         // load all existing keys from storage
-        private void LoadKeyFromStorage()
+        private void LoadKeysFromStorage()
         {
             var count = 0;
-            foreach (var key in this.DataStorage.ReadAllKeys())
+            foreach (var key in this.DataStorage.Keys)
             {
                 AddKnownKey(key);
                 count++;
@@ -147,13 +107,8 @@ namespace BitSharp.Storage
         private void AddKnownKey(TKey key)
         {
             // add to the list of known keys
-            var wasAdded = this.knownKeys.TryAdd(key);
-
-            // fire addition event
-            if (wasAdded)
-            {
+            if (this.knownKeys.TryAdd(key))
                 RaiseOnAddition(key, default(TValue));
-            }
         }
 
         // remove a key from the known list, fire event if deleted
@@ -161,6 +116,29 @@ namespace BitSharp.Storage
         {
             // remove from the list of known keys
             this.knownKeys.TryRemove(key);
+        }
+
+        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
+        {
+            foreach (var keyPair in this.dataStorage)
+            {
+                AddKnownKey(keyPair.Key);
+                yield return new KeyValuePair<TKey, TValue>(keyPair.Key, keyPair.Value);
+            }
+        }
+
+        private IEnumerator<TKey> GetKeysEnumerator()
+        {
+            foreach (var key in this.dataStorage.Keys)
+            {
+                AddKnownKey(key);
+                yield return key;
+            }
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
+            return this.GetEnumerator();
         }
     }
 }

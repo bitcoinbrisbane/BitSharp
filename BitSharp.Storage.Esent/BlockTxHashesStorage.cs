@@ -16,79 +16,32 @@ using System.IO;
 
 namespace BitSharp.Storage.Esent
 {
-    public class BlockTxHashesStorage : EsentDataStorage, IBlockTxHashesStorage
+    public class BlockTxHashesStorage : EsentDataStorage<IImmutableList<UInt256>>, IBlockTxHashesStorage
     {
         public BlockTxHashesStorage(EsentStorageContext storageContext)
-            : base(storageContext, "blockTxHashes")
+            : base(storageContext, "blockTxHashes",
+                txHashes =>
+                {
+                    var txHashesBytes = new byte[txHashes.Count * 32];
+                    for (var i = 0; i < txHashes.Count; i++)
+                    {
+                        Buffer.BlockCopy(txHashes[i].ToByteArray(), 0, txHashesBytes, i * 32, 32);
+                    }
+
+                    return txHashesBytes;
+                },
+                (blockHash, bytes) =>
+                {
+                    var txHashes = ImmutableList.CreateBuilder<UInt256>();
+                    var txHashBytes = new byte[32];
+                    for (var i = 0; i < bytes.Length; i += 32)
+                    {
+                        Buffer.BlockCopy(bytes, i, txHashBytes, 0, 32);
+                        txHashes.Add(new UInt256(txHashBytes));
+                    }
+
+                    return txHashes.ToImmutable();
+                })
         { }
-
-        public IEnumerable<UInt256> ReadAllKeys()
-        {
-            return this.Data.Keys;
-        }
-
-        public IEnumerable<KeyValuePair<UInt256, IImmutableList<UInt256>>> ReadAllValues()
-        {
-            return this.Data.Select(x =>
-            {
-                var blockHash = x.Key;
-                var txHashesBytes = x.Value;
-
-                var txHashes = ImmutableList.CreateBuilder<UInt256>();
-                var txHashBytes = new byte[32];
-                for (var i = 0; i < txHashesBytes.Length; i += 32)
-                {
-                    Buffer.BlockCopy(txHashesBytes, i, txHashBytes, 0, 32);
-                    txHashes.Add(new UInt256(txHashBytes));
-                }
-
-                return new KeyValuePair<UInt256, IImmutableList<UInt256>>(blockHash, txHashes.ToImmutable());
-            });
-        }
-
-        public bool TryReadValue(UInt256 blockHash, out IImmutableList<UInt256> blockTxHashes)
-        {
-            byte[] txHashesBytes;
-            if (this.Data.TryGetValue(blockHash, out txHashesBytes))
-            {
-                var txHashes = ImmutableList.CreateBuilder<UInt256>();
-                var txHashBytes = new byte[32];
-                for (var i = 0; i < txHashesBytes.Length; i += 32)
-                {
-                    Buffer.BlockCopy(txHashesBytes, i, txHashBytes, 0, 32);
-                    txHashes.Add(new UInt256(txHashBytes));
-                }
-
-                blockTxHashes = txHashes.ToImmutable();
-                return true;
-            }
-            else
-            {
-                blockTxHashes = default(ImmutableList<UInt256>);
-                return false;
-            }
-        }
-
-        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<IImmutableList<UInt256>>>> keyPairs)
-        {
-            foreach (var keyPair in keyPairs)
-            {
-                var txHashesBytes = new byte[keyPair.Value.Value.Count * 32];
-                for (var i = 0; i < keyPair.Value.Value.Count; i++)
-                {
-                    Buffer.BlockCopy(keyPair.Value.Value[i].ToByteArray(), 0, txHashesBytes, i * 32, 32);
-                }
-
-                this.Data[keyPair.Key] = txHashesBytes;
-            }
-
-            this.Data.Flush();
-            return true;
-        }
-
-        public void Truncate()
-        {
-            this.Data.Clear();
-        }
     }
 }

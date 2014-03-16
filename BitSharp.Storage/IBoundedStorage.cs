@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public interface IBoundedStorage<TKey, TValue> : IUnboundedStorage<TKey, TValue>
+    public interface IBoundedStorage<TKey, TValue> : IUnboundedStorage<TKey, TValue>, IEnumerable<KeyValuePair<TKey, TValue>>
     {
-        IEnumerable<TKey> ReadAllKeys();
+        int Count { get; }
 
-        IEnumerable<KeyValuePair<TKey, TValue>> ReadAllValues();
+        ICollection<TKey> Keys { get; }
+
+        ICollection<TValue> Values { get; }
     }
 }

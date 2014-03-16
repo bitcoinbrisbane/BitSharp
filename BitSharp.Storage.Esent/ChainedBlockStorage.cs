@@ -20,43 +20,48 @@ namespace BitSharp.Storage.Esent
     {
         private readonly EsentStorageContext storageContext;
         private readonly string name;
-        private readonly string dataPath;
-        private readonly PersistentDictionary<string, ChainedBlockSerial> data;
+        private readonly string directory;
+        private readonly PersistentDictionary<string, ChainedBlockSerial> dict;
 
         public ChainedBlockStorage(EsentStorageContext storageContext)
         {
             this.storageContext = storageContext;
             this.name = "chainedBlocks";
-            this.dataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "data", this.name);
-            this.data = new PersistentDictionary<string, ChainedBlockSerial>(this.dataPath);
+            this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "data", this.name);
+            this.dict = new PersistentDictionary<string, ChainedBlockSerial>(this.directory);
         }
 
         public EsentStorageContext StorageContext { get { return this.storageContext; } }
 
         public void Dispose()
         {
-            this.data.Dispose();
+            this.dict.Dispose();
         }
 
-        public IEnumerable<UInt256> ReadAllKeys()
+        public int Count
         {
-            return this.data.Keys.Select(x => DecodeKey(x));
+            get { return this.dict.Count; }
         }
 
-        public IEnumerable<KeyValuePair<UInt256, ChainedBlock>> ReadAllValues()
+        public ICollection<UInt256> Keys
         {
-            return this.data.Select(keyPair =>
-            {
-                var blockHash = DecodeKey(keyPair.Key);
-                var chainedBlock = DecodeValue(blockHash, keyPair.Value);
-                return new KeyValuePair<UInt256, ChainedBlock>(blockHash, chainedBlock);
-            });
+            get { return new SimpleCollection<UInt256>(() => this.Count, () => this.Select(x => x.Key).GetEnumerator()); }
         }
 
-        public bool TryReadValue(UInt256 blockHash, out ChainedBlock chainedBlock)
+        public ICollection<ChainedBlock> Values
+        {
+            get { return new SimpleCollection<ChainedBlock>(() => this.Count, () => this.Select(x => x.Value).GetEnumerator()); }
+        }
+
+        public bool ContainsKey(UInt256 blockHash)
+        {
+            return this.dict.ContainsKey(EncodeKey(blockHash));
+        }
+
+        public bool TryGetValue(UInt256 blockHash, out ChainedBlock chainedBlock)
         {
             ChainedBlockSerial chainedBlockSerial;
-            if (this.data.TryGetValue(EncodeKey(blockHash), out chainedBlockSerial))
+            if (this.dict.TryGetValue(EncodeKey(blockHash), out chainedBlockSerial))
             {
                 chainedBlock = DecodeValue(blockHash, chainedBlockSerial);
                 return true;
@@ -68,28 +73,50 @@ namespace BitSharp.Storage.Esent
             }
         }
 
-        public bool TryWriteValues(IEnumerable<KeyValuePair<UInt256, WriteValue<ChainedBlock>>> keyPairs)
+        public bool TryAdd(UInt256 blockHash, ChainedBlock chainedBlock)
         {
-            foreach (var keyPair in keyPairs)
-                this.data[EncodeKey(keyPair.Key)] = EncodeValue(keyPair.Value.Value);
-
-            this.data.Flush();
+            this.dict[EncodeKey(blockHash)] = EncodeValue(chainedBlock);
             return true;
         }
 
-        public void Truncate()
+        public ChainedBlock this[UInt256 blockHash]
         {
-            this.data.Clear();
+            get
+            {
+                ChainedBlock chainedBlock;
+                if (this.TryGetValue(blockHash, out chainedBlock))
+                    return chainedBlock;
+
+                throw new KeyNotFoundException();
+            }
+            set
+            {
+                this.dict[EncodeKey(blockHash)] = EncodeValue(value);
+            }
+        }
+
+        public IEnumerator<KeyValuePair<UInt256, ChainedBlock>> GetEnumerator()
+        {
+            foreach (var keyPair in this.dict)
+            {
+                var blockHash = DecodeKey(keyPair.Key);
+                yield return new KeyValuePair<UInt256, ChainedBlock>(blockHash, DecodeValue(blockHash, keyPair.Value));
+            }
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
+            return this.GetEnumerator();
         }
 
         public IEnumerable<KeyValuePair<UInt256, ChainedBlock>> SelectMaxTotalWorkBlocks()
         {
             try
             {
-                var maxTotalWork = this.data.Values.Max(x => StorageEncoder.DecodeTotalWork(Convert.FromBase64String(x.TotalWork).ToMemoryStream()));
+                var maxTotalWork = this.dict.Values.Max(x => StorageEncoder.DecodeTotalWork(Convert.FromBase64String(x.TotalWork).ToMemoryStream()));
                 var maxTotalWorkString = Convert.ToBase64String(StorageEncoder.EncodeTotalWork(maxTotalWork));
 
-                return this.data
+                return this.dict
                     .Where(x => x.Value.TotalWork == maxTotalWorkString)
                     .Select(keyPair =>
                     {

@@ -10,53 +10,72 @@ namespace BitSharp.Storage.Test
 {
     public class MemoryStorage<TKey, TValue> : IBoundedStorage<TKey, TValue>
     {
-        private readonly MemoryStorageContext _storageContext;
-        private readonly ConcurrentDictionary<TKey, TValue> _storage = new ConcurrentDictionary<TKey, TValue>();
+        private readonly MemoryStorageContext storageContext;
+        private readonly ConcurrentDictionary<TKey, TValue> storage = new ConcurrentDictionary<TKey, TValue>();
 
         public MemoryStorage(MemoryStorageContext storageContext)
         {
-            this._storageContext = storageContext;
+            this.storageContext = storageContext;
         }
 
-        public MemoryStorageContext StorageContext { get { return this._storageContext; } }
+        public MemoryStorageContext StorageContext { get { return this.storageContext; } }
 
-        internal ConcurrentDictionary<TKey, TValue> Storage { get { return this._storage; } }
+        internal ConcurrentDictionary<TKey, TValue> Storage { get { return this.storage; } }
 
         public void Dispose()
         {
         }
 
-        public IEnumerable<TKey> ReadAllKeys()
+        public int Count
         {
-            return this._storage.Keys;
+            get { return this.storage.Count; }
         }
 
-        public IEnumerable<KeyValuePair<TKey, TValue>> ReadAllValues()
+        public ICollection<TKey> Keys
         {
-            return this._storage;
+            get { return this.storage.Keys; }
         }
 
-        public bool TryReadValue(TKey key, out TValue value)
+        public ICollection<TValue> Values
         {
-            return this._storage.TryGetValue(key, out value);
+            get { return this.storage.Values; }
         }
 
-        public virtual bool TryWriteValues(IEnumerable<KeyValuePair<TKey, WriteValue<TValue>>> keyPairs)
+        public bool ContainsKey(TKey key)
         {
-            foreach (var keyPair in keyPairs)
+            return this.storage.ContainsKey(key);
+        }
+
+        public bool TryGetValue(TKey key, out TValue value)
+        {
+            return this.storage.TryGetValue(key, out value);
+        }
+
+        public bool TryAdd(TKey key, TValue value)
+        {
+            return this.storage.TryAdd(key, value);
+        }
+
+        public TValue this[TKey key]
+        {
+            get
             {
-                this._storage.AddOrUpdate(
-                    keyPair.Key,
-                    keyPair.Value.Value,
-                    (existingKey, existingValue) => keyPair.Value.IsCreate ? existingValue : keyPair.Value.Value);
+                return this.storage[key];
             }
-
-            return true;
+            set
+            {
+                this.storage[key] = value;
+            }
         }
 
-        public bool TryWriteValue(KeyValuePair<TKey, WriteValue<TValue>> keyPair)
+        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
         {
-            return TryWriteValues(new KeyValuePair<TKey, WriteValue<TValue>>[] { keyPair });
+            return this.storage.GetEnumerator();
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
+            return this.GetEnumerator();
         }
     }
 }

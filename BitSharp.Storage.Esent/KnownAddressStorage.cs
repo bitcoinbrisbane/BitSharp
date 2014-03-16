@@ -17,41 +17,50 @@ namespace BitSharp.Storage.Esent
 {
     public class KnownAddressStorage : IBoundedStorage<NetworkAddressKey, NetworkAddressWithTime>
     {
-        private readonly EsentStorageContext _storageContext;
-        private readonly string _name;
-        private readonly string _dataPath;
-        private readonly PersistentByteDictionary _data;
+        private readonly EsentStorageContext storageContext;
+        private readonly string name;
+        private readonly string directory;
+        private readonly PersistentByteDictionary dict;
 
         public KnownAddressStorage(EsentStorageContext storageContext)
         {
-            this._storageContext = storageContext;
-            this._name = "knownAddresses";
-            this._dataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "data", this._name);
-            this._data = new PersistentByteDictionary(this._dataPath);
+            this.storageContext = storageContext;
+            this.name = "knownAddresses";
+            this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "data", this.name);
+            this.dict = new PersistentByteDictionary(this.directory);
         }
 
         public void Dispose()
         {
-            this._data.Dispose();
+            this.dict.Dispose();
         }
 
-        public EsentStorageContext StorageContext { get { return this._storageContext; } }
+        public EsentStorageContext StorageContext { get { return this.storageContext; } }
 
-        public IEnumerable<NetworkAddressKey> ReadAllKeys()
+        public int Count
         {
-            return this.Data.Keys.Select(x => NetworkEncoder.DecodeNetworkAddressKey(x.ToMemoryStream()));
+            get { return this.dict.Count; }
         }
 
-        public IEnumerable<KeyValuePair<NetworkAddressKey, NetworkAddressWithTime>> ReadAllValues()
+        public ICollection<NetworkAddressKey> Keys
         {
-            return this.Data.Select(x =>
-                new KeyValuePair<NetworkAddressKey, NetworkAddressWithTime>(NetworkEncoder.DecodeNetworkAddressKey(x.Key.ToMemoryStream()), NetworkEncoder.DecodeNetworkAddressWithTime(x.Value.ToMemoryStream())));
+            get { return new SimpleCollection<NetworkAddressKey>(() => this.Count, () => this.Select(x => x.Key).GetEnumerator()); }
         }
 
-        public bool TryReadValue(NetworkAddressKey networkAddressKey, out NetworkAddressWithTime networkAddressWithTime)
+        public ICollection<NetworkAddressWithTime> Values
+        {
+            get { return new SimpleCollection<NetworkAddressWithTime>(() => this.Count, () => this.Select(x => x.Value).GetEnumerator()); }
+        }
+
+        public bool ContainsKey(NetworkAddressKey networkAddressKey)
+        {
+            return this.dict.ContainsKey(NetworkEncoder.EncodeNetworkAddressKey(networkAddressKey));
+        }
+
+        public bool TryGetValue(NetworkAddressKey networkAddressKey, out NetworkAddressWithTime networkAddressWithTime)
         {
             byte[] networkAddressWithTimeBytes;
-            if (this.Data.TryGetValue(NetworkEncoder.EncodeNetworkAddressKey(networkAddressKey), out networkAddressWithTimeBytes))
+            if (this.dict.TryGetValue(NetworkEncoder.EncodeNetworkAddressKey(networkAddressKey), out networkAddressWithTimeBytes))
             {
                 networkAddressWithTime = NetworkEncoder.DecodeNetworkAddressWithTime(networkAddressWithTimeBytes.ToMemoryStream());
                 return true;
@@ -63,20 +72,39 @@ namespace BitSharp.Storage.Esent
             }
         }
 
-        public bool TryWriteValues(IEnumerable<KeyValuePair<NetworkAddressKey, WriteValue<NetworkAddressWithTime>>> keyPairs)
+        public bool TryAdd(NetworkAddressKey networkAddressKey, NetworkAddressWithTime networkAddressWithTime)
         {
-            foreach (var keyPair in keyPairs)
-                this.Data[NetworkEncoder.EncodeNetworkAddressKey(keyPair.Key).ToArray()] = NetworkEncoder.EncodeNetworkAddressWithTime(keyPair.Value.Value);
-
-            this.Data.Flush();
+            this.dict.Add(NetworkEncoder.EncodeNetworkAddressKey(networkAddressKey).ToArray(), NetworkEncoder.EncodeNetworkAddressWithTime(networkAddressWithTime));
             return true;
         }
 
-        public void Truncate()
+        public NetworkAddressWithTime this[NetworkAddressKey networkAddressKey]
         {
-            this.Data.Clear();
+            get
+            {
+                NetworkAddressWithTime networkAddressWithTime;
+                if (this.TryGetValue(networkAddressKey, out networkAddressWithTime))
+                    return networkAddressWithTime;
+
+                throw new KeyNotFoundException();
+            }
+            set
+            {
+                this.dict[NetworkEncoder.EncodeNetworkAddressKey(networkAddressKey).ToArray()] = NetworkEncoder.EncodeNetworkAddressWithTime(value);
+            }
         }
 
-        protected PersistentByteDictionary Data { get { return this._data; } }
+        public IEnumerator<KeyValuePair<NetworkAddressKey, NetworkAddressWithTime>> GetEnumerator()
+        {
+            foreach (var keyPair in this.dict)
+                yield return new KeyValuePair<NetworkAddressKey, NetworkAddressWithTime>(
+                    NetworkEncoder.DecodeNetworkAddressKey(keyPair.Key.ToMemoryStream()),
+                    NetworkEncoder.DecodeNetworkAddressWithTime(keyPair.Value.ToMemoryStream()));
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        {
+            return this.GetEnumerator();
+        }
     }
 }

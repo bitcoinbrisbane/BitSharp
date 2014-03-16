@@ -13,87 +13,85 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class UnboundedCache<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
+    public class UnboundedCache<TKey, TValue>
     {
         public event Action<TKey, TValue> OnAddition;
         public event Action<TKey, TValue> OnModification;
         public event Action<TKey, TValue> OnRetrieved;
         public event Action<TKey> OnMissing;
 
-        private readonly string _name;
-
+        private readonly string name;
         private readonly IUnboundedStorage<TKey, TValue> dataStorage;
 
         public UnboundedCache(string name, IUnboundedStorage<TKey, TValue> dataStorage)
         {
-            this._name = name;
-
+            this.name = name;
             this.dataStorage = dataStorage;
         }
 
-        public string Name { get { return this._name; } }
+        public string Name { get { return this.name; } }
+
+        public virtual bool ContainsKey(TKey key)
+        {
+            return this.dataStorage.ContainsKey(key);
+        }
 
         // try to get a value
         public virtual bool TryGetValue(TKey key, out TValue value)
         {
             // look in storage
-            if (TryGetStorageValue(key, out value))
-                return true;
-
-            // no value found in storage, fire missing event
-            var handler = this.OnMissing;
-            if (handler != null)
-                handler(key);
-
-            value = default(TValue);
-            return false;
-        }
-
-        public virtual void CreateValue(TKey key, TValue value)
-        {
-            if (!this.dataStorage.TryCreateValue(key, value))
-                throw new Exception("TODO");
-
-            var handler = this.OnAddition;
-            if (handler != null)
-                handler(key, value);
-        }
-
-        public virtual void UpdateValue(TKey key, TValue value)
-        {
-            if (!this.dataStorage.TryUpdateValue(key, value))
-                throw new Exception("TODO");
-
-            var handler = this.OnModification;
-            if (handler != null)
-                handler(key, value);
-        }
-
-        protected bool TryGetStorageValue(TKey key, out TValue value)
-        {
-            TValue valueLocal = default(TValue);
-            var result = new MethodTimer(false && this.Name == "BlockCache").Time(() =>
+            if (this.dataStorage.TryGetValue(key, out value))
             {
-                TValue storedValue;
-                if (dataStorage.TryReadValue(key, out storedValue))
-                {
-                    // fire retrieved event
-                    var handler = this.OnRetrieved;
-                    if (handler != null)
-                        handler(key, storedValue);
+                // value found, fire retrieved event
+                var handler = this.OnRetrieved;
+                if (handler != null)
+                    handler(key, value);
 
-                    valueLocal = storedValue;
-                    return true;
-                }
+                return true;
+            }
+            else
+            {
+                // no value found, fire missing event
+                var handler = this.OnMissing;
+                if (handler != null)
+                    handler(key);
+
+                return false;
+            }
+        }
+
+        public virtual bool TryAdd(TKey key, TValue value)
+        {
+            if (this.dataStorage.TryAdd(key, value))
+            {
+                var handler = this.OnAddition;
+                if (handler != null)
+                    handler(key, value);
+
+                return true;
+            }
+            else
+                return false;
+        }
+
+        public virtual TValue this[TKey key]
+        {
+            get
+            {
+                TValue value;
+                if (this.TryGetValue(key, out value))
+                    return value;
                 else
-                {
-                    valueLocal = default(TValue);
-                    return false;
-                }
-            });
+                    throw new KeyNotFoundException();
+            }
+            set
+            {
+                this.dataStorage[key] = value;
 
-            value = valueLocal;
-            return result;
+                var handler = this.OnModification;
+                if (handler != null)
+                    handler(key, value);
+            }
         }
 
         protected void RaiseOnAddition(TKey key, TValue value)
@@ -101,16 +99,6 @@ namespace BitSharp.Storage
             var handler = this.OnAddition;
             if (handler != null)
                 handler(key, value);
-        }
-
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
-        {
-            throw new NotImplementedException();
-        }
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            throw new NotImplementedException();
         }
     }
 }

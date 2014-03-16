@@ -39,7 +39,7 @@ namespace BitSharp.Storage
                 new MethodTimer().Time("SelectMaxTotalWorkBlocks", () =>
                 {
                     //foreach (var keyPair in this._cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
-                    foreach (var keyPair in this._cacheContext.StorageContext.ChainedBlockStorage.ReadAllValues())
+                    foreach (var keyPair in this._cacheContext.StorageContext.ChainedBlockStorage)
                         CheckTotalWork(keyPair.Key, keyPair.Value);
                 });
 
@@ -60,16 +60,24 @@ namespace BitSharp.Storage
             }
         }
 
-        public override void CreateValue(UInt256 blockHash, ChainedBlock chainedBlock)
+        public override bool TryAdd(UInt256 blockHash, ChainedBlock chainedBlock)
         {
-            base.CreateValue(blockHash, chainedBlock);
+            var result = base.TryAdd(blockHash, chainedBlock);
             CheckTotalWork(blockHash, chainedBlock);
+            return result;
         }
 
-        public override void UpdateValue(UInt256 blockHash, ChainedBlock chainedBlock)
+        public override ChainedBlock this[UInt256 blockHash]
         {
-            base.UpdateValue(blockHash, chainedBlock);
-            CheckTotalWork(blockHash, chainedBlock);
+            get
+            {
+                return base[blockHash];
+            }
+            set
+            {
+                base[blockHash] = value;
+                CheckTotalWork(blockHash, value);
+            }
         }
 
         private void CheckTotalWork(UInt256 blockHash, ChainedBlock chainedBlock)
