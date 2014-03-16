@@ -49,8 +49,7 @@ namespace BitSharp.Blockchain
             try
             {
                 //TODO make this work with look-ahead again
-                //foreach (var tuple in BlockAndTxLookAhead(targetBlockPathBuilder.RewindBlocks.Select(x => x.BlockHash).ToList()))
-                foreach (var pathElement in chainStateBuilder.ChainedBlocks.NavigateTowards(getTargetChainedBlocks))
+                foreach (var pathElement in BlockAndTxLookAhead(chainStateBuilder.ChainedBlocks.NavigateTowards(getTargetChainedBlocks)))
                 {
                     utxoSafe = false;
 
@@ -63,8 +62,7 @@ namespace BitSharp.Blockchain
                     // get block and metadata for next link in blockchain
                     var direction = pathElement.Item1;
                     var chainedBlock = pathElement.Item2;
-                    //TODO make this work with look-ahead again
-                    var block = this.CacheContext.GetBlock(chainedBlock.BlockHash);
+                    var block = pathElement.Item3;
 
                     if (direction < 0)
                     {
@@ -530,41 +528,34 @@ namespace BitSharp.Blockchain
             return blockLookAhead.Zip(chainedBlockLookAhead, (block, chainedBlock) => Tuple.Create(block, chainedBlock));
         }
 
-        public IEnumerable<Tuple<Block, ChainedBlock /*, ImmutableDictionary<UInt256, Transaction>*/>> BlockAndTxLookAhead(IList<UInt256> blockHashes)
+        public IEnumerable<Tuple<int, ChainedBlock, Block /*, ImmutableDictionary<UInt256, Transaction>*/>> BlockAndTxLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chainedBlocks)
         {
-            var blockLookAhead = LookAheadMethods.LookAhead(
-                blockHashes.Select(
-                    blockHash =>
-                    {
-                        var block = new MethodTimer(false).Time("GetBlock", () =>
-                            this.CacheContext.GetBlock(blockHash, saveInCache: false));
+            foreach (var chainedBlockTuple in LookAheadMethods.LookAhead(chainedBlocks, this.shutdownToken))
+            {
+                var chainedBlockDirection = chainedBlockTuple.Item1;
+                var chainedBlock = chainedBlockTuple.Item2;
 
-                        this.CacheContext.TransactionCache.CacheBlock(block);
+                var block = new MethodTimer(false).Time("GetBlock", () =>
+                    this.CacheContext.GetBlock(chainedBlock.BlockHash, saveInCache: false));
 
-                        //var transactionsBuilder = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
-                        //var inputTxHashList = block.Transactions.Skip(1).SelectMany(x => x.Inputs).Select(x => x.PreviousTxOutputKey.TxHash).Distinct();
+                yield return Tuple.Create(chainedBlockDirection, chainedBlock, block);
 
-                        //// pre-cache input transactions
-                        ////Parallel.ForEach(inputTxHashList, inputTxHash =>
-                        //foreach (var inputTxHash in inputTxHashList)
-                        //{
-                        //    Transaction inputTx;
-                        //    if (this.CacheContext.TransactionCache.TryGetValue(inputTxHash, out inputTx, saveInCache: false))
-                        //    {
-                        //        transactionsBuilder.Add(inputTxHash, inputTx);
-                        //    }
-                        //}
+                //var transactionsBuilder = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
+                //var inputTxHashList = block.Transactions.Skip(1).SelectMany(x => x.Inputs).Select(x => x.PreviousTxOutputKey.TxHash).Distinct();
 
-                        //return Tuple.Create(block, transactionsBuilder.ToImmutable());
-                        return block;
-                    }),
-                this.shutdownToken);
+                //// pre-cache input transactions
+                ////Parallel.ForEach(inputTxHashList, inputTxHash =>
+                //foreach (var inputTxHash in inputTxHashList)
+                //{
+                //    Transaction inputTx;
+                //    if (this.CacheContext.TransactionCache.TryGetValue(inputTxHash, out inputTx, saveInCache: false))
+                //    {
+                //        transactionsBuilder.Add(inputTxHash, inputTx);
+                //    }
+                //}
 
-            var chainedBlockLookAhead = LookAheadMethods.LookAhead(
-                blockHashes.Select(blockHash => this.CacheContext.GetChainedBlock(blockHash, saveInCache: false)),
-                this.shutdownToken);
-
-            return blockLookAhead.Zip(chainedBlockLookAhead, (block, chainedBlock) => Tuple.Create(block, chainedBlock));
+                //return Tuple.Create(block, transactionsBuilder.ToImmutable());
+            }
         }
 
         public IEnumerable<Tuple<ChainedBlock, Block>> PreviousBlocksLookAhead(ChainedBlock firstBlock, IImmutableList<ChainedBlock> currentChain)
