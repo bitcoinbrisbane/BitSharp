@@ -18,7 +18,8 @@ namespace BitSharp.Common
 
             var finished = false;
             var abortToken = new CancellationTokenSource();
-
+            Exception readException = null;
+            
             var valueReadEvent = new AutoResetEvent(true);
             var valueAvailableEvent = new AutoResetEvent(false);
             var thread = new Thread(() =>
@@ -65,9 +66,9 @@ namespace BitSharp.Common
                     }
                     valueAvailableEvent.Set();
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    abortToken.Cancel();
+                    readException = e;
                     valueAvailableEvent.Set();
                 }
             });
@@ -77,10 +78,13 @@ namespace BitSharp.Common
             {
                 while (!finished || readValues.Count > 0)
                 {
-                    valueAvailableEvent.WaitOne();
+                    // cooperative loop
                     cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
-                    abortToken.Token.ThrowIfCancellationRequested();
 
+                    valueAvailableEvent.WaitOne();
+                    if (readException != null)
+                        throw readException;
+                    
                     T value;
                     if (readValues.TryDequeue(out value))
                         yield return value;
