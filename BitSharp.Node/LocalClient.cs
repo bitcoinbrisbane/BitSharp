@@ -244,6 +244,10 @@ namespace BitSharp.Node
                     // cooperative loop
                     this.shutdownToken.Token.ThrowIfCancellationRequested();
 
+                    // always allow missing blocks to be requested
+                    DateTime ignore;
+                    this.requestedBlocks.TryRemove(block, out ignore);
+                    
                     var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), block);
                     if (task != null)
                         requestTasks.Add(task);
