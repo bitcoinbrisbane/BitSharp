@@ -1,5 +1,4 @@
 ﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using System.Threading.Tasks;
