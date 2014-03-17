@@ -55,6 +55,7 @@ namespace BitSharp.Daemon
         private readonly Worker blockchainWorker;
         private readonly Worker validateCurrentChainWorker;
         private readonly Worker writeBlockchainWorker;
+        private readonly ChainingWorker chainingWorker;
         private readonly TargetChainWorker targetChainWorker;
 
         public BlockchainDaemon(IBlockchainRules rules, CacheContext cacheContext)
@@ -93,6 +94,7 @@ namespace BitSharp.Daemon
             this.writeBlockchainWorker = new Worker("BlockchainDaemon.WriteBlockchainWorker", WriteBlockchainWorker,
                 runOnStart: true, waitTime: TimeSpan.FromMinutes(5), maxIdleTime: TimeSpan.FromMinutes(30));
 
+            this.chainingWorker = new ChainingWorker(rules, cacheContext);
             this.targetChainWorker = new TargetChainWorker(rules, cacheContext);
         }
 
@@ -105,6 +107,8 @@ namespace BitSharp.Daemon
         public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
 
         public ChainState ChainState { get { return this.chainState; } }
+
+        public ChainingWorker ChainingWorker { get { return this.chainingWorker; } }
 
         public TargetChainWorker TargetChainWorker { get { return this.targetChainWorker; } }
 
@@ -134,6 +138,7 @@ namespace BitSharp.Daemon
                 this.blockchainWorker.Start();
                 //TODO this.validateCurrentChainWorker.Start();
                 //TODO this.writeBlockchainWorker.Start();
+                this.chainingWorker.Start();
                 this.targetChainWorker.Start();
             }
             catch (Exception)
@@ -163,6 +168,7 @@ namespace BitSharp.Daemon
                 this.blockchainWorker,
                 this.validateCurrentChainWorker,
                 this.writeBlockchainWorker,
+                this.chainingWorker,
                 this.targetChainWorker,
                 this.shutdownToken
             }.DisposeList();
