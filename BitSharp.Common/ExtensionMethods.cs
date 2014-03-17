@@ -434,5 +434,28 @@ namespace BitSharp.Common.ExtensionMethods
             foreach (var value in values)
                 queue.Enqueue(value);
         }
+
+        public static bool TryAddRange<T>(this IProducerConsumerCollection<T> collection, IEnumerable<T> values)
+        {
+            foreach (var value in values)
+                if (!collection.TryAdd(value))
+                    return false;
+
+            return true;
+        }
+
+        public static BigInteger SumBigInteger<T>(this IEnumerable<T> values, Func<T, BigInteger> selector)
+        {
+            BigInteger sum = 0;
+            foreach (var value in values)
+                sum += selector(value);
+
+            return sum;
+        }
+
+        public static IReadOnlyDictionary<TOuterKey, IReadOnlyDictionary<TInnerKey, TInnerValue>> AsReadOnly<TOuterKey, TInnerKey, TInnerValue>(this Dictionary<TOuterKey, Dictionary<TInnerKey, TInnerValue>> outerDictionary)
+        {
+            return new ReadOnlyDictionaryOfDictionary<TOuterKey, TInnerKey, TInnerValue>(outerDictionary);
+        }
     }
 }

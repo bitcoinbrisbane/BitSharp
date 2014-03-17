@@ -83,14 +83,7 @@ namespace BitSharp.Blockchain
 
             Debug.Assert(_genesisBlock.Hash == UInt256.Parse("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206", NumberStyles.HexNumber));
 
-            this._genesisChainedBlock =
-                new ChainedBlock
-                (
-                    blockHash: this._genesisBlock.Hash,
-                    previousBlockHash: this._genesisBlock.Header.PreviousBlock,
-                    height: 0,
-                    totalWork: this._genesisBlock.Header.CalculateWork()
-                );
+            this._genesisChainedBlock = ChainedBlock.CreateForGenesisBlock(this._genesisBlock.Header);
         }
 
         public override Block GenesisBlock { get { return this._genesisBlock; } }

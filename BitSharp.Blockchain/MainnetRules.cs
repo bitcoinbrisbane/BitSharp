@@ -95,14 +95,7 @@ namespace BitSharp.Blockchain
                     )
                 );
 
-            this._genesisChainedBlock =
-                new ChainedBlock
-                (
-                    blockHash: this._genesisBlock.Hash,
-                    previousBlockHash: this._genesisBlock.Header.PreviousBlock,
-                    height: 0,
-                    totalWork: this._genesisBlock.Header.CalculateWork()
-                );
+            this._genesisChainedBlock = ChainedBlock.CreateForGenesisBlock(this._genesisBlock.Header);
         }
 
         public CacheContext CacheContext { get { return this._cacheContext; } }

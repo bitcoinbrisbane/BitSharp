@@ -38,15 +38,7 @@ namespace BitSharp.Blockchain.Test
         public void SetGenesisBlock(Block genesisBlock)
         {
             this._genesisBlock = genesisBlock;
-
-            this._genesisChainedBlock =
-                new ChainedBlock
-                (
-                    blockHash: this._genesisBlock.Hash,
-                    previousBlockHash: this._genesisBlock.Header.PreviousBlock,
-                    height: 0,
-                    totalWork: this._genesisBlock.Header.CalculateWork()
-                );
+            this._genesisChainedBlock = ChainedBlock.CreateForGenesisBlock(this._genesisBlock.Header);
         }
 
         public void SetHighestTarget(UInt256 highestTarget)

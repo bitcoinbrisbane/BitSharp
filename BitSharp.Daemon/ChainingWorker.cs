@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -17,17 +18,11 @@ namespace BitSharp.Daemon
 {
     public class ChainingWorker : IDisposable
     {
-        private readonly CacheContext cacheContext;
-
-        private readonly IBlockchainRules rules;
-
-        private readonly Dictionary<UInt256, Dictionary<UInt256, BlockHeader>> unchainedBlocksByPrevious;
-
         private readonly CancellationTokenSource shutdownToken;
-
-        private readonly Worker chainBlocksWorker;
-
-        private readonly ConcurrentQueue<BlockHeader> chainBlocksPending;
+        private readonly IBlockchainRules rules;
+        private readonly CacheContext cacheContext;
+        private readonly ChainingCalculator chainingCalculator;
+        private readonly Worker worker;
 
         public ChainingWorker(IBlockchainRules rules, CacheContext cacheContext)
         {
@@ -36,28 +31,15 @@ namespace BitSharp.Daemon
             this.rules = rules;
             this.cacheContext = cacheContext;
 
-            this.chainBlocksPending = new ConcurrentQueue<BlockHeader>();
-
-            this.unchainedBlocksByPrevious = new Dictionary<UInt256, Dictionary<UInt256, BlockHeader>>();
-
-            // wire up cache events
-            this.cacheContext.BlockHeaderCache.OnAddition += ChainBlockHeader;
-            this.cacheContext.BlockHeaderCache.OnModification += ChainBlockHeader;
-            this.cacheContext.BlockCache.OnAddition += ChainBlock;
-            this.cacheContext.BlockCache.OnModification += ChainBlock;
+            this.chainingCalculator = new ChainingCalculator(cacheContext);
 
             // create workers
-            this.chainBlocksWorker = new Worker("TargetChainWorker.ChainBlocksWorker", ChainBlocksWorker,
+            this.worker = new Worker("ChainingWorker.WorkerThread", WorkerThread,
                 runOnStart: true, waitTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
 
-            new Thread(
-                () => ChainMissingBlocks())
-                .Start();
+            this.chainingCalculator.OnQueued += NotifyWork;
+            this.chainingCalculator.QueueAllBlockHeaders();
         }
-
-        public CacheContext CacheContext { get { return this.cacheContext; } }
-
-        public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
 
         public void Start()
         {
@@ -67,7 +49,7 @@ namespace BitSharp.Daemon
                 //TODO LoadExistingState();
 
                 // startup workers
-                this.chainBlocksWorker.Start();
+                this.worker.Start();
             }
             catch (Exception)
             {
@@ -78,11 +60,8 @@ namespace BitSharp.Daemon
 
         public void Dispose()
         {
-            // cleanup events
-            this.CacheContext.BlockHeaderCache.OnAddition -= ChainBlockHeader;
-            this.CacheContext.BlockHeaderCache.OnModification -= ChainBlockHeader;
-            this.CacheContext.BlockCache.OnAddition -= ChainBlock;
-            this.CacheContext.BlockCache.OnModification -= ChainBlock;
+            // unwire events
+            this.chainingCalculator.OnQueued -= NotifyWork;
 
             // notify threads to begin shutting down
             this.shutdownToken.Cancel();
@@ -90,94 +69,19 @@ namespace BitSharp.Daemon
             // cleanup workers
             new IDisposable[]
             {
-                this.chainBlocksWorker,
+                this.worker,
                 this.shutdownToken
             }.DisposeList();
         }
 
-        private void ChainMissingBlocks()
+        private void NotifyWork()
         {
-            foreach (var unchainedBlockHash in
-                this.CacheContext.BlockHeaderCache.Keys
-                .Except(this.CacheContext.ChainedBlockCache.Keys))
-            {
-                BlockHeader unchainedBlockHeader;
-                if (this.CacheContext.BlockHeaderCache.TryGetValue(unchainedBlockHash, out unchainedBlockHeader))
-                {
-                    ChainBlockHeader(unchainedBlockHash, unchainedBlockHeader);
-                }
-            }
+            this.worker.NotifyWork();
         }
 
-        private void ChainBlockHeader(UInt256 blockHash, BlockHeader blockHeader)
+        private void WorkerThread()
         {
-            try
-            {
-                if (blockHeader == null)
-                    blockHeader = this.CacheContext.BlockHeaderCache[blockHash];
-            }
-            catch (MissingDataException) { return; }
-
-            this.chainBlocksPending.Enqueue(blockHeader);
-            this.chainBlocksWorker.NotifyWork();
-        }
-
-        private void ChainBlock(UInt256 blockHash, Block block)
-        {
-            ChainBlockHeader(blockHash, block != null ? block.Header : null);
-        }
-
-        private void ChainBlocksWorker()
-        {
-            BlockHeader workBlock;
-            while (this.chainBlocksPending.TryDequeue(out workBlock))
-            {
-                // cooperative loop
-                if (this.shutdownToken.IsCancellationRequested)
-                    return;
-
-                if (!this.CacheContext.ChainedBlockCache.ContainsKey(workBlock.Hash))
-                {
-                    ChainedBlock prevChainedBlock;
-                    if (this.CacheContext.ChainedBlockCache.TryGetValue(workBlock.PreviousBlock, out prevChainedBlock))
-                    {
-                        var newChainedBlock = new ChainedBlock
-                        (
-                            blockHash: workBlock.Hash,
-                            previousBlockHash: workBlock.PreviousBlock,
-                            height: prevChainedBlock.Height + 1,
-                            totalWork: prevChainedBlock.TotalWork + workBlock.CalculateWork()
-                        );
-
-                        this.CacheContext.ChainedBlockCache[workBlock.Hash] = newChainedBlock;
-
-                        if (this.unchainedBlocksByPrevious.ContainsKey(workBlock.Hash))
-                        {
-                            this.chainBlocksPending.EnqueueRange(this.unchainedBlocksByPrevious[workBlock.Hash].Values);
-                        }
-
-                        if (this.unchainedBlocksByPrevious.ContainsKey(workBlock.PreviousBlock))
-                        {
-                            this.unchainedBlocksByPrevious[workBlock.PreviousBlock].Remove(workBlock.Hash);
-                            if (this.unchainedBlocksByPrevious[workBlock.PreviousBlock].Count == 0)
-                                this.unchainedBlocksByPrevious.Remove(workBlock.PreviousBlock);
-                        }
-                    }
-                    else
-                    {
-                        if (!this.unchainedBlocksByPrevious.ContainsKey(workBlock.PreviousBlock))
-                            this.unchainedBlocksByPrevious[workBlock.PreviousBlock] = new Dictionary<UInt256, BlockHeader>();
-                        this.unchainedBlocksByPrevious[workBlock.PreviousBlock][workBlock.Hash] = workBlock;
-                    }
-                }
-                else
-                {
-                    if (this.unchainedBlocksByPrevious.ContainsKey(workBlock.Hash))
-                    {
-                        this.chainBlocksPending.EnqueueRange(this.unchainedBlocksByPrevious[workBlock.Hash].Values);
-                    }
-                }
-            }
+            this.chainingCalculator.ChainBlockHeaders(this.shutdownToken.Token);
         }
     }
 }

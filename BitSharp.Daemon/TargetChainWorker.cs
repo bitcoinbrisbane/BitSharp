@@ -19,18 +19,17 @@ namespace BitSharp.Daemon
     {
         public event EventHandler<ChainedBlock> OnWinningBlockChanged;
 
-        private readonly CacheContext cacheContext;
-
-        private readonly IBlockchainRules rules;
-
-        private ChainedBlocks targetChainedBlocks;
-
         private readonly CancellationTokenSource shutdownToken;
 
-        private readonly Worker readTargetChainedBlocksWorker;
+        private readonly IBlockchainRules rules;
+        private readonly CacheContext cacheContext;
 
         private ChainedBlock targetBlock;
         private readonly ReaderWriterLockSlim targetBlockLock;
+
+        private ChainedBlocks targetChainedBlocks;
+
+        private readonly Worker readTargetChainedBlocksWorker;
 
         public TargetChainWorker(IBlockchainRules rules, CacheContext cacheContext)
         {
@@ -39,10 +38,10 @@ namespace BitSharp.Daemon
             this.rules = rules;
             this.cacheContext = cacheContext;
 
-            this.targetChainedBlocks = ChainedBlocks.CreateForGenesisBlock(this.rules.GenesisChainedBlock);
-
             this.targetBlock = this.rules.GenesisChainedBlock;
             this.targetBlockLock = new ReaderWriterLockSlim();
+
+            this.targetChainedBlocks = ChainedBlocks.CreateForGenesisBlock(this.rules.GenesisChainedBlock);
 
             // wire up cache events
             this.cacheContext.ChainedBlockCache.OnAddition += CheckChainedBlock;
@@ -53,17 +52,22 @@ namespace BitSharp.Daemon
                 runOnStart: true, waitTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
 
             //TODO periodic rescan
-            var checkThread = new Thread(() =>
-            {
-                new MethodTimer().Time("SelectMaxTotalWorkBlocks", () =>
-                {
-                    foreach (var chainedBlock in this.cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
-                        CheckChainedBlock(chainedBlock.BlockHash, chainedBlock);
-                });
+            //new Thread(() =>
+            //    {
+                    new MethodTimer().Time("SelectMaxTotalWorkBlocks", () =>
+                    {
+                        foreach (var chainedBlock in this.cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
+                        {
+                            // cooperative loop
+                            if (this.shutdownToken.IsCancellationRequested)
+                                return;
 
-                //Debugger.Break();
-            });
-            checkThread.Start();
+                            CheckChainedBlock(chainedBlock.BlockHash, chainedBlock);
+                        }
+                    });
+
+                    //Debugger.Break();
+                //}).start();
         }
 
         public CacheContext CacheContext { get { return this.cacheContext; } }

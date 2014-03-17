@@ -57,5 +57,16 @@ namespace BitSharp.Data
         {
             return !(left == right);
         }
+
+        public static ChainedBlock CreateForGenesisBlock(BlockHeader genesisBlockHeader)
+        {
+            return new ChainedBlock
+            (
+                blockHash: genesisBlockHeader.Hash,
+                previousBlockHash: genesisBlockHeader.PreviousBlock,
+                height: 0,
+                totalWork: genesisBlockHeader.CalculateWork()
+            );
+        }
     }
 }
