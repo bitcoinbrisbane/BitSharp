@@ -35,7 +35,7 @@ namespace BitSharp.Daemon
 
         private readonly ConcurrentQueue<BlockHeader> chainBlocksPending;
 
-        private ChainedBlock maxTotalWorkBlock;
+        private ChainedBlock targetBlock;
         private readonly ReaderWriterLockSlim targetBlockLock;
 
         public TargetChainWorker(IBlockchainRules rules, CacheContext cacheContext)
@@ -47,7 +47,7 @@ namespace BitSharp.Daemon
 
             this.targetChainedBlocks = ChainedBlocks.CreateForGenesisBlock(this.rules.GenesisChainedBlock);
 
-            this.maxTotalWorkBlock = this.rules.GenesisChainedBlock;
+            this.targetBlock = this.rules.GenesisChainedBlock;
             this.targetBlockLock = new ReaderWriterLockSlim();
 
             this.chainBlocksPending = new ConcurrentQueue<BlockHeader>();
@@ -55,12 +55,12 @@ namespace BitSharp.Daemon
             this.unchainedBlocksByPrevious = new Dictionary<UInt256, Dictionary<UInt256, BlockHeader>>();
 
             // wire up cache events
-            this.cacheContext.BlockHeaderCache.OnAddition += OnBlockHeaderAddition;
-            this.cacheContext.BlockHeaderCache.OnModification += OnBlockHeaderModification;
-            this.cacheContext.BlockCache.OnAddition += OnBlockAddition;
-            this.cacheContext.BlockCache.OnModification += OnBlockModification;
-            this.cacheContext.ChainedBlockCache.OnAddition += OnChainedBlockAddition;
-            this.cacheContext.ChainedBlockCache.OnModification += OnChainedBlockModification;
+            this.cacheContext.BlockHeaderCache.OnAddition += ChainBlockHeader;
+            this.cacheContext.BlockHeaderCache.OnModification += ChainBlockHeader;
+            this.cacheContext.BlockCache.OnAddition += ChainBlock;
+            this.cacheContext.BlockCache.OnModification += ChainBlock;
+            this.cacheContext.ChainedBlockCache.OnAddition += HandleChainedBlock;
+            this.cacheContext.ChainedBlockCache.OnModification += HandleChainedBlock;
 
             // create workers
             this.chainBlocksWorker = new Worker("TargetChainWorker.ChainBlocksWorker", ChainBlocksWorker,
@@ -79,7 +79,7 @@ namespace BitSharp.Daemon
                 new MethodTimer().Time("SelectMaxTotalWorkBlocks", () =>
                 {
                     foreach (var chainedBlock in this.cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
-                        CheckTotalWork(chainedBlock.BlockHash, chainedBlock);
+                        HandleChainedBlock(chainedBlock.BlockHash, chainedBlock);
                 });
 
                 //Debugger.Break();
@@ -116,12 +116,12 @@ namespace BitSharp.Daemon
         public void Dispose()
         {
             // cleanup events
-            this.CacheContext.BlockHeaderCache.OnAddition -= OnBlockHeaderAddition;
-            this.CacheContext.BlockHeaderCache.OnModification -= OnBlockHeaderModification;
-            this.CacheContext.BlockCache.OnAddition -= OnBlockAddition;
-            this.CacheContext.BlockCache.OnModification -= OnBlockModification;
-            this.CacheContext.ChainedBlockCache.OnAddition -= OnChainedBlockAddition;
-            this.CacheContext.ChainedBlockCache.OnModification -= OnChainedBlockModification;
+            this.CacheContext.BlockHeaderCache.OnAddition -= ChainBlockHeader;
+            this.CacheContext.BlockHeaderCache.OnModification -= ChainBlockHeader;
+            this.CacheContext.BlockCache.OnAddition -= ChainBlock;
+            this.CacheContext.BlockCache.OnModification -= ChainBlock;
+            this.CacheContext.ChainedBlockCache.OnAddition -= HandleChainedBlock;
+            this.CacheContext.ChainedBlockCache.OnModification -= HandleChainedBlock;
 
             // notify threads to begin shutting down
             this.shutdownToken.Cancel();
@@ -133,43 +133,6 @@ namespace BitSharp.Daemon
                 this.readTargetChainedBlocksWorker,
                 this.shutdownToken
             }.DisposeList();
-        }
-
-        private void OnBlockHeaderAddition(UInt256 blockHash, BlockHeader blockHeader)
-        {
-            ChainBlockHeader(blockHash, blockHeader);
-        }
-
-        private void OnBlockHeaderModification(UInt256 blockHash, BlockHeader blockHeader)
-        {
-            OnBlockHeaderAddition(blockHash, blockHeader);
-        }
-
-        private void OnBlockAddition(UInt256 blockHash, Block block)
-        {
-            ChainBlockHeader(blockHash, block != null ? block.Header : null);
-        }
-
-        private void OnBlockModification(UInt256 blockHash, Block block)
-        {
-            OnBlockAddition(blockHash, block);
-        }
-
-        private void OnChainedBlockAddition(UInt256 blockHash, ChainedBlock chainedBlock)
-        {
-            CheckTotalWork(blockHash, chainedBlock);
-            this.readTargetChainedBlocksWorker.NotifyWork();
-            this.chainBlocksWorker.NotifyWork();
-        }
-
-        private void OnChainedBlockModification(UInt256 blockHash, ChainedBlock chainedBlock)
-        {
-            OnChainedBlockAddition(blockHash, chainedBlock);
-        }
-
-        private void OnMaxTotalWorkBlocksChanged()
-        {
-            this.readTargetChainedBlocksWorker.NotifyWork();
         }
 
         private void ChainMissingBlocks()
@@ -193,13 +156,35 @@ namespace BitSharp.Daemon
                 if (blockHeader == null)
                     blockHeader = this.CacheContext.BlockHeaderCache[blockHash];
             }
-            catch (MissingDataException)
-            {
-                return;
-            }
+            catch (MissingDataException) { return; }
 
             this.chainBlocksPending.Enqueue(blockHeader);
             this.chainBlocksWorker.NotifyWork();
+        }
+
+        private void ChainBlock(UInt256 blockHash, Block block)
+        {
+            ChainBlockHeader(blockHash, block != null ? block.Header : null);
+        }
+
+        private void HandleChainedBlock(UInt256 blockHash, ChainedBlock chainedBlock)
+        {
+            try
+            {
+                if (chainedBlock == null)
+                    chainedBlock = this.CacheContext.ChainedBlockCache[blockHash];
+            }
+            catch (MissingDataException) { return; }
+
+            this.targetBlockLock.DoWrite(() =>
+            {
+                if (this.targetBlock == null
+                    || chainedBlock.TotalWork > this.targetBlock.TotalWork)
+                {
+                    this.targetBlock = chainedBlock;
+                    this.readTargetChainedBlocksWorker.NotifyWork();
+                }
+            });
         }
 
         private void ChainBlocksWorker()
@@ -255,47 +240,24 @@ namespace BitSharp.Daemon
             }
         }
 
-        private void CheckTotalWork(UInt256 blockHash, ChainedBlock chainedBlock)
-        {
-            try
-            {
-                if (chainedBlock == null)
-                    chainedBlock = this.CacheContext.ChainedBlockCache[blockHash];
-            }
-            catch (MissingDataException)
-            {
-                return;
-            }
-
-            this.targetBlockLock.DoWrite(() =>
-            {
-                if (this.maxTotalWorkBlock == null
-                    || chainedBlock.TotalWork > this.maxTotalWorkBlock.Height)
-                {
-                    this.maxTotalWorkBlock = chainedBlock;
-                    this.readTargetChainedBlocksWorker.NotifyWork();
-                }
-            });
-        }
-
         private void ReadTargetChainedBlocksWorker()
         {
             try
             {
-                var targetBlockLocal = this.maxTotalWorkBlock;
+                var targetBlockLocal = this.targetBlock;
                 var targetChainedBlocksLocal = this.targetChainedBlocks;
 
                 if (targetBlockLocal.BlockHash != targetChainedBlocksLocal.LastBlock.BlockHash)
                 {
-                    var newTargetChainedBlocks = this.targetChainedBlocks.ToBuilder();
+                    var newTargetChainedBlocks = targetChainedBlocksLocal.ToBuilder();
 
                     var deltaBlockPath = new MethodTimer(false).Time("deltaBlockPath", () =>
                         new BlockchainWalker().GetBlockchainPath(newTargetChainedBlocks.LastBlock, targetBlockLocal, blockHash => this.CacheContext.ChainedBlockCache[blockHash]));
 
                     foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
                         newTargetChainedBlocks.RemoveBlock(rewindBlock);
-                    foreach (var rewindBlock in deltaBlockPath.AdvanceBlocks)
-                        newTargetChainedBlocks.AddBlock(rewindBlock);
+                    foreach (var advanceBlock in deltaBlockPath.AdvanceBlocks)
+                        newTargetChainedBlocks.AddBlock(advanceBlock);
 
                     //Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetBlock.BlockHash.ToHexNumberString(), targetBlock.Height, targetBlock.TotalWork.ToString("X")));
                     this.targetChainedBlocks = newTargetChainedBlocks.ToImmutable();
@@ -305,10 +267,7 @@ namespace BitSharp.Daemon
                         handler(this, targetBlockLocal);
                 }
             }
-            catch (Exception)
-            {
-                //TODO log
-            }
+            catch (MissingDataException) { }
         }
     }
 }
