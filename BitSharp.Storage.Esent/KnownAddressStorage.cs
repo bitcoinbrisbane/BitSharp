@@ -26,7 +26,7 @@ namespace BitSharp.Storage.Esent
         {
             this.storageContext = storageContext;
             this.name = "knownAddresses";
-            this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "data", this.name);
+            this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "peers", this.name);
             this.dict = new PersistentByteDictionary(this.directory);
         }
 
