@@ -19,6 +19,8 @@ namespace BitSharp.Storage
 
         //IBlockchainStorage BlockchainStorage { get; }
 
+        IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks();
+        
         UtxoBuilder ToUtxoBuilder(Utxo utxo);
     }
 }

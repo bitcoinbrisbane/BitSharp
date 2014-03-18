@@ -45,6 +45,11 @@ namespace BitSharp.Storage.Test
 
         //IBlockchainStorage IStorageContext.BlockchainStorage { get { return this._blockchainStorage; } }
 
+        public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
+        {
+            return this.ChainedBlockStorage.SelectMaxTotalWorkBlocks();
+        }
+
         public UtxoBuilder ToUtxoBuilder(Utxo utxo)
         {
             return new MemoryUtxoBuilder(utxo);

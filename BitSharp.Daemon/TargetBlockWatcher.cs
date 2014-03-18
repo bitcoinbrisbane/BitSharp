@@ -50,7 +50,7 @@ namespace BitSharp.Daemon
             //    {
             new MethodTimer().Time(() =>
             {
-                foreach (var chainedBlock in this.cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
+                foreach (var chainedBlock in this.cacheContext.StorageContext.SelectMaxTotalWorkBlocks())
                 {
                     //TODO
                     // cooperative loop
