@@ -27,22 +27,22 @@ namespace BitSharp.Daemon.Test
             using (var targetBlockWatcher = new TargetBlockWatcher(memoryCacheContext))
             {
                 // monitor event firing
-                var eventCount = 0;
-                targetBlockWatcher.OnTargetBlockChanged += () => eventCount++;
+                var onTargetBlockChangedCount = 0;
+                targetBlockWatcher.OnTargetBlockChanged += () => onTargetBlockChangedCount++;
 
                 // verify initial state
                 Assert.IsNull(targetBlockWatcher.TargetBlock);
 
                 // add block 0
                 memoryCacheContext.ChainedBlockCache[chainedBlock0.BlockHash] = chainedBlock0;
-                Assert.AreEqual(1, eventCount);
+                Assert.AreEqual(1, onTargetBlockChangedCount);
 
                 // verify block 0
                 Assert.AreEqual(chainedBlock0, targetBlockWatcher.TargetBlock);
 
                 // add block 1
                 memoryCacheContext.ChainedBlockCache[chainedBlock1.BlockHash] = chainedBlock1;
-                Assert.AreEqual(2, eventCount);
+                Assert.AreEqual(2, onTargetBlockChangedCount);
 
                 // verify block 1
                 Assert.AreEqual(chainedBlock1, targetBlockWatcher.TargetBlock);
