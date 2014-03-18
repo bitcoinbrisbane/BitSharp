@@ -51,10 +51,10 @@ namespace BitSharp.Daemon
 
         private readonly CancellationTokenSource shutdownToken;
 
-        private readonly Worker validationWorker;
-        private readonly Worker blockchainWorker;
-        private readonly Worker validateCurrentChainWorker;
-        private readonly Worker writeBlockchainWorker;
+        private readonly WorkerMethod validationWorker;
+        private readonly WorkerMethod blockchainWorker;
+        private readonly WorkerMethod validateCurrentChainWorker;
+        private readonly WorkerMethod writeBlockchainWorker;
         private readonly ChainingWorker chainingWorker;
         private readonly TargetChainWorker targetChainWorker;
 
@@ -82,16 +82,16 @@ namespace BitSharp.Daemon
             this.cacheContext.ChainedBlockCache.OnModification += OnChainedBlockModification;
 
             // create workers
-            this.validationWorker = new Worker("BlockchainDaemon.ValidationWorker", ValidationWorker,
+            this.validationWorker = new WorkerMethod("BlockchainDaemon.ValidationWorker", ValidationWorker,
                 runOnStart: true, waitTime: TimeSpan.FromSeconds(10), maxIdleTime: TimeSpan.FromMinutes(5));
 
-            this.blockchainWorker = new Worker("BlockchainDaemon.BlockchainWorker", BlockchainWorker,
+            this.blockchainWorker = new WorkerMethod("BlockchainDaemon.BlockchainWorker", BlockchainWorker,
                 runOnStart: true, waitTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
 
-            this.validateCurrentChainWorker = new Worker("BlockchainDaemon.ValidateCurrentChainWorker", ValidateCurrentChainWorker,
+            this.validateCurrentChainWorker = new WorkerMethod("BlockchainDaemon.ValidateCurrentChainWorker", ValidateCurrentChainWorker,
                 runOnStart: true, waitTime: TimeSpan.FromMinutes(30), maxIdleTime: TimeSpan.FromMinutes(30));
 
-            this.writeBlockchainWorker = new Worker("BlockchainDaemon.WriteBlockchainWorker", WriteBlockchainWorker,
+            this.writeBlockchainWorker = new WorkerMethod("BlockchainDaemon.WriteBlockchainWorker", WriteBlockchainWorker,
                 runOnStart: true, waitTime: TimeSpan.FromMinutes(5), maxIdleTime: TimeSpan.FromMinutes(30));
 
             this.chainingWorker = new ChainingWorker(rules, cacheContext);

@@ -50,11 +50,11 @@ namespace BitSharp.Node
 
         private readonly LocalClientType _type;
 
-        private readonly Worker connectWorker;
-        private readonly Worker requestBlocksWorker;
-        private readonly Worker requestHeadersWorker;
-        private readonly Worker requestTransactionsWorker;
-        private readonly Worker statsWorker;
+        private readonly WorkerMethod connectWorker;
+        private readonly WorkerMethod requestBlocksWorker;
+        private readonly WorkerMethod requestHeadersWorker;
+        private readonly WorkerMethod requestTransactionsWorker;
+        private readonly WorkerMethod statsWorker;
 
         private readonly BlockchainDaemon blockchainDaemon;
 
@@ -85,11 +85,11 @@ namespace BitSharp.Node
             this.knownAddressStorage = knownAddressStorage;
             this.knownAddressCache = new BoundedCache<NetworkAddressKey, NetworkAddressWithTime>("KnownAddressCache", knownAddressStorage);
 
-            this.connectWorker = new Worker("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
-            this.requestBlocksWorker = new Worker("LocalClient.RequestBlocksWorker", RequestBlocksWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
-            this.requestHeadersWorker = new Worker("LocalClient.RequestHeadersWorker", RequestHeadersWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
-            this.requestTransactionsWorker = new Worker("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
-            this.statsWorker = new Worker("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+            this.connectWorker = new WorkerMethod("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+            this.requestBlocksWorker = new WorkerMethod("LocalClient.RequestBlocksWorker", RequestBlocksWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
+            this.requestHeadersWorker = new WorkerMethod("LocalClient.RequestHeadersWorker", RequestHeadersWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
+            this.requestTransactionsWorker = new WorkerMethod("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
+            this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
             this.blockchainDaemon.TargetChainWorker.OnWinningBlockChanged += OnWinningBlockChanged;
 

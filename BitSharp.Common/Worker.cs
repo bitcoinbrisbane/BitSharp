@@ -9,9 +9,11 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Common
 {
-    public class Worker : IDisposable
+    public abstract class Worker : IDisposable
     {
-        private readonly Action workAction;
+        public event Action OnNotifyWork;
+        public event Action OnWorkStarted;
+        public event Action OnWorkStopped;
 
         private readonly CancellationTokenSource shutdownToken;
 
@@ -25,10 +27,9 @@ namespace BitSharp.Common
         private bool isStarted;
         private bool isDisposed;
 
-        public Worker(string name, Action workAction, bool runOnStart, TimeSpan waitTime, TimeSpan maxIdleTime)
+        public Worker(string name, bool runOnStart, TimeSpan waitTime, TimeSpan maxIdleTime)
         {
             this.Name = name;
-            this.workAction = workAction;
             this.WaitTime = waitTime;
             this.MaxIdleTime = maxIdleTime;
 
@@ -88,9 +89,9 @@ namespace BitSharp.Common
                     {
                         if (this.isStarted && !this.isDisposed)
                         {
+                            this.shutdownToken.Cancel();
                             this.notifyEvent.Set();
                             this.forceNotifyEvent.Set();
-                            this.shutdownToken.Cancel();
 
                             this.workerThread.Join(5000);
 
@@ -112,37 +113,45 @@ namespace BitSharp.Common
 
         public void NotifyWork()
         {
-            if (!this.isDisposed)
-            {
-                this.notifyEvent.Set();
-            }
+            if (this.isDisposed)
+                return;
+
+            this.notifyEvent.Set();
+
+            var handler = this.OnNotifyWork;
+            if (handler != null)
+                handler();
         }
 
         public void ForceWork()
         {
-            if (!this.isDisposed)
-            {
-                this.forceNotifyEvent.Set();
-                this.notifyEvent.Set();
-            }
+            if (this.isDisposed)
+                return;
+
+            this.forceNotifyEvent.Set();
+            this.notifyEvent.Set();
+
+            var handler = this.OnNotifyWork;
+            if (handler != null)
+                handler();
         }
 
         public void ForceWorkAndWait()
         {
-            if (!this.isDisposed)
-            {
-                // wait for worker to idle
-                this.idleEvent.Wait();
+            if (this.isDisposed)
+                return;
 
-                // reset its idle state
-                this.idleEvent.Reset();
+            // wait for worker to idle
+            this.idleEvent.Wait();
 
-                // force an execution
-                ForceWork();
+            // reset its idle state
+            this.idleEvent.Reset();
 
-                // wait for worker to be idle again
-                this.idleEvent.Wait();
-            }
+            // force an execution
+            ForceWork();
+
+            // wait for worker to be idle again
+            this.idleEvent.Wait();
         }
 
         private void WorkerLoop()
@@ -182,12 +191,17 @@ namespace BitSharp.Common
                     var stopwatch = new Stopwatch();
                     stopwatch.Start();
 
+                    // notify
+                    var startHandler = this.OnWorkStarted;
+                    if (startHandler != null)
+                        startHandler();
+
                     // perform the work
                     working = true;
                     workerTime.Start();
                     try
                     {
-                        workAction();
+                        WorkAction();
                     }
                     catch (Exception e)
                     {
@@ -212,6 +226,11 @@ namespace BitSharp.Common
                         var percentWorkerTime = workerTime.ElapsedSecondsFloat() / totalTime.ElapsedSecondsFloat();
                         Debug.WriteLineIf(percentWorkerTime > 0.05, "{0,55} work time: {1,10:##0.00%}".Format2(this.Name, percentWorkerTime));
                     }
+
+                    // notify
+                    var stopHandler = this.OnWorkStopped;
+                    if (stopHandler != null)
+                        stopHandler();
                 }
             }
             catch (ObjectDisposedException e)
@@ -222,5 +241,7 @@ namespace BitSharp.Common
             }
             catch (OperationCanceledException) { }
         }
+
+        public abstract void WorkAction();
     }
 }

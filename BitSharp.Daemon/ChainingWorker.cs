@@ -22,7 +22,7 @@ namespace BitSharp.Daemon
         private readonly IBlockchainRules rules;
         private readonly CacheContext cacheContext;
         private readonly ChainingCalculator chainingCalculator;
-        private readonly Worker worker;
+        private readonly WorkerMethod worker;
 
         public ChainingWorker(IBlockchainRules rules, CacheContext cacheContext)
         {
@@ -34,7 +34,7 @@ namespace BitSharp.Daemon
             this.chainingCalculator = new ChainingCalculator(cacheContext);
 
             // create workers
-            this.worker = new Worker("ChainingWorker.WorkerThread", WorkerThread,
+            this.worker = new WorkerMethod("ChainingWorker.WorkerThread", WorkerThread,
                 runOnStart: true, waitTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
 
             this.chainingCalculator.OnQueued += NotifyWork;

@@ -27,7 +27,7 @@ namespace BitSharp.Daemon
         private readonly TargetBlockWatcher targetBlockWatcher;
         private ChainedBlocks targetChainedBlocks;
 
-        private readonly Worker worker;
+        private readonly WorkerMethod worker;
 
         public TargetChainWorker(IBlockchainRules rules, CacheContext cacheContext)
         {
@@ -40,7 +40,7 @@ namespace BitSharp.Daemon
             this.targetChainedBlocks = null;
 
             // create workers
-            this.worker = new Worker("TargetChainWorker.ReadTargetChainedBlocksWorker", WorkerThread,
+            this.worker = new WorkerMethod("TargetChainWorker.ReadTargetChainedBlocksWorker", WorkerThread,
                 runOnStart: true, waitTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
 
             this.targetBlockWatcher.OnTargetBlockChanged += NotifyWork;

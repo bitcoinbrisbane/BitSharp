@@ -88,6 +88,7 @@
     <Compile Include="ThrottledNotifyEvent.cs" />
     <Compile Include="UInt256.cs" />
     <Compile Include="Worker.cs" />
+    <Compile Include="WorkerMethod.cs" />
     <Compile Include="WriterExtensionMethods.cs" />
   </ItemGroup>
   <ItemGroup>
