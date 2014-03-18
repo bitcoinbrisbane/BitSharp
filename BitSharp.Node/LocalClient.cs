@@ -261,17 +261,20 @@ namespace BitSharp.Node
 
                     foreach (var requestBlockTuple in chainStateLocal.CurrentChainedBlocks.NavigateTowards(targetChainedBlocksLocal))
                     {
+                        // cooperative loop
+                        this.shutdownToken.Token.ThrowIfCancellationRequested();
+
                         var requestBlockDirection = requestBlockTuple.Item1;
                         var requestBlock = requestBlockTuple.Item2;
 
+                        // limit how far ahead the target blockchain will be downloaded
+                        if (requestBlockDirection > 0
+                            && requestBlock.Height >= MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT
+                            && requestBlock.Height - this.blockchainDaemon.CurrentBuilderHeight > MAX_BLOCKCHAIN_LOOKAHEAD)
+                            break;
+
                         if (!this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(requestBlock.BlockHash))
                         {
-                            // limit how far ahead the target blockchain will be downloaded
-                            if (requestBlockDirection > 0
-                                && requestBlock.Height >= MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT
-                                && requestBlock.Height - this.blockchainDaemon.CurrentBuilderHeight > MAX_BLOCKCHAIN_LOOKAHEAD)
-                                break;
-
                             var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), requestBlock.BlockHash);
                             if (task != null)
                                 requestTasks.Add(task);
@@ -279,9 +282,6 @@ namespace BitSharp.Node
                             //if (requestTasks.Count > requestAmount)
                             if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
                                 break;
-
-                            // cooperative loop
-                            this.shutdownToken.Token.ThrowIfCancellationRequested();
                         }
                     }
                 }
