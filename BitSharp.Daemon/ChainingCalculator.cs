@@ -48,11 +48,14 @@ namespace BitSharp.Daemon
             new Thread(
                 () =>
                 {
-                    this.blockHeaders.EnqueueRange(blockHeaders);
+                    new MethodTimer().Time("QueueAllBlockHeaders", () =>
+                    {
+                        this.blockHeaders.EnqueueRange(this.cacheContext.BlockHeaderCache.Values);
 
-                    var handler = this.OnQueued;
-                    if (handler != null)
-                        handler();
+                        var handler = this.OnQueued;
+                        if (handler != null)
+                            handler();
+                    });
                 })
                 .Start();
         }
