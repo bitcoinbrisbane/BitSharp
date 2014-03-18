@@ -133,6 +133,7 @@ namespace BitSharp.Storage.Esent
                 {
                     if (block.TotalWork > maxTotalWork)
                     {
+                        maxTotalWork = block.TotalWork;
                         maxTotalWorkBlocks = new List<ChainedBlock>();
                         maxTotalWorkBlocks.Add(block);
                     }
