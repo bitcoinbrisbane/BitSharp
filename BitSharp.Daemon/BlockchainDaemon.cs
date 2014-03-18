@@ -33,27 +33,19 @@ namespace BitSharp.Daemon
     //TODO compact UTXO's and other immutables in the blockchains on a thread
     public class BlockchainDaemon : IDisposable
     {
-        public event EventHandler<ChainState> OnCurrentBlockchainChanged;
-        public event EventHandler<int> OnCurrentBuilderHeightChanged;
-
-        private static readonly int MAX_BUILDER_LIFETIME_SECONDS = 60;
+        public event EventHandler OnWinningBlockChanged;
+        public event EventHandler OnCurrentBlockchainChanged;
+        public event EventHandler OnCurrentBuilderHeightChanged;
 
         private readonly CacheContext cacheContext;
 
         private readonly IBlockchainRules rules;
-        private readonly BlockchainCalculator calculator;
-
-        private ChainState chainState;
-        private readonly ReaderWriterLockSlim chainStateLock;
-
-        private ChainStateBuilder chainStateBuilder;
-        private DateTime chainStateBuilderTime;
 
         private readonly CancellationTokenSource shutdownToken;
 
-        private readonly WorkerMethod blockchainWorker;
         private readonly ChainingWorker chainingWorker;
         private readonly TargetChainWorker targetChainWorker;
+        private readonly ChainStateWorker chainStateWorker;
 
         public BlockchainDaemon(IBlockchainRules rules, CacheContext cacheContext)
         {
@@ -61,10 +53,6 @@ namespace BitSharp.Daemon
 
             this.rules = rules;
             this.cacheContext = cacheContext;
-            this.calculator = new BlockchainCalculator(this.rules, this.cacheContext, this.shutdownToken.Token);
-
-            this.chainState = ChainState.CreateForGenesisBlock(this.rules.GenesisChainedBlock, this.StorageContext.ToUtxoBuilder);
-            this.chainStateLock = new ReaderWriterLockSlim();
 
             // write genesis block out to storage
             this.cacheContext.BlockCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
@@ -79,35 +67,55 @@ namespace BitSharp.Daemon
             this.cacheContext.ChainedBlockCache.OnModification += OnChainedBlockModification;
 
             // create workers
-            this.blockchainWorker = new WorkerMethod("BlockchainDaemon.BlockchainWorker", BlockchainWorker,
-                runOnStart: true, waitTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
-
             this.chainingWorker = new ChainingWorker(rules, cacheContext);
             this.targetChainWorker = new TargetChainWorker(rules, cacheContext);
+            this.chainStateWorker = new ChainStateWorker(rules, cacheContext, () => this.targetChainWorker.TargetChainedBlocks);
 
-            this.targetChainWorker.OnWinningBlockChanged += (sender, targetBlock) => this.blockchainWorker.NotifyWork();
+            this.targetChainWorker.OnWinningBlockChanged +=
+                (sender, targetBlock) =>
+                {
+                    this.chainStateWorker.NotifyWork();
+
+                    var handler = this.OnWinningBlockChanged;
+                    if (handler != null)
+                        handler(this, EventArgs.Empty);
+                };
+
+            this.chainStateWorker.OnChainStateChanged +=
+                () =>
+                {
+                    var handler = this.OnCurrentBlockchainChanged;
+                    if (handler != null)
+                        handler(this, EventArgs.Empty);
+                };
+
+            this.chainStateWorker.OnChainStateBuilderChanged +=
+                () =>
+                {
+                    var handler = this.OnCurrentBuilderHeightChanged;
+                    if (handler != null)
+                        handler(this, EventArgs.Empty);
+                };
         }
 
         public IBlockchainRules Rules { get { return this.rules; } }
-
-        public BlockchainCalculator Calculator { get { return this.calculator; } }
 
         public CacheContext CacheContext { get { return this.cacheContext; } }
 
         public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
 
-        public ChainState ChainState { get { return this.chainState; } }
+        public ChainedBlock WinningBlock { get { return this.targetChainWorker.WinningBlock; } }
 
-        public ChainingWorker ChainingWorker { get { return this.chainingWorker; } }
+        public ChainedBlocks TargetChainedBlocks { get { return this.targetChainWorker.TargetChainedBlocks; } }
 
-        public TargetChainWorker TargetChainWorker { get { return this.targetChainWorker; } }
+        public ChainState ChainState { get { return this.chainStateWorker.ChainState; } }
 
         public int CurrentBuilderHeight
         {
             get
             {
-                var chainStateLocal = this.chainState;
-                var chainStateBuilderLocal = this.chainStateBuilder;
+                var chainStateLocal = this.chainStateWorker.ChainState;
+                var chainStateBuilderLocal = this.chainStateWorker.ChainStateBuilder;
 
                 if (chainStateBuilderLocal != null)
                     return chainStateBuilderLocal.ChainedBlocks.Height;
@@ -124,9 +132,9 @@ namespace BitSharp.Daemon
                 //TODO LoadExistingState();
 
                 // startup workers
-                this.blockchainWorker.Start();
                 this.chainingWorker.Start();
                 this.targetChainWorker.Start();
+                this.chainStateWorker.Start();
             }
             catch (Exception)
             {
@@ -151,26 +159,16 @@ namespace BitSharp.Daemon
             // cleanup workers
             new IDisposable[]
             {
-                this.blockchainWorker,
                 this.chainingWorker,
                 this.targetChainWorker,
+                this.chainStateWorker,
                 this.shutdownToken
             }.DisposeList();
         }
 
-        public void WaitForFullUpdate()
-        {
-            WaitForBlockchainUpdate();
-        }
-
-        public void WaitForBlockchainUpdate()
-        {
-            this.blockchainWorker.ForceWorkAndWait();
-        }
-
         private void OnBlockHeaderAddition(UInt256 blockHash, BlockHeader blockHeader)
         {
-            this.blockchainWorker.NotifyWork();
+            this.chainStateWorker.NotifyWork();
         }
 
         private void OnBlockHeaderModification(UInt256 blockHash, BlockHeader blockHeader)
@@ -180,7 +178,7 @@ namespace BitSharp.Daemon
 
         private void OnBlockAddition(UInt256 blockHash, Block block)
         {
-            this.blockchainWorker.NotifyWork();
+            this.chainStateWorker.NotifyWork();
         }
 
         private void OnBlockModification(UInt256 blockHash, Block block)
@@ -190,7 +188,7 @@ namespace BitSharp.Daemon
 
         private void OnChainedBlockAddition(UInt256 blockHash, ChainedBlock chainedBlock)
         {
-            this.blockchainWorker.NotifyWork();
+            this.chainStateWorker.NotifyWork();
         }
 
         private void OnChainedBlockModification(UInt256 blockHash, ChainedBlock chainedBlock)
@@ -299,73 +297,6 @@ namespace BitSharp.Daemon
             //}
         }
 
-        private void BlockchainWorker()
-        {
-            try
-            {
-                var chainStateLocal = this.chainState;
-
-                if (this.chainStateBuilder != null
-                    && this.chainStateBuilder.ChainedBlocks.LastBlock.BlockHash != chainStateLocal.CurrentBlock.BlockHash
-                    && DateTime.UtcNow - this.chainStateBuilderTime > TimeSpan.FromSeconds(MAX_BUILDER_LIFETIME_SECONDS))
-                {
-                    var newChainedBlocks = this.chainStateBuilder.ChainedBlocks.ToImmutable();
-                    var newUtxo = this.chainStateBuilder.Utxo.Close(newChainedBlocks.LastBlock.BlockHash);
-
-                    this.chainStateBuilder.Dispose();
-                    this.chainStateBuilder = null;
-
-                    UpdateCurrentBlockchain(new ChainState(newChainedBlocks, newUtxo));
-                    chainStateLocal = this.chainState;
-                }
-
-                if (this.chainStateBuilder == null)
-                {
-                    this.chainStateBuilderTime = DateTime.UtcNow;
-                    this.chainStateBuilder = chainStateLocal.ToBuilder(this.StorageContext.ToUtxoBuilder);
-                }
-
-                // try to advance the blockchain with the new winning block
-                using (var cancelToken = new CancellationTokenSource())
-                {
-                    var startTime = new Stopwatch();
-                    startTime.Start();
-
-                    Calculator.CalculateBlockchainFromExisting(this.chainStateBuilder, () => this.targetChainWorker.TargetChainedBlocks, cancelToken.Token,
-                        () =>
-                        {
-                            var handler = this.OnCurrentBuilderHeightChanged;
-                            if (handler != null)
-                                handler(this, this.chainStateBuilder.ChainedBlocks.Height);
-
-                            if (startTime.Elapsed > TimeSpan.FromSeconds(MAX_BUILDER_LIFETIME_SECONDS))
-                            {
-                                this.blockchainWorker.NotifyWork();
-                                cancelToken.Cancel();
-                            }
-                        });
-                }
-            }
-            catch (Exception)
-            {
-                if (this.chainStateBuilder != null && !this.chainStateBuilder.IsConsistent)
-                {
-                    this.chainStateBuilder.Dispose();
-                    this.chainStateBuilder = null;
-                }
-
-                // try again on failure
-                this.blockchainWorker.NotifyWork();
-
-                var handler = this.OnCurrentBuilderHeightChanged;
-                if (handler != null)
-                    handler(this, this.chainState.CurrentChainedBlocks.Height);
-            }
-
-            // collect after processing
-            //GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
-        }
-
         private void WriteBlockchainWorker()
         {
             throw new NotImplementedException();
@@ -386,29 +317,6 @@ namespace BitSharp.Daemon
 
             //stopwatch.Stop();
             //Debug.WriteLine("WriteBlockchainWorker: {0:#,##0.000}s".Format2(stopwatch.ElapsedSecondsFloat()));
-        }
-
-        private void UpdateCurrentBlockchain(ChainState newChainState)
-        {
-            this.chainStateLock.EnterWriteLock();
-            try
-            {
-                var oldChainState = this.chainState;
-
-                this.chainState = newChainState;
-
-                //TODO stop gap
-                if (oldChainState != null)
-                    oldChainState.CurrentUtxo.DisposeDelete();
-            }
-            finally
-            {
-                this.chainStateLock.ExitWriteLock();
-            }
-
-            var handler = this.OnCurrentBlockchainChanged;
-            if (handler != null)
-                handler(this, newChainState);
         }
     }
 }

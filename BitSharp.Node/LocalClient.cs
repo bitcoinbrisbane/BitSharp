@@ -91,7 +91,7 @@ namespace BitSharp.Node
             this.requestTransactionsWorker = new WorkerMethod("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
             this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
-            this.blockchainDaemon.TargetChainWorker.OnWinningBlockChanged += OnWinningBlockChanged;
+            this.blockchainDaemon.OnWinningBlockChanged += OnWinningBlockChanged;
 
             switch (this.Type)
             {
@@ -131,7 +131,7 @@ namespace BitSharp.Node
 
         public void Dispose()
         {
-            this.blockchainDaemon.TargetChainWorker.OnWinningBlockChanged -= OnWinningBlockChanged;
+            this.blockchainDaemon.OnWinningBlockChanged -= OnWinningBlockChanged;
 
             this.shutdownToken.Cancel();
 
@@ -149,7 +149,7 @@ namespace BitSharp.Node
             }.DisposeList();
         }
 
-        private void OnWinningBlockChanged(object sender, ChainedBlock winningChainedBlock)
+        private void OnWinningBlockChanged(object sender, EventArgs e)
         {
             this.requestHeadersWorker.NotifyWork();
         }
@@ -254,7 +254,7 @@ namespace BitSharp.Node
                 }
 
                 var chainStateLocal = this.blockchainDaemon.ChainState;
-                var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainWorker.TargetChainedBlocks;
+                var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
                 if (targetChainedBlocksLocal != null)
                 {
                     var targetBlockHash = targetChainedBlocksLocal.LastBlock.BlockHash;
@@ -463,7 +463,7 @@ namespace BitSharp.Node
 
         private async Task SendGetHeaders(RemoteNode remoteNode)
         {
-            var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainWorker.TargetChainedBlocks;
+            var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
             if (targetChainedBlocksLocal != null)
             {
                 var blockLocatorHashes = CalculateBlockLocatorHashes(targetChainedBlocksLocal.BlockList);
@@ -474,7 +474,7 @@ namespace BitSharp.Node
 
         private async Task SendGetBlocks(RemoteNode remoteNode)
         {
-            var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainWorker.TargetChainedBlocks;
+            var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
             if (targetChainedBlocksLocal != null)
             {
                 var blockLocatorHashes = CalculateBlockLocatorHashes(targetChainedBlocksLocal.BlockList);
@@ -721,7 +721,10 @@ namespace BitSharp.Node
         {
             // if in comparison mode, synchronize all work before returning current headers
             if (this.Type == LocalClientType.ComparisonToolTestNet)
-                this.blockchainDaemon.WaitForFullUpdate();
+            {
+                //TODO
+                //this.blockchainDaemon.WaitForFullUpdate();
+            }
 
             var currentBlockchainLocal = this.blockchainDaemon.ChainState.CurrentChainedBlocks;
             var blockHeaders = new List<BlockHeader>(currentBlockchainLocal.BlockList.Count());
