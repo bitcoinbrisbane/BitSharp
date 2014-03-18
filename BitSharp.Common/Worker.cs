@@ -178,7 +178,18 @@ namespace BitSharp.Common
 
                     // perform the work
                     working = true;
-                    workAction();
+                    try
+                    {
+                        workAction();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(new string('*', 80));
+                        Console.WriteLine("Unhandled worker exception: " + e.Message);
+                        Console.WriteLine(e);
+                        Console.WriteLine(new string('*', 80));
+                        throw;
+                    }
                     working = false;
 
                     stopwatch.Stop();
