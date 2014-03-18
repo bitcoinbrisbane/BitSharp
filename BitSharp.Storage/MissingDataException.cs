@@ -21,6 +21,7 @@ namespace BitSharp.Storage
 
         public MissingDataException(object key)
         {
+            this.key = key;
         }
 
         public object Key { get { return this.key; } }
