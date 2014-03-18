@@ -30,9 +30,9 @@ namespace BitSharp.Daemon
 
             // wire up cache events
             this.cacheContext.BlockHeaderCache.OnAddition += ChainBlockHeader;
-            this.cacheContext.BlockHeaderCache.OnModification += ChainBlockHeader;
-            this.cacheContext.BlockCache.OnAddition += ChainBlock;
-            this.cacheContext.BlockCache.OnModification += ChainBlock;
+            //this.cacheContext.BlockHeaderCache.OnModification += ChainBlockHeader;
+            //this.cacheContext.BlockCache.OnAddition += ChainBlock;
+            //this.cacheContext.BlockCache.OnModification += ChainBlock;
         }
 
         public IReadOnlyDictionary<UInt256, IReadOnlyDictionary<UInt256, BlockHeader>> UnchainedBlocksByPrevious
@@ -48,7 +48,7 @@ namespace BitSharp.Daemon
             new Thread(
                 () =>
                 {
-                    new MethodTimer().Time("QueueAllBlockHeaders", () =>
+                    new MethodTimer().Time(() =>
                     {
                         this.blockHeaders.EnqueueRange(this.cacheContext.BlockHeaderCache.Values);
 
@@ -125,18 +125,21 @@ namespace BitSharp.Daemon
 
         private void ChainBlockHeader(UInt256 blockHash, BlockHeader blockHeader)
         {
-            try
+            if (!this.cacheContext.ChainedBlockCache.ContainsKey(blockHeader.Hash))
             {
-                if (blockHeader == null)
-                    blockHeader = this.cacheContext.BlockHeaderCache[blockHash];
+                try
+                {
+                    if (blockHeader == null)
+                        blockHeader = this.cacheContext.BlockHeaderCache[blockHash];
+                }
+                catch (MissingDataException) { return; }
+
+                this.blockHeaders.Enqueue(blockHeader);
+
+                var handler = this.OnQueued;
+                if (handler != null)
+                    handler();
             }
-            catch (MissingDataException) { return; }
-
-            this.blockHeaders.Enqueue(blockHeader);
-
-            var handler = this.OnQueued;
-            if (handler != null)
-                handler();
         }
 
         private void ChainBlock(UInt256 blockHash, Block block)

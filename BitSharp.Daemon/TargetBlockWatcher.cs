@@ -48,7 +48,7 @@ namespace BitSharp.Daemon
             //TODO periodic rescan
             //new Thread(() =>
             //    {
-            new MethodTimer().Time("CheckAllChainedBlocks", () =>
+            new MethodTimer().Time(() =>
             {
                 foreach (var chainedBlock in this.cacheContext.StorageContext.ChainedBlockStorage.SelectMaxTotalWorkBlocks())
                 {
