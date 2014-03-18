@@ -150,6 +150,12 @@ namespace BitSharp.Common
             var working = false;
             try
             {
+                var totalTime = new Stopwatch();
+                var workerTime = new Stopwatch();
+                var lastReportTime = DateTime.Now;
+
+                totalTime.Start();
+
                 while (true)
                 {
                     // cooperative loop
@@ -178,6 +184,7 @@ namespace BitSharp.Common
 
                     // perform the work
                     working = true;
+                    workerTime.Start();
                     try
                     {
                         workAction();
@@ -190,10 +197,21 @@ namespace BitSharp.Common
                         Console.WriteLine(new string('*', 80));
                         throw;
                     }
+                    finally
+                    {
+                        workerTime.Stop();
+                    }
                     working = false;
 
                     stopwatch.Stop();
                     //Debug.WriteLineIf(stopwatch.ElapsedMilliseconds >= 25 && !this.Name.Contains(".StorageWorker"), "{0,35} worked in {1:#,##0.000}s".Format2(this.Name, stopwatch.ElapsedSecondsFloat()));
+
+                    if (DateTime.Now - lastReportTime > TimeSpan.FromSeconds(5))
+                    {
+                        lastReportTime = DateTime.Now;
+                        var percentWorkerTime = workerTime.ElapsedSecondsFloat() / totalTime.ElapsedSecondsFloat();
+                        Debug.WriteLineIf(percentWorkerTime > 0.05, "{0,55} work time: {1,10:##0.00%}".Format2(this.Name, percentWorkerTime));
+                    }
                 }
             }
             catch (ObjectDisposedException e)
