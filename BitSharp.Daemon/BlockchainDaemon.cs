@@ -51,10 +51,7 @@ namespace BitSharp.Daemon
 
         private readonly CancellationTokenSource shutdownToken;
 
-        private readonly WorkerMethod validationWorker;
         private readonly WorkerMethod blockchainWorker;
-        private readonly WorkerMethod validateCurrentChainWorker;
-        private readonly WorkerMethod writeBlockchainWorker;
         private readonly ChainingWorker chainingWorker;
         private readonly TargetChainWorker targetChainWorker;
 
@@ -82,17 +79,8 @@ namespace BitSharp.Daemon
             this.cacheContext.ChainedBlockCache.OnModification += OnChainedBlockModification;
 
             // create workers
-            this.validationWorker = new WorkerMethod("BlockchainDaemon.ValidationWorker", ValidationWorker,
-                runOnStart: true, waitTime: TimeSpan.FromSeconds(10), maxIdleTime: TimeSpan.FromMinutes(5));
-
             this.blockchainWorker = new WorkerMethod("BlockchainDaemon.BlockchainWorker", BlockchainWorker,
                 runOnStart: true, waitTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
-
-            this.validateCurrentChainWorker = new WorkerMethod("BlockchainDaemon.ValidateCurrentChainWorker", ValidateCurrentChainWorker,
-                runOnStart: true, waitTime: TimeSpan.FromMinutes(30), maxIdleTime: TimeSpan.FromMinutes(30));
-
-            this.writeBlockchainWorker = new WorkerMethod("BlockchainDaemon.WriteBlockchainWorker", WriteBlockchainWorker,
-                runOnStart: true, waitTime: TimeSpan.FromMinutes(5), maxIdleTime: TimeSpan.FromMinutes(30));
 
             this.chainingWorker = new ChainingWorker(rules, cacheContext);
             this.targetChainWorker = new TargetChainWorker(rules, cacheContext);
@@ -136,10 +124,7 @@ namespace BitSharp.Daemon
                 //TODO LoadExistingState();
 
                 // startup workers
-                //TODO this.validationWorker.Start();
                 this.blockchainWorker.Start();
-                //TODO this.validateCurrentChainWorker.Start();
-                //TODO this.writeBlockchainWorker.Start();
                 this.chainingWorker.Start();
                 this.targetChainWorker.Start();
             }
@@ -166,10 +151,7 @@ namespace BitSharp.Daemon
             // cleanup workers
             new IDisposable[]
             {
-                this.validationWorker,
                 this.blockchainWorker,
-                this.validateCurrentChainWorker,
-                this.writeBlockchainWorker,
                 this.chainingWorker,
                 this.targetChainWorker,
                 this.shutdownToken
@@ -361,9 +343,6 @@ namespace BitSharp.Daemon
                                 this.blockchainWorker.NotifyWork();
                                 cancelToken.Cancel();
                             }
-
-                            // let the blockchain writer know there is new work
-                            this.writeBlockchainWorker.NotifyWork();
                         });
                 }
             }
@@ -385,12 +364,6 @@ namespace BitSharp.Daemon
 
             // collect after processing
             //GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
-
-            // whenever the chain is successfully advanced, keep looking for more
-            //this.blockchainWorker.NotifyWork();
-
-            // kick off a blockchain revalidate after update
-            this.validateCurrentChainWorker.NotifyWork();
         }
 
         private void WriteBlockchainWorker()
