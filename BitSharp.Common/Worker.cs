@@ -27,7 +27,7 @@ namespace BitSharp.Common
         private bool isStarted;
         private bool isDisposed;
 
-        public Worker(string name, bool runOnStart, TimeSpan waitTime, TimeSpan maxIdleTime)
+        public Worker(string name, bool initialNotify, TimeSpan waitTime, TimeSpan maxIdleTime)
         {
             this.Name = name;
             this.WaitTime = waitTime;
@@ -38,8 +38,8 @@ namespace BitSharp.Common
             this.workerThread = new Thread(WorkerLoop);
             this.workerThread.Name = "Worker.{0}.WorkerLoop".Format2(name);
 
-            this.notifyEvent = new AutoResetEvent(runOnStart);
-            this.forceNotifyEvent = new AutoResetEvent(runOnStart);
+            this.notifyEvent = new AutoResetEvent(initialNotify);
+            this.forceNotifyEvent = new AutoResetEvent(initialNotify);
             this.idleEvent = new ManualResetEventSlim(false);
             this.stopEvent = new ManualResetEventSlim(true);
 
@@ -53,6 +53,8 @@ namespace BitSharp.Common
         public TimeSpan WaitTime { get; set; }
 
         public TimeSpan MaxIdleTime { get; set; }
+
+        protected CancellationTokenSource ShutdownToken { get { return this.shutdownToken; } }
 
         public void Start()
         {
@@ -103,6 +105,8 @@ namespace BitSharp.Common
 
                             this.isStarted = false;
                             this.isDisposed = true;
+
+                            SubDispose();
                         }
                     });
                     this.semaphore.Dispose();
@@ -233,7 +237,7 @@ namespace BitSharp.Common
                         stopHandler();
                 }
             }
-            catch (ObjectDisposedException e)
+            catch (ObjectDisposedException)
             {
                 // only throw disposed exceptions that occur in workAction()
                 if (working)
@@ -242,6 +246,8 @@ namespace BitSharp.Common
             catch (OperationCanceledException) { }
         }
 
-        public abstract void WorkAction();
+        protected abstract void WorkAction();
+
+        protected abstract void SubDispose();
     }
 }

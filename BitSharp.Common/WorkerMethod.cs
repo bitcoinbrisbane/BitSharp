@@ -19,7 +19,9 @@ namespace BitSharp.Common
             this.workAction = workAction;
         }
 
-        public override void WorkAction()
+        protected override void SubDispose() { }
+
+        protected override void WorkAction()
         {
             this.workAction();
         }

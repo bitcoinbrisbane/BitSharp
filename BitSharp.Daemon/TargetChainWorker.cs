@@ -15,11 +15,9 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Daemon
 {
-    public class TargetChainWorker : IDisposable
+    public class TargetChainWorker : Worker
     {
         public event EventHandler<ChainedBlock> OnWinningBlockChanged;
-
-        private readonly CancellationTokenSource shutdownToken;
 
         private readonly IBlockchainRules rules;
         private readonly CacheContext cacheContext;
@@ -27,23 +25,25 @@ namespace BitSharp.Daemon
         private readonly TargetBlockWatcher targetBlockWatcher;
         private ChainedBlocks targetChainedBlocks;
 
-        private readonly WorkerMethod worker;
-
         public TargetChainWorker(IBlockchainRules rules, CacheContext cacheContext)
+            : base("TargetChainWorker", initialNotify: true, waitTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))
         {
-            this.shutdownToken = new CancellationTokenSource();
-
             this.rules = rules;
             this.cacheContext = cacheContext;
 
             this.targetBlockWatcher = new TargetBlockWatcher(cacheContext);
             this.targetChainedBlocks = null;
 
-            // create workers
-            this.worker = new WorkerMethod("TargetChainWorker.ReadTargetChainedBlocksWorker", WorkerThread,
-                runOnStart: true, waitTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
-
             this.targetBlockWatcher.OnTargetBlockChanged += NotifyWork;
+        }
+
+        protected override void SubDispose()
+        {
+            // cleanup events
+            this.targetBlockWatcher.OnTargetBlockChanged -= NotifyWork;
+
+            // cleanup workers
+            this.targetBlockWatcher.Dispose();
         }
 
         public CacheContext CacheContext { get { return this.cacheContext; } }
@@ -64,46 +64,7 @@ namespace BitSharp.Daemon
             }
         }
 
-        public void Start()
-        {
-            try
-            {
-                // start loading the existing state from storage
-                //TODO LoadExistingState();
-
-                // startup workers
-                this.worker.Start();
-            }
-            catch (Exception)
-            {
-                Dispose();
-                throw;
-            }
-        }
-
-        public void Dispose()
-        {
-            // cleanup events
-            this.targetBlockWatcher.OnTargetBlockChanged -= NotifyWork;
-
-            // notify threads to begin shutting down
-            this.shutdownToken.Cancel();
-
-            // cleanup workers
-            new IDisposable[]
-            {
-                this.targetBlockWatcher,
-                this.worker,
-                this.shutdownToken
-            }.DisposeList();
-        }
-
-        private void NotifyWork()
-        {
-            this.worker.NotifyWork();
-        }
-
-        private void WorkerThread()
+        protected override void WorkAction()
         {
             try
             {

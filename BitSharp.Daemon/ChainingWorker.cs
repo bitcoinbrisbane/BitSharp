@@ -16,73 +16,36 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Daemon
 {
-    public class ChainingWorker : IDisposable
+    public class ChainingWorker : Worker
     {
-        private readonly CancellationTokenSource shutdownToken;
         private readonly IBlockchainRules rules;
         private readonly CacheContext cacheContext;
         private readonly ChainingCalculator chainingCalculator;
-        private readonly WorkerMethod worker;
 
         public ChainingWorker(IBlockchainRules rules, CacheContext cacheContext)
+            : base("ChainingWorker", initialNotify: true, waitTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))
         {
-            this.shutdownToken = new CancellationTokenSource();
-
             this.rules = rules;
             this.cacheContext = cacheContext;
 
             this.chainingCalculator = new ChainingCalculator(cacheContext);
 
-            // create workers
-            this.worker = new WorkerMethod("ChainingWorker.WorkerThread", WorkerThread,
-                runOnStart: true, waitTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
-
             this.chainingCalculator.OnQueued += NotifyWork;
             this.chainingCalculator.QueueAllBlockHeaders();
         }
 
-        public void Start()
-        {
-            try
-            {
-                // start loading the existing state from storage
-                //TODO LoadExistingState();
-
-                // startup workers
-                this.worker.Start();
-            }
-            catch (Exception)
-            {
-                Dispose();
-                throw;
-            }
-        }
-
-        public void Dispose()
+        protected override void SubDispose()
         {
             // unwire events
             this.chainingCalculator.OnQueued -= NotifyWork;
 
-            // notify threads to begin shutting down
-            this.shutdownToken.Cancel();
-
             // cleanup workers
-            new IDisposable[]
-            {
-                this.chainingCalculator,
-                this.worker,
-                this.shutdownToken
-            }.DisposeList();
+            this.chainingCalculator.Dispose();
         }
 
-        private void NotifyWork()
+        protected override void WorkAction()
         {
-            this.worker.NotifyWork();
-        }
-
-        private void WorkerThread()
-        {
-            this.chainingCalculator.ChainBlockHeaders(this.shutdownToken.Token);
+            this.chainingCalculator.ChainBlockHeaders(this.ShutdownToken.Token);
         }
     }
 }
