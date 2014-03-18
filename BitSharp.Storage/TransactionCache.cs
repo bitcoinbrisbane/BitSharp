@@ -11,18 +11,76 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class TransactionCache : UnboundedCache<UInt256, Transaction>
+    public class TransactionCache : ITransactionStorage
     {
-        private readonly CacheContext _cacheContext;
+        private readonly CacheContext cacheContext;
+        private readonly ITransactionStorage txStorage;
+        private readonly ConcurrentSetBuilder<UInt256> missingData;
 
         public TransactionCache(CacheContext cacheContext)
-            : base("TransactionCache", cacheContext.StorageContext.TransactionStorage)
         {
-            this._cacheContext = cacheContext;
+            this.cacheContext = cacheContext;
+            this.txStorage = cacheContext.StorageContext.TransactionStorage;
+            this.missingData = new ConcurrentSetBuilder<UInt256>();
         }
 
-        public CacheContext CacheContext { get { return this._cacheContext; } }
+        public CacheContext CacheContext { get { return this.cacheContext; } }
 
         public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
+
+        public ImmutableHashSet<UInt256> MissingData { get { return this.missingData.ToImmutable(); } }
+
+        public bool ContainsKey(UInt256 key)
+        {
+            return this.txStorage.ContainsKey(key);
+        }
+
+        public bool TryGetValue(UInt256 key, out Transaction value)
+        {
+            if (this.txStorage.TryGetValue(key, out value))
+            {
+                this.missingData.Remove(key);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public bool TryAdd(UInt256 key, Transaction value)
+        {
+            var result = this.txStorage.TryAdd(key, value);
+            this.missingData.Remove(key);
+            return result;
+        }
+
+        public Transaction this[UInt256 key]
+        {
+            get
+            {
+                Transaction value;
+                if (this.txStorage.TryGetValue(key, out value))
+                {
+                    this.missingData.Remove(key);
+                    return value;
+                }
+                else
+                {
+                    this.missingData.Add(key);
+                    throw new MissingDataException(key);
+                }
+            }
+            set
+            {
+                this.txStorage[key] = value;
+                this.missingData.Remove(key);
+            }
+        }
+
+        public void Dispose()
+        {
+            this.txStorage.Dispose();
+        }
     }
 }

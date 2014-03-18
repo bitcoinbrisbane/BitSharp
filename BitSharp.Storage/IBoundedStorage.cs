@@ -10,8 +10,8 @@ namespace BitSharp.Storage
     {
         int Count { get; }
 
-        ICollection<TKey> Keys { get; }
+        IEnumerable<TKey> Keys { get; }
 
-        ICollection<TValue> Values { get; }
+        IEnumerable<TValue> Values { get; }
     }
 }

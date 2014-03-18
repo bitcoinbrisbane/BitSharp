@@ -52,14 +52,14 @@ namespace BitSharp.Storage.Esent
             get { return this.dict.Count; }
         }
 
-        public ICollection<UInt256> Keys
+        public IEnumerable<UInt256> Keys
         {
             get { return this.dict.Keys; }
         }
 
-        public ICollection<TValue> Values
+        public IEnumerable<TValue> Values
         {
-            get { return new SimpleCollection<TValue>(() => this.Count, () => this.Select(x => x.Value).GetEnumerator()); }
+            get { return this.dict.Select(x => this.decoder(x.Key, x.Value)); }
         }
 
         public bool ContainsKey(UInt256 key)
@@ -116,61 +116,6 @@ namespace BitSharp.Storage.Esent
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
             return this.GetEnumerator();
-        }
-
-        private class ValuesCollection : ICollection<TValue>
-        {
-            private readonly EsentDataStorage<TValue> storage;
-
-            public ValuesCollection(EsentDataStorage<TValue> storage)
-            {
-                this.storage = storage;
-            }
-
-            public void Add(TValue item)
-            {
-                throw new NotSupportedException();
-            }
-
-            public void Clear()
-            {
-                throw new NotSupportedException();
-            }
-
-            public bool Contains(TValue item)
-            {
-                throw new NotSupportedException();
-            }
-
-            public void CopyTo(TValue[] array, int arrayIndex)
-            {
-                throw new NotSupportedException();
-            }
-
-            public int Count
-            {
-                get { return this.storage.Count; }
-            }
-
-            public bool IsReadOnly
-            {
-                get { return true; }
-            }
-
-            public bool Remove(TValue item)
-            {
-                throw new NotSupportedException();
-            }
-
-            public IEnumerator<TValue> GetEnumerator()
-            {
-                return this.storage.Select(x => x.Value).GetEnumerator();
-            }
-
-            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-            {
-                return this.GetEnumerator();
-            }
         }
     }
 }

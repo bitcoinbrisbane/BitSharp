@@ -18,8 +18,15 @@ namespace BitSharp.Storage.Test
 
         public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
         {
-            var maxTotalWork = this.Storage.Values.Max(x => x.TotalWork);
-            return this.Storage.Values.Where(x => x.TotalWork == maxTotalWork);
+            try
+            {
+                var maxTotalWork = this.Storage.Values.Max(x => x.TotalWork);
+                return this.Storage.Values.Where(x => x.TotalWork == maxTotalWork);
+            }
+            catch (InvalidOperationException)
+            {
+                return Enumerable.Empty<ChainedBlock>();
+            }
         }
     }
 }

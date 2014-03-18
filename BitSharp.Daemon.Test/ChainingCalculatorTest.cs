@@ -21,56 +21,63 @@ namespace BitSharp.Daemon.Test
         public void TestSimpleChaining()
         {
             // initialize data
-            var blockHeaderA0 = new BlockHeader(version: 0, previousBlock: 0, merkleRoot: 0, time: 0, bits: 486604799, nonce: 0);
-            var blockHeaderA1 = new BlockHeader(version: 0, previousBlock: blockHeaderA0.Hash, merkleRoot: 0, time: 0, bits: 486604799, nonce: 0);
-            var blockHeaderA2 = new BlockHeader(version: 0, previousBlock: blockHeaderA1.Hash, merkleRoot: 0, time: 0, bits: 486604799, nonce: 0);
+            var blockHeader0 = new BlockHeader(version: 0, previousBlock: 0, merkleRoot: 0, time: 0, bits: 486604799, nonce: 0);
+            var blockHeader1 = new BlockHeader(version: 0, previousBlock: blockHeader0.Hash, merkleRoot: 0, time: 0, bits: 486604799, nonce: 0);
+            var blockHeader2 = new BlockHeader(version: 0, previousBlock: blockHeader1.Hash, merkleRoot: 0, time: 0, bits: 486604799, nonce: 0);
 
             // initialize storage
             var memoryCacheContext = new CacheContext(new MemoryStorageContext());
 
             // store genesis block
-            memoryCacheContext.ChainedBlockCache[blockHeaderA0.Hash] = ChainedBlock.CreateForGenesisBlock(blockHeaderA0);
+            memoryCacheContext.ChainedBlockCache[blockHeader0.Hash] = ChainedBlock.CreateForGenesisBlock(blockHeader0);
 
             // initialize the chaining calculator
-            var chainingCalculator = new ChainingCalculator(memoryCacheContext);
+            using (var chainingCalculator = new ChainingCalculator(memoryCacheContext))
+            {
+                // monitor event firing
+                var eventCount = 0;
+                chainingCalculator.OnQueued += () => eventCount++;
 
-            // add block 1
-            memoryCacheContext.BlockHeaderCache[blockHeaderA1.Hash] = blockHeaderA1;
+                // add block 1
+                memoryCacheContext.BlockHeaderCache[blockHeader1.Hash] = blockHeader1;
+                Assert.AreEqual(1, eventCount);
 
-            // perform chaining
-            chainingCalculator.ChainBlockHeaders();
+                // perform chaining
+                chainingCalculator.ChainBlockHeaders();
 
-            // verify block 1
-            Assert.AreEqual(2, memoryCacheContext.ChainedBlockCache.Count);
-            Assert.IsTrue(memoryCacheContext.ChainedBlockCache.ContainsKey(blockHeaderA1.Hash));
-            Assert.AreEqual(
-                new ChainedBlock(
-                    blockHash: blockHeaderA1.Hash,
-                    previousBlockHash: blockHeaderA1.PreviousBlock,
-                    height: 1,
-                    totalWork: new[] { blockHeaderA0, blockHeaderA1 }.SumBigInteger(x => x.CalculateWork())
-                )
-                , memoryCacheContext.ChainedBlockCache[blockHeaderA1.Hash]);
-            Assert.AreEqual(0, chainingCalculator.UnchainedBlocksByPrevious.Count);
+                // verify block 1
+                Assert.AreEqual(2, memoryCacheContext.ChainedBlockCache.Count);
+                Assert.IsTrue(memoryCacheContext.ChainedBlockCache.ContainsKey(blockHeader1.Hash));
+                Assert.AreEqual(
+                    new ChainedBlock(
+                        blockHash: blockHeader1.Hash,
+                        previousBlockHash: blockHeader1.PreviousBlock,
+                        height: 1,
+                        totalWork: new[] { blockHeader0, blockHeader1 }.SumBigInteger(x => x.CalculateWork())
+                    )
+                    , memoryCacheContext.ChainedBlockCache[blockHeader1.Hash]);
+                Assert.AreEqual(0, chainingCalculator.UnchainedBlocksByPrevious.Count);
 
-            // add block 2
-            memoryCacheContext.BlockHeaderCache[blockHeaderA2.Hash] = blockHeaderA2;
+                // add block 2
+                memoryCacheContext.BlockHeaderCache[blockHeader2.Hash] = blockHeader2;
+                Assert.AreEqual(2, eventCount);
 
-            // perform chaining
-            chainingCalculator.ChainBlockHeaders();
+                // perform chaining
+                chainingCalculator.ChainBlockHeaders();
 
-            // verify block 2
-            Assert.AreEqual(3, memoryCacheContext.ChainedBlockCache.Count);
-            Assert.IsTrue(memoryCacheContext.ChainedBlockCache.ContainsKey(blockHeaderA2.Hash));
-            Assert.AreEqual(
-                new ChainedBlock(
-                    blockHash: blockHeaderA2.Hash,
-                    previousBlockHash: blockHeaderA2.PreviousBlock,
-                    height: 2,
-                    totalWork: new[] { blockHeaderA0, blockHeaderA1, blockHeaderA2 }.SumBigInteger(x => x.CalculateWork())
-                )
-                , memoryCacheContext.ChainedBlockCache[blockHeaderA2.Hash]);
-            Assert.AreEqual(0, chainingCalculator.UnchainedBlocksByPrevious.Count);
+                // verify block 2
+                Assert.AreEqual(3, memoryCacheContext.ChainedBlockCache.Count);
+                Assert.IsTrue(memoryCacheContext.ChainedBlockCache.ContainsKey(blockHeader2.Hash));
+                Assert.AreEqual(
+                    new ChainedBlock(
+                        blockHash: blockHeader2.Hash,
+                        previousBlockHash: blockHeader2.PreviousBlock,
+                        height: 2,
+                        totalWork: new[] { blockHeader0, blockHeader1, blockHeader2 }.SumBigInteger(x => x.CalculateWork())
+                    )
+                    , memoryCacheContext.ChainedBlockCache[blockHeader2.Hash]);
+                Assert.AreEqual(0, chainingCalculator.UnchainedBlocksByPrevious.Count);
+            }
         }
     }
 }

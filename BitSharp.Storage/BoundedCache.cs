@@ -4,6 +4,7 @@ using BitSharp.Storage.ExtensionMethods;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
@@ -13,145 +14,144 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class BoundedCache<TKey, TValue> : UnboundedCache<TKey, TValue>, IEnumerable<KeyValuePair<TKey, TValue>>
+    public class BoundedCache<TKey, TValue>
     {
-        // known keys
-        private ConcurrentSet<TKey> knownKeys;
+        public event Action<TKey, TValue> OnAddition;
+        public event Action<TKey, TValue> OnModification;
+        public event Action<TKey> OnMissing;
 
+        private readonly string name;
         private readonly IBoundedStorage<TKey, TValue> dataStorage;
+        private readonly ConcurrentSet<TKey> knownKeys;
+        private readonly ConcurrentSetBuilder<TKey> missingData;
 
         public BoundedCache(string name, IBoundedStorage<TKey, TValue> dataStorage)
-            : base(name, dataStorage)
         {
-            this.knownKeys = new ConcurrentSet<TKey>();
-
+            this.name = name;
             this.dataStorage = dataStorage;
-
-            this.OnAddition += (key, value) => AddKnownKey(key, value);
-            this.OnModification += (key, value) => AddKnownKey(key, value);
-            this.OnRetrieved += (key, value) => AddKnownKey(key, value);
-            this.OnMissing += key => RemoveKnownKey(key);
+            this.knownKeys = new ConcurrentSet<TKey>();
+            this.missingData = new ConcurrentSetBuilder<TKey>();
 
             // load existing keys from storage
-            LoadKeysFromStorage();
+            this.knownKeys.UnionWith(this.dataStorage.Keys);
+            Debug.WriteLine("{0}: Finished loading from storage: {1:#,##0}".Format2(this.Name, this.Count));
         }
 
-        public IBoundedStorage<TKey, TValue> DataStorage { get { return this.dataStorage; } }
+        public string Name { get { return this.name; } }
 
-        // get count of known items
+        public ImmutableHashSet<TKey> MissingData { get { return this.missingData.ToImmutable(); } }
+
         public int Count
         {
             get { return this.dataStorage.Count; }
         }
 
-        public ICollection<TKey> Keys
+        public IEnumerable<TKey> Keys
         {
-            get { return new SimpleCollection<TKey>(() => this.Count, () => this.GetKeysEnumerator()); }
+            get { return this.dataStorage.Keys; }
         }
 
-        public ICollection<TValue> Values
+        public IEnumerable<TValue> Values
         {
-            get { return new SimpleCollection<TValue>(() => this.Count, () => this.Select(x => x.Value).GetEnumerator()); }
+            get { return this.dataStorage.Values; }
         }
 
-        public override bool ContainsKey(TKey key)
+        public virtual bool ContainsKey(TKey key)
         {
-            return this.knownKeys.Contains(key);
+            return this.dataStorage.ContainsKey(key);
         }
 
-        public override bool TryGetValue(TKey key, out TValue value)
+        // try to get a value
+        public virtual bool TryGetValue(TKey key, out TValue value)
         {
-            if (base.TryGetValue(key, out value))
+            // look in storage
+            if (this.dataStorage.TryGetValue(key, out value))
             {
-                AddKnownKey(key, value);
+                if (AddKnownKey(key))
+                    RaiseOnAddition(key, value);
+
                 return true;
             }
             else
             {
-                RemoveKnownKey(key);
+                if (RemoveKnownKey(key))
+                    RaiseOnMissing(key);
+
                 return false;
             }
         }
 
-        public override bool TryAdd(TKey key, TValue value)
+        public virtual bool TryAdd(TKey key, TValue value)
         {
-            var result = base.TryAdd(key, value);
-            AddKnownKey(key, value);
+            var result = this.dataStorage.TryAdd(key, value);
+
+            if (AddKnownKey(key) || result)
+                RaiseOnAddition(key, value);
 
             return result;
         }
 
-        public override TValue this[TKey key]
+        public virtual TValue this[TKey key]
         {
             get
             {
-                return base[key];
+                TValue value;
+                if (this.TryGetValue(key, out value))
+                {
+                    return value;
+                }
+                else
+                {
+                    this.missingData.Add(key);
+                    throw new MissingDataException(key);
+                }
             }
             set
             {
-                base[key] = value;
-                AddKnownKey(key, value);
+                this.dataStorage[key] = value;
+
+                if (AddKnownKey(key))
+                    RaiseOnAddition(key, value);
+                else
+                    RaiseOnModification(key, value);
             }
-        }
-
-        // clear all state and reload
-        private void ClearKnownKeys()
-        {
-            // clear known keys
-            this.knownKeys.Clear();
-
-            // reload existing keys from storage
-            LoadKeysFromStorage();
-        }
-
-        // load all existing keys from storage
-        private void LoadKeysFromStorage()
-        {
-            var count = 0;
-            foreach (var key in this.DataStorage.Keys)
-            {
-                AddKnownKey(key, default(TValue));
-                count++;
-            }
-            Debug.WriteLine("{0}: Finished loading from storage: {1:#,##0}".Format2(this.Name, count));
         }
 
         // add a key to the known list, fire event if new
-        private void AddKnownKey(TKey key, TValue value)
+        private bool AddKnownKey(TKey key)
         {
+            this.missingData.Remove(key);
+
             // add to the list of known keys
-            if (this.knownKeys.TryAdd(key))
-                RaiseOnAddition(key, value);
+            return this.knownKeys.TryAdd(key);
         }
 
         // remove a key from the known list, fire event if deleted
-        private void RemoveKnownKey(TKey key)
+        private bool RemoveKnownKey(TKey key)
         {
             // remove from the list of known keys
-            this.knownKeys.TryRemove(key);
+            return this.knownKeys.TryRemove(key);
         }
 
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
+        private void RaiseOnAddition(TKey key, TValue value)
         {
-            foreach (var keyPair in this.dataStorage)
-            {
-                AddKnownKey(keyPair.Key, keyPair.Value);
-                yield return new KeyValuePair<TKey, TValue>(keyPair.Key, keyPair.Value);
-            }
+            var handler = this.OnAddition;
+            if (handler != null)
+                handler(key, value);
         }
 
-        private IEnumerator<TKey> GetKeysEnumerator()
+        private void RaiseOnModification(TKey key, TValue value)
         {
-            foreach (var key in this.dataStorage.Keys)
-            {
-                AddKnownKey(key, default(TValue));
-                yield return key;
-            }
+            var handler = this.OnModification;
+            if (handler != null)
+                handler(key, value);
         }
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        private void RaiseOnMissing(TKey key)
         {
-            return this.GetEnumerator();
+            var handler = this.OnMissing;
+            if (handler != null)
+                handler(key);
         }
     }
 }

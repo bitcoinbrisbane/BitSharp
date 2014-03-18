@@ -69,6 +69,7 @@ namespace BitSharp.Daemon
             // cleanup workers
             new IDisposable[]
             {
+                this.chainingCalculator,
                 this.worker,
                 this.shutdownToken
             }.DisposeList();

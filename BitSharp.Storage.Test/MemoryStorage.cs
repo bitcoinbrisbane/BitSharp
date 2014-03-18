@@ -31,12 +31,12 @@ namespace BitSharp.Storage.Test
             get { return this.storage.Count; }
         }
 
-        public ICollection<TKey> Keys
+        public IEnumerable<TKey> Keys
         {
             get { return this.storage.Keys; }
         }
 
-        public ICollection<TValue> Values
+        public IEnumerable<TValue> Values
         {
             get { return this.storage.Values; }
         }

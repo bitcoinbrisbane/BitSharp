@@ -42,14 +42,14 @@ namespace BitSharp.Storage.Esent
             get { return this.dict.Count; }
         }
 
-        public ICollection<NetworkAddressKey> Keys
+        public IEnumerable<NetworkAddressKey> Keys
         {
-            get { return new SimpleCollection<NetworkAddressKey>(() => this.Count, () => this.Select(x => x.Key).GetEnumerator()); }
+            get { return this.Select(x => x.Key); }
         }
 
-        public ICollection<NetworkAddressWithTime> Values
+        public IEnumerable<NetworkAddressWithTime> Values
         {
-            get { return new SimpleCollection<NetworkAddressWithTime>(() => this.Count, () => this.Select(x => x.Value).GetEnumerator()); }
+            get { return this.Select(x => x.Value); }
         }
 
         public bool ContainsKey(NetworkAddressKey networkAddressKey)

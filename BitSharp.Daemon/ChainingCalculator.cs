@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Daemon
 {
-    internal class ChainingCalculator
+    internal class ChainingCalculator : IDisposable
     {
         public event Action OnQueued;
 

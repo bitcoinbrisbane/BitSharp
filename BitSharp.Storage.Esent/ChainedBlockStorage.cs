@@ -44,14 +44,14 @@ namespace BitSharp.Storage.Esent
             get { return this.dict.Count; }
         }
 
-        public ICollection<UInt256> Keys
+        public IEnumerable<UInt256> Keys
         {
-            get { return new SimpleCollection<UInt256>(() => this.Count, () => this.Select(x => x.Key).GetEnumerator()); }
+            get { return this.dict.Keys.Select(x => DecodeKey(x)); }
         }
 
-        public ICollection<ChainedBlock> Values
+        public IEnumerable<ChainedBlock> Values
         {
-            get { return new SimpleCollection<ChainedBlock>(() => this.Count, () => this.Select(x => x.Value).GetEnumerator()); }
+            get { return this.Select(x => x.Value); }
         }
 
         public bool ContainsKey(UInt256 blockHash)

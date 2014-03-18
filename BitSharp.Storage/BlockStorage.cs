@@ -29,14 +29,14 @@ namespace BitSharp.Storage
             get { return this.cacheContext.BlockTxHashesCache.Count; }
         }
 
-        public ICollection<UInt256> Keys
+        public IEnumerable<UInt256> Keys
         {
             get { return this.cacheContext.BlockTxHashesCache.Keys; }
         }
 
-        public ICollection<Block> Values
+        public IEnumerable<Block> Values
         {
-            get { return new SimpleCollection<Block>(() => this.Count, () => this.Select(x => x.Value).GetEnumerator()); }
+            get { return this.Select(x => x.Value); }
         }
 
         public bool ContainsKey(UInt256 blockHash)

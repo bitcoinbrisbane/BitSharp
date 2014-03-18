@@ -86,11 +86,10 @@
     <Compile Include="Provider\IStorageContext.cs" />
     <Compile Include="MissingDataException.cs" />
     <Compile Include="TransactionCache.cs" />
-    <Compile Include="UnboundedCache.cs" />
+    <Compile Include="BoundedCache.cs" />
     <Compile Include="Provider\IChainedBlockStorage.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="IBoundedStorage.cs" />
-    <Compile Include="BoundedCache.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CacheContext.cs" />
     <Compile Include="Structs\CacheKey.cs" />

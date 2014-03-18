@@ -85,7 +85,6 @@
     <Compile Include="MethodTimer.cs" />
     <Compile Include="ReaderExtensionMethods.cs" />
     <Compile Include="ReadOnlyDictionaryOfDictionary.cs" />
-    <Compile Include="SimpleCollection.cs" />
     <Compile Include="ThrottledNotifyEvent.cs" />
     <Compile Include="UInt256.cs" />
     <Compile Include="Worker.cs" />
