@@ -58,7 +58,7 @@ namespace BitSharp.Storage
 
         public virtual bool ContainsKey(TKey key)
         {
-            return this.dataStorage.ContainsKey(key);
+            return this.knownKeys.Contains(key);
         }
 
         // try to get a value
