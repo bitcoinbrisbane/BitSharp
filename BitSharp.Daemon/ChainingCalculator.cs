@@ -35,6 +35,15 @@ namespace BitSharp.Daemon
             //this.cacheContext.BlockCache.OnModification += ChainBlock;
         }
 
+        public void Dispose()
+        {
+            // cleanup events
+            this.cacheContext.BlockHeaderCache.OnAddition -= ChainBlockHeader;
+            //this.cacheContext.BlockHeaderCache.OnModification -= ChainBlockHeader;
+            //this.cacheContext.BlockCache.OnAddition -= ChainBlock;
+            //this.cacheContext.BlockCache.OnModification -= ChainBlock;
+        }
+
         public IReadOnlyDictionary<UInt256, IReadOnlyDictionary<UInt256, BlockHeader>> UnchainedBlocksByPrevious
         {
             get
@@ -112,15 +121,6 @@ namespace BitSharp.Daemon
                     }
                 }
             });
-        }
-
-        public void Dispose()
-        {
-            // cleanup events
-            this.cacheContext.BlockHeaderCache.OnAddition -= ChainBlockHeader;
-            this.cacheContext.BlockHeaderCache.OnModification -= ChainBlockHeader;
-            this.cacheContext.BlockCache.OnAddition -= ChainBlock;
-            this.cacheContext.BlockCache.OnModification -= ChainBlock;
         }
 
         private void ChainBlockHeader(UInt256 blockHash, BlockHeader blockHeader)
