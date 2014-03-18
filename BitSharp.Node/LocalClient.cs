@@ -39,7 +39,7 @@ namespace BitSharp.Node
 
         private static readonly int MAX_BLOCK_REQUESTS = 20 * CONNECTED_MAX;
         private static readonly int MAX_TRANSACTION_REQUESTS = 20 * CONNECTED_MAX;
-        private static readonly int MAX_BLOCKCHAIN_LOOKAHEAD = 100.THOUSAND();
+        private static readonly int MAX_BLOCKCHAIN_LOOKAHEAD = 100;
         // don't limit the first 100,000 block downloading as they are so small it will slow down their processing
         private static readonly int MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT = 100.THOUSAND();
         private static readonly int REQUEST_LIFETIME_SECONDS = 5;
@@ -168,25 +168,26 @@ namespace BitSharp.Node
                  && (connectedCount + pendingCount) < maxConnections
                  && unconnectedCount > 0)
             {
-                // grab a snapshot of unconnected peers
-                var unconnectedPeersLocal = this.unconnectedPeers.SafeToList();
-
                 // get number of connections to attempt
                 var connectCount = Math.Min(unconnectedCount, maxConnections - (connectedCount + pendingCount));
 
-                var connectTasks = new Task[connectCount];
+                var connectTasks = new List<Task>();
                 for (var i = 0; i < connectCount; i++)
                 {
                     // cooperative loop
                     this.shutdownToken.Token.ThrowIfCancellationRequested();
 
                     // get a random peer to connect to
-                    var remoteEndpoint = unconnectedPeersLocal.RandomOrDefault();
-                    connectTasks[i] = ConnectToPeer(remoteEndpoint);
+                    var remoteEndpoint = this.unconnectedPeers.FirstOrDefault();
+                    if (remoteEndpoint != null)
+                    {
+                        this.unconnectedPeers.Remove(remoteEndpoint);
+                        connectTasks.Add(ConnectToPeer(remoteEndpoint));
+                    }
                 }
 
                 // wait for pending connection attempts to complete
-                Task.WaitAll(connectTasks.ToArray(), this.shutdownToken.Token);
+                //Task.WaitAll(connectTasks.ToArray(), this.shutdownToken.Token);
             }
 
             // check if there are too many peers connected
