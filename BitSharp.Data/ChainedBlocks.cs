@@ -56,7 +56,9 @@ namespace BitSharp.Data
             while (true)
             {
                 var targetChainedBlocks = getTargetChainedBlocks();
-                if (targetChainedBlocks.GenesisBlock != this.GenesisBlock)
+                if (targetChainedBlocks == null)
+                    yield break;
+                else if (targetChainedBlocks.GenesisBlock != this.GenesisBlock)
                     throw new InvalidOperationException();
 
                 var targetBlock = targetChainedBlocks.LastBlock;

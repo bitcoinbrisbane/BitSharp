@@ -39,7 +39,7 @@ namespace BitSharp.Client
 
             this.viewChainState = chainStateLocal;
 
-            this.WinningBlockchainHeight = winningBlockLocal.Height;
+            this.WinningBlockchainHeight = winningBlockLocal != null ? winningBlockLocal.Height : -1;
             this.CurrentBlockchainHeight = this.blockchainDaemon.CurrentBuilderHeight;
             this.DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockCache.Count;
 

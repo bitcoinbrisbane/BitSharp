@@ -91,9 +91,23 @@ namespace BitSharp.Storage
 
         public bool TryAdd(UInt256 blockHash, Block block)
         {
-            this[blockHash] = block;
-            //TODO
-            return true;
+            var result = false;
+
+            // write the block header
+            result |= this.cacheContext.BlockHeaderCache.TryAdd(blockHash, block.Header);
+
+            // write the block's transactions
+            var txHashesList = ImmutableList.CreateBuilder<UInt256>();
+            foreach (var tx in block.Transactions)
+            {
+                result |= this.cacheContext.TransactionCache.TryAdd(tx.Hash, tx);
+                txHashesList.Add(tx.Hash);
+            }
+
+            // write the transaction hash list
+            result |= this.cacheContext.BlockTxHashesCache.TryAdd(blockHash, txHashesList.ToImmutableList());
+
+            return result;
         }
 
         public Block this[UInt256 blockHash]
@@ -111,9 +125,8 @@ namespace BitSharp.Storage
                 // write the block header
                 this.cacheContext.BlockHeaderCache[value.Hash] = value.Header;
 
-                var txHashesList = ImmutableList.CreateBuilder<UInt256>();
-
                 // write the block's transactions
+                var txHashesList = ImmutableList.CreateBuilder<UInt256>();
                 foreach (var tx in value.Transactions)
                 {
                     this.cacheContext.TransactionCache[tx.Hash] = tx;

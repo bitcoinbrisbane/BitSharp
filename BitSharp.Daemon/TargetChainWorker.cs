@@ -37,7 +37,7 @@ namespace BitSharp.Daemon
             this.cacheContext = cacheContext;
 
             this.targetBlockWatcher = new TargetBlockWatcher(cacheContext);
-            this.targetChainedBlocks = ChainedBlocks.CreateForGenesisBlock(this.rules.GenesisChainedBlock);
+            this.targetChainedBlocks = null;
 
             // create workers
             this.worker = new Worker("TargetChainWorker.ReadTargetChainedBlocksWorker", WorkerThread,
@@ -52,7 +52,17 @@ namespace BitSharp.Daemon
 
         public ChainedBlocks TargetChainedBlocks { get { return this.targetChainedBlocks; } }
 
-        public ChainedBlock WinningBlock { get { return this.targetChainedBlocks.LastBlock; } }
+        public ChainedBlock WinningBlock
+        {
+            get
+            {
+                var targetChainedBlocksLocal = this.targetChainedBlocks;
+                if (targetChainedBlocks != null)
+                    return this.targetChainedBlocks.LastBlock;
+                else
+                    return null;
+            }
+        }
 
         public void Start()
         {
@@ -97,15 +107,19 @@ namespace BitSharp.Daemon
         {
             try
             {
-                var targetBlock = this.targetBlockWatcher.TargetBlock;
+                var targetBlockLocal = this.targetBlockWatcher.TargetBlock;
                 var targetChainedBlocksLocal = this.targetChainedBlocks;
 
-                if (targetBlock.BlockHash != targetChainedBlocksLocal.LastBlock.BlockHash)
+                if (targetBlockLocal != null &&
+                    (targetChainedBlocksLocal == null || targetBlockLocal.BlockHash != targetChainedBlocksLocal.LastBlock.BlockHash))
                 {
-                    var newTargetChainedBlocks = targetChainedBlocksLocal.ToBuilder();
+                    var newTargetChainedBlocks =
+                        targetChainedBlocksLocal != null
+                        ? targetChainedBlocksLocal.ToBuilder()
+                        : new ChainedBlocksBuilder(ChainedBlocks.CreateForGenesisBlock(this.rules.GenesisChainedBlock));
 
                     var deltaBlockPath = new MethodTimer(false).Time("deltaBlockPath", () =>
-                        new BlockchainWalker().GetBlockchainPath(newTargetChainedBlocks.LastBlock, targetBlock, blockHash => this.CacheContext.ChainedBlockCache[blockHash]));
+                        new BlockchainWalker().GetBlockchainPath(newTargetChainedBlocks.LastBlock, targetBlockLocal, blockHash => this.CacheContext.ChainedBlockCache[blockHash]));
 
                     foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
                         newTargetChainedBlocks.RemoveBlock(rewindBlock);
@@ -117,7 +131,7 @@ namespace BitSharp.Daemon
 
                     var handler = this.OnWinningBlockChanged;
                     if (handler != null)
-                        handler(this, targetBlock);
+                        handler(this, targetBlockLocal);
                 }
             }
             catch (MissingDataException) { }
