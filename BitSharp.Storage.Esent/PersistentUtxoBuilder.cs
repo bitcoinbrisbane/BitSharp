@@ -102,7 +102,9 @@ namespace BitSharp.Storage.Esent
             if (!this.closed)
             {
                 this.utxo.Dispose();
-                Directory.Delete(this.directory, recursive: true);
+                
+                try { Directory.Delete(this.directory, recursive: true); }
+                catch (IOException) { }
             }
             else
             {
