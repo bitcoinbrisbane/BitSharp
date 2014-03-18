@@ -96,6 +96,8 @@ namespace BitSharp.Daemon
 
             this.chainingWorker = new ChainingWorker(rules, cacheContext);
             this.targetChainWorker = new TargetChainWorker(rules, cacheContext);
+
+            this.targetChainWorker.OnWinningBlockChanged += (sender, targetBlock) => this.blockchainWorker.NotifyWork();
         }
 
         public IBlockchainRules Rules { get { return this.rules; } }
@@ -213,7 +215,7 @@ namespace BitSharp.Daemon
         {
             OnChainedBlockAddition(blockHash, chainedBlock);
         }
-        
+
         private void LoadExistingState()
         {
             throw new NotImplementedException();
