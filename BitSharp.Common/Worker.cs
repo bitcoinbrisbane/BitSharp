@@ -27,10 +27,10 @@ namespace BitSharp.Common
         private bool isStarted;
         private bool isDisposed;
 
-        public Worker(string name, bool initialNotify, TimeSpan waitTime, TimeSpan maxIdleTime)
+        public Worker(string name, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
         {
             this.Name = name;
-            this.WaitTime = waitTime;
+            this.MinIdleTime = minIdleTime;
             this.MaxIdleTime = maxIdleTime;
 
             this.shutdownToken = new CancellationTokenSource();
@@ -50,7 +50,7 @@ namespace BitSharp.Common
 
         public string Name { get; protected set; }
 
-        public TimeSpan WaitTime { get; set; }
+        public TimeSpan MinIdleTime { get; set; }
 
         public TimeSpan MaxIdleTime { get; set; }
 
@@ -181,10 +181,13 @@ namespace BitSharp.Common
                     this.stopEvent.Wait();
 
                     // delay for the requested wait time, unless forced
-                    this.forceNotifyEvent.WaitOne(this.WaitTime);
+                    this.forceNotifyEvent.WaitOne(this.MinIdleTime);
 
                     // wait for work notification
-                    this.notifyEvent.WaitOne(this.MaxIdleTime - this.WaitTime); // subtract time already spent waiting
+                    if (this.MaxIdleTime == TimeSpan.MaxValue)
+                        this.notifyEvent.WaitOne();
+                    else
+                        this.notifyEvent.WaitOne(this.MaxIdleTime - this.MinIdleTime); // subtract time already spent waiting
 
                     // cooperative loop
                     this.shutdownToken.Token.ThrowIfCancellationRequested();

@@ -92,7 +92,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="ChainingCalculatorTest.cs" />
+    <Compile Include="ChainingWorkerTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TargetBlockWatcherTest.cs" />
   </ItemGroup>

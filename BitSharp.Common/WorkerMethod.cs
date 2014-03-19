@@ -13,8 +13,8 @@ namespace BitSharp.Common
     {
         private readonly Action workAction;
 
-        public WorkerMethod(string name, Action workAction, bool runOnStart, TimeSpan waitTime, TimeSpan maxIdleTime)
-            : base(name, runOnStart, waitTime, maxIdleTime)
+        public WorkerMethod(string name, Action workAction, bool runOnStart, TimeSpan minIdleTime, TimeSpan maxIdleTime)
+            : base(name, runOnStart, minIdleTime, maxIdleTime)
         {
             this.workAction = workAction;
         }
