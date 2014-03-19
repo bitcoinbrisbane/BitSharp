@@ -50,9 +50,9 @@ namespace BitSharp.Storage.Test
             return this.ChainedBlockStorage.SelectMaxTotalWorkBlocks();
         }
 
-        public UtxoBuilder ToUtxoBuilder(Utxo utxo)
+        public IUtxoBuilderStorage ToUtxoBuilder(Utxo utxo)
         {
-            return new MemoryUtxoBuilder(utxo);
+            return new MemoryUtxoBuilderStorage(utxo);
         }
 
         public void Dispose()

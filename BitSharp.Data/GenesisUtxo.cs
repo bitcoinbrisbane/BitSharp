@@ -12,12 +12,10 @@ namespace BitSharp.Data
         // genesis block coinbase is not included in utxo, it is unspendable
 
         private readonly UInt256 blockHash;
-        private readonly Func<Utxo, UtxoBuilder> toBuilderFactory;
 
-        public GenesisUtxo(UInt256 blockHash, Func<Utxo, UtxoBuilder> toBuilderFactory)
+        public GenesisUtxo(UInt256 blockHash)
         {
             this.blockHash = blockHash;
-            this.toBuilderFactory = toBuilderFactory;
         }
 
         public UInt256 BlockHash
@@ -33,11 +31,6 @@ namespace BitSharp.Data
         public IEnumerable<UnspentTx> UnspentTransactions()
         {
             return Enumerable.Empty<UnspentTx>();
-        }
-
-        public UtxoBuilder ToBuilder()
-        {
-            return toBuilderFactory(this);
         }
 
         public bool ContainsKey(UInt256 txHash)

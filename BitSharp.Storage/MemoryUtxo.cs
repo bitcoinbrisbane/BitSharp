@@ -37,11 +37,6 @@ namespace BitSharp.Storage
             return this._utxo.Values;
         }
 
-        public UtxoBuilder ToBuilder()
-        {
-            return new MemoryUtxoBuilder(this);
-        }
-
         public bool ContainsKey(UInt256 txHash)
         {
             return this._utxo.ContainsKey(txHash);

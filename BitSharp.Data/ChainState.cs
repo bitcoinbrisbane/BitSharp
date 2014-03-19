@@ -24,16 +24,11 @@ namespace BitSharp.Data
 
         public ChainedBlock CurrentBlock { get { return this.currentChainedBlocks.LastBlock; } }
 
-        public ChainStateBuilder ToBuilder(Func<Utxo, UtxoBuilder> utxoBuilderFactory)
-        {
-            return new ChainStateBuilder(this.currentChainedBlocks.ToBuilder(), utxoBuilderFactory(this.currentUtxo));
-        }
-
-        public static ChainState CreateForGenesisBlock(ChainedBlock genesisBlock, Func<Utxo, UtxoBuilder> utxoBuilderFactory)
+        public static ChainState CreateForGenesisBlock(ChainedBlock genesisBlock)
         {
             return new ChainState(
                 ChainedBlocks.CreateForGenesisBlock(genesisBlock),
-                new GenesisUtxo(genesisBlock.BlockHash, utxoBuilderFactory)
+                new GenesisUtxo(genesisBlock.BlockHash)
             );
         }
     }

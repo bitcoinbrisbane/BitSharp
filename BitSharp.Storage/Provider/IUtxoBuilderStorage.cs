@@ -1,13 +1,14 @@
 ﻿using BitSharp.Common;
+using BitSharp.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Data
+namespace BitSharp.Storage
 {
-    public interface UtxoBuilder : IDisposable
+    public interface IUtxoBuilderStorage : IDisposable
     {
         bool ContainsKey(UInt256 txHash);
 

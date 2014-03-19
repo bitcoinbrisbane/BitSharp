@@ -38,7 +38,7 @@ namespace BitSharp.Daemon
             this.calculator = new BlockchainCalculator(this.rules, this.cacheContext, this.ShutdownToken.Token);
             this.getTargetChainedBlocks = getTargetChainedBlocks;
 
-            this.chainState = ChainState.CreateForGenesisBlock(this.rules.GenesisChainedBlock, this.cacheContext.StorageContext.ToUtxoBuilder);
+            this.chainState = ChainState.CreateForGenesisBlock(this.rules.GenesisChainedBlock);
             this.chainStateLock = new ReaderWriterLockSlim();
         }
 
@@ -78,7 +78,12 @@ namespace BitSharp.Daemon
                 if (this.chainStateBuilder == null)
                 {
                     this.chainStateBuilderTime = DateTime.UtcNow;
-                    this.chainStateBuilder = chainStateLocal.ToBuilder(this.cacheContext.StorageContext.ToUtxoBuilder);
+                    this.chainStateBuilder =
+                        new ChainStateBuilder
+                        (
+                            chainStateLocal.CurrentChainedBlocks.ToBuilder(),
+                            new UtxoBuilder(this.cacheContext, chainStateLocal.CurrentUtxo)
+                        );
                 }
 
                 // try to advance the blockchain with the new winning block

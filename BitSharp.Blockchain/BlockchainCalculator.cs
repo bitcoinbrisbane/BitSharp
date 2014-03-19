@@ -333,32 +333,7 @@ namespace BitSharp.Blockchain
                 for (var inputIndex = tx.Inputs.Count - 1; inputIndex >= 0; inputIndex--)
                 {
                     var input = tx.Inputs[inputIndex];
-
-                    // add spent outputs back into the rolled back utxo
-                    if (utxoBuilder.ContainsKey(input.PreviousTxOutputKey.TxHash))
-                    {
-                        var prevUnspentTx = utxoBuilder[input.PreviousTxOutputKey.TxHash];
-
-                        // check if output is out of bounds
-                        if (input.PreviousTxOutputKey.TxOutputIndex >= prevUnspentTx.UnspentOutputs.Length)
-                            throw new ValidationException();
-
-                        // check that output isn't already considered unspent
-                        if (prevUnspentTx.UnspentOutputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()])
-                            throw new ValidationException();
-
-                        // mark output as unspent
-                        utxoBuilder[input.PreviousTxOutputKey.TxHash] =
-                            new UnspentTx(prevUnspentTx.TxHash, prevUnspentTx.UnspentOutputs.Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
-                    }
-                    else
-                    {
-                        // fully spent transaction being added back in during roll back
-                        var prevUnspentTx = this.CacheContext.TransactionCache[input.PreviousTxOutputKey.TxHash];
-
-                        utxoBuilder[input.PreviousTxOutputKey.TxHash] =
-                            new UnspentTx(prevUnspentTx.Hash, new ImmutableBitArray(prevUnspentTx.Outputs.Count, false).Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
-                    }
+                    utxoBuilder.Unspend(input);
 
                     //TODO
                     //if (prevUtxoBuilder.Add(input.PreviousTxOutputKey))

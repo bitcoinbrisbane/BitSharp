@@ -78,13 +78,14 @@
     <Compile Include="BlockHeaderCache.cs" />
     <Compile Include="IUnboundedStorage.cs" />
     <Compile Include="MemoryUtxo.cs" />
-    <Compile Include="MemoryUtxoBuilder.cs" />
+    <Compile Include="MemoryUtxoBuilderStorage.cs" />
     <Compile Include="Provider\IBlockHeaderStorage.cs" />
     <Compile Include="Provider\ITransactionStorage.cs" />
     <Compile Include="Provider\IBlockTxHashesStorage.cs" />
     <Compile Include="Provider\IBlockchainStorage.cs" />
     <Compile Include="Provider\IStorageContext.cs" />
     <Compile Include="MissingDataException.cs" />
+    <Compile Include="Provider\IUtxoBuilderStorage.cs" />
     <Compile Include="TransactionCache.cs" />
     <Compile Include="BoundedCache.cs" />
     <Compile Include="Provider\IChainedBlockStorage.cs" />

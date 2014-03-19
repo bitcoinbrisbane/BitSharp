@@ -59,11 +59,6 @@ namespace BitSharp.Storage.Esent
             }
         }
 
-        public UtxoBuilder ToBuilder()
-        {
-            return new PersistentUtxoBuilder(this);
-        }
-
         public bool ContainsKey(Common.UInt256 txHash)
         {
             return this.utxoLock.DoRead(() => utxo.ContainsKey(txHash));

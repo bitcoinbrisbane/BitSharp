@@ -11,13 +11,13 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage.Esent
 {
-    public class PersistentUtxoBuilder : UtxoBuilder
+    public class PersistentUtxoBuilderStorage : IUtxoBuilderStorage
     {
         private readonly string directory;
         private readonly PersistentUInt256ByteDictionary utxo;
         private bool closed = false;
 
-        public PersistentUtxoBuilder(Utxo parentUtxo)
+        public PersistentUtxoBuilderStorage(Utxo parentUtxo)
         {
             this.directory = GetDirectory();
             if (parentUtxo is PersistentUtxo)
@@ -35,7 +35,7 @@ namespace BitSharp.Storage.Esent
             }
         }
 
-        ~PersistentUtxoBuilder()
+        ~PersistentUtxoBuilderStorage()
         {
             this.Dispose();
         }

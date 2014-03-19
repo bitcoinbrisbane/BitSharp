@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BitSharp.Data;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -6,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Data
+namespace BitSharp.Blockchain
 {
     public class ChainStateBuilder
     {

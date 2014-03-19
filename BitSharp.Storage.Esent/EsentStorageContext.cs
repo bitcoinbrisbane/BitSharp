@@ -47,9 +47,9 @@ namespace BitSharp.Storage.Esent
             return this.ChainedBlockStorage.SelectMaxTotalWorkBlocks();
         }
 
-        public UtxoBuilder ToUtxoBuilder(Utxo utxo)
+        public IUtxoBuilderStorage ToUtxoBuilder(Utxo utxo)
         {
-            return new PersistentUtxoBuilder(utxo);
+            return new PersistentUtxoBuilderStorage(utxo);
         }
 
         public void Dispose()

@@ -21,6 +21,6 @@ namespace BitSharp.Storage
 
         IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks();
         
-        UtxoBuilder ToUtxoBuilder(Utxo utxo);
+        IUtxoBuilderStorage ToUtxoBuilder(Utxo utxo);
     }
 }

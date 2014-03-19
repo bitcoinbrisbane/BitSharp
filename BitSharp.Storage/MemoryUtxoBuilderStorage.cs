@@ -9,11 +9,11 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class MemoryUtxoBuilder : UtxoBuilder
+    public class MemoryUtxoBuilderStorage : IUtxoBuilderStorage
     {
         private ImmutableDictionary<UInt256, UnspentTx>.Builder utxo;
 
-        public MemoryUtxoBuilder(Utxo parentUtxo)
+        public MemoryUtxoBuilderStorage(Utxo parentUtxo)
         {
             if (parentUtxo is MemoryUtxo)
             {

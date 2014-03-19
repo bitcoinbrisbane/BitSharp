@@ -15,8 +15,6 @@ namespace BitSharp.Data
 
         IEnumerable<UnspentTx> UnspentTransactions();
 
-        UtxoBuilder ToBuilder();
-
         bool ContainsKey(UInt256 txHash);
 
         UnspentTx this[UInt256 txHash] { get; }
