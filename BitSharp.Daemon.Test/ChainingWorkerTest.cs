@@ -36,7 +36,7 @@ namespace BitSharp.Daemon.Test
             memoryCacheContext.BlockHeaderCache[blockHeader0.Hash] = blockHeader0;
             memoryCacheContext.ChainedBlockCache[blockHeader0.Hash] = ChainedBlock.CreateForGenesisBlock(blockHeader0);
 
-            // initialize the chaining calculator
+            // initialize the chaining worker
             using (var chainingWorker = new ChainingWorker(mockRules, memoryCacheContext, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue))
             {
                 // monitor event firing
@@ -110,7 +110,7 @@ namespace BitSharp.Daemon.Test
             memoryCacheContext.BlockHeaderCache[blockHeader0.Hash] = blockHeader0;
             memoryCacheContext.ChainedBlockCache[blockHeader0.Hash] = ChainedBlock.CreateForGenesisBlock(blockHeader0);
 
-            // initialize the chaining calculator
+            // initialize the chaining worker
             using (var chainingWorker = new ChainingWorker(mockRules, memoryCacheContext, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue))
             {
                 // monitor event firing
