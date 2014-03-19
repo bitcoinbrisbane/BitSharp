@@ -25,8 +25,8 @@ namespace BitSharp.Daemon
         private readonly TargetBlockWatcher targetBlockWatcher;
         private ChainedBlocks targetChainedBlocks;
 
-        public TargetChainWorker(IBlockchainRules rules, CacheContext cacheContext)
-            : base("TargetChainWorker", initialNotify: true, waitTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))
+        public TargetChainWorker(IBlockchainRules rules, CacheContext cacheContext, bool initialNotify, TimeSpan waitTime, TimeSpan maxIdleTime)
+            : base("TargetChainWorker", initialNotify, waitTime, maxIdleTime)
         {
             this.rules = rules;
             this.cacheContext = cacheContext;

@@ -30,8 +30,8 @@ namespace BitSharp.Daemon
         private ChainStateBuilder chainStateBuilder;
         private DateTime chainStateBuilderTime;
 
-        public ChainStateWorker(IBlockchainRules rules, CacheContext cacheContext, Func<ChainedBlocks> getTargetChainedBlocks)
-            : base("ChainStateWorker", initialNotify: true, waitTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5))
+        public ChainStateWorker(IBlockchainRules rules, CacheContext cacheContext, Func<ChainedBlocks> getTargetChainedBlocks, bool initialNotify, TimeSpan waitTime, TimeSpan maxIdleTime)
+            : base("ChainStateWorker", initialNotify, waitTime, maxIdleTime)
         {
             this.rules = rules;
             this.cacheContext = cacheContext;

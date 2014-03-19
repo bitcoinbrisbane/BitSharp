@@ -22,8 +22,8 @@ namespace BitSharp.Daemon
         private readonly CacheContext cacheContext;
         private readonly ChainingCalculator chainingCalculator;
 
-        public ChainingWorker(IBlockchainRules rules, CacheContext cacheContext)
-            : base("ChainingWorker", initialNotify: true, waitTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))
+        public ChainingWorker(IBlockchainRules rules, CacheContext cacheContext, bool initialNotify, TimeSpan waitTime, TimeSpan maxIdleTime)
+            : base("ChainingWorker", initialNotify, waitTime, maxIdleTime)
         {
             this.rules = rules;
             this.cacheContext = cacheContext;
