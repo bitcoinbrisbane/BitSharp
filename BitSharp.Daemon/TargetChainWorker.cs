@@ -32,7 +32,6 @@ namespace BitSharp.Daemon
             this.cacheContext = cacheContext;
 
             this.targetBlockWatcher = new TargetBlockWatcher(cacheContext);
-            this.targetChainedBlocks = null;
 
             this.targetBlockWatcher.OnTargetBlockChanged += NotifyWork;
         }
@@ -52,16 +51,11 @@ namespace BitSharp.Daemon
 
         public ChainedBlocks TargetChainedBlocks { get { return this.targetChainedBlocks; } }
 
-        public ChainedBlock WinningBlock
+        public ChainedBlock WinningBlock { get { return this.targetBlockWatcher.TargetBlock; } }
+
+        protected override void SubStart()
         {
-            get
-            {
-                var targetChainedBlocksLocal = this.targetChainedBlocks;
-                if (targetChainedBlocks != null)
-                    return this.targetChainedBlocks.LastBlock;
-                else
-                    return null;
-            }
+            this.targetBlockWatcher.CheckAllChainedBlocks();
         }
 
         protected override void WorkAction()

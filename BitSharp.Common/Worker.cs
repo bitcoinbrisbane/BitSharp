@@ -66,6 +66,8 @@ namespace BitSharp.Common
                     {
                         this.workerThread.Start();
                         this.isStarted = true;
+
+                        this.SubStart();
                     }
                 });
             }
@@ -78,6 +80,8 @@ namespace BitSharp.Common
             this.semaphore.Do(() =>
             {
                 this.stopEvent.Reset();
+
+                this.SubStop();
             });
         }
 
@@ -106,7 +110,7 @@ namespace BitSharp.Common
                             this.isStarted = false;
                             this.isDisposed = true;
 
-                            SubDispose();
+                            this.SubDispose();
                         }
                     });
                     this.semaphore.Dispose();
@@ -251,6 +255,10 @@ namespace BitSharp.Common
 
         protected abstract void WorkAction();
 
-        protected abstract void SubDispose();
+        protected virtual void SubDispose() { }
+
+        protected virtual void SubStart() { }
+
+        protected virtual void SubStop() { }
     }
 }

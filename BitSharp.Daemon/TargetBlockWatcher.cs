@@ -30,8 +30,6 @@ namespace BitSharp.Daemon
             // wire up cache events
             this.cacheContext.ChainedBlockCache.OnAddition += CheckChainedBlock;
             this.cacheContext.ChainedBlockCache.OnModification += CheckChainedBlock;
-
-            CheckAllChainedBlocks();
         }
 
         public ChainedBlock TargetBlock { get { return this.targetBlock; } }
@@ -43,11 +41,8 @@ namespace BitSharp.Daemon
             this.cacheContext.ChainedBlockCache.OnModification -= CheckChainedBlock;
         }
 
-        private void CheckAllChainedBlocks()
+        public void CheckAllChainedBlocks()
         {
-            //TODO periodic rescan
-            //new Thread(() =>
-            //    {
             new MethodTimer().Time(() =>
             {
                 foreach (var chainedBlock in this.cacheContext.StorageContext.SelectMaxTotalWorkBlocks())
@@ -60,9 +55,6 @@ namespace BitSharp.Daemon
                     CheckChainedBlock(chainedBlock.BlockHash, chainedBlock);
                 }
             });
-
-            //Debugger.Break();
-            //}).start();
         }
 
         private void CheckChainedBlock(UInt256 blockHash, ChainedBlock chainedBlock)
