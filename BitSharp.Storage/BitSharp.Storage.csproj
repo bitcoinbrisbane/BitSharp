@@ -72,6 +72,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BlockView.cs" />
+    <Compile Include="BoundedFullCache.cs" />
     <Compile Include="IUnboundedCache.cs" />
     <Compile Include="IBoundedCache.cs" />
     <Compile Include="IUnboundedStorage.cs" />

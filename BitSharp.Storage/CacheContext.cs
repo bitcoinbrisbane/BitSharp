@@ -18,18 +18,18 @@ namespace BitSharp.Storage
     {
         private readonly IStorageContext storageContext;
 
-        private readonly BoundedCache<UInt256, BlockHeader> blockHeaderCache;
-        private readonly BoundedCache<UInt256, ChainedBlock> chainedBlockCache;
-        private readonly BoundedCache<UInt256, IImmutableList<UInt256>> blockTxHashesCache;
-        private readonly UnboundedCache<UInt256, Transaction> transactionCache;
-        private readonly BlockView blockView;
+        private readonly IBoundedCache<UInt256, BlockHeader> blockHeaderCache;
+        private readonly IBoundedCache<UInt256, ChainedBlock> chainedBlockCache;
+        private readonly IBoundedCache<UInt256, IImmutableList<UInt256>> blockTxHashesCache;
+        private readonly IUnboundedCache<UInt256, Transaction> transactionCache;
+        private readonly IUnboundedCache<UInt256, Block> blockView;
 
         public CacheContext(IStorageContext storageContext)
         {
             this.storageContext = storageContext;
 
-            this.blockHeaderCache = new BoundedCache<UInt256, BlockHeader>("Block Header Cache", storageContext.BlockHeaderStorage);
-            this.chainedBlockCache = new BoundedCache<UInt256, ChainedBlock>("Chained Block Cache", storageContext.ChainedBlockStorage);
+            this.blockHeaderCache = new BoundedFullCache<UInt256, BlockHeader>("Block Header Cache", storageContext.BlockHeaderStorage);
+            this.chainedBlockCache = new BoundedFullCache<UInt256, ChainedBlock>("Chained Block Cache", storageContext.ChainedBlockStorage);
             this.blockTxHashesCache = new BoundedCache<UInt256, IImmutableList<UInt256>>("Block TX Hashes Cache", storageContext.BlockTxHashesStorage);
             this.transactionCache = new UnboundedCache<UInt256, Transaction>("Transaction Cache", storageContext.TransactionStorage);
             this.blockView = new BlockView(this);
