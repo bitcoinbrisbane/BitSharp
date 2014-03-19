@@ -11,18 +11,18 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class BlockStorage : IBoundedStorage<UInt256, Block>
+    public class BlockView : IEnumerable<KeyValuePair<UInt256, Block>>
     {
         private readonly CacheContext cacheContext;
+        private readonly ConcurrentSetBuilder<UInt256> missingData;
 
-        public BlockStorage(CacheContext cacheContext)
+        public BlockView(CacheContext cacheContext)
         {
             this.cacheContext = cacheContext;
+            this.missingData = new ConcurrentSetBuilder<UInt256>();
         }
 
-        public void Dispose()
-        {
-        }
+        public ImmutableHashSet<UInt256> MissingData { get { return this.missingData.ToImmutable(); } }
 
         public int Count
         {
@@ -75,6 +75,7 @@ namespace BitSharp.Storage
                         if (success)
                         {
                             block = new Block(blockHeader, blockTransactions.ToImmutable());
+                            this.missingData.Remove(blockHash);
                             return true;
                         }
                     }
@@ -85,6 +86,7 @@ namespace BitSharp.Storage
                 }
             }
 
+            this.missingData.Add(blockHash);
             block = default(Block);
             return false;
         }
@@ -116,9 +118,14 @@ namespace BitSharp.Storage
             {
                 Block block;
                 if (this.TryGetValue(blockHash, out block))
+                {
                     return block;
+                }
                 else
-                    throw new KeyNotFoundException();
+                {
+                    this.missingData.Add(blockHash);
+                    throw new MissingDataException(blockHash);
+                }
             }
             set
             {
@@ -135,6 +142,8 @@ namespace BitSharp.Storage
 
                 // write the transaction hash list
                 this.cacheContext.BlockTxHashesCache[value.Hash] = txHashesList.ToImmutableList();
+                
+                this.missingData.Remove(blockHash);
             }
         }
 

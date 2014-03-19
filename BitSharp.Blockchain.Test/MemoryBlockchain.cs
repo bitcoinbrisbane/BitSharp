@@ -189,7 +189,7 @@ namespace BitSharp.Blockchain.Test
                 prevChainedBlock != null ? prevChainedBlock.TotalWork + block.Header.CalculateWork() : block.Header.CalculateWork()
             );
 
-            this.CacheContext.BlockCache[block.Hash] = block;
+            this.CacheContext.BlockView[block.Hash] = block;
 
             this.CacheContext.ChainedBlockCache[block.Hash] = chainedBlock;
 

@@ -1,7 +1,9 @@
-﻿using BitSharp.Common.ExtensionMethods;
+﻿using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,44 +12,48 @@ namespace BitSharp.Storage.Test
 {
     public class MemoryStorageContext : IStorageContext
     {
-        private readonly MemoryBlockHeaderStorage _blockHeaderStorage;
-        private readonly MemoryBlockTxHashesStorage _blockTxHashesStorage;
-        private readonly MemoryTransactionStorage _transactionStorage;
-        private readonly MemoryChainedBlockStorage _chainedBlockStorage;
-        //private readonly MemoryBlockchainStorage _blockchainStorage;
+        private readonly MemoryStorage<UInt256, BlockHeader> _blockHeaderStorage;
+        private readonly MemoryStorage<UInt256, ChainedBlock> _chainedBlockStorage;
+        private readonly MemoryStorage<UInt256, IImmutableList<UInt256>> _blockTxHashesStorage;
+        private readonly MemoryStorage<UInt256, Transaction> _transactionStorage;
 
         public MemoryStorageContext()
         {
-            this._blockHeaderStorage = new MemoryBlockHeaderStorage(this);
-            this._blockTxHashesStorage = new MemoryBlockTxHashesStorage(this);
-            this._transactionStorage = new MemoryTransactionStorage(this);
-            this._chainedBlockStorage = new MemoryChainedBlockStorage(this);
-            //this._blockchainStorage = new MemoryBlockchainStorage(this);
+            this._blockHeaderStorage = new MemoryStorage<UInt256, BlockHeader>(this);
+            this._chainedBlockStorage = new MemoryStorage<UInt256, ChainedBlock>(this);
+            this._blockTxHashesStorage = new MemoryStorage<UInt256, IImmutableList<UInt256>>(this);
+            this._transactionStorage = new MemoryStorage<UInt256, Transaction>(this);
         }
 
-        public MemoryBlockHeaderStorage BlockHeaderStorage { get { return this._blockHeaderStorage; } }
+        public MemoryStorage<UInt256, BlockHeader> BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 
-        public MemoryBlockTxHashesStorage BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
+        public MemoryStorage<UInt256, ChainedBlock> ChainedBlockStorage { get { return this._chainedBlockStorage; } }
 
-        public MemoryTransactionStorage TransactionStorage { get { return this._transactionStorage; } }
+        public MemoryStorage<UInt256, IImmutableList<UInt256>> BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
-        public MemoryChainedBlockStorage ChainedBlockStorage { get { return this._chainedBlockStorage; } }
+        public MemoryStorage<UInt256, Transaction> TransactionStorage { get { return this._transactionStorage; } }
 
-        //public MemoryBlockchainStorage BlockchainStorage { get { return this._blockchainStorage; } }
+        IBoundedStorage<UInt256, BlockHeader> IStorageContext.BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 
-        IBlockHeaderStorage IStorageContext.BlockHeaderStorage { get { return this._blockHeaderStorage; } }
+        IBoundedStorage<UInt256, ChainedBlock> IStorageContext.ChainedBlockStorage { get { return this._chainedBlockStorage; } }
 
-        IBlockTxHashesStorage IStorageContext.BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
+        IBoundedStorage<UInt256, IImmutableList<UInt256>> IStorageContext.BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
-        ITransactionStorage IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
-
-        IChainedBlockStorage IStorageContext.ChainedBlockStorage { get { return this._chainedBlockStorage; } }
+        IUnboundedStorage<UInt256, Transaction> IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
 
         //IBlockchainStorage IStorageContext.BlockchainStorage { get { return this._blockchainStorage; } }
 
         public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
         {
-            return this.ChainedBlockStorage.SelectMaxTotalWorkBlocks();
+            try
+            {
+                var maxTotalWork = this.ChainedBlockStorage.Storage.Values.Max(x => x.TotalWork);
+                return this.ChainedBlockStorage.Storage.Values.Where(x => x.TotalWork == maxTotalWork);
+            }
+            catch (InvalidOperationException)
+            {
+                return Enumerable.Empty<ChainedBlock>();
+            }
         }
 
         public IUtxoBuilderStorage ToUtxoBuilder(Utxo utxo)

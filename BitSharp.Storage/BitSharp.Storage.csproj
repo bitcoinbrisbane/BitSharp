@@ -71,29 +71,19 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BlockCache.cs" />
-    <Compile Include="BlockStorage.cs" />
-    <Compile Include="BlockTxHashesCache.cs" />
-    <Compile Include="ChainedBlockCache.cs" />
-    <Compile Include="BlockHeaderCache.cs" />
+    <Compile Include="BlockView.cs" />
     <Compile Include="IUnboundedStorage.cs" />
     <Compile Include="MemoryUtxo.cs" />
     <Compile Include="MemoryUtxoBuilderStorage.cs" />
-    <Compile Include="Provider\IBlockHeaderStorage.cs" />
-    <Compile Include="Provider\ITransactionStorage.cs" />
-    <Compile Include="Provider\IBlockTxHashesStorage.cs" />
-    <Compile Include="Provider\IBlockchainStorage.cs" />
-    <Compile Include="Provider\IStorageContext.cs" />
+    <Compile Include="IStorageContext.cs" />
     <Compile Include="MissingDataException.cs" />
-    <Compile Include="Provider\IUtxoBuilderStorage.cs" />
-    <Compile Include="TransactionCache.cs" />
+    <Compile Include="IUtxoBuilderStorage.cs" />
+    <Compile Include="UnboundedCache.cs" />
     <Compile Include="BoundedCache.cs" />
-    <Compile Include="Provider\IChainedBlockStorage.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="IBoundedStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CacheContext.cs" />
-    <Compile Include="Structs\CacheKey.cs" />
     <Compile Include="StorageEncoder.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -235,7 +235,7 @@ namespace BitSharp.Node
                 //}
 
                 // send out requests for any missing blocks
-                foreach (var block in this.blockchainDaemon.CacheContext.BlockCache.MissingData)
+                foreach (var block in this.blockchainDaemon.CacheContext.BlockView.MissingData)
                 {
                     //if (requestTasks.Count > requestAmount)
                     if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
@@ -273,7 +273,7 @@ namespace BitSharp.Node
                             && requestBlock.Height - this.blockchainDaemon.CurrentBuilderHeight > MAX_BLOCKCHAIN_LOOKAHEAD)
                             break;
 
-                        if (!this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(requestBlock.BlockHash))
+                        if (!this.blockchainDaemon.CacheContext.BlockView.ContainsKey(requestBlock.BlockHash))
                         {
                             var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), requestBlock.BlockHash);
                             if (task != null)
@@ -628,7 +628,7 @@ namespace BitSharp.Node
 
         private Task RequestBlock(RemoteNode remoteNode, UInt256 blockHash)
         {
-            if (this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(blockHash))
+            if (this.blockchainDaemon.CacheContext.BlockView.ContainsKey(blockHash))
                 return null;
 
             var now = DateTime.UtcNow;
@@ -668,7 +668,7 @@ namespace BitSharp.Node
 
             DateTime ignore;
             this.requestedBlocks.TryRemove(block.Hash, out ignore);
-            this.blockchainDaemon.CacheContext.BlockCache.TryAdd(block.Hash, block);
+            this.blockchainDaemon.CacheContext.BlockView.TryAdd(block.Hash, block);
 
             this.requestBlocksWorker.NotifyWork();
         }

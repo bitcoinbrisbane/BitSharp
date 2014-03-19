@@ -1,8 +1,10 @@
-﻿using BitSharp.Common.ExtensionMethods;
+﻿using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Storage.Esent;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -32,15 +34,13 @@ namespace BitSharp.Storage.Esent
 
         public ChainedBlockStorage ChainedBlockStorage { get { return this._chainedBlockStorage; } }
 
-        IBlockHeaderStorage IStorageContext.BlockHeaderStorage { get { return this._blockHeaderStorage; } }
+        IBoundedStorage<UInt256, BlockHeader> IStorageContext.BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 
-        IBlockTxHashesStorage IStorageContext.BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
+        IBoundedStorage<UInt256, ChainedBlock> IStorageContext.ChainedBlockStorage { get { return this._chainedBlockStorage; } }
 
-        ITransactionStorage IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
+        IBoundedStorage<UInt256, IImmutableList<UInt256>> IStorageContext.BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
-        IChainedBlockStorage IStorageContext.ChainedBlockStorage { get { return this._chainedBlockStorage; } }
-
-        //IBlockchainStorage IStorageContext.BlockchainStorage { get { return null; } }
+        IUnboundedStorage<UInt256, Transaction> IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
 
         public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
         {
@@ -57,8 +57,9 @@ namespace BitSharp.Storage.Esent
             new IDisposable[]
             {
                 this._blockHeaderStorage,
+                this._chainedBlockStorage,
                 this._blockTxHashesStorage,
-                this._chainedBlockStorage
+                this._transactionStorage
             }.DisposeList();
         }
     }

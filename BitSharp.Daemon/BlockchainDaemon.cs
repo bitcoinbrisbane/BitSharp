@@ -55,14 +55,14 @@ namespace BitSharp.Daemon
             this.cacheContext = cacheContext;
 
             // write genesis block out to storage
-            this.cacheContext.BlockCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
+            this.cacheContext.BlockView[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
             this.cacheContext.ChainedBlockCache[this.rules.GenesisChainedBlock.BlockHash] = this.rules.GenesisChainedBlock;
 
             // wire up cache events
             this.cacheContext.BlockHeaderCache.OnAddition += OnBlockHeaderAddition;
             this.cacheContext.BlockHeaderCache.OnModification += OnBlockHeaderModification;
-            this.cacheContext.BlockCache.OnAddition += OnBlockAddition;
-            this.cacheContext.BlockCache.OnModification += OnBlockModification;
+            this.cacheContext.BlockTxHashesCache.OnAddition += OnBlockTxHashesAddition;
+            this.cacheContext.BlockTxHashesCache.OnModification += OnBlockTxHashesModification;
             this.cacheContext.ChainedBlockCache.OnAddition += OnChainedBlockAddition;
             this.cacheContext.ChainedBlockCache.OnModification += OnChainedBlockModification;
 
@@ -148,8 +148,8 @@ namespace BitSharp.Daemon
             // cleanup events
             this.CacheContext.BlockHeaderCache.OnAddition -= OnBlockHeaderAddition;
             this.CacheContext.BlockHeaderCache.OnModification -= OnBlockHeaderModification;
-            this.CacheContext.BlockCache.OnAddition -= OnBlockAddition;
-            this.CacheContext.BlockCache.OnModification -= OnBlockModification;
+            this.CacheContext.BlockTxHashesCache.OnAddition -= OnBlockTxHashesAddition;
+            this.CacheContext.BlockTxHashesCache.OnModification -= OnBlockTxHashesModification;
             this.CacheContext.ChainedBlockCache.OnAddition -= OnChainedBlockAddition;
             this.CacheContext.ChainedBlockCache.OnModification -= OnChainedBlockModification;
 
@@ -176,14 +176,14 @@ namespace BitSharp.Daemon
             OnBlockHeaderAddition(blockHash, blockHeader);
         }
 
-        private void OnBlockAddition(UInt256 blockHash, Block block)
+        private void OnBlockTxHashesAddition(UInt256 blockHash, IImmutableList<UInt256> blockTxHashes)
         {
             this.chainStateWorker.NotifyWork();
         }
 
-        private void OnBlockModification(UInt256 blockHash, Block block)
+        private void OnBlockTxHashesModification(UInt256 blockHash, IImmutableList<UInt256> blockTxHashes)
         {
-            OnBlockAddition(blockHash, block);
+            OnBlockTxHashesAddition(blockHash, blockTxHashes);
         }
 
         private void OnChainedBlockAddition(UInt256 blockHash, ChainedBlock chainedBlock)

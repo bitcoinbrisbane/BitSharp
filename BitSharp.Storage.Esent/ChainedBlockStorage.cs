@@ -17,7 +17,7 @@ using System.Numerics;
 
 namespace BitSharp.Storage.Esent
 {
-    public class ChainedBlockStorage : IChainedBlockStorage
+    public class ChainedBlockStorage : IBoundedStorage<UInt256, ChainedBlock>
     {
         private readonly EsentStorageContext storageContext;
         private readonly string name;

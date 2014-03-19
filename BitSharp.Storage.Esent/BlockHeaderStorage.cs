@@ -14,7 +14,7 @@ using System.Data.SqlClient;
 
 namespace BitSharp.Storage.Esent
 {
-    public class BlockHeaderStorage : EsentDataStorage<BlockHeader>, IBlockHeaderStorage
+    public class BlockHeaderStorage : EsentDataStorage<BlockHeader>, IUnboundedStorage<UInt256, BlockHeader>
     {
         public BlockHeaderStorage(EsentStorageContext storageContext)
             : base(storageContext, "blockHeaders",

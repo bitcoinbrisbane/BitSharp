@@ -16,7 +16,7 @@ using System.IO;
 
 namespace BitSharp.Storage.Esent
 {
-    public class BlockTxHashesStorage : EsentDataStorage<IImmutableList<UInt256>>, IBlockTxHashesStorage
+    public class BlockTxHashesStorage : EsentDataStorage<IImmutableList<UInt256>>
     {
         public BlockTxHashesStorage(EsentStorageContext storageContext)
             : base(storageContext, "blockTxHashes",

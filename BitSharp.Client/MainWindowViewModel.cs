@@ -41,11 +41,11 @@ namespace BitSharp.Client
 
             this.WinningBlockchainHeight = winningBlockLocal != null ? winningBlockLocal.Height : -1;
             this.CurrentBlockchainHeight = this.blockchainDaemon.CurrentBuilderHeight;
-            this.DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockCache.Count;
+            this.DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockTxHashesCache.Count;
 
-            this.blockchainDaemon.CacheContext.BlockCache.OnAddition +=
+            this.blockchainDaemon.CacheContext.BlockTxHashesCache.OnAddition +=
                 (blockHash, block) =>
-                    DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockCache.Count;
+                    DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockTxHashesCache.Count;
 
             this.blockchainDaemon.OnWinningBlockChanged +=
                 (sender, block) =>
@@ -175,7 +175,7 @@ namespace BitSharp.Client
             {
                 if (chainState.CurrentChainedBlocks.Height > 0)
                 {
-                    var block = this.blockchainDaemon.CacheContext.BlockCache[this.viewChainState.CurrentChainedBlocks.LastBlock.BlockHash];
+                    var block = this.blockchainDaemon.CacheContext.BlockView[this.viewChainState.CurrentChainedBlocks.LastBlock.BlockHash];
                     // TODO this is abusing rollback a bit just to get the transactions that exist in a target block that's already known
                     // TODO make a better api for get the net output of a block
                     //List<TxOutputKey> spendOutputs, receiveOutputs;

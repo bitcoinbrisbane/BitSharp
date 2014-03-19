@@ -439,7 +439,7 @@ namespace BitSharp.Blockchain
                         var chainedBlock = chainedBlockTuple.Item2;
 
                         var block = new MethodTimer(false).Time("GetBlock", () =>
-                            this.CacheContext.BlockCache[chainedBlock.BlockHash]);
+                            this.CacheContext.BlockView[chainedBlock.BlockHash]);
 
                         var prevInputTxes = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
                         new MethodTimer(false).Time("GetPrevInputTxes", () =>

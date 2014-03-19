@@ -16,39 +16,35 @@ namespace BitSharp.Storage
 {
     public class CacheContext
     {
-        private readonly IStorageContext _storageContext;
+        private readonly IStorageContext storageContext;
 
-        private readonly BlockStorage _blockStorage;
-        private readonly BlockCache _blockCache;
-        private readonly BlockHeaderCache _blockHeaderCache;
-        private readonly ChainedBlockCache _chainedBlockCache;
-        private readonly BlockTxHashesCache _blockTxHashesCache;
-        private readonly TransactionCache _transactionCache;
+        private readonly BoundedCache<UInt256, BlockHeader> blockHeaderCache;
+        private readonly BoundedCache<UInt256, ChainedBlock> chainedBlockCache;
+        private readonly BoundedCache<UInt256, IImmutableList<UInt256>> blockTxHashesCache;
+        private readonly UnboundedCache<UInt256, Transaction> transactionCache;
+        private readonly BlockView blockView;
 
         public CacheContext(IStorageContext storageContext)
         {
-            this._storageContext = storageContext;
+            this.storageContext = storageContext;
 
-            this._blockHeaderCache = new BlockHeaderCache(this);
-            this._chainedBlockCache = new ChainedBlockCache(this);
-            this._blockTxHashesCache = new BlockTxHashesCache(this);
-            this._transactionCache = new TransactionCache(this);
-            this._blockStorage = new BlockStorage(this);
-            this._blockCache = new BlockCache(this);
+            this.blockHeaderCache = new BoundedCache<UInt256, BlockHeader>("Block Header Cache", storageContext.BlockHeaderStorage);
+            this.chainedBlockCache = new BoundedCache<UInt256, ChainedBlock>("Chained Block Cache", storageContext.ChainedBlockStorage);
+            this.blockTxHashesCache = new BoundedCache<UInt256, IImmutableList<UInt256>>("Block TX Hashes Cache", storageContext.BlockTxHashesStorage);
+            this.transactionCache = new UnboundedCache<UInt256, Transaction>("Transaction Cache", storageContext.TransactionStorage);
+            this.blockView = new BlockView(this);
         }
 
-        public IStorageContext StorageContext { get { return this._storageContext; } }
+        public IStorageContext StorageContext { get { return this.storageContext; } }
 
-        public BlockStorage BlockStorage { get { return this._blockStorage; } }
+        public BoundedCache<UInt256, BlockHeader> BlockHeaderCache { get { return this.blockHeaderCache; } }
 
-        public BlockCache BlockCache { get { return this._blockCache; } }
+        public BoundedCache<UInt256, ChainedBlock> ChainedBlockCache { get { return this.chainedBlockCache; } }
 
-        public BlockHeaderCache BlockHeaderCache { get { return this._blockHeaderCache; } }
+        public BoundedCache<UInt256, IImmutableList<UInt256>> BlockTxHashesCache { get { return this.blockTxHashesCache; } }
 
-        public ChainedBlockCache ChainedBlockCache { get { return this._chainedBlockCache; } }
+        public UnboundedCache<UInt256, Transaction> TransactionCache { get { return this.transactionCache; } }
 
-        public BlockTxHashesCache BlockTxHashesCache { get { return this._blockTxHashesCache; } }
-
-        public TransactionCache TransactionCache { get { return this._transactionCache; } }
+        public BlockView BlockView { get { return this.blockView; } }
     }
 }
