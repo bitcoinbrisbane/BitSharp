@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class BoundedCache<TKey, TValue>
+    public class BoundedCache<TKey, TValue> : IBoundedCache<TKey, TValue>
     {
         public event Action<TKey, TValue> OnAddition;
         public event Action<TKey, TValue> OnModification;

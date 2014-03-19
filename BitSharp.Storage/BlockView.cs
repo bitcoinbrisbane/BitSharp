@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class BlockView : IEnumerable<KeyValuePair<UInt256, Block>>
+    public class BlockView : IUnboundedCache<UInt256, Block>
     {
         private readonly CacheContext cacheContext;
         private readonly ConcurrentSetBuilder<UInt256> missingData;
@@ -22,22 +22,12 @@ namespace BitSharp.Storage
             this.missingData = new ConcurrentSetBuilder<UInt256>();
         }
 
+        public string Name
+        {
+            get { return "Block View"; }
+        }
+
         public ImmutableHashSet<UInt256> MissingData { get { return this.missingData.ToImmutable(); } }
-
-        public int Count
-        {
-            get { return this.cacheContext.BlockTxHashesCache.Count; }
-        }
-
-        public IEnumerable<UInt256> Keys
-        {
-            get { return this.cacheContext.BlockTxHashesCache.Keys; }
-        }
-
-        public IEnumerable<Block> Values
-        {
-            get { return this.Select(x => x.Value); }
-        }
 
         public bool ContainsKey(UInt256 blockHash)
         {
@@ -145,21 +135,6 @@ namespace BitSharp.Storage
                 
                 this.missingData.Remove(blockHash);
             }
-        }
-
-        public IEnumerator<KeyValuePair<UInt256, Block>> GetEnumerator()
-        {
-            foreach (var blockHeader in this.cacheContext.BlockHeaderCache.Values)
-            {
-                Block block;
-                if (this.TryGetValue(blockHeader.Hash, out block))
-                    yield return new KeyValuePair<UInt256, Block>(block.Hash, block);
-            }
-        }
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            return this.GetEnumerator();
         }
     }
 }

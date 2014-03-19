@@ -37,14 +37,14 @@ namespace BitSharp.Storage
 
         public IStorageContext StorageContext { get { return this.storageContext; } }
 
-        public BoundedCache<UInt256, BlockHeader> BlockHeaderCache { get { return this.blockHeaderCache; } }
+        public IBoundedCache<UInt256, BlockHeader> BlockHeaderCache { get { return this.blockHeaderCache; } }
 
-        public BoundedCache<UInt256, ChainedBlock> ChainedBlockCache { get { return this.chainedBlockCache; } }
+        public IBoundedCache<UInt256, ChainedBlock> ChainedBlockCache { get { return this.chainedBlockCache; } }
 
-        public BoundedCache<UInt256, IImmutableList<UInt256>> BlockTxHashesCache { get { return this.blockTxHashesCache; } }
+        public IBoundedCache<UInt256, IImmutableList<UInt256>> BlockTxHashesCache { get { return this.blockTxHashesCache; } }
 
-        public UnboundedCache<UInt256, Transaction> TransactionCache { get { return this.transactionCache; } }
+        public IUnboundedCache<UInt256, Transaction> TransactionCache { get { return this.transactionCache; } }
 
-        public BlockView BlockView { get { return this.blockView; } }
+        public IUnboundedCache<UInt256, Block> BlockView { get { return this.blockView; } }
     }
 }

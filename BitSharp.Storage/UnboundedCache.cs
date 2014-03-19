@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class UnboundedCache<TKey, TValue>
+    public class UnboundedCache<TKey, TValue> : IUnboundedCache<TKey, TValue>
     {
         private readonly string name;
         private readonly IUnboundedStorage<TKey, TValue> dataStorage;
