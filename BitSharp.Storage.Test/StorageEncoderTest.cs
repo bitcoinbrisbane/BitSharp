@@ -11,6 +11,7 @@ namespace BitSharp.Storage.Test
     [TestClass]
     public class StorageEncoderTest
     {
+        [Ignore]
         [TestMethod]
         public void TestDecodeBlock()
         {
