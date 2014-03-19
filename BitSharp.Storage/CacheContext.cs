@@ -35,8 +35,6 @@ namespace BitSharp.Storage
             this.blockView = new BlockView(this);
         }
 
-        public IStorageContext StorageContext { get { return this.storageContext; } }
-
         public IBoundedCache<UInt256, BlockHeader> BlockHeaderCache { get { return this.blockHeaderCache; } }
 
         public IBoundedCache<UInt256, ChainedBlock> ChainedBlockCache { get { return this.chainedBlockCache; } }
