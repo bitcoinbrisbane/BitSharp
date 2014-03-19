@@ -163,7 +163,7 @@ namespace BitSharp.Blockchain
 
         private void CalculateUtxo(long blockHeight, Block block, UtxoBuilder utxoBuilder, out ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions, out long txCount, out long inputCount)
         {
-            txCount = 0;
+            txCount = 1;
             inputCount = 0;
 
             var newTransactionsBuilder = ImmutableDictionary.CreateBuilder<UInt256, ImmutableHashSet<int>>();
