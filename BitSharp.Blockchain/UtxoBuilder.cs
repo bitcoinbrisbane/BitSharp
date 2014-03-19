@@ -12,13 +12,13 @@ namespace BitSharp.Blockchain
 {
     public class UtxoBuilder : IDisposable
     {
-        private readonly CacheContext cacheContext;
+        private readonly ICacheContext cacheContext;
         private readonly IUtxoBuilderStorage utxoBuilderStorage;
 
-        public UtxoBuilder(CacheContext cacheContext, Utxo currentUtxo)
+        public UtxoBuilder(ICacheContext cacheContext, Utxo currentUtxo)
         {
             this.cacheContext = cacheContext;
-            this.utxoBuilderStorage = cacheContext.StorageContext.ToUtxoBuilder(currentUtxo);
+            this.utxoBuilderStorage = cacheContext.ToUtxoBuilder(currentUtxo);
         }
 
         ~UtxoBuilder()

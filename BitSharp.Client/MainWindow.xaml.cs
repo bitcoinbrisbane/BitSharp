@@ -45,7 +45,7 @@ namespace BitSharp.Client
     public partial class MainWindow : Window
     {
         private IStorageContext storageContext;
-        private CacheContext cacheContext;
+        private ICacheContext cacheContext;
         private IBlockchainRules rules;
         private BlockchainDaemon blockchainDaemon;
         private LocalClient localClient;

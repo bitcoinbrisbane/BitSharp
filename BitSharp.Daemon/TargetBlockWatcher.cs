@@ -16,11 +16,11 @@ namespace BitSharp.Daemon
     {
         public event Action OnTargetBlockChanged;
 
-        private readonly CacheContext cacheContext;
+        private readonly ICacheContext cacheContext;
         private ChainedBlock targetBlock;
         private readonly ReaderWriterLockSlim targetBlockLock;
 
-        public TargetBlockWatcher(CacheContext cacheContext)
+        public TargetBlockWatcher(ICacheContext cacheContext)
         {
             this.cacheContext = cacheContext;
 
@@ -45,7 +45,7 @@ namespace BitSharp.Daemon
         {
             new MethodTimer().Time(() =>
             {
-                foreach (var chainedBlock in this.cacheContext.StorageContext.SelectMaxTotalWorkBlocks())
+                foreach (var chainedBlock in this.cacheContext.SelectMaxTotalWorkBlocks())
                 {
                     //TODO
                     // cooperative loop

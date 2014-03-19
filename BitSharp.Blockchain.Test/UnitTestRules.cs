@@ -23,7 +23,7 @@ namespace BitSharp.Blockchain.Test
         private Block _genesisBlock;
         private ChainedBlock _genesisChainedBlock;
 
-        public UnitTestRules(CacheContext cacheContext)
+        public UnitTestRules(ICacheContext cacheContext)
             : base(cacheContext)
         {
             this._highestTarget = Target0;

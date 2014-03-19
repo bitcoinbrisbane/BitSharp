@@ -25,14 +25,14 @@ namespace BitSharp.Blockchain
 
         private const UInt64 SATOSHI_PER_BTC = 100 * 1000 * 1000;
 
-        private readonly CacheContext _cacheContext;
+        private readonly ICacheContext _cacheContext;
         private readonly UInt256 _highestTarget;
         private readonly Block _genesisBlock;
         private readonly ChainedBlock _genesisChainedBlock;
         private readonly int _difficultyInternal = 2016;
         private readonly long _difficultyTargetTimespan = 14 * 24 * 60 * 60;
 
-        public MainnetRules(CacheContext cacheContext)
+        public MainnetRules(ICacheContext cacheContext)
         {
             this._cacheContext = cacheContext;
 
@@ -98,9 +98,7 @@ namespace BitSharp.Blockchain
             this._genesisChainedBlock = ChainedBlock.CreateForGenesisBlock(this._genesisBlock.Header);
         }
 
-        public CacheContext CacheContext { get { return this._cacheContext; } }
-
-        public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
+        public ICacheContext CacheContext { get { return this._cacheContext; } }
 
         public virtual UInt256 HighestTarget { get { return this._highestTarget; } }
 

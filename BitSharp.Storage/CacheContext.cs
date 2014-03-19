@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class CacheContext
+    public class CacheContext : ICacheContext
     {
         private readonly IStorageContext storageContext;
 
@@ -46,5 +46,15 @@ namespace BitSharp.Storage
         public IUnboundedCache<UInt256, Transaction> TransactionCache { get { return this.transactionCache; } }
 
         public IUnboundedCache<UInt256, Block> BlockView { get { return this.blockView; } }
+
+        public IUtxoBuilderStorage ToUtxoBuilder(Utxo utxo)
+        {
+            return this.storageContext.ToUtxoBuilder(utxo);
+        }
+
+        public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
+        {
+            return this.storageContext.SelectMaxTotalWorkBlocks();
+        }
     }
 }

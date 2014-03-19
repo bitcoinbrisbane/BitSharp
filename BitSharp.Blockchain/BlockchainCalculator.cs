@@ -20,10 +20,10 @@ namespace BitSharp.Blockchain
     public class BlockchainCalculator
     {
         private readonly IBlockchainRules _rules;
-        private readonly CacheContext _cacheContext;
+        private readonly ICacheContext _cacheContext;
         private readonly CancellationToken shutdownToken;
 
-        public BlockchainCalculator(IBlockchainRules rules, CacheContext cacheContext, CancellationToken shutdownToken)
+        public BlockchainCalculator(IBlockchainRules rules, ICacheContext cacheContext, CancellationToken shutdownToken)
         {
             this._rules = rules;
             this._cacheContext = cacheContext;
@@ -32,9 +32,7 @@ namespace BitSharp.Blockchain
 
         public IBlockchainRules Rules { get { return this._rules; } }
 
-        public CacheContext CacheContext { get { return this._cacheContext; } }
-
-        public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
+        public ICacheContext CacheContext { get { return this._cacheContext; } }
 
         public void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<ChainedBlocks> getTargetChainedBlocks, CancellationToken cancelToken, Action onProgress = null)
         {

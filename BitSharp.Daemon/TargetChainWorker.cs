@@ -20,12 +20,12 @@ namespace BitSharp.Daemon
         public event EventHandler<ChainedBlock> OnWinningBlockChanged;
 
         private readonly IBlockchainRules rules;
-        private readonly CacheContext cacheContext;
+        private readonly ICacheContext cacheContext;
 
         private readonly TargetBlockWatcher targetBlockWatcher;
         private ChainedBlocks targetChainedBlocks;
 
-        public TargetChainWorker(IBlockchainRules rules, CacheContext cacheContext, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
+        public TargetChainWorker(IBlockchainRules rules, ICacheContext cacheContext, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
             : base("TargetChainWorker", initialNotify, minIdleTime, maxIdleTime)
         {
             this.rules = rules;
@@ -45,9 +45,7 @@ namespace BitSharp.Daemon
             this.targetBlockWatcher.Dispose();
         }
 
-        public CacheContext CacheContext { get { return this.cacheContext; } }
-
-        public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
+        public ICacheContext CacheContext { get { return this.cacheContext; } }
 
         public ChainedBlocks TargetChainedBlocks { get { return this.targetChainedBlocks; } }
 

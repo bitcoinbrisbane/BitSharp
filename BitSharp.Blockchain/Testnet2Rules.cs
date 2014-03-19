@@ -21,7 +21,7 @@ namespace BitSharp.Blockchain
         private readonly Block _genesisBlock;
         private readonly ChainedBlock _genesisChainedBlock;
 
-        public Testnet2Rules(CacheContext cacheContext)
+        public Testnet2Rules(ICacheContext cacheContext)
             : base(cacheContext)
         {
             this._genesisBlock =

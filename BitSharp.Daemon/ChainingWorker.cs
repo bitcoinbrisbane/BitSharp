@@ -19,11 +19,11 @@ namespace BitSharp.Daemon
     public class ChainingWorker : Worker
     {
         private readonly IBlockchainRules rules;
-        private readonly CacheContext cacheContext;
+        private readonly ICacheContext cacheContext;
         private readonly ConcurrentQueue<BlockHeader> blockHeaders;
         private readonly Dictionary<UInt256, Dictionary<UInt256, BlockHeader>> unchainedBlocksByPrevious;
 
-        public ChainingWorker(IBlockchainRules rules, CacheContext cacheContext, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
+        public ChainingWorker(IBlockchainRules rules, ICacheContext cacheContext, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
             : base("ChainingWorker", initialNotify, minIdleTime, maxIdleTime)
         {
             this.rules = rules;

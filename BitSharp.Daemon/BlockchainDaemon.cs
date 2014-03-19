@@ -37,7 +37,7 @@ namespace BitSharp.Daemon
         public event EventHandler OnCurrentBlockchainChanged;
         public event EventHandler OnCurrentBuilderHeightChanged;
 
-        private readonly CacheContext cacheContext;
+        private readonly ICacheContext cacheContext;
 
         private readonly IBlockchainRules rules;
 
@@ -47,7 +47,7 @@ namespace BitSharp.Daemon
         private readonly TargetChainWorker targetChainWorker;
         private readonly ChainStateWorker chainStateWorker;
 
-        public BlockchainDaemon(IBlockchainRules rules, CacheContext cacheContext)
+        public BlockchainDaemon(IBlockchainRules rules, ICacheContext cacheContext)
         {
             this.shutdownToken = new CancellationTokenSource();
 
@@ -100,9 +100,7 @@ namespace BitSharp.Daemon
 
         public IBlockchainRules Rules { get { return this.rules; } }
 
-        public CacheContext CacheContext { get { return this.cacheContext; } }
-
-        public IStorageContext StorageContext { get { return this.CacheContext.StorageContext; } }
+        public ICacheContext CacheContext { get { return this.cacheContext; } }
 
         public ChainedBlock WinningBlock { get { return this.targetChainWorker.WinningBlock; } }
 

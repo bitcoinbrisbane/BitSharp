@@ -20,7 +20,7 @@ namespace BitSharp.Daemon
         private static readonly int MAX_BUILDER_LIFETIME_SECONDS = 60;
 
         private readonly IBlockchainRules rules;
-        private readonly CacheContext cacheContext;
+        private readonly ICacheContext cacheContext;
         private readonly BlockchainCalculator calculator;
         private Func<ChainedBlocks> getTargetChainedBlocks;
 
@@ -30,7 +30,7 @@ namespace BitSharp.Daemon
         private ChainStateBuilder chainStateBuilder;
         private DateTime chainStateBuilderTime;
 
-        public ChainStateWorker(IBlockchainRules rules, CacheContext cacheContext, Func<ChainedBlocks> getTargetChainedBlocks, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
+        public ChainStateWorker(IBlockchainRules rules, ICacheContext cacheContext, Func<ChainedBlocks> getTargetChainedBlocks, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
             : base("ChainStateWorker", initialNotify, minIdleTime, maxIdleTime)
         {
             this.rules = rules;

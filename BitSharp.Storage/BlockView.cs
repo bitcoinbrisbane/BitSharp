@@ -13,10 +13,10 @@ namespace BitSharp.Storage
 {
     public class BlockView : IUnboundedCache<UInt256, Block>
     {
-        private readonly CacheContext cacheContext;
+        private readonly ICacheContext cacheContext;
         private readonly ConcurrentSetBuilder<UInt256> missingData;
 
-        public BlockView(CacheContext cacheContext)
+        public BlockView(ICacheContext cacheContext)
         {
             this.cacheContext = cacheContext;
             this.missingData = new ConcurrentSetBuilder<UInt256>();

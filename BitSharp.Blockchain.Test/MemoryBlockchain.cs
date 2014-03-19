@@ -25,7 +25,7 @@ namespace BitSharp.Blockchain.Test
         private readonly Random random;
 
         private readonly MemoryStorageContext _storageContext;
-        private readonly CacheContext _cacheContext;
+        private readonly ICacheContext _cacheContext;
 
         private readonly Block _genesisBlock;
         private readonly ChainedBlock _genesisChainedBlock;
@@ -68,7 +68,7 @@ namespace BitSharp.Blockchain.Test
 
         public BlockchainCalculator Calculator { get { return this._calculator; } }
 
-        public CacheContext CacheContext { get { return this._cacheContext; } }
+        public ICacheContext CacheContext { get { return this._cacheContext; } }
 
         public MemoryStorageContext StorageContext { get { return this._storageContext; } }
 
