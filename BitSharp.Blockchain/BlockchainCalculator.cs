@@ -59,18 +59,16 @@ namespace BitSharp.Blockchain
 
                 if (direction < 0)
                 {
-                    List<TxOutputKey> spendOutputs, receiveOutputs;
-                    RollbackUtxo(chainStateBuilder, block, out spendOutputs, out receiveOutputs);
+                    RollbackUtxo(chainStateBuilder, block);
 
                     chainStateBuilder.ChainedBlocks.RemoveBlock(chainedBlock);
                 }
                 else if (direction > 0)
                 {
                     // calculate the new block utxo, double spends will be checked for
-                    ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions = ImmutableDictionary.Create<UInt256, ImmutableHashSet<int>>();
                     long txCount = 0, inputCount = 0;
                     new MethodTimer(false).Time("CalculateUtxo", () =>
-                        CalculateUtxo(chainedBlock.Height, block, chainStateBuilder.Utxo, out newTransactions, out txCount, out inputCount));
+                        CalculateUtxo(chainedBlock.Height, block, chainStateBuilder.Utxo, out txCount, out inputCount));
 
                     chainStateBuilder.ChainedBlocks.AddBlock(chainedBlock);
 
@@ -80,7 +78,7 @@ namespace BitSharp.Blockchain
                     try
                     {
                         new MethodTimer(false).Time("ValidateBlock", () =>
-                            this.Rules.ValidateBlock(block, chainStateBuilder, newTransactions, prevInputTxes));
+                            this.Rules.ValidateBlock(block, chainStateBuilder, prevInputTxes));
                     }
                     finally
                     {
@@ -159,12 +157,10 @@ namespace BitSharp.Blockchain
                 ));
         }
 
-        private void CalculateUtxo(long blockHeight, Block block, UtxoBuilder utxoBuilder, out ImmutableDictionary<UInt256, ImmutableHashSet<int>> newTransactions, out long txCount, out long inputCount)
+        private void CalculateUtxo(int blockHeight, Block block, UtxoBuilder utxoBuilder, out long txCount, out long inputCount)
         {
             txCount = 1;
             inputCount = 0;
-
-            var newTransactionsBuilder = ImmutableDictionary.CreateBuilder<UInt256, ImmutableHashSet<int>>();
 
             // don't include genesis block coinbase in utxo
             if (blockHeight > 0)
@@ -173,29 +169,7 @@ namespace BitSharp.Blockchain
                 // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
                 var coinbaseTx = block.Transactions[0];
 
-                // add the coinbase outputs to the utxo
-                var coinbaseUnspentTx = new UnspentTx(coinbaseTx.Hash, new ImmutableBitArray(coinbaseTx.Outputs.Count, true));
-
-                // add transaction output to to the utxo
-                if (utxoBuilder.ContainsKey(coinbaseTx.Hash))
-                {
-                    // duplicate transaction output
-                    Debug.WriteLine("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(blockHeight, block.Hash.ToHexNumberString()));
-
-                    //TODO the inverse needs to be special cased in RollbackUtxo as well
-                    if ((blockHeight == 91842 && coinbaseTx.Hash == UInt256.Parse("d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599", NumberStyles.HexNumber))
-                        || (blockHeight == 91880 && coinbaseTx.Hash == UInt256.Parse("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468", NumberStyles.HexNumber)))
-                    {
-                        utxoBuilder.Remove(coinbaseTx.Hash);
-                    }
-                    else
-                    {
-                        throw new ValidationException();
-                    }
-                }
-
-                newTransactionsBuilder.Add(coinbaseTx.Hash, ImmutableHashSet.Create(0));
-                utxoBuilder.Add(coinbaseTx.Hash, coinbaseUnspentTx);
+                utxoBuilder.Mint(coinbaseTx, blockHeight);
             }
 
             // check for double spends
@@ -209,147 +183,36 @@ namespace BitSharp.Blockchain
                     var input = tx.Inputs[inputIndex];
                     inputCount++;
 
-                    if (!utxoBuilder.ContainsKey(input.PreviousTxOutputKey.TxHash))
-                    {
-                        // output wasn't present in utxo, invalid block
-                        throw new ValidationException();
-                    }
-
-                    var prevUnspentTx = utxoBuilder[input.PreviousTxOutputKey.TxHash];
-
-                    if (input.PreviousTxOutputKey.TxOutputIndex >= prevUnspentTx.UnspentOutputs.Length)
-                    {
-                        // output was out of bounds
-                        throw new ValidationException();
-                    }
-
-                    if (!prevUnspentTx.UnspentOutputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()])
-                    {                        // output was already spent
-                        throw new ValidationException();
-                    }
-
-
-                    // remove the output from the utxo
-                    utxoBuilder[input.PreviousTxOutputKey.TxHash] =
-                        new UnspentTx(prevUnspentTx.TxHash, prevUnspentTx.UnspentOutputs.Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), false));
-
-                    // remove fully spent transaction from the utxo
-                    if (utxoBuilder[input.PreviousTxOutputKey.TxHash].UnspentOutputs.All(x => !x))
-                        utxoBuilder.Remove(input.PreviousTxOutputKey.TxHash);
+                    utxoBuilder.Spend(input);
                 }
 
-                // add the output to the list to be added to the utxo
-                var unspentTx = new UnspentTx(tx.Hash, new ImmutableBitArray(tx.Outputs.Count, true));
-
-                // add transaction output to to the utxo
-                if (utxoBuilder.ContainsKey(tx.Hash))
-                {
-                    // duplicate transaction output
-                    Debug.WriteLine("Duplicate transaction at block {0:#,##0}, {1}, tx {2}".Format2(blockHeight, block.Hash.ToHexNumberString(), txIndex));
-                    //Debugger.Break();
-                    //TODO throw new Validation();
-
-                    //TODO this needs to be tracked so that blocks can be rolled back accurately
-                    //TODO track these separately on the blockchain info? gonna be costly to track on every transaction
-                }
-
-                if (!newTransactionsBuilder.ContainsKey(tx.Hash))
-                    newTransactionsBuilder.Add(tx.Hash, ImmutableHashSet.Create(txIndex));
-                else
-                    newTransactionsBuilder[tx.Hash] = newTransactionsBuilder[tx.Hash].Add(txIndex);
-                utxoBuilder.Add(tx.Hash, unspentTx);
+                utxoBuilder.Mint(tx, blockHeight);
             }
-
-            // validation successful, return the new utxo
-            newTransactions = newTransactionsBuilder.ToImmutable();
         }
 
-        private void RollbackUtxo(ChainStateBuilder chainStateBuilder, Block block, out List<TxOutputKey> spendOutputs, out List<TxOutputKey> receiveOutputs)
+        private void RollbackUtxo(ChainStateBuilder chainStateBuilder, Block block)
         {
             var blockHeight = chainStateBuilder.ChainedBlocks.Height;
             var utxoBuilder = chainStateBuilder.Utxo;
-
-            spendOutputs = new List<TxOutputKey>();
-            receiveOutputs = new List<TxOutputKey>();
-
-            //TODO apply real coinbase rule
-            // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
-            var coinbaseTx = block.Transactions[0];
-
-            for (var outputIndex = 0; outputIndex < coinbaseTx.Outputs.Count; outputIndex++)
-            {
-                var txOutputKey = new TxOutputKey(coinbaseTx.Hash, (UInt32)outputIndex);
-                if (blockHeight > 0)
-                {
-                    // remove new outputs from the rolled back utxo
-                    if (utxoBuilder.Remove(coinbaseTx.Hash))
-                    {
-                        receiveOutputs.Add(txOutputKey);
-                    }
-                    else
-                    {
-                        // missing transaction output
-                        Debug.WriteLine("Missing transaction at block {0:#,##0}, {1}, tx {2}, output {3}".Format2(blockHeight, block.Hash.ToHexNumberString(), 0, outputIndex));
-                        Debugger.Break();
-                        //TODO throw new Validation();
-
-                        //TODO this needs to be tracked so that blocks can be rolled back accurately
-                        //TODO track these separately on the blockchain info? gonna be costly to track on every transaction
-                    }
-                }
-            }
 
             for (var txIndex = block.Transactions.Count - 1; txIndex >= 1; txIndex--)
             {
                 var tx = block.Transactions[txIndex];
 
-                for (var outputIndex = tx.Outputs.Count - 1; outputIndex >= 0; outputIndex--)
-                {
-                    var output = tx.Outputs[outputIndex];
-                    var txOutputKey = new TxOutputKey(tx.Hash, (UInt32)outputIndex);
-                    //TODO what if a transaction wasn't added to the utxo because it already existed?
-                    //TODO the block would still pass without adding the tx to its utxo, but here it would get rolled back
-                    //TODO maybe a flag bit to track this?
+                // remove outputs
+                utxoBuilder.Unmint(tx, blockHeight);
 
-                    // remove new outputs from the rolled back utxo
-                    if (utxoBuilder.Remove(tx.Hash))
-                    {
-                        receiveOutputs.Add(txOutputKey);
-                    }
-                    else
-                    {
-                        // missing transaction output
-                        Debug.WriteLine("Missing transaction at block {0:#,##0}, {1}, tx {2}, output {3}".Format2(blockHeight, block.Hash.ToHexNumberString(), txIndex, outputIndex));
-                        Debugger.Break();
-                        //TODO throw new Validation();
-
-                        //TODO this needs to be tracked so that blocks can be rolled back accurately
-                        //TODO track these separately on the blockchain info? gonna be costly to track on every transaction
-                    }
-                }
-
+                // remove inputs in reverse order
                 for (var inputIndex = tx.Inputs.Count - 1; inputIndex >= 0; inputIndex--)
                 {
                     var input = tx.Inputs[inputIndex];
                     utxoBuilder.Unspend(input);
-
-                    //TODO
-                    //if (prevUtxoBuilder.Add(input.PreviousTxOutputKey))
-                    //{
-                    //    spendOutputs.Add(input.PreviousTxOutputKey);
-                    //}
-                    //else
-                    //{
-                    //    // missing transaction output
-                    //    Debug.WriteLine("Duplicate transaction at block {0:#,##0}, {1}, tx {2}, input {3}".Format2(blockHeight, block.Hash.ToHexNumberString(), txIndex, inputIndex));
-                    //    Debugger.Break();
-                    //    //TODO throw new Validation();
-
-                    //    //TODO this needs to be tracked so that blocks can be rolled back accurately
-                    //    //TODO track these separately on the blockchain info? gonna be costly to track on every transaction
-                    //}
                 }
             }
+
+            // remove coinbase outputs
+            var coinbaseTx = block.Transactions[0];
+            utxoBuilder.Unmint(coinbaseTx, blockHeight);
         }
 
         public void RevalidateBlockchain(ChainedBlocks blockchain, Block genesisBlock)
