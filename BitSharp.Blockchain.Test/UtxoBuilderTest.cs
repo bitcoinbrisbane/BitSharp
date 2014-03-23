@@ -19,28 +19,61 @@ namespace BitSharp.Blockchain.Test
         [TestMethod]
         public void TestSimpleSpend()
         {
-            var mockCacheContext = new Mock<ICacheContext>();
-            var mockUtxoBuilderStorage = new Mock<IUtxoBuilderStorage>();
-            var mockParentUtxo = Mock.Of<Utxo>();
+            // initialize storage
+            var memoryCacheContext = new CacheContext(new MemoryStorageContext());
 
-            mockCacheContext.Setup(cc => cc.ToUtxoBuilder(mockParentUtxo)).Returns(mockUtxoBuilderStorage.Object);
-
+            // prepare an unspent transaction
             var txHash = new UInt256(100);
             var txOutputIndex = 0U;
             var txUnspentOutputs = new ImmutableBitArray(1, false);
+            var unspentTx = new UnspentTx(txHash, 1, OutputState.Unspent);
 
-            mockUtxoBuilderStorage.Setup(utxo => utxo.ContainsKey(txHash)).Returns(true);
-            mockUtxoBuilderStorage.Setup(utxo => utxo[txHash]).Returns(new UnspentTx(txHash, 1, OutputState.Unspent));
+            // mock a parent utxo containing the unspent transaction
+            var mockParentUtxo = new Mock<Utxo>();
+            mockParentUtxo.Setup(utxo => utxo.UnspentTransactions()).Returns(new[] { unspentTx });
 
-            var utxoBuilder = new UtxoBuilder(mockCacheContext.Object, mockParentUtxo);
+            // initialize utxo builder
+            var utxoBuilder = new UtxoBuilder(memoryCacheContext, mockParentUtxo.Object);
 
+            // create an input to spend the unspent transaction
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex), ImmutableList.Create<byte>(), 0);
+
+            // spend the input
             utxoBuilder.Spend(input);
+
+            // no validation exception thrown
         }
 
         [TestMethod]
+        [ExpectedException(typeof(ValidationException))]
         public void TestDoubleSpend()
         {
+            // initialize storage
+            var memoryCacheContext = new CacheContext(new MemoryStorageContext());
+
+            // prepare an unspent transaction
+            var txHash = new UInt256(100);
+            var txOutputIndex = 0U;
+            var txUnspentOutputs = new ImmutableBitArray(1, false);
+            var unspentTx = new UnspentTx(txHash, 1, OutputState.Unspent);
+
+            // mock a parent utxo containing the unspent transaction
+            var mockParentUtxo = new Mock<Utxo>();
+            mockParentUtxo.Setup(utxo => utxo.UnspentTransactions()).Returns(new[] { unspentTx });
+
+            // initialize utxo builder
+            var utxoBuilder = new UtxoBuilder(memoryCacheContext, mockParentUtxo.Object);
+
+            // create an input to spend the unspent transaction
+            var input = new TxInput(new TxOutputKey(txHash, txOutputIndex), ImmutableList.Create<byte>(), 0);
+
+            // spend the input
+            utxoBuilder.Spend(input);
+
+            // attempt to spend the input again
+            utxoBuilder.Spend(input);
+
+            // validation exception should be thrown
         }
     }
 }
