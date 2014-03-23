@@ -17,10 +17,10 @@ namespace BitSharp.Blockchain
         private readonly ICacheContext cacheContext;
         private readonly IUtxoBuilderStorage utxoBuilderStorage;
 
-        public UtxoBuilder(ICacheContext cacheContext, Utxo currentUtxo)
+        public UtxoBuilder(ICacheContext cacheContext, Utxo parentUtxo)
         {
             this.cacheContext = cacheContext;
-            this.utxoBuilderStorage = cacheContext.ToUtxoBuilder(currentUtxo);
+            this.utxoBuilderStorage = cacheContext.ToUtxoBuilder(parentUtxo);
         }
 
         ~UtxoBuilder()
