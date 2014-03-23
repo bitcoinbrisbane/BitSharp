@@ -1,7 +1,4 @@
-﻿//#define SQLITE
-//#define FIREBIRD
-//#define SQL_SERVER
-#define ESENT
+﻿//#define TEST_TOOL
 
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Blockchain;
@@ -9,6 +6,7 @@ using BitSharp.Daemon;
 using BitSharp.Node;
 using BitSharp.Script;
 using BitSharp.Storage;
+using BitSharp.Storage.Esent;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,16 +24,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using BitSharp.Network;
-
-#if SQLITE
-using BitSharp.Storage.SQLite;
-#elif FIREBIRD
-using BitSharp.Storage.Firebird;
-#elif SQL_SERVER
-using BitSharp.Storage.SqlServer;
-#elif ESENT
-using BitSharp.Storage.Esent;
-#endif
 
 namespace BitSharp.Client
 {
@@ -62,34 +50,31 @@ namespace BitSharp.Client
 
                 Debug.WriteLine(DateTime.Now);
 
-#if SQLITE
-                var storageContext = new SQLiteStorageContext();
-                var knownAddressStorage = new BitSharp.Storage.SQLite.KnownAddressStorage(storageContext);
-                this.storageContext = storageContext;
-#elif FIREBIRD
-                var storageContext = new FirebirdStorageContext();
-                var knownAddressStorage = new BitSharp.Storage.Firebird.KnownAddressStorage(storageContext);
-                this.storageContext = storageContext;
-#elif SQL_SERVER
-                var storageContext = new SqlServerStorageContext();
-                var knownAddressStorage = new BitSharp.Storage.SqlServer.KnownAddressStorage(storageContext);
-                this.storageContext = storageContext;
-#elif ESENT
+#if !TEST_TOOL
                 var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data"));
-
-                //if (Directory.Exists(Path.Combine(Config.LocalStoragePath, "data-test")))
-                //    Directory.Delete(Path.Combine(Config.LocalStoragePath, "data-test"), recursive: true);
-                //var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data-test"));
-
+#else
+                if (Directory.Exists(Path.Combine(Config.LocalStoragePath, "data-test")))
+                    Directory.Delete(Path.Combine(Config.LocalStoragePath, "data-test"), recursive: true);
+                var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data-test"));
+#endif
+                
                 var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
                 this.storageContext = storageContext;
-#endif
                 this.cacheContext = new CacheContext(this.storageContext);
+                
+#if !TEST_TOOL
                 this.rules = new MainnetRules(this.cacheContext);
-                //this.rules = new ComparisonToolTestNetRules(this.cacheContext);
+#else
+                this.rules = new ComparisonToolTestNetRules(this.cacheContext);
+#endif
+                
                 this.blockchainDaemon = new BlockchainDaemon(this.rules, this.cacheContext);
+                
+#if !TEST_TOOL
                 this.localClient = new LocalClient(LocalClientType.MainNet, this.blockchainDaemon, knownAddressStorage);
-                //this.localClient = new LocalClient(LocalClientType.ComparisonToolTestNet, this.blockchainDaemon, knownAddressStorage);
+#else
+                this.localClient = new LocalClient(LocalClientType.ComparisonToolTestNet, this.blockchainDaemon, knownAddressStorage);
+#endif
 
                 // setup view model
                 this.viewModel = new MainWindowViewModel(this.blockchainDaemon);
