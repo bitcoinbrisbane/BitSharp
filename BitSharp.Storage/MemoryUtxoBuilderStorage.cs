@@ -26,6 +26,8 @@ namespace BitSharp.Storage
             }
         }
 
+        public ImmutableDictionary<UInt256, UnspentTx>.Builder Storage { get { return this.utxo; } }
+
         public bool ContainsKey(UInt256 txHash)
         {
             return this.utxo.ContainsKey(txHash);
