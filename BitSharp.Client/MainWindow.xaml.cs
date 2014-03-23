@@ -75,14 +75,21 @@ namespace BitSharp.Client
                 var knownAddressStorage = new BitSharp.Storage.SqlServer.KnownAddressStorage(storageContext);
                 this.storageContext = storageContext;
 #elif ESENT
-                var storageContext = new EsentStorageContext();
+                var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data"));
+
+                //if (Directory.Exists(Path.Combine(Config.LocalStoragePath, "data-test")))
+                //    Directory.Delete(Path.Combine(Config.LocalStoragePath, "data-test"), recursive: true);
+                //var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data-test"));
+
                 var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
                 this.storageContext = storageContext;
 #endif
                 this.cacheContext = new CacheContext(this.storageContext);
                 this.rules = new MainnetRules(this.cacheContext);
+                //this.rules = new ComparisonToolTestNetRules(this.cacheContext);
                 this.blockchainDaemon = new BlockchainDaemon(this.rules, this.cacheContext);
                 this.localClient = new LocalClient(LocalClientType.MainNet, this.blockchainDaemon, knownAddressStorage);
+                //this.localClient = new LocalClient(LocalClientType.ComparisonToolTestNet, this.blockchainDaemon, knownAddressStorage);
 
                 // setup view model
                 this.viewModel = new MainWindowViewModel(this.blockchainDaemon);

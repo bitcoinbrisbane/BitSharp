@@ -28,7 +28,7 @@ namespace BitSharp.Storage.Esent
         {
             this.storageContext = storageContext;
             this.name = "chainedBlocks";
-            this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "data", this.name);
+            this.directory = Path.Combine(storageContext.BaseDirectory, this.name);
             this.dict = new PersistentDictionary<string, ChainedBlockSerial>(this.directory);
         }
 

@@ -31,7 +31,7 @@ namespace BitSharp.Storage.Esent
         {
             this.storageContext = storageContext;
             this.name = name;
-            this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "data", name);
+            this.directory = Path.Combine(storageContext.BaseDirectory, name);
             this.dict = new PersistentUInt256ByteDictionary(this.directory);
 
             this.encoder = encoder;

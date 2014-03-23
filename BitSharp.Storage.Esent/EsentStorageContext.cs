@@ -13,13 +13,15 @@ namespace BitSharp.Storage.Esent
 {
     public class EsentStorageContext : IStorageContext
     {
+        private readonly string baseDirectory;
         private readonly BlockHeaderStorage _blockHeaderStorage;
         private readonly BlockTxHashesStorage _blockTxHashesStorage;
         private readonly TransactionStorage _transactionStorage;
         private readonly ChainedBlockStorage _chainedBlockStorage;
 
-        public EsentStorageContext()
+        public EsentStorageContext(string baseDirectory)
         {
+            this.baseDirectory = baseDirectory;
             this._blockHeaderStorage = new BlockHeaderStorage(this);
             this._blockTxHashesStorage = new BlockTxHashesStorage(this);
             this._transactionStorage = new TransactionStorage(this);
@@ -33,6 +35,8 @@ namespace BitSharp.Storage.Esent
         public TransactionStorage Transactionstorage { get { return this._transactionStorage; } }
 
         public ChainedBlockStorage ChainedBlockStorage { get { return this._chainedBlockStorage; } }
+
+        internal string BaseDirectory { get { return this.baseDirectory; } }
 
         IBoundedStorage<UInt256, BlockHeader> IStorageContext.BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 
@@ -62,5 +66,6 @@ namespace BitSharp.Storage.Esent
                 this._transactionStorage
             }.DisposeList();
         }
-    }
+    
+}
 }
