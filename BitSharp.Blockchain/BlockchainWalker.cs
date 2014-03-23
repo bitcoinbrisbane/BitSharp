@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -63,7 +64,7 @@ namespace BitSharp.Blockchain
                 cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
 
                 // from chain is longer, rewind it
-                if (currentFromBlock.Height > currentToBlock.BlockHash)
+                if (currentFromBlock.Height > currentToBlock.Height)
                 {
                     // if no further rollback is possible, chain mismatch
                     if (currentFromBlock.Height == 0)
@@ -85,6 +86,9 @@ namespace BitSharp.Blockchain
                 // chains are same height, rewind both
                 else
                 {
+                    if (currentFromBlock.Height != currentToBlock.Height)
+                        throw new InvalidOperationException();
+
                     // if no further rollback is possible, chain mismatch
                     if (currentFromBlock.Height == 0 || currentToBlock.Height == 0)
                         throw new InvalidOperationException();

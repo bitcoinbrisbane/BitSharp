@@ -34,7 +34,7 @@ namespace BitSharp.Blockchain
             GC.SuppressFinalize(this);
         }
 
-        public void Mint(Transaction tx, int blockHeight)
+        public void Mint(Transaction tx, ChainedBlock block)
         {
             // add the coinbase outputs to the utxo
             var coinbaseUnspentTx = new UnspentTx(tx.Hash, tx.Outputs.Count, OutputState.Unspent);
@@ -43,8 +43,8 @@ namespace BitSharp.Blockchain
             if (this.ContainsKey(tx.Hash))
             {
                 // two specific duplicates are allowed, from before duplicates were disallowed
-                if ((blockHeight == 91842 && tx.Hash == UInt256.Parse("d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599", NumberStyles.HexNumber))
-                    || (blockHeight == 91880 && tx.Hash == UInt256.Parse("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468", NumberStyles.HexNumber)))
+                if ((block.Height == 91842 && tx.Hash == UInt256.Parse("d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599", NumberStyles.HexNumber))
+                    || (block.Height == 91880 && tx.Hash == UInt256.Parse("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468", NumberStyles.HexNumber)))
                 {
                     //TODO the inverse needs to be special cased in RollbackUtxo as well
                     this.Remove(tx.Hash);
@@ -53,7 +53,7 @@ namespace BitSharp.Blockchain
                 {
                     // duplicate transaction output
                     //Debug.WriteLine("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(blockHeight, block.Hash.ToHexNumberString()));
-                    throw new ValidationException();
+                    throw new ValidationException(block.BlockHash);
                 }
             }
 
@@ -61,12 +61,12 @@ namespace BitSharp.Blockchain
             this.Add(tx.Hash, coinbaseUnspentTx);
         }
 
-        public void Spend(TxInput input)
+        public void Spend(TxInput input, ChainedBlock block)
         {
             if (!this.ContainsKey(input.PreviousTxOutputKey.TxHash))
             {
                 // output wasn't present in utxo, invalid block
-                throw new ValidationException();
+                throw new ValidationException(block.BlockHash);
             }
 
             var prevUnspentTx = this[input.PreviousTxOutputKey.TxHash];
@@ -74,13 +74,13 @@ namespace BitSharp.Blockchain
             if (input.PreviousTxOutputKey.TxOutputIndex >= prevUnspentTx.OutputStates.Length)
             {
                 // output was out of bounds
-                throw new ValidationException();
+                throw new ValidationException(block.BlockHash);
             }
 
             if (prevUnspentTx.OutputStates[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()] == OutputState.Spent)
             {
                 // output was already spent
-                throw new ValidationException();
+                throw new ValidationException(block.BlockHash);
             }
 
             // remove the output from the utxo
@@ -91,14 +91,14 @@ namespace BitSharp.Blockchain
                 this.Remove(input.PreviousTxOutputKey.TxHash);
         }
 
-        public void Unmint(Transaction tx, int blockHeight)
+        public void Unmint(Transaction tx, ChainedBlock block)
         {
             // check that transaction exists
             if (!this.ContainsKey(tx.Hash))
             {
                 // missing transaction output
                 //Debug.WriteLine("Missing transaction at block {0:#,##0}, {1}, tx {2}, output {3}".Format2(blockHeight, block.Hash.ToHexNumberString(), txIndex, outputIndex));
-                throw new ValidationException();
+                throw new ValidationException(block.BlockHash);
             }
 
             //TODO verify blockheight
@@ -107,14 +107,14 @@ namespace BitSharp.Blockchain
             var unspentOutputs = this[tx.Hash];
             if (!unspentOutputs.OutputStates.All(x => x == OutputState.Unspent))
             {
-                throw new ValidationException();
+                throw new ValidationException(block.BlockHash);
             }
 
             // remove the outputs
             this.Remove(tx.Hash);
         }
 
-        public void Unspend(TxInput input)
+        public void Unspend(TxInput input, ChainedBlock block)
         {
             // add spent outputs back into the rolled back utxo
             if (this.ContainsKey(input.PreviousTxOutputKey.TxHash))
@@ -123,11 +123,11 @@ namespace BitSharp.Blockchain
 
                 // check if output is out of bounds
                 if (input.PreviousTxOutputKey.TxOutputIndex >= prevUnspentTx.OutputStates.Length)
-                    throw new ValidationException();
+                    throw new ValidationException(block.BlockHash);
 
                 // check that output isn't already considered unspent
                 if (prevUnspentTx.OutputStates[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()] == OutputState.Unspent)
-                    throw new ValidationException();
+                    throw new ValidationException(block.BlockHash);
 
                 // mark output as unspent
                 this[input.PreviousTxOutputKey.TxHash] = prevUnspentTx.SetOutputState(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), OutputState.Unspent);

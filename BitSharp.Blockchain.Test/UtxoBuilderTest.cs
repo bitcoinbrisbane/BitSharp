@@ -19,6 +19,9 @@ namespace BitSharp.Blockchain.Test
         [TestMethod]
         public void TestSimpleSpend()
         {
+            // prepare block
+            var chainedBlock = new ChainedBlock(blockHash: 1, previousBlockHash: 0, height: 0, totalWork: 0);
+
             // prepare an unspent transaction
             var txHash = new UInt256(100);
             var unspentTx = new UnspentTx(txHash, 3, OutputState.Unspent);
@@ -41,7 +44,7 @@ namespace BitSharp.Blockchain.Test
             var input1 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableList.Create<byte>(), 0);
 
             // spend the input
-            utxoBuilder.Spend(input1);
+            utxoBuilder.Spend(input1, chainedBlock);
 
             // verify utxo storage
             Assert.IsTrue(memoryUtxoBuilderStorage.Storage.ContainsKey(txHash));
@@ -54,7 +57,7 @@ namespace BitSharp.Blockchain.Test
             var input2 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 1), ImmutableList.Create<byte>(), 0);
 
             // spend the input
-            utxoBuilder.Spend(input2);
+            utxoBuilder.Spend(input2, chainedBlock);
 
             // verify utxo storage
             Assert.IsTrue(memoryUtxoBuilderStorage.Storage.ContainsKey(txHash));
@@ -67,7 +70,7 @@ namespace BitSharp.Blockchain.Test
             var input3 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 2), ImmutableList.Create<byte>(), 0);
 
             // spend the input
-            utxoBuilder.Spend(input3);
+            utxoBuilder.Spend(input3, chainedBlock);
 
             // verify utxo storage
             Assert.IsFalse(memoryUtxoBuilderStorage.Storage.ContainsKey(txHash));
@@ -77,6 +80,9 @@ namespace BitSharp.Blockchain.Test
         [ExpectedException(typeof(ValidationException))]
         public void TestDoubleSpend()
         {
+            // prepare block
+            var chainedBlock = new ChainedBlock(blockHash: 1, previousBlockHash: 0, height: 0, totalWork: 0);
+
             // prepare an unspent transaction
             var txHash = new UInt256(100);
             var unspentTx = new UnspentTx(txHash, 1, OutputState.Unspent);
@@ -99,13 +105,13 @@ namespace BitSharp.Blockchain.Test
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableList.Create<byte>(), 0);
 
             // spend the input
-            utxoBuilder.Spend(input);
+            utxoBuilder.Spend(input, chainedBlock);
 
             // verify utxo storage
             Assert.IsFalse(memoryUtxoBuilderStorage.Storage.ContainsKey(txHash));
 
             // attempt to spend the input again
-            utxoBuilder.Spend(input);
+            utxoBuilder.Spend(input, chainedBlock);
 
             // validation exception should be thrown
         }

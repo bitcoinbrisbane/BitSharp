@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BitSharp.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,13 +9,21 @@ namespace BitSharp.Blockchain
 {
     public class ValidationException : Exception
     {
-        //[Obsolete]
-        public ValidationException()
-            : base()
-        { }
+        private readonly UInt256 blockHash;
 
-        public ValidationException(string message)
+        //[Obsolete]
+        public ValidationException(UInt256 blockHash)
+            : base()
+        {
+            this.blockHash = blockHash;
+        }
+
+        public ValidationException(UInt256 blockHash, string message)
             : base(message)
-        { }
+        {
+            this.blockHash = blockHash;
+        }
+
+        public UInt256 BlockHash { get { return this.blockHash; } }
     }
 }

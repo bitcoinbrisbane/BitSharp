@@ -281,6 +281,32 @@ namespace BitSharp.Storage
             writer.WriteBytes(bytes);
         }
 
+        public static string DecodeVarString(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                var length = reader.ReadInt32();
+                return Encoding.ASCII.GetString(reader.ReadBytes(length));
+            }
+        }
+
+        public static void EncodeVarString(Stream stream, string s)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                var bytes = Encoding.ASCII.GetBytes(s);
+                writer.WriteInt32(bytes.Length);
+                writer.WriteBytes(bytes);
+            }
+        }
+
+        public static byte[] EncodeVarString(string s)
+        {
+            var stream = new MemoryStream();
+            EncodeVarString(stream, s);
+            return stream.ToArray();
+        }
+
         public static ImmutableList<T> DecodeList<T>(BinaryReader reader, Func<T> decode)
         {
             var length = reader.ReadInt32();

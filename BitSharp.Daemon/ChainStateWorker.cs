@@ -107,12 +107,18 @@ namespace BitSharp.Daemon
                         });
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 if (this.chainStateBuilder != null && !this.chainStateBuilder.IsConsistent)
                 {
                     this.chainStateBuilder.Dispose();
                     this.chainStateBuilder = null;
+                }
+
+                if (e is ValidationException)
+                {
+                    var validationException = (ValidationException)e;
+                    this.cacheContext.InvalidBlockCache[validationException.BlockHash] = validationException.Message;
                 }
 
                 // try again on failure

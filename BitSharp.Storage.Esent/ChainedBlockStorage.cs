@@ -122,34 +122,34 @@ namespace BitSharp.Storage.Esent
             return this.GetEnumerator();
         }
 
-        public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
-        {
-            try
-            {
-                var maxTotalWork = new BigInteger(-1);
-                var maxTotalWorkBlocks = new List<ChainedBlock>();
+        //public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
+        //{
+        //    try
+        //    {
+        //        var maxTotalWork = new BigInteger(-1);
+        //        var maxTotalWorkBlocks = new List<ChainedBlock>();
 
-                foreach (var block in this.Values)
-                {
-                    if (block.TotalWork > maxTotalWork)
-                    {
-                        maxTotalWork = block.TotalWork;
-                        maxTotalWorkBlocks = new List<ChainedBlock>();
-                        maxTotalWorkBlocks.Add(block);
-                    }
-                    else if (block.TotalWork == maxTotalWork)
-                    {
-                        maxTotalWorkBlocks.Add(block);
-                    }
-                }
+        //        foreach (var block in this.Values)
+        //        {
+        //            if (block.TotalWork > maxTotalWork)
+        //            {
+        //                maxTotalWork = block.TotalWork;
+        //                maxTotalWorkBlocks = new List<ChainedBlock>();
+        //                maxTotalWorkBlocks.Add(block);
+        //            }
+        //            else if (block.TotalWork == maxTotalWork)
+        //            {
+        //                maxTotalWorkBlocks.Add(block);
+        //            }
+        //        }
 
-                return maxTotalWorkBlocks;
-            }
-            catch (InvalidOperationException)
-            {
-                return Enumerable.Empty<ChainedBlock>();
-            }
-        }
+        //        return maxTotalWorkBlocks;
+        //    }
+        //    catch (InvalidOperationException)
+        //    {
+        //        return Enumerable.Empty<ChainedBlock>();
+        //    }
+        //}
 
         private static ChainedBlockSerial EncodeValue(ChainedBlock chainedBlock)
         {

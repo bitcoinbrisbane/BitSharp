@@ -30,6 +30,9 @@ namespace BitSharp.Daemon
             // wire up cache events
             this.cacheContext.ChainedBlockCache.OnAddition += CheckChainedBlock;
             this.cacheContext.ChainedBlockCache.OnModification += CheckChainedBlock;
+
+            this.cacheContext.InvalidBlockCache.OnAddition += AddInvalidBlock;
+            this.cacheContext.InvalidBlockCache.OnModification += AddInvalidBlock;
         }
 
         public ChainedBlock TargetBlock { get { return this.targetBlock; } }
@@ -39,13 +42,16 @@ namespace BitSharp.Daemon
             // cleanup events
             this.cacheContext.ChainedBlockCache.OnAddition -= CheckChainedBlock;
             this.cacheContext.ChainedBlockCache.OnModification -= CheckChainedBlock;
+
+            this.cacheContext.InvalidBlockCache.OnAddition -= AddInvalidBlock;
+            this.cacheContext.InvalidBlockCache.OnModification -= AddInvalidBlock;
         }
 
         public void CheckAllChainedBlocks()
         {
             new MethodTimer().Time(() =>
             {
-                foreach (var chainedBlock in this.cacheContext.SelectMaxTotalWorkBlocks())
+                foreach (var chainedBlock in this.cacheContext.ChainedBlockCache.Values)
                 {
                     //TODO
                     // cooperative loop
@@ -66,6 +72,9 @@ namespace BitSharp.Daemon
             }
             catch (MissingDataException) { return; }
 
+            if (this.cacheContext.InvalidBlockCache.ContainsKey(chainedBlock.BlockHash))
+                return;
+
             var wasChanged = false;
             this.targetBlockLock.DoWrite(() =>
             {
@@ -82,6 +91,25 @@ namespace BitSharp.Daemon
                 var handler = this.OnTargetBlockChanged;
                 if (handler != null)
                     handler();
+            }
+        }
+
+        private void AddInvalidBlock(UInt256 blockHash, string data)
+        {
+            var wasTargetBlockInvalid = false;
+            this.targetBlockLock.DoWrite(() =>
+            {
+                if (this.targetBlock != null
+                    && this.targetBlock.BlockHash == blockHash)
+                {
+                    this.targetBlock = null;
+                    wasTargetBlockInvalid = true;
+                }
+            });
+
+            if (wasTargetBlockInvalid)
+            {
+                this.CheckAllChainedBlocks();
             }
         }
     }

@@ -16,6 +16,7 @@ namespace BitSharp.Storage.Test
         private readonly MemoryStorage<UInt256, ChainedBlock> _chainedBlockStorage;
         private readonly MemoryStorage<UInt256, IImmutableList<UInt256>> _blockTxHashesStorage;
         private readonly MemoryStorage<UInt256, Transaction> _transactionStorage;
+        private readonly MemoryStorage<UInt256, string> _invalidBlockStorage;
 
         public MemoryStorageContext()
         {
@@ -23,6 +24,7 @@ namespace BitSharp.Storage.Test
             this._chainedBlockStorage = new MemoryStorage<UInt256, ChainedBlock>(this);
             this._blockTxHashesStorage = new MemoryStorage<UInt256, IImmutableList<UInt256>>(this);
             this._transactionStorage = new MemoryStorage<UInt256, Transaction>(this);
+            this._invalidBlockStorage = new MemoryStorage<UInt256, string>(this);
         }
 
         public MemoryStorage<UInt256, BlockHeader> BlockHeaderStorage { get { return this._blockHeaderStorage; } }
@@ -33,6 +35,8 @@ namespace BitSharp.Storage.Test
 
         public MemoryStorage<UInt256, Transaction> TransactionStorage { get { return this._transactionStorage; } }
 
+        public MemoryStorage<UInt256, string> InvalidBlockStorage { get { return this._invalidBlockStorage; } }
+
         IBoundedStorage<UInt256, BlockHeader> IStorageContext.BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 
         IBoundedStorage<UInt256, ChainedBlock> IStorageContext.ChainedBlockStorage { get { return this._chainedBlockStorage; } }
@@ -41,20 +45,20 @@ namespace BitSharp.Storage.Test
 
         IUnboundedStorage<UInt256, Transaction> IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
 
-        //IBlockchainStorage IStorageContext.BlockchainStorage { get { return this._blockchainStorage; } }
+        IBoundedStorage<UInt256, string> IStorageContext.InvalidBlockStorage { get { return this._invalidBlockStorage; } }
 
-        public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
-        {
-            try
-            {
-                var maxTotalWork = this.ChainedBlockStorage.Storage.Values.Max(x => x.TotalWork);
-                return this.ChainedBlockStorage.Storage.Values.Where(x => x.TotalWork == maxTotalWork);
-            }
-            catch (InvalidOperationException)
-            {
-                return Enumerable.Empty<ChainedBlock>();
-            }
-        }
+        //public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
+        //{
+        //    try
+        //    {
+        //        var maxTotalWork = this.ChainedBlockStorage.Storage.Values.Max(x => x.TotalWork);
+        //        return this.ChainedBlockStorage.Storage.Values.Where(x => x.TotalWork == maxTotalWork);
+        //    }
+        //    catch (InvalidOperationException)
+        //    {
+        //        return Enumerable.Empty<ChainedBlock>();
+        //    }
+        //}
 
         public IUtxoBuilderStorage ToUtxoBuilder(Utxo utxo)
         {

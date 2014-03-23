@@ -68,7 +68,7 @@ namespace BitSharp.Blockchain
                     // calculate the new block utxo, double spends will be checked for
                     long txCount = 0, inputCount = 0;
                     new MethodTimer(false).Time("CalculateUtxo", () =>
-                        CalculateUtxo(chainedBlock.Height, block, chainStateBuilder.Utxo, out txCount, out inputCount));
+                        CalculateUtxo(chainedBlock, block, chainStateBuilder.Utxo, out txCount, out inputCount));
 
                     chainStateBuilder.ChainedBlocks.AddBlock(chainedBlock);
 
@@ -157,19 +157,19 @@ namespace BitSharp.Blockchain
                 ));
         }
 
-        private void CalculateUtxo(int blockHeight, Block block, UtxoBuilder utxoBuilder, out long txCount, out long inputCount)
+        private void CalculateUtxo(ChainedBlock chainedBlock, Block block, UtxoBuilder utxoBuilder, out long txCount, out long inputCount)
         {
             txCount = 1;
             inputCount = 0;
 
             // don't include genesis block coinbase in utxo
-            if (blockHeight > 0)
+            if (chainedBlock.Height > 0)
             {
                 //TODO apply real coinbase rule
                 // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
                 var coinbaseTx = block.Transactions[0];
 
-                utxoBuilder.Mint(coinbaseTx, blockHeight);
+                utxoBuilder.Mint(coinbaseTx, chainedBlock);
             }
 
             // check for double spends
@@ -183,10 +183,10 @@ namespace BitSharp.Blockchain
                     var input = tx.Inputs[inputIndex];
                     inputCount++;
 
-                    utxoBuilder.Spend(input);
+                    utxoBuilder.Spend(input, chainedBlock);
                 }
 
-                utxoBuilder.Mint(tx, blockHeight);
+                utxoBuilder.Mint(tx, chainedBlock);
             }
         }
 
@@ -200,19 +200,19 @@ namespace BitSharp.Blockchain
                 var tx = block.Transactions[txIndex];
 
                 // remove outputs
-                utxoBuilder.Unmint(tx, blockHeight);
+                utxoBuilder.Unmint(tx, chainStateBuilder.ChainedBlocks.LastBlock);
 
                 // remove inputs in reverse order
                 for (var inputIndex = tx.Inputs.Count - 1; inputIndex >= 0; inputIndex--)
                 {
                     var input = tx.Inputs[inputIndex];
-                    utxoBuilder.Unspend(input);
+                    utxoBuilder.Unspend(input, chainStateBuilder.ChainedBlocks.LastBlock);
                 }
             }
 
             // remove coinbase outputs
             var coinbaseTx = block.Transactions[0];
-            utxoBuilder.Unmint(coinbaseTx, blockHeight);
+            utxoBuilder.Unmint(coinbaseTx, chainStateBuilder.ChainedBlocks.LastBlock);
         }
 
         public void RevalidateBlockchain(ChainedBlocks blockchain, Block genesisBlock)
@@ -225,11 +225,11 @@ namespace BitSharp.Blockchain
 
                 // verify blockchain has blocks
                 if (blockchain.BlockList.Count == 0)
-                    throw new ValidationException();
+                    throw new ValidationException(0);
 
                 // verify genesis block hash
                 if (blockchain.BlockList[0].BlockHash != genesisBlock.Hash)
-                    throw new ValidationException();
+                    throw new ValidationException(blockchain.BlockList[0].BlockHash);
 
                 // get genesis block header
                 var chainGenesisBlockHeader = this.CacheContext.BlockHeaderCache[blockchain.BlockList[0].BlockHash];
@@ -245,7 +245,7 @@ namespace BitSharp.Blockchain
                     || genesisBlock.Hash != chainGenesisBlockHeader.Hash
                     || genesisBlock.Hash != CalculateHash(chainGenesisBlockHeader))
                 {
-                    throw new ValidationException();
+                    throw new ValidationException(chainGenesisBlockHeader.Hash);
                 }
 
                 // setup expected previous block hash value to verify each chain actually does link
@@ -260,22 +260,22 @@ namespace BitSharp.Blockchain
 
                     // verify height
                     if (chainedBlock.Height != height)
-                        throw new ValidationException();
+                        throw new ValidationException(chainedBlock.BlockHash);
 
                     // verify blockchain linking
                     if (chainedBlock.PreviousBlockHash != expectedPreviousBlockHash)
-                        throw new ValidationException();
+                        throw new ValidationException(chainedBlock.BlockHash);
 
                     // verify block exists
                     var blockHeader = this.CacheContext.BlockHeaderCache[chainedBlock.BlockHash];
 
                     // verify block metadata matches header values
                     if (blockHeader.PreviousBlock != chainedBlock.PreviousBlockHash)
-                        throw new ValidationException();
+                        throw new ValidationException(chainedBlock.BlockHash);
 
                     // verify block header hash
                     if (CalculateHash(blockHeader) != chainedBlock.BlockHash)
-                        throw new ValidationException();
+                        throw new ValidationException(chainedBlock.BlockHash);
 
                     // next block metadata should have the current metadata's hash as its previous hash value
                     expectedPreviousBlockHash = chainedBlock.BlockHash;

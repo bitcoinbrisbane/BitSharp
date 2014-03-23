@@ -205,7 +205,7 @@ namespace BitSharp.Blockchain
             {
                 // invalid bits
                 Debugger.Break();
-                throw new ValidationException();
+                throw new ValidationException(chainedBlocks.LastBlock.BlockHash);
             }
         }
 
@@ -222,19 +222,19 @@ namespace BitSharp.Blockchain
             var blockTarget = block.Header.CalculateTarget();
             if (blockTarget > requiredTarget)
             {
-                throw new ValidationException("Failing block {0} at height {1}: Block target {2} did not match required target of {3}".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height, blockTarget.ToHexNumberString(), requiredTarget.ToHexNumberString()));
+                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Block target {2} did not match required target of {3}".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height, blockTarget.ToHexNumberString(), requiredTarget.ToHexNumberString()));
             }
 
             // validate block's proof of work against its stated target
             if (block.Hash > blockTarget || block.Hash > requiredTarget)
             {
-                throw new ValidationException("Failing block {0} at height {1}: Block did not match its own target of {2}".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height, blockTarget.ToHexNumberString()));
+                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Block did not match its own target of {2}".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height, blockTarget.ToHexNumberString()));
             }
 
             // ensure there is at least 1 transaction
             if (block.Transactions.Count == 0)
             {
-                throw new ValidationException("Failing block {0} at height {1}: Zero transactions present".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height));
+                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Zero transactions present".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height));
             }
 
             //TODO apply real coinbase rule
@@ -244,7 +244,7 @@ namespace BitSharp.Blockchain
             // check that coinbase has only one input
             if (coinbaseTx.Inputs.Count != 1)
             {
-                throw new ValidationException("Failing block {0} at height {1}: Coinbase transaction does not have exactly one input".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height));
+                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Coinbase transaction does not have exactly one input".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height));
             }
 
             // validate transactions in parallel
@@ -293,7 +293,7 @@ namespace BitSharp.Blockchain
             // ensure coinbase has correct reward
             if (actualReward > expectedReward)
             {
-                throw new ValidationException("Failing block {0} at height {1}: Coinbase value is greater than reward + fees".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height));
+                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Coinbase value is greater than reward + fees".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height));
             }
 
             // all validation has passed
@@ -317,7 +317,7 @@ namespace BitSharp.Blockchain
 
                 // find previous transaction output
                 if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Count)
-                    throw new ValidationException();
+                    throw new ValidationException(block.Hash);
                 var prevOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
 
                 previousOutputs.Add(input.PreviousTxOutputKey, Tuple.Create(input, inputIndex, prevOutput));
@@ -325,7 +325,7 @@ namespace BitSharp.Blockchain
 
             if (prevOutputMissing)
             {
-                throw new ValidationException();
+                throw new ValidationException(block.Hash);
             }
 
             // verify spend amounts
@@ -351,7 +351,7 @@ namespace BitSharp.Blockchain
             // ensure that amount being output from transaction isn't greater than amount being input
             if (txOutputValue > txInputValue)
             {
-                throw new ValidationException("Failing tx {0}: Transaction output value is greater than input value".Format2(tx.Hash.ToHexNumberString()));
+                throw new ValidationException(block.Hash, "Failing tx {0}: Transaction output value is greater than input value".Format2(tx.Hash.ToHexNumberString()));
             }
 
             // calculate unspent value
@@ -360,7 +360,7 @@ namespace BitSharp.Blockchain
             // sanity check
             if (unspentValue < 0)
             {
-                throw new ValidationException();
+                throw new ValidationException(block.Hash);
             }
 
             // all validation has passed
@@ -388,7 +388,7 @@ namespace BitSharp.Blockchain
 
                     // find previous transaction output
                     if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Count)
-                        throw new ValidationException();
+                        throw new ValidationException(block.Hash);
                     var prevOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
 
                     previousOutputs.Add(input.PreviousTxOutputKey, Tuple.Create(tx, input, inputIndex, prevOutput));
@@ -397,7 +397,7 @@ namespace BitSharp.Blockchain
 
             if (prevOutputMissing)
             {
-                throw new ValidationException();
+                throw new ValidationException(block.Hash);
             }
 
             var exceptions = new ConcurrentBag<Exception>();
@@ -417,7 +417,7 @@ namespace BitSharp.Blockchain
                     var script = input.ScriptSignature.AddRange(prevOutput.ScriptPublicKey);
                     if (!scriptEngine.VerifyScript(0 /*TODO blockHash*/, 0 /*TODO txIndex*/, prevOutput.ScriptPublicKey.ToArray(), tx, inputIndex, script.ToArray()))
                     {
-                        exceptions.Add(new ValidationException());
+                        exceptions.Add(new ValidationException(block.Hash));
                         loopState.Break();
                     }
                 }

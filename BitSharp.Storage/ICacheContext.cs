@@ -24,12 +24,14 @@ namespace BitSharp.Storage
 
         IUnboundedCache<UInt256, Transaction> TransactionCache { get; }
 
+        IBoundedCache<UInt256, string> InvalidBlockCache { get; }
+
         IUnboundedCache<UInt256, Block> BlockView { get; }
 
         //TODO
         IUtxoBuilderStorage ToUtxoBuilder(Utxo utxo);
 
         //TODO
-        IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks();
+        //IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks();
     }
 }

@@ -15,26 +15,30 @@ namespace BitSharp.Storage.Esent
     {
         private readonly string baseDirectory;
         private readonly BlockHeaderStorage _blockHeaderStorage;
+        private readonly ChainedBlockStorage _chainedBlockStorage;
         private readonly BlockTxHashesStorage _blockTxHashesStorage;
         private readonly TransactionStorage _transactionStorage;
-        private readonly ChainedBlockStorage _chainedBlockStorage;
+        private readonly InvalidBlockStorage _invalidBlockStorage;
 
         public EsentStorageContext(string baseDirectory)
         {
             this.baseDirectory = baseDirectory;
             this._blockHeaderStorage = new BlockHeaderStorage(this);
+            this._chainedBlockStorage = new ChainedBlockStorage(this);
             this._blockTxHashesStorage = new BlockTxHashesStorage(this);
             this._transactionStorage = new TransactionStorage(this);
-            this._chainedBlockStorage = new ChainedBlockStorage(this);
+            this._invalidBlockStorage = new InvalidBlockStorage(this);
         }
 
         public BlockHeaderStorage BlockHeaderStorage { get { return this._blockHeaderStorage; } }
+
+        public ChainedBlockStorage ChainedBlockStorage { get { return this._chainedBlockStorage; } }
 
         public BlockTxHashesStorage BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
         public TransactionStorage Transactionstorage { get { return this._transactionStorage; } }
 
-        public ChainedBlockStorage ChainedBlockStorage { get { return this._chainedBlockStorage; } }
+        public IBoundedStorage<UInt256, string> InvalidBlockStorage { get { return this._invalidBlockStorage; } }
 
         internal string BaseDirectory { get { return this.baseDirectory; } }
 
@@ -46,10 +50,12 @@ namespace BitSharp.Storage.Esent
 
         IUnboundedStorage<UInt256, Transaction> IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
 
-        public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
-        {
-            return this.ChainedBlockStorage.SelectMaxTotalWorkBlocks();
-        }
+        IBoundedStorage<UInt256, string> IStorageContext.InvalidBlockStorage { get { return this._invalidBlockStorage; } }
+
+        //public IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks()
+        //{
+        //    return this.ChainedBlockStorage.SelectMaxTotalWorkBlocks();
+        //}
 
         public IUtxoBuilderStorage ToUtxoBuilder(Utxo utxo)
         {
@@ -66,6 +72,5 @@ namespace BitSharp.Storage.Esent
                 this._transactionStorage
             }.DisposeList();
         }
-    
-}
+    }
 }
