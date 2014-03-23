@@ -31,7 +31,8 @@ namespace BitSharp.Storage
 
         public bool ContainsKey(UInt256 blockHash)
         {
-            return this.cacheContext.BlockHeaderCache.ContainsKey(blockHash)
+            return !this.missingData.Contains(blockHash)
+                && this.cacheContext.BlockHeaderCache.ContainsKey(blockHash)
                 && this.cacheContext.BlockTxHashesCache.ContainsKey(blockHash);
         }
 
