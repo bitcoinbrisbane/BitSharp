@@ -156,6 +156,9 @@ namespace BitSharp.Node
 
         private void ConnectWorker()
         {
+            if (this.Type == LocalClientType.ComparisonToolTestNet)
+                return;
+
             // get peer counts
             var connectedCount = this.connectedPeers.Count;
             var pendingCount = this.pendingPeers.Count;
@@ -714,7 +717,41 @@ namespace BitSharp.Node
 
         private void OnGetBlocks(RemoteNode remoteNode, GetBlocksPayload payload)
         {
-            //TODO
+            var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
+
+            ChainedBlock matchingChainedBlock = null;
+            foreach (var blockHash in payload.BlockLocatorHashes)
+            {
+                ChainedBlock chainedBlock;
+                if (this.blockchainDaemon.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
+                {
+                    if (chainedBlock.Height <= targetChainedBlocksLocal.BlockList.Count
+                        && chainedBlock.BlockHash == targetChainedBlocksLocal.BlockList[chainedBlock.Height].BlockHash)
+                    {
+                        matchingChainedBlock = chainedBlock;
+                        break;
+                    }
+                }
+            }
+
+            if (matchingChainedBlock == null)
+            {
+                matchingChainedBlock = this.blockchainDaemon.Rules.GenesisChainedBlock;
+            }
+
+            var invVectors = ImmutableList.CreateBuilder<InventoryVector>();
+            var count = 0;
+            var limit = 500;
+            for (var i = matchingChainedBlock.Height; i < targetChainedBlocksLocal.BlockList.Count && count <= limit; i++, count++)
+            {
+                var chainedBlock = targetChainedBlocksLocal.BlockList[i];
+                invVectors.Add(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, chainedBlock.BlockHash));
+
+                if (chainedBlock.BlockHash == payload.HashStop)
+                    break;
+            }
+
+            remoteNode.Sender.SendInventory(invVectors.ToImmutable()).Forget();
         }
 
         private void OnGetHeaders(RemoteNode remoteNode, GetBlocksPayload payload)

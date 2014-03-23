@@ -76,6 +76,14 @@ namespace BitSharp.Network
             await SendMessageAsync(getBlocksMessage);
         }
 
+        public async Task SendInventory(ImmutableList<InventoryVector> invVectors)
+        {
+            var invPayload = Messaging.ConstructInventoryPayload(invVectors);
+            var invMessage = Messaging.ConstructMessage("inv", NetworkEncoder.EncodeInventoryPayload(invPayload));
+
+            await SendMessageAsync(invMessage);
+        }
+
         public async Task SendVersion(IPEndPoint localEndPoint, IPEndPoint remoteEndPoint, UInt64 nodeId, UInt32 startBlockHeight)
         {
             var versionPayload = Messaging.ConstructVersionPayload(localEndPoint, remoteEndPoint, nodeId, startBlockHeight);
