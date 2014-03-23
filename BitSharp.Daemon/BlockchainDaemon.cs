@@ -164,6 +164,13 @@ namespace BitSharp.Daemon
             }.DisposeList();
         }
 
+        public void ForceWorkAndWait()
+        {
+            this.chainingWorker.ForceWorkAndWait();
+            this.targetChainWorker.ForceWorkAndWait();
+            this.chainStateWorker.ForceWorkAndWait();
+        }
+
         private void OnBlockHeaderAddition(UInt256 blockHash, BlockHeader blockHeader)
         {
             this.chainStateWorker.NotifyWork();

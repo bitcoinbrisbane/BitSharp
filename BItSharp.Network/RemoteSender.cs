@@ -84,6 +84,22 @@ namespace BitSharp.Network
             await SendMessageAsync(getBlocksMessage);
         }
 
+        public async Task SendHeaders(ImmutableList<BlockHeader> blockHeaders)
+        {
+            var payloadStream = new MemoryStream();
+            using (var payloadWriter = new BinaryWriter(payloadStream))
+            {
+                payloadWriter.WriteVarInt((UInt64)blockHeaders.Count);
+                foreach (var blockHeader in blockHeaders)
+                {
+                    NetworkEncoder.EncodeBlockHeader(payloadStream, blockHeader);
+                    payloadWriter.WriteVarInt(0);
+                }
+            }
+
+            await SendMessageAsync(Messaging.ConstructMessage("headers", payloadStream.ToArray()));
+        }
+
         public async Task SendInventory(ImmutableList<InventoryVector> invVectors)
         {
             var invPayload = Messaging.ConstructInventoryPayload(invVectors);

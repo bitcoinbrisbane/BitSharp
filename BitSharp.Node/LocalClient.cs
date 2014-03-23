@@ -618,17 +618,17 @@ namespace BitSharp.Node
             if (connectedPeersLocal.Count == 0)
                 return;
 
-            //TODO
-            //foreach (var invVector in invVectors)
-            //{
-            //    if (
-            //        invVector.Type == InventoryVector.TYPE_MESSAGE_BLOCK
-            //        && !this.blockchainDaemon.CacheContext.BlockCache.ContainsKey(invVector.Hash)
-            //        && (/*TODO properly handle comparison blockchain*/ this.Type == LocalClientType.ComparisonToolTestNet || this.blockchainDaemon.MissingBlocks.Contains(invVector.Hash)))
-            //    {
-            //        this.blockchainDaemon.AddMissingBlock(invVector.Hash);
-            //    }
-            //}
+            if (this.Type == LocalClientType.ComparisonToolTestNet)
+            {
+                foreach (var invVector in invVectors)
+                {
+                    if (invVector.Type == InventoryVector.TYPE_MESSAGE_BLOCK
+                        && !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(invVector.Hash))
+                    {
+                        this.RequestBlock(connectedPeersLocal.RandomOrDefault(), invVector.Hash);
+                    }
+                }
+            }
         }
 
         private Task RequestBlock(RemoteNode remoteNode, UInt256 blockHash)
@@ -758,42 +758,55 @@ namespace BitSharp.Node
 
         private void OnGetHeaders(RemoteNode remoteNode, GetBlocksPayload payload)
         {
-            // if in comparison mode, synchronize all work before returning current headers
             if (this.Type == LocalClientType.ComparisonToolTestNet)
             {
-                //TODO
-                //this.blockchainDaemon.WaitForFullUpdate();
+                this.blockchainDaemon.ForceWorkAndWait();
             }
 
-            var currentBlockchainLocal = this.blockchainDaemon.ChainState.CurrentChainedBlocks;
-            var blockHeaders = new List<BlockHeader>(currentBlockchainLocal.BlockList.Count());
-            foreach (var chainedBlock in currentBlockchainLocal.BlockList)
+            var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
+
+            ChainedBlock matchingChainedBlock = null;
+            foreach (var blockHash in payload.BlockLocatorHashes)
             {
+                ChainedBlock chainedBlock;
+                if (this.blockchainDaemon.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
+                {
+                    if (chainedBlock.Height <= targetChainedBlocksLocal.BlockList.Count
+                        && chainedBlock.BlockHash == targetChainedBlocksLocal.BlockList[chainedBlock.Height].BlockHash)
+                    {
+                        matchingChainedBlock = chainedBlock;
+                        break;
+                    }
+                }
+            }
+
+            if (matchingChainedBlock == null)
+            {
+                matchingChainedBlock = this.blockchainDaemon.Rules.GenesisChainedBlock;
+            }
+
+            var blockHeaders = ImmutableList.CreateBuilder<BlockHeader>();
+            var count = 0;
+            var limit = 500;
+            for (var i = matchingChainedBlock.Height; i < targetChainedBlocksLocal.BlockList.Count && count <= limit; i++, count++)
+            {
+                var chainedBlock = targetChainedBlocksLocal.BlockList[i];
+
                 BlockHeader blockHeader;
-                if (this.blockchainDaemon.CacheContext.BlockHeaderCache.TryGetValue(chainedBlock.BlockHash, out blockHeader))
+                if (this.blockchainDaemon.CacheContext.BlockHeaderCache.TryGetValue(targetChainedBlocksLocal.BlockList[i].BlockHash, out blockHeader))
                 {
                     blockHeaders.Add(blockHeader);
                 }
                 else
                 {
-                    Debugger.Break();
-                    Debug.WriteLine("Couldn't generate getheaders response");
-                    return;
+                    break;
                 }
+
+                if (chainedBlock.BlockHash == payload.HashStop)
+                    break;
             }
 
-            var payloadStream = new MemoryStream();
-            using (var payloadWriter = new BinaryWriter(payloadStream))
-            {
-                payloadWriter.WriteVarInt((UInt64)blockHeaders.Count);
-                foreach (var blockHeader in blockHeaders)
-                {
-                    NetworkEncoder.EncodeBlockHeader(payloadStream, blockHeader);
-                    payloadWriter.WriteVarInt(0);
-                }
-            }
-
-            remoteNode.Sender.SendMessageAsync(Messaging.ConstructMessage("headers", payloadStream.ToArray())).Wait();
+            remoteNode.Sender.SendHeaders(blockHeaders.ToImmutable()).Forget();
         }
 
         private void OnGetData(RemoteNode remoteNode, InventoryPayload payload)
@@ -806,7 +819,7 @@ namespace BitSharp.Node
                         Block block;
                         if (this.blockchainDaemon.CacheContext.BlockView.TryGetValue(invVector.Hash, out block))
                         {
-                            remoteNode.Sender.SendBlock(block).Forget();
+                            //remoteNode.Sender.SendBlock(block).Forget();
                         }
                         break;
 
