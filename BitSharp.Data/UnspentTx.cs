@@ -9,22 +9,35 @@ namespace BitSharp.Data
 {
     public class UnspentTx
     {
-        private readonly UInt256 _txHash;
-        private readonly ImmutableBitArray _unspentOutputs;
+        private readonly UInt256 txHash;
+        private readonly OutputStates outputStates;
 
         private readonly int hashCode;
 
-        public UnspentTx(UInt256 txHash, ImmutableBitArray unspentOutputs)
+        public UnspentTx(UInt256 txHash, OutputStates outputStates)
         {
-            this._txHash = txHash;
-            this._unspentOutputs = unspentOutputs;
+            this.txHash = txHash;
+            this.outputStates = outputStates;
 
-            this.hashCode = txHash.GetHashCode() ^ unspentOutputs.GetHashCode();
+            this.hashCode = txHash.GetHashCode() ^ outputStates.GetHashCode();
         }
 
-        public UInt256 TxHash { get { return this._txHash; } }
+        public UnspentTx(UInt256 txHash, int length, OutputState state)
+        {
+            this.txHash = txHash;
+            this.outputStates = new OutputStates(length, state);
 
-        public ImmutableBitArray UnspentOutputs { get { return this._unspentOutputs; } }
+            this.hashCode = txHash.GetHashCode() ^ outputStates.GetHashCode();
+        }
+
+        public UInt256 TxHash { get { return this.txHash; } }
+
+        public OutputStates OutputStates { get { return this.outputStates; } }
+
+        public UnspentTx SetOutputState(int index, OutputState value)
+        {
+            return new UnspentTx(this.txHash, this.outputStates.Set(index, value));
+        }
 
         public override bool Equals(object obj)
         {
@@ -41,7 +54,7 @@ namespace BitSharp.Data
 
         public static bool operator ==(UnspentTx left, UnspentTx right)
         {
-            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.TxHash == right.TxHash && left.UnspentOutputs == right.UnspentOutputs);
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.TxHash == right.TxHash && left.OutputStates == right.OutputStates);
         }
 
         public static bool operator !=(UnspentTx left, UnspentTx right)

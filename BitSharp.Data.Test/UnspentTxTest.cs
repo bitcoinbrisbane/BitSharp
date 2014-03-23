@@ -18,19 +18,19 @@ namespace BitSharp.Data.Test
             var sameUnspentTx = new UnspentTx
             (
                 txHash: randomUnspentTx.TxHash,
-                unspentOutputs: randomUnspentTx.UnspentOutputs
+                outputStates: randomUnspentTx.OutputStates
             );
 
             var differentUnspentTxTxHash = new UnspentTx
             (
                 txHash: ~randomUnspentTx.TxHash,
-                unspentOutputs: randomUnspentTx.UnspentOutputs
+                outputStates: randomUnspentTx.OutputStates
             );
 
             var differentUnspentTxUnpsentOutputs = new UnspentTx
             (
                 txHash: ~randomUnspentTx.TxHash,
-                unspentOutputs: randomUnspentTx.UnspentOutputs
+                outputStates: randomUnspentTx.OutputStates
             );
 
             Assert.IsTrue(randomUnspentTx.Equals(sameUnspentTx));

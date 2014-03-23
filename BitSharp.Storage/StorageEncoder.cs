@@ -246,7 +246,7 @@ namespace BitSharp.Storage
             {
                 return new UnspentTx(
                     txHash: txHash,
-                    unspentOutputs: new ImmutableBitArray(
+                    outputStates: new OutputStates(
                         bytes: reader.ReadVarBytes(),
                         length: reader.ReadInt32())
                 );
@@ -257,8 +257,8 @@ namespace BitSharp.Storage
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.WriteVarBytes(unspentTx.UnspentOutputs.ToByteArray());
-                writer.WriteInt32(unspentTx.UnspentOutputs.Length);
+                writer.WriteVarBytes(unspentTx.OutputStates.ToByteArray());
+                writer.WriteInt32(unspentTx.OutputStates.Length);
             }
         }
 

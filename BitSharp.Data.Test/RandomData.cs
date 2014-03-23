@@ -152,7 +152,7 @@ namespace BitSharp.Data.Test
             return new UnspentTx
             (
                 txHash: random.NextUInt256(),
-                unspentOutputs: random.NextImmutableBitArray(random.Next((options != null ? options.TxOutputCount : null) ?? 100))
+                outputStates: new OutputStates(random.NextImmutableBitArray(random.Next((options != null ? options.TxOutputCount : null) ?? 100)))
             );
         }
 

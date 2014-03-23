@@ -37,7 +37,7 @@ namespace BitSharp.Blockchain
         public void Mint(Transaction tx, int blockHeight)
         {
             // add the coinbase outputs to the utxo
-            var coinbaseUnspentTx = new UnspentTx(tx.Hash, new ImmutableBitArray(tx.Outputs.Count, true));
+            var coinbaseUnspentTx = new UnspentTx(tx.Hash, tx.Outputs.Count, OutputState.Unspent);
 
             // verify transaction does not already exist in utxo
             if (this.ContainsKey(tx.Hash))
@@ -71,24 +71,23 @@ namespace BitSharp.Blockchain
 
             var prevUnspentTx = this[input.PreviousTxOutputKey.TxHash];
 
-            if (input.PreviousTxOutputKey.TxOutputIndex >= prevUnspentTx.UnspentOutputs.Length)
+            if (input.PreviousTxOutputKey.TxOutputIndex >= prevUnspentTx.OutputStates.Length)
             {
                 // output was out of bounds
                 throw new ValidationException();
             }
 
-            if (!prevUnspentTx.UnspentOutputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()])
-            {                        // output was already spent
+            if (prevUnspentTx.OutputStates[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()] == OutputState.Spent)
+            {
+                // output was already spent
                 throw new ValidationException();
             }
 
-
             // remove the output from the utxo
-            this[input.PreviousTxOutputKey.TxHash] =
-                new UnspentTx(prevUnspentTx.TxHash, prevUnspentTx.UnspentOutputs.Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), false));
+            this[input.PreviousTxOutputKey.TxHash] = prevUnspentTx.SetOutputState(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), OutputState.Spent);
 
             // remove fully spent transaction from the utxo
-            if (this[input.PreviousTxOutputKey.TxHash].UnspentOutputs.All(x => !x))
+            if (this[input.PreviousTxOutputKey.TxHash].OutputStates.All(x => x == OutputState.Spent))
                 this.Remove(input.PreviousTxOutputKey.TxHash);
         }
 
@@ -106,7 +105,7 @@ namespace BitSharp.Blockchain
 
             // verify all outputs are unspent before unminting
             var unspentOutputs = this[tx.Hash];
-            if (unspentOutputs.UnspentOutputs.Any(x => !x))
+            if (unspentOutputs.OutputStates.Any(x => x == OutputState.Unspent))
             {
                 throw new ValidationException();
             }
@@ -123,16 +122,15 @@ namespace BitSharp.Blockchain
                 var prevUnspentTx = this[input.PreviousTxOutputKey.TxHash];
 
                 // check if output is out of bounds
-                if (input.PreviousTxOutputKey.TxOutputIndex >= prevUnspentTx.UnspentOutputs.Length)
+                if (input.PreviousTxOutputKey.TxOutputIndex >= prevUnspentTx.OutputStates.Length)
                     throw new ValidationException();
 
                 // check that output isn't already considered unspent
-                if (prevUnspentTx.UnspentOutputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()])
+                if (prevUnspentTx.OutputStates[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()] == OutputState.Unspent)
                     throw new ValidationException();
 
                 // mark output as unspent
-                this[input.PreviousTxOutputKey.TxHash] =
-                    new UnspentTx(prevUnspentTx.TxHash, prevUnspentTx.UnspentOutputs.Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
+                this[input.PreviousTxOutputKey.TxHash] = prevUnspentTx.SetOutputState(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), OutputState.Unspent);
             }
             else
             {
@@ -140,7 +138,8 @@ namespace BitSharp.Blockchain
                 var prevUnspentTx = this.cacheContext.TransactionCache[input.PreviousTxOutputKey.TxHash];
 
                 this[input.PreviousTxOutputKey.TxHash] =
-                    new UnspentTx(prevUnspentTx.Hash, new ImmutableBitArray(prevUnspentTx.Outputs.Count, false).Set(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), true));
+                    new UnspentTx(prevUnspentTx.Hash, prevUnspentTx.Outputs.Count, OutputState.Spent)
+                    .SetOutputState(input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked(), OutputState.Unspent);
             }
         }
 
