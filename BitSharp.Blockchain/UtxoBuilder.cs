@@ -105,7 +105,7 @@ namespace BitSharp.Blockchain
 
             // verify all outputs are unspent before unminting
             var unspentOutputs = this[tx.Hash];
-            if (unspentOutputs.OutputStates.Any(x => x == OutputState.Unspent))
+            if (!unspentOutputs.OutputStates.All(x => x == OutputState.Unspent))
             {
                 throw new ValidationException();
             }
