@@ -31,6 +31,7 @@ namespace BitSharp.Network
         public event Action<ImmutableList<NetworkAddressWithTime>> OnReceivedAddresses;
         public event Action<GetBlocksPayload> OnGetBlocks;
         public event Action<GetBlocksPayload> OnGetHeaders;
+        public event Action<InventoryPayload> OnGetData;
         public event Action<ImmutableList<byte>> OnPing;
 
         private readonly Socket socket;
@@ -209,6 +210,16 @@ namespace BitSharp.Network
                         var handler = this.OnGetHeaders;
                         if (handler != null)
                             handler(getHeadersPayload);
+                    }
+                    break;
+
+                case "getdata":
+                    {
+                        var invPayload = NetworkEncoder.DecodeInventoryPayload(payload.ToMemoryStream());
+
+                        var handler = this.OnGetData;
+                        if (handler != null)
+                            handler(invPayload);
                     }
                     break;
 

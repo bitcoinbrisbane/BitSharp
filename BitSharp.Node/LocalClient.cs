@@ -587,6 +587,7 @@ namespace BitSharp.Node
             remoteNode.Receiver.OnReceivedAddresses += OnReceivedAddresses;
             remoteNode.OnGetBlocks += OnGetBlocks;
             remoteNode.OnGetHeaders += OnGetHeaders;
+            remoteNode.OnGetData += OnGetData;
             remoteNode.OnPing += OnPing;
             remoteNode.OnDisconnect += OnDisconnect;
         }
@@ -601,6 +602,7 @@ namespace BitSharp.Node
             remoteNode.Receiver.OnReceivedAddresses -= OnReceivedAddresses;
             remoteNode.OnGetBlocks -= OnGetBlocks;
             remoteNode.OnGetHeaders -= OnGetHeaders;
+            remoteNode.OnGetData -= OnGetData;
             remoteNode.OnPing -= OnPing;
             remoteNode.OnDisconnect -= OnDisconnect;
         }
@@ -792,6 +794,31 @@ namespace BitSharp.Node
             }
 
             remoteNode.Sender.SendMessageAsync(Messaging.ConstructMessage("headers", payloadStream.ToArray())).Wait();
+        }
+
+        private void OnGetData(RemoteNode remoteNode, InventoryPayload payload)
+        {
+            foreach (var invVector in payload.InventoryVectors)
+            {
+                switch (invVector.Type)
+                {
+                    case InventoryVector.TYPE_MESSAGE_BLOCK:
+                        Block block;
+                        if (this.blockchainDaemon.CacheContext.BlockView.TryGetValue(invVector.Hash, out block))
+                        {
+                            remoteNode.Sender.SendBlock(block).Forget();
+                        }
+                        break;
+
+                    case InventoryVector.TYPE_MESSAGE_TRANSACTION:
+                        Transaction transaction;
+                        if (this.blockchainDaemon.CacheContext.TransactionCache.TryGetValue(invVector.Hash, out transaction))
+                        {
+                            remoteNode.Sender.SendTransaction(transaction).Forget();
+                        }
+                        break;
+                }
+            }
         }
 
         private void OnPing(RemoteNode remoteNode, ImmutableList<byte> payload)

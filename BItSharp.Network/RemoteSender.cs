@@ -12,6 +12,7 @@ using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using System.Collections.Immutable;
 using System.IO;
+using BitSharp.Data;
 
 namespace BitSharp.Network
 {
@@ -42,6 +43,13 @@ namespace BitSharp.Network
         public async Task PingAsync()
         {
             await SendMessageAsync("ping");
+        }
+
+        public async Task SendBlock(Block block)
+        {
+            var sendBlockMessage = Messaging.ConstructMessage("block", NetworkEncoder.EncodeBlock(block));
+            
+            await SendMessageAsync(sendBlockMessage);
         }
 
         public async Task SendGetData(InventoryVector invVector)
@@ -82,6 +90,13 @@ namespace BitSharp.Network
             var invMessage = Messaging.ConstructMessage("inv", NetworkEncoder.EncodeInventoryPayload(invPayload));
 
             await SendMessageAsync(invMessage);
+        }
+
+        public async Task SendTransaction(Transaction transaction)
+        {
+            var sendTxMessage = Messaging.ConstructMessage("tx", NetworkEncoder.EncodeTransaction(transaction));
+
+            await SendMessageAsync(sendTxMessage);
         }
 
         public async Task SendVersion(IPEndPoint localEndPoint, IPEndPoint remoteEndPoint, UInt64 nodeId, UInt32 startBlockHeight)

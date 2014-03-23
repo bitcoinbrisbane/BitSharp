@@ -18,6 +18,7 @@ namespace BitSharp.Network
     {
         public event Action<RemoteNode, GetBlocksPayload> OnGetBlocks;
         public event Action<RemoteNode, GetBlocksPayload> OnGetHeaders;
+        public event Action<RemoteNode, InventoryPayload> OnGetData;
         public event Action<RemoteNode, ImmutableList<byte>> OnPing;
         public event Action<RemoteNode> OnDisconnect;
 
@@ -126,6 +127,7 @@ namespace BitSharp.Network
             this.sender.OnFailed += HandleFailed;
             this.receiver.OnGetBlocks += HandleGetBlocks;
             this.receiver.OnGetHeaders += HandleGetHeaders;
+            this.receiver.OnGetData += HandleGetData;
             this.receiver.OnPing += HandlePing;
         }
 
@@ -135,6 +137,7 @@ namespace BitSharp.Network
             this.sender.OnFailed -= HandleFailed;
             this.receiver.OnGetBlocks -= HandleGetBlocks;
             this.receiver.OnGetHeaders -= HandleGetHeaders;
+            this.receiver.OnGetData -= HandleGetData;
             this.receiver.OnPing -= HandlePing;
         }
 
@@ -154,6 +157,13 @@ namespace BitSharp.Network
         private void HandleGetHeaders(GetBlocksPayload payload)
         {
             var handler = this.OnGetHeaders;
+            if (handler != null)
+                handler(this, payload);
+        }
+
+        private void HandleGetData(InventoryPayload payload)
+        {
+            var handler = this.OnGetData;
             if (handler != null)
                 handler(this, payload);
         }

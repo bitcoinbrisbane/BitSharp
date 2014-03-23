@@ -10,9 +10,9 @@ namespace BitSharp.Network
 {
     public class InventoryVector
     {
-        public static readonly UInt32 TYPE_ERROR = 0;
-        public static readonly UInt32 TYPE_MESSAGE_TRANSACTION = 1;
-        public static readonly UInt32 TYPE_MESSAGE_BLOCK = 2;
+        public const UInt32 TYPE_ERROR = 0;
+        public const UInt32 TYPE_MESSAGE_TRANSACTION = 1;
+        public const UInt32 TYPE_MESSAGE_BLOCK = 2;
 
         public readonly UInt32 Type;
         public readonly UInt256 Hash;
