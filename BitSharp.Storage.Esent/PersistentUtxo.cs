@@ -50,7 +50,7 @@ namespace BitSharp.Storage.Esent
             {
                 foreach (var rawUnspentTx in utxo)
                 {
-                    yield return StorageEncoder.DecodeUnspentTx(rawUnspentTx.Key, rawUnspentTx.Value.ToMemoryStream());
+                    yield return StorageEncoder.DecodeUnspentTx(rawUnspentTx.Key, rawUnspentTx.Value);
                 }
             }
             finally
@@ -66,7 +66,7 @@ namespace BitSharp.Storage.Esent
 
         public UnspentTx this[Common.UInt256 txHash]
         {
-            get { return this.utxoLock.DoRead(() => StorageEncoder.DecodeUnspentTx(txHash, this.utxo[txHash].ToMemoryStream())); }
+            get { return this.utxoLock.DoRead(() => StorageEncoder.DecodeUnspentTx(txHash, this.utxo[txHash])); }
         }
 
         internal void Duplicate(string destDirectory)

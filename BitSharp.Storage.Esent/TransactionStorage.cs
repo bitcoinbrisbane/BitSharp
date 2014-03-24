@@ -19,7 +19,7 @@ namespace BitSharp.Storage.Esent
         public TransactionStorage(EsentStorageContext storageContext)
             : base(storageContext, "transactions",
                 tx => StorageEncoder.EncodeTransaction(tx),
-                (txHash, bytes) => StorageEncoder.DecodeTransaction(bytes.ToMemoryStream(), txHash))
+                (txHash, bytes) => StorageEncoder.DecodeTransaction(bytes, txHash))
         { }
     }
 }

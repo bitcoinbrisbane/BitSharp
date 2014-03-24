@@ -69,7 +69,8 @@ namespace BitSharp.Script
             stack = new Stack();
             altStack = new Stack();
 
-            using (var opReader = new BinaryReader(script.ToMemoryStream()))
+            using (var scriptStream = new MemoryStream(script))
+            using (var opReader = new BinaryReader(scriptStream))
             {
                 while (opReader.BaseStream.Position < script.Length)
                 {
@@ -392,10 +393,10 @@ namespace BitSharp.Script
             //}
 
             // create simplified transaction
-            var newTx = tx.With(Inputs: newInputs.ToImmutableList());
+            var newTx = tx.With(Inputs: newInputs.ToImmutableArray());
 
             // return wire-encoded simplified transaction with the 4-byte hashType tacked onto the end
-            var stream = new MemoryStream();
+            using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
                 writer.WriteBytes(DataCalculator.EncodeTransaction(newTx));

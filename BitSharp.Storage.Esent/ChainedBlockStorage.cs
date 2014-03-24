@@ -172,7 +172,7 @@ namespace BitSharp.Storage.Esent
                 blockHash: blockHash,
                 previousBlockHash: new UInt256(Convert.FromBase64String(value.PreviousBlockHash)),
                 height: value.Height,
-                totalWork: StorageEncoder.DecodeTotalWork(Convert.FromBase64String(value.TotalWork).ToMemoryStream())
+                totalWork: StorageEncoder.DecodeTotalWork(Convert.FromBase64String(value.TotalWork))
             );
         }
 

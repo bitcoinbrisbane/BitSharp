@@ -11,14 +11,14 @@ namespace BitSharp.Network
 {
     public class AddressPayload
     {
-        public readonly ImmutableList<NetworkAddressWithTime> NetworkAddresses;
+        public readonly ImmutableArray<NetworkAddressWithTime> NetworkAddresses;
 
-        public AddressPayload(ImmutableList<NetworkAddressWithTime> NetworkAddresses)
+        public AddressPayload(ImmutableArray<NetworkAddressWithTime> NetworkAddresses)
         {
             this.NetworkAddresses = NetworkAddresses;
         }
 
-        public AddressPayload With(ImmutableList<NetworkAddressWithTime> NetworkAddresses = null)
+        public AddressPayload With(ImmutableArray<NetworkAddressWithTime>? NetworkAddresses = null)
         {
             return new AddressPayload
             (

@@ -32,12 +32,12 @@ namespace BitSharp.BlockHelper
             );
         }
 
-        public static ImmutableList<Transaction> ReadTransactions(dynamic transactions)
+        public static ImmutableArray<Transaction> ReadTransactions(dynamic transactions)
         {
             return
                 Enumerable.Range(0, (int)transactions.Length)
                 .Select(i => (Transaction)ReadTransaction(transactions[i]))
-                .ToImmutableList();
+                .ToImmutableArray();
         }
 
         public static Transaction ReadTransaction(dynamic transaction)
@@ -51,20 +51,20 @@ namespace BitSharp.BlockHelper
             );
         }
 
-        public static ImmutableList<TxInput> ReadInputs(dynamic inputs)
+        public static ImmutableArray<TxInput> ReadInputs(dynamic inputs)
         {
             return
                 Enumerable.Range(0, (int)inputs.Length)
                 .Select(i => (TxInput)ReadInput(inputs[i]))
-                .ToImmutableList();
+                .ToImmutableArray();
         }
 
-        public static ImmutableList<TxOutput> ReadOutputs(dynamic outputs)
+        public static ImmutableArray<TxOutput> ReadOutputs(dynamic outputs)
         {
             return
                 Enumerable.Range(0, (int)outputs.Length)
                 .Select(i => (TxOutput)ReadOutput(outputs[i]))
-                .ToImmutableList();
+                .ToImmutableArray();
         }
 
         public static TxInput ReadInput(dynamic input)

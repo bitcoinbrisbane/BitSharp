@@ -1,4 +1,5 @@
-﻿using BitSharp.Common.ExtensionMethods;
+﻿using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -11,7 +12,7 @@ namespace BitSharp.Network.ExtensionMethods
 {
     public static class WriterExtensionMethods
     {
-        public static void EncodeList<T>(this BinaryWriter writer, ImmutableList<T> list, Action<T> encode)
+        public static void EncodeList<T>(this BinaryWriter writer, ImmutableArray<T> list, Action<T> encode)
         {
             writer.WriteVarInt((UInt64)list.Count);
             for (var i = 0; i < list.Count; i++)

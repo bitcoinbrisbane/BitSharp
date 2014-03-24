@@ -32,7 +32,7 @@ namespace BitSharp.Data
 
         public static byte[] EncodeBlockHeader(UInt32 Version, UInt256 PreviousBlock, UInt256 MerkleRoot, UInt32 Time, UInt32 Bits, UInt32 Nonce)
         {
-            var stream = new MemoryStream();
+            using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
                 writer.Write4Bytes(Version);
@@ -51,7 +51,7 @@ namespace BitSharp.Data
             return new UInt256(Crypto.DoubleSHA256(EncodeTransaction(tx)));
         }
 
-        public static UInt256 CalculateTransactionHash(UInt32 Version, ImmutableList<TxInput> Inputs, ImmutableList<TxOutput> Outputs, UInt32 LockTime)
+        public static UInt256 CalculateTransactionHash(UInt32 Version, ImmutableArray<TxInput> Inputs, ImmutableArray<TxOutput> Outputs, UInt32 LockTime)
         {
             return new UInt256(Crypto.DoubleSHA256(EncodeTransaction(Version, Inputs, Outputs, LockTime)));
         }
@@ -61,9 +61,9 @@ namespace BitSharp.Data
             return EncodeTransaction(tx.Version, tx.Inputs, tx.Outputs, tx.LockTime);
         }
 
-        public static byte[] EncodeTransaction(UInt32 Version, ImmutableList<TxInput> Inputs, ImmutableList<TxOutput> Outputs, UInt32 LockTime)
+        public static byte[] EncodeTransaction(UInt32 Version, ImmutableArray<TxInput> Inputs, ImmutableArray<TxOutput> Outputs, UInt32 LockTime)
         {
-            var stream = new MemoryStream();
+            using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
                 writer.Write4Bytes(Version);

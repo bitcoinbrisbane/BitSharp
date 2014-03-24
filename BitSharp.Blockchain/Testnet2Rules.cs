@@ -36,12 +36,12 @@ namespace BitSharp.Blockchain
                         bits: 0x207FFFFF,
                         nonce: 2
                     ),
-                    transactions: ImmutableList.Create
+                    transactions: ImmutableArray.Create
                     (
                         new Transaction
                         (
                             version: 1,
-                            inputs: ImmutableList.Create
+                            inputs: ImmutableArray.Create
                             (
                                 new TxInput
                                 (
@@ -61,7 +61,7 @@ namespace BitSharp.Blockchain
                                     sequence: 0xFFFFFFFF
                                 )
                             ),
-                            outputs: ImmutableList.Create
+                            outputs: ImmutableArray.Create
                             (
                                 new TxOutput
                                 (

@@ -130,7 +130,7 @@ namespace BitSharp.Network
             );
         }
 
-        public static InventoryPayload ConstructInventoryPayload(ImmutableList<InventoryVector> invVectors)
+        public static InventoryPayload ConstructInventoryPayload(ImmutableArray<InventoryVector> invVectors)
         {
             return new InventoryPayload
             (
@@ -138,7 +138,7 @@ namespace BitSharp.Network
             );
         }
 
-        public static GetBlocksPayload ConstructGetBlocksPayload(ImmutableList<UInt256> blockLocatorHashes, UInt256 hashStop)
+        public static GetBlocksPayload ConstructGetBlocksPayload(ImmutableArray<UInt256> blockLocatorHashes, UInt256 hashStop)
         {
             return new GetBlocksPayload
             (

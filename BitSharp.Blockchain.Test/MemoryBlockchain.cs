@@ -84,7 +84,7 @@ namespace BitSharp.Blockchain.Test
             var coinbaseTx = new Transaction
             (
                 version: 0,
-                inputs: ImmutableList.Create
+                inputs: ImmutableArray.Create
                 (
                     new TxInput
                     (
@@ -97,7 +97,7 @@ namespace BitSharp.Blockchain.Test
                         sequence: 0
                     )
                 ),
-                outputs: ImmutableList.Create
+                outputs: ImmutableArray.Create
                 (
                     new TxOutput
                     (
@@ -110,7 +110,7 @@ namespace BitSharp.Blockchain.Test
 
             //Debug.WriteLine("Coinbase Tx Created: {0}".Format2(coinbaseTx.Hash.ToHexNumberString()));
 
-            var transactions = ImmutableList.Create(coinbaseTx);
+            var transactions = ImmutableArray.Create(coinbaseTx);
             var txHashes = ImmutableList.Create(coinbaseTx.Hash);
             var merkleRoot = DataCalculator.CalculateMerkleRoot(txHashes);
 

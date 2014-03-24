@@ -129,12 +129,12 @@ namespace BitSharp.Storage.Esent
 
         private static NetworkAddressKey DecodeKey(byte[] networkAddressKeyBytes)
         {
-            return NetworkEncoder.DecodeNetworkAddressKey(networkAddressKeyBytes.ToMemoryStream());
+            return NetworkEncoder.DecodeNetworkAddressKey(networkAddressKeyBytes);
         }
 
         private static NetworkAddressWithTime DecodeValue(byte[] networkAddressWithTimeBytes)
         {
-            return NetworkEncoder.DecodeNetworkAddressWithTime(networkAddressWithTimeBytes.ToMemoryStream());
+            return NetworkEncoder.DecodeNetworkAddressWithTime(networkAddressWithTimeBytes);
         }
     }
 }

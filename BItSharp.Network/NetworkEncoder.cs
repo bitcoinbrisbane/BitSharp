@@ -30,6 +30,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static Block DecodeBlock(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeBlock(stream);
+            }
+        }
+
         public static void EncodeBlock(Stream stream, Block block)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -41,9 +49,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeBlock(Block block)
         {
-            var stream = new MemoryStream();
-            EncodeBlock(stream, block);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeBlock(stream, block);
+                return stream.ToArray();
+            }
         }
 
         public static BlockHeader DecodeBlockHeader(Stream stream, UInt256? blockHash = null)
@@ -63,6 +73,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static BlockHeader DecodeBlockHeader(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeBlockHeader(stream);
+            }
+        }
+
         public static void EncodeBlockHeader(Stream stream, BlockHeader blockHeader)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -78,9 +96,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeBlockHeader(BlockHeader blockHeader)
         {
-            var stream = new MemoryStream();
-            EncodeBlockHeader(stream, blockHeader);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeBlockHeader(stream, blockHeader);
+                return stream.ToArray();
+            }
         }
 
         public static Transaction DecodeTransaction(Stream stream, UInt256? txHash = null)
@@ -98,6 +118,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static Transaction DecodeTransaction(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeTransaction(stream);
+            }
+        }
+
         public static void EncodeTransaction(Stream stream, Transaction tx)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -111,9 +139,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeTransaction(Transaction tx)
         {
-            var stream = new MemoryStream();
-            EncodeTransaction(stream, tx);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeTransaction(stream, tx);
+                return stream.ToArray();
+            }
         }
 
         public static TxInput DecodeTxInput(Stream stream)
@@ -133,6 +163,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static TxInput DecodeTxInput(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeTxInput(stream);
+            }
+        }
+
         public static void EncodeTxInput(Stream stream, TxInput txInput)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -146,9 +184,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeTxInput(TxInput txInput)
         {
-            var stream = new MemoryStream();
-            EncodeTxInput(stream, txInput);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeTxInput(stream, txInput);
+                return stream.ToArray();
+            }
         }
 
         public static TxOutput DecodeTxOutput(Stream stream)
@@ -163,6 +203,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static TxOutput DecodeTxOutput(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeTxOutput(stream);
+            }
+        }
+
         public static void EncodeTxOutput(Stream stream, TxOutput txOutput)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -174,9 +222,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeTxOutput(TxOutput txOutput)
         {
-            var stream = new MemoryStream();
-            EncodeTxOutput(stream, txOutput);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeTxOutput(stream, txOutput);
+                return stream.ToArray();
+            }
         }
 
         public static AlertPayload DecodeAlertPayload(Stream stream)
@@ -191,6 +241,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static AlertPayload DecodeAlertPayload(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeAlertPayload(stream);
+            }
+        }
+
         public static void EncodeAlertPayload(Stream stream, AlertPayload alertPayload)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -202,9 +260,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeAlertPayload(AlertPayload alertPayload)
         {
-            var stream = new MemoryStream();
-            EncodeAlertPayload(stream, alertPayload);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeAlertPayload(stream, alertPayload);
+                return stream.ToArray();
+            }
         }
 
         public static AddressPayload DecodeAddressPayload(Stream stream)
@@ -218,6 +278,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static AddressPayload DecodeAddressPayload(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeAddressPayload(stream);
+            }
+        }
+
         public static void EncodeAddressPayload(Stream stream, AddressPayload addressPayload)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -228,9 +296,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeAddressPayload(AddressPayload addressPayload)
         {
-            var stream = new MemoryStream();
-            EncodeAddressPayload(stream, addressPayload);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeAddressPayload(stream, addressPayload);
+                return stream.ToArray();
+            }
         }
 
         public static GetBlocksPayload DecodeGetBlocksPayload(Stream stream)
@@ -246,6 +316,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static GetBlocksPayload DecodeGetBlocksPayload(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeGetBlocksPayload(stream);
+            }
+        }
+
         public static void EncodeGetBlocksPayload(Stream stream, GetBlocksPayload getBlocksPayload)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -258,9 +336,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeGetBlocksPayload(GetBlocksPayload getBlocksPayload)
         {
-            var stream = new MemoryStream();
-            EncodeGetBlocksPayload(stream, getBlocksPayload);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeGetBlocksPayload(stream, getBlocksPayload);
+                return stream.ToArray();
+            }
         }
 
         public static InventoryPayload DecodeInventoryPayload(Stream stream)
@@ -274,6 +354,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static InventoryPayload DecodeInventoryPayload(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeInventoryPayload(stream);
+            }
+        }
+
         public static void EncodeInventoryPayload(Stream stream, InventoryPayload invPayload)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -284,9 +372,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeInventoryPayload(InventoryPayload invPayload)
         {
-            var stream = new MemoryStream();
-            EncodeInventoryPayload(stream, invPayload);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeInventoryPayload(stream, invPayload);
+                return stream.ToArray();
+            }
         }
 
         public static InventoryVector DecodeInventoryVector(Stream stream)
@@ -301,6 +391,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static InventoryVector DecodeInventoryVector(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeInventoryVector(stream);
+            }
+        }
+
         public static void EncodeInventoryVector(Stream stream, InventoryVector invVector)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -312,9 +410,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeInventoryVector(InventoryVector invVector)
         {
-            var stream = new MemoryStream();
-            EncodeInventoryVector(stream, invVector);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeInventoryVector(stream, invVector);
+                return stream.ToArray();
+            }
         }
 
         public static Message DecodeMessage(Stream stream)
@@ -338,6 +438,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static Message DecodeMessage(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeMessage(stream);
+            }
+        }
+
         public static void EncodeMessage(Stream stream, Message message)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -352,9 +460,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeMessage(Message message)
         {
-            var stream = new MemoryStream();
-            EncodeMessage(stream, message);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeMessage(stream, message);
+                return stream.ToArray();
+            }
         }
 
         public static NetworkAddress DecodeNetworkAddress(Stream stream)
@@ -370,6 +480,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static NetworkAddress DecodeNetworkAddress(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeNetworkAddress(stream);
+            }
+        }
+
         public static void EncodeNetworkAddress(Stream stream, NetworkAddress networkAddress)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -382,9 +500,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeNetworkAddress(NetworkAddress networkAddress)
         {
-            var stream = new MemoryStream();
-            EncodeNetworkAddress(stream, networkAddress);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeNetworkAddress(stream, networkAddress);
+                return stream.ToArray();
+            }
         }
 
         public static NetworkAddressWithTime DecodeNetworkAddressWithTime(Stream stream)
@@ -399,6 +519,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static NetworkAddressWithTime DecodeNetworkAddressWithTime(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeNetworkAddressWithTime(stream);
+            }
+        }
+
         public static void EncodeNetworkAddressWithTime(Stream stream, NetworkAddressWithTime networkAddressWithTime)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -410,9 +538,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeNetworkAddressWithTime(NetworkAddressWithTime networkAddressWithTime)
         {
-            var stream = new MemoryStream();
-            EncodeNetworkAddressWithTime(stream, networkAddressWithTime);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeNetworkAddressWithTime(stream, networkAddressWithTime);
+                return stream.ToArray();
+            }
         }
 
         public static VersionPayload DecodeVersionPayload(Stream stream, int payloadLength)
@@ -442,6 +572,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static VersionPayload DecodeVersionPayload(byte[] bytes, int payloadLength)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeVersionPayload(stream, payloadLength);
+            }
+        }
+
         public static void EncodeVersionPayload(Stream stream, VersionPayload versionPayload, bool withRelay)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -462,9 +600,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeVersionPayload(VersionPayload versionPayload, bool withRelay)
         {
-            var stream = new MemoryStream();
-            EncodeVersionPayload(stream, versionPayload, withRelay);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeVersionPayload(stream, versionPayload, withRelay);
+                return stream.ToArray();
+            }
         }
 
         public static NetworkAddressKey DecodeNetworkAddressKey(Stream stream)
@@ -479,6 +619,14 @@ namespace BitSharp.Network
             }
         }
 
+        public static NetworkAddressKey DecodeNetworkAddressKey(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeNetworkAddressKey(stream);
+            }
+        }
+
         public static void EncodeNetworkAddressKey(Stream stream, NetworkAddressKey networkAddressKey)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -490,9 +638,11 @@ namespace BitSharp.Network
 
         public static byte[] EncodeNetworkAddressKey(NetworkAddressKey networkAddressKey)
         {
-            var stream = new MemoryStream();
-            EncodeNetworkAddressKey(stream, networkAddressKey);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeNetworkAddressKey(stream, networkAddressKey);
+                return stream.ToArray();
+            }
         }
     }
 }

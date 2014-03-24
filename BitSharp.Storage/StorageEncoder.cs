@@ -27,6 +27,14 @@ namespace BitSharp.Storage
             }
         }
 
+        public static Block DecodeBlock(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeBlock(stream);
+            }
+        }
+
         public static void EncodeBlock(Stream stream, Block block)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -38,9 +46,11 @@ namespace BitSharp.Storage
 
         public static byte[] EncodeBlock(Block block)
         {
-            var stream = new MemoryStream();
-            EncodeBlock(stream, block);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeBlock(stream, block);
+                return stream.ToArray();
+            }
         }
 
         public static BlockHeader DecodeBlockHeader(Stream stream, UInt256? blockHash = null)
@@ -60,6 +70,14 @@ namespace BitSharp.Storage
             }
         }
 
+        public static BlockHeader DecodeBlockHeader(byte[] bytes, UInt256? blockHash = null)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeBlockHeader(stream, blockHash);
+            }
+        }
+
         public static void EncodeBlockHeader(Stream stream, BlockHeader blockHeader)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -75,9 +93,11 @@ namespace BitSharp.Storage
 
         public static byte[] EncodeBlockHeader(BlockHeader blockHeader)
         {
-            var stream = new MemoryStream();
-            EncodeBlockHeader(stream, blockHeader);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeBlockHeader(stream, blockHeader);
+                return stream.ToArray();
+            }
         }
 
         public static BigInteger DecodeTotalWork(Stream stream)
@@ -86,6 +106,14 @@ namespace BitSharp.Storage
             {
                 var totalWorkBytes = reader.ReadBytes(64);
                 return new BigInteger(totalWorkBytes);
+            }
+        }
+
+        public static BigInteger DecodeTotalWork(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeTotalWork(stream);
             }
         }
 
@@ -107,9 +135,11 @@ namespace BitSharp.Storage
 
         public static byte[] EncodeTotalWork(BigInteger totalWork)
         {
-            var stream = new MemoryStream();
-            EncodeTotalWork(stream, totalWork);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeTotalWork(stream, totalWork);
+                return stream.ToArray();
+            }
         }
 
         public static ChainedBlock DecodeChainedBlock(Stream stream)
@@ -126,6 +156,14 @@ namespace BitSharp.Storage
             }
         }
 
+        public static ChainedBlock DecodeChainedBlock(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeChainedBlock(stream);
+            }
+        }
+
         public static void EncodeChainedBlock(Stream stream, ChainedBlock chainedBlock)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -139,9 +177,11 @@ namespace BitSharp.Storage
 
         public static byte[] EncodeChainedBlock(ChainedBlock chainedBlock)
         {
-            var stream = new MemoryStream();
-            EncodeChainedBlock(stream, chainedBlock);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeChainedBlock(stream, chainedBlock);
+                return stream.ToArray();
+            }
         }
 
         public static Transaction DecodeTransaction(Stream stream, UInt256? txHash = null)
@@ -159,6 +199,14 @@ namespace BitSharp.Storage
             }
         }
 
+        public static Transaction DecodeTransaction(byte[] bytes, UInt256? txHash = null)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeTransaction(stream, txHash);
+            }
+        }
+
         public static void EncodeTransaction(Stream stream, Transaction tx)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -172,9 +220,11 @@ namespace BitSharp.Storage
 
         public static byte[] EncodeTransaction(Transaction tx)
         {
-            var stream = new MemoryStream();
-            EncodeTransaction(stream, tx);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeTransaction(stream, tx);
+                return stream.ToArray();
+            }
         }
 
         public static TxInput DecodeTxInput(Stream stream)
@@ -194,6 +244,14 @@ namespace BitSharp.Storage
             }
         }
 
+        public static TxInput DecodeTxInput(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeTxInput(stream);
+            }
+        }
+
         public static void EncodeTxInput(Stream stream, TxInput txInput)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -207,9 +265,11 @@ namespace BitSharp.Storage
 
         public static byte[] EncodeTxInput(TxInput txInput)
         {
-            var stream = new MemoryStream();
-            EncodeTxInput(stream, txInput);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeTxInput(stream, txInput);
+                return stream.ToArray();
+            }
         }
 
         public static TxOutput DecodeTxOutput(Stream stream)
@@ -224,6 +284,14 @@ namespace BitSharp.Storage
             }
         }
 
+        public static TxOutput DecodeTxOutput(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeTxOutput(stream);
+            }
+        }
+
         public static void EncodeTxOutput(Stream stream, TxOutput txOutput)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -235,9 +303,11 @@ namespace BitSharp.Storage
 
         public static byte[] EncodeTxOutput(TxOutput txOutput)
         {
-            var stream = new MemoryStream();
-            EncodeTxOutput(stream, txOutput);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeTxOutput(stream, txOutput);
+                return stream.ToArray();
+            }
         }
 
         public static UnspentTx DecodeUnspentTx(UInt256 txHash, Stream stream)
@@ -253,6 +323,14 @@ namespace BitSharp.Storage
             }
         }
 
+        public static UnspentTx DecodeUnspentTx(UInt256 txhash, byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeUnspentTx(txhash, stream);
+            }
+        }
+
         public static void EncodeUnspentTx(Stream stream, UnspentTx unspentTx)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -264,9 +342,11 @@ namespace BitSharp.Storage
 
         public static byte[] EncodeUnspentTx(UnspentTx unspentTx)
         {
-            var stream = new MemoryStream();
-            EncodeUnspentTx(stream, unspentTx);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeUnspentTx(stream, unspentTx);
+                return stream.ToArray();
+            }
         }
 
         public static byte[] DecodeVarBytes(BinaryReader reader)
@@ -290,6 +370,14 @@ namespace BitSharp.Storage
             }
         }
 
+        public static string DecodeVarString(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeVarString(stream);
+            }
+        }
+
         public static void EncodeVarString(Stream stream, string s)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
@@ -302,12 +390,14 @@ namespace BitSharp.Storage
 
         public static byte[] EncodeVarString(string s)
         {
-            var stream = new MemoryStream();
-            EncodeVarString(stream, s);
-            return stream.ToArray();
+            using (var stream = new MemoryStream())
+            {
+                EncodeVarString(stream, s);
+                return stream.ToArray();
+            }
         }
 
-        public static ImmutableList<T> DecodeList<T>(BinaryReader reader, Func<T> decode)
+        public static ImmutableArray<T> DecodeList<T>(BinaryReader reader, Func<T> decode)
         {
             var length = reader.ReadInt32();
 
@@ -317,10 +407,10 @@ namespace BitSharp.Storage
                 list[i] = decode();
             }
 
-            return list.ToImmutableList();
+            return list.ToImmutableArray();
         }
 
-        public static void EncodeList<T>(BinaryWriter writer, ImmutableList<T> list, Action<T> encode)
+        public static void EncodeList<T>(BinaryWriter writer, ImmutableArray<T> list, Action<T> encode)
         {
             writer.WriteInt32(list.Count);
 

@@ -82,7 +82,9 @@ namespace BitSharp.Common.ExtensionMethods
         {
             var bytes = reader.ReadBytes(length);
             Array.Reverse(bytes);
-            return new BinaryReader(new MemoryStream(bytes));
+
+            var stream = new MemoryStream(bytes);
+            return new BinaryReader(stream, Encoding.ASCII, leaveOpen: false);
         }
     }
 }

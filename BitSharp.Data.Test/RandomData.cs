@@ -31,7 +31,7 @@ namespace BitSharp.Data.Test
             return new Block
             (
                 header: RandomBlockHeader(),
-                transactions: Enumerable.Range(0, random.Next((options != null ? options.TransactionCount : null) ?? 100)).Select(x => RandomTransaction()).ToImmutableList()
+                transactions: Enumerable.Range(0, random.Next((options != null ? options.TransactionCount : null) ?? 100)).Select(x => RandomTransaction()).ToImmutableArray()
             );
         }
 
@@ -53,8 +53,8 @@ namespace BitSharp.Data.Test
             return new Transaction
             (
                 version: random.NextUInt32(),
-                inputs: Enumerable.Range(0, random.Next((options != null ? options.TxInputCount : null) ?? 100)).Select(x => RandomTxInput()).ToImmutableList(),
-                outputs: Enumerable.Range(0, random.Next((options != null ? options.TxOutputCount : null) ?? 100)).Select(x => RandomTxOutput()).ToImmutableList(),
+                inputs: Enumerable.Range(0, random.Next((options != null ? options.TxInputCount : null) ?? 100)).Select(x => RandomTxInput()).ToImmutableArray(),
+                outputs: Enumerable.Range(0, random.Next((options != null ? options.TxOutputCount : null) ?? 100)).Select(x => RandomTxOutput()).ToImmutableArray(),
                 lockTime: random.NextUInt32()
             );
         }

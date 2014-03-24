@@ -66,7 +66,7 @@ namespace BitSharp.Storage.Esent
         {
             get
             {
-                return StorageEncoder.DecodeUnspentTx(txHash, this.utxo[txHash].ToMemoryStream());
+                return StorageEncoder.DecodeUnspentTx(txHash, this.utxo[txHash]);
             }
             set
             {

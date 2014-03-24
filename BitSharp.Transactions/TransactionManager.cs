@@ -61,16 +61,18 @@ namespace BitSharp.Transactions
         {
             var publicAddressHash = Crypto.SingleRIPEMD160(Crypto.SingleSHA256(publicAddress));
 
-            var publicKeyScript = new ScriptBuilder();
-            publicKeyScript.WriteOp(ScriptOp.OP_DUP);
-            publicKeyScript.WriteOp(ScriptOp.OP_HASH160);
-            publicKeyScript.WritePushData(publicAddressHash);
-            publicKeyScript.WriteOp(ScriptOp.OP_EQUALVERIFY);
-            publicKeyScript.WriteOp(ScriptOp.OP_CHECKSIG);
+            using (var publicKeyScript = new ScriptBuilder())
+            {
+                publicKeyScript.WriteOp(ScriptOp.OP_DUP);
+                publicKeyScript.WriteOp(ScriptOp.OP_HASH160);
+                publicKeyScript.WritePushData(publicAddressHash);
+                publicKeyScript.WriteOp(ScriptOp.OP_EQUALVERIFY);
+                publicKeyScript.WriteOp(ScriptOp.OP_CHECKSIG);
 
-            //Debug.WriteLine("Public Script: {0}".Format2(publicKeyScript.GetScript().ToHexDataString()));
+                //Debug.WriteLine("Public Script: {0}".Format2(publicKeyScript.GetScript().ToHexDataString()));
 
-            return publicKeyScript.GetScript();
+                return publicKeyScript.GetScript();
+            }
         }
 
         public static byte[] CreatePrivateKeyScript(Transaction tx, int inputIndex, byte hashType, ECPrivateKeyParameters privateKey, ECPublicKeyParameters publicKey)
@@ -107,12 +109,14 @@ namespace BitSharp.Transactions
             //Debug.WriteLine("Sig S:       {0}".Format2(s.ToHexNumberStringUnsigned()));
             //Debug.WriteLine("Sig Encoded: {0}".Format2(sigEncoded.ToHexDataString()));
 
-            var privateKeyScript = new ScriptBuilder();
-            privateKeyScript.WritePushData(sigEncoded);
-            privateKeyScript.WritePushData(publicAddress);
-            //Debug.WriteLine("Private Script: {0}".Format2(privateKeyScript.GetScript().ToHexDataString()));
+            using (var privateKeyScript = new ScriptBuilder())
+            {
+                privateKeyScript.WritePushData(sigEncoded);
+                privateKeyScript.WritePushData(publicAddress);
+                //Debug.WriteLine("Private Script: {0}".Format2(privateKeyScript.GetScript().ToHexDataString()));
 
-            return privateKeyScript.GetScript();
+                return privateKeyScript.GetScript();
+            }
         }
 
         public static Transaction CreateCoinbaseTransaction(ECPublicKeyParameters publicKey, byte[] coinbase)
@@ -120,7 +124,7 @@ namespace BitSharp.Transactions
             var tx = new Transaction
             (
                 version: 1,
-                inputs: ImmutableList.Create
+                inputs: ImmutableArray.Create
                 (
                     new TxInput
                     (
@@ -133,7 +137,7 @@ namespace BitSharp.Transactions
                         sequence: 0
                     )
                 ),
-                outputs: ImmutableList.Create
+                outputs: ImmutableArray.Create
                 (
                     new TxOutput
                     (
@@ -152,7 +156,7 @@ namespace BitSharp.Transactions
             var tx = new Transaction
             (
                 version: 1,
-                inputs: ImmutableList.Create
+                inputs: ImmutableArray.Create
                 (
                     new TxInput
                     (
@@ -165,7 +169,7 @@ namespace BitSharp.Transactions
                         sequence: 0
                     )
                 ),
-                outputs: ImmutableList.Create
+                outputs: ImmutableArray.Create
                 (
                     new TxOutput
                     (
@@ -180,7 +184,7 @@ namespace BitSharp.Transactions
             var scriptSignature = ImmutableArray.Create(CreatePrivateKeyScript(tx, 0, hashType, fromPrivateKey, fromPublicKey));
 
             // add the signature script to the transaction
-            tx = tx.With(Inputs: ImmutableList.Create(tx.Inputs[0].With(scriptSignature: scriptSignature)));
+            tx = tx.With(Inputs: ImmutableArray.Create(tx.Inputs[0].With(scriptSignature: scriptSignature)));
 
             return tx;
         }

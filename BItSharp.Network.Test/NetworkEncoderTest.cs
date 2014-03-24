@@ -23,7 +23,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeAddressPayload()
         {
-            var actual = NetworkEncoder.EncodeAddressPayload(NetworkEncoder.DecodeAddressPayload(ADDRESS_PAYLOAD_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeAddressPayload(NetworkEncoder.DecodeAddressPayload(ADDRESS_PAYLOAD_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(ADDRESS_PAYLOAD_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -37,7 +37,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeAlertPayload()
         {
-            var actual = NetworkEncoder.EncodeAlertPayload(NetworkEncoder.DecodeAlertPayload(ALERT_PAYLOAD_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeAlertPayload(NetworkEncoder.DecodeAlertPayload(ALERT_PAYLOAD_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(ALERT_PAYLOAD_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -51,7 +51,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeBlockHeader()
         {
-            var actual = NetworkEncoder.EncodeBlockHeader(NetworkEncoder.DecodeBlockHeader(BLOCK_HEADER_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeBlockHeader(NetworkEncoder.DecodeBlockHeader(BLOCK_HEADER_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(BLOCK_HEADER_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -65,7 +65,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeBlock()
         {
-            var actual = NetworkEncoder.EncodeBlock(NetworkEncoder.DecodeBlock(BLOCK_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeBlock(NetworkEncoder.DecodeBlock(BLOCK_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(BLOCK_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -79,7 +79,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeGetBlocksPayload()
         {
-            var actual = NetworkEncoder.EncodeGetBlocksPayload(NetworkEncoder.DecodeGetBlocksPayload(GET_BLOCKS_PAYLOAD_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeGetBlocksPayload(NetworkEncoder.DecodeGetBlocksPayload(GET_BLOCKS_PAYLOAD_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(GET_BLOCKS_PAYLOAD_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -93,7 +93,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeInventoryPayload()
         {
-            var actual = NetworkEncoder.EncodeInventoryPayload(NetworkEncoder.DecodeInventoryPayload(INVENTORY_PAYLOAD_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeInventoryPayload(NetworkEncoder.DecodeInventoryPayload(INVENTORY_PAYLOAD_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(INVENTORY_PAYLOAD_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -107,7 +107,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeInventoryVector()
         {
-            var actual = NetworkEncoder.EncodeInventoryVector(NetworkEncoder.DecodeInventoryVector(INVENTORY_VECTOR_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeInventoryVector(NetworkEncoder.DecodeInventoryVector(INVENTORY_VECTOR_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(INVENTORY_VECTOR_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -121,7 +121,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeMessage()
         {
-            var actual = NetworkEncoder.EncodeMessage(NetworkEncoder.DecodeMessage(MESSAGE_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeMessage(NetworkEncoder.DecodeMessage(MESSAGE_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(MESSAGE_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -135,7 +135,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeNetworkAddress()
         {
-            var actual = NetworkEncoder.EncodeNetworkAddress(NetworkEncoder.DecodeNetworkAddress(NETWORK_ADDRESS_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeNetworkAddress(NetworkEncoder.DecodeNetworkAddress(NETWORK_ADDRESS_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(NETWORK_ADDRESS_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -149,7 +149,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeNetworkAddressWithTime()
         {
-            var actual = NetworkEncoder.EncodeNetworkAddressWithTime(NetworkEncoder.DecodeNetworkAddressWithTime(NETWORK_ADDRESS_WITH_TIME_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeNetworkAddressWithTime(NetworkEncoder.DecodeNetworkAddressWithTime(NETWORK_ADDRESS_WITH_TIME_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(NETWORK_ADDRESS_WITH_TIME_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -163,7 +163,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeTransactionIn()
         {
-            var actual = NetworkEncoder.EncodeTxInput(NetworkEncoder.DecodeTxInput(TRANSACTION_INPUT_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeTxInput(NetworkEncoder.DecodeTxInput(TRANSACTION_INPUT_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(TRANSACTION_INPUT_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -177,7 +177,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeTransactionOut()
         {
-            var actual = NetworkEncoder.EncodeTxOutput(NetworkEncoder.DecodeTxOutput(TRANSACTION_OUTPUT_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeTxOutput(NetworkEncoder.DecodeTxOutput(TRANSACTION_OUTPUT_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(TRANSACTION_OUTPUT_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -191,7 +191,7 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeTransaction()
         {
-            var actual = NetworkEncoder.EncodeTransaction(NetworkEncoder.DecodeTransaction(TRANSACTION_1_BYTES.ToArray().ToMemoryStream()));
+            var actual = NetworkEncoder.EncodeTransaction(NetworkEncoder.DecodeTransaction(TRANSACTION_1_BYTES.ToArray()));
             CollectionAssert.AreEqual(TRANSACTION_1_BYTES.ToList(), actual.ToList());
         }
 
@@ -212,14 +212,14 @@ namespace BitSharp.Network.Test
         [TestMethod]
         public void TestWireDecodeVersionPayloadWithoutRelay()
         {
-            var actual = NetworkEncoder.EncodeVersionPayload(NetworkEncoder.DecodeVersionPayload(VERSION_PAYLOAD_1_NO_RELAY_BYTES.ToArray().ToMemoryStream(), VERSION_PAYLOAD_1_NO_RELAY_BYTES.Count), withRelay: false);
+            var actual = NetworkEncoder.EncodeVersionPayload(NetworkEncoder.DecodeVersionPayload(VERSION_PAYLOAD_1_NO_RELAY_BYTES.ToArray(), VERSION_PAYLOAD_1_NO_RELAY_BYTES.Count), withRelay: false);
             CollectionAssert.AreEqual(VERSION_PAYLOAD_1_NO_RELAY_BYTES.ToList(), actual.ToList());
         }
 
         [TestMethod]
         public void TestWireDecodeVersionPayloadWithRelay()
         {
-            var actual = NetworkEncoder.EncodeVersionPayload(NetworkEncoder.DecodeVersionPayload(VERSION_PAYLOAD_2_RELAY_BYTES.ToArray().ToMemoryStream(), VERSION_PAYLOAD_2_RELAY_BYTES.Count), withRelay: true);
+            var actual = NetworkEncoder.EncodeVersionPayload(NetworkEncoder.DecodeVersionPayload(VERSION_PAYLOAD_2_RELAY_BYTES.ToArray(), VERSION_PAYLOAD_2_RELAY_BYTES.Count), withRelay: true);
             CollectionAssert.AreEqual(VERSION_PAYLOAD_2_RELAY_BYTES.ToList(), actual.ToList());
         }
     }

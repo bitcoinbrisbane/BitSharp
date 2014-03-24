@@ -116,7 +116,8 @@ namespace BitSharp.Common.ExtensionMethods
         private static void ReverseWrite(this BinaryWriter writer, int length, Action<BinaryWriter> write)
         {
             var bytes = new byte[length];
-            using (var reverseWriter = new BinaryWriter(new MemoryStream(bytes)))
+            using (var stream = new MemoryStream(bytes))
+            using (var reverseWriter = new BinaryWriter(stream))
             {
                 write(reverseWriter);
                 

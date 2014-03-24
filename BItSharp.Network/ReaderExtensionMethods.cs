@@ -13,17 +13,17 @@ namespace BitSharp.Network.ExtensionMethods
 {
     public static class ReaderExtensionMethods
     {
-        public static ImmutableList<T> DecodeList<T>(this BinaryReader reader, Func<T> decode)
+        public static ImmutableArray<T> DecodeList<T>(this BinaryReader reader, Func<T> decode)
         {
             var length = reader.ReadVarInt().ToIntChecked();
 
-            var list = ImmutableList.CreateBuilder<T>();
+            var list = new T[length];
             for (var i = 0; i < length; i++)
             {
-                list.Add(decode());
+                list[i] = decode();
             }
 
-            return list.ToImmutable();
+            return list.ToImmutableArray();
         }
     }
 }

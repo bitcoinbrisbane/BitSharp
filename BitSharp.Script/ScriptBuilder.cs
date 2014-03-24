@@ -9,13 +9,18 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Script
 {
-    public class ScriptBuilder
+    public class ScriptBuilder : IDisposable
     {
         private readonly MemoryStream stream;
 
         public ScriptBuilder()
         {
             this.stream = new MemoryStream();
+        }
+
+        public void Dispose()
+        {
+            this.stream.Dispose();
         }
 
         public byte[] GetScript()

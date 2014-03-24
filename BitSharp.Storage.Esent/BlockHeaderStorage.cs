@@ -19,7 +19,7 @@ namespace BitSharp.Storage.Esent
         public BlockHeaderStorage(EsentStorageContext storageContext)
             : base(storageContext, "blockHeaders",
                 blockHeader => StorageEncoder.EncodeBlockHeader(blockHeader),
-                (blockHash, bytes) => StorageEncoder.DecodeBlockHeader(bytes.ToMemoryStream(), blockHash))
+                (blockHash, bytes) => StorageEncoder.DecodeBlockHeader(bytes, blockHash))
         { }
     }
 }

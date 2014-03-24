@@ -12,9 +12,9 @@ namespace BitSharp.Data
     public class Block
     {
         private readonly BlockHeader _header;
-        private readonly ImmutableList<Transaction> _transactions;
+        private readonly ImmutableArray<Transaction> _transactions;
 
-        public Block(BlockHeader header, ImmutableList<Transaction> transactions)
+        public Block(BlockHeader header, ImmutableArray<Transaction> transactions)
         {
             this._header = header;
             this._transactions = transactions;
@@ -24,9 +24,9 @@ namespace BitSharp.Data
 
         public BlockHeader Header { get { return this._header; } }
 
-        public ImmutableList<Transaction> Transactions { get { return this._transactions; } }
+        public ImmutableArray<Transaction> Transactions { get { return this._transactions; } }
 
-        public Block With(BlockHeader Header = null, ImmutableList<Transaction> Transactions = null)
+        public Block With(BlockHeader Header = null, ImmutableArray<Transaction>? Transactions = null)
         {
             return new Block
             (

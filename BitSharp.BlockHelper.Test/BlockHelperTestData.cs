@@ -33,12 +33,12 @@ namespace BitSharp.BlockHelper.Test
                 bits: 486604799,
                 nonce: 2083236893
             ),
-            transactions: ImmutableList.Create
+            transactions: ImmutableArray.Create
             (
                 new Transaction
                 (
                     version: 1,
-                    inputs: ImmutableList.Create
+                    inputs: ImmutableArray.Create
                     (
                         new TxInput
                         (
@@ -58,7 +58,7 @@ namespace BitSharp.BlockHelper.Test
                             sequence: 0xFFFFFFFF
                         )
                     ),
-                    outputs: ImmutableList.Create
+                    outputs: ImmutableArray.Create
                     (
                         new TxOutput
                         (
