@@ -61,29 +61,6 @@ namespace BitSharp.Daemon
             this.NotifyWork();
         }
 
-        private void CheckAllChainedBlocks()
-        {
-            new MethodTimer().Time(() =>
-            {
-                this.targetBlockLock.DoWrite(() =>
-                {
-                    this.targetBlock = null;
-                });
-
-                ChainedBlock winningBlock = null;
-                foreach (var chainedBlock in this.cacheContext.ChainedBlockCache.Values)
-                {
-                    if (winningBlock == null || chainedBlock.TotalWork > winningBlock.TotalWork)
-                    {
-                        winningBlock = chainedBlock;
-                    }
-                }
-
-                if (winningBlock != null)
-                    CheckChainedBlock(winningBlock.BlockHash, winningBlock);
-            });
-        }
-
         private void CheckChainedBlock(UInt256 blockHash, ChainedBlock chainedBlock)
         {
             try
