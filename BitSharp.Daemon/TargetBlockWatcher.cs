@@ -64,15 +64,17 @@ namespace BitSharp.Daemon
                     this.targetBlock = null;
                 });
 
+                ChainedBlock winningBlock = null;
                 foreach (var chainedBlock in this.cacheContext.ChainedBlockCache.Values)
                 {
-                    //TODO
-                    // cooperative loop
-                    //if (this.shutdownToken.IsCancellationRequested)
-                    //    return;
-
-                    CheckChainedBlock(chainedBlock.BlockHash, chainedBlock);
+                    if (winningBlock == null || chainedBlock.TotalWork > winningBlock.TotalWork)
+                    {
+                        winningBlock = chainedBlock;
+                    }
                 }
+                
+                if (winningBlock != null)
+                    CheckChainedBlock(winningBlock.BlockHash, winningBlock);
             });
         }
 
