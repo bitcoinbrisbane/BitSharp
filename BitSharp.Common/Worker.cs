@@ -231,7 +231,7 @@ namespace BitSharp.Common
                     stopwatch.Stop();
                     //Debug.WriteLineIf(stopwatch.ElapsedMilliseconds >= 25 && !this.Name.Contains(".StorageWorker"), "{0,35} worked in {1:#,##0.000}s".Format2(this.Name, stopwatch.ElapsedSecondsFloat()));
 
-                    if (DateTime.Now - lastReportTime > TimeSpan.FromSeconds(5))
+                    if (DateTime.Now - lastReportTime > TimeSpan.FromSeconds(30))
                     {
                         lastReportTime = DateTime.Now;
                         var percentWorkerTime = workerTime.ElapsedSecondsFloat() / totalTime.ElapsedSecondsFloat();
