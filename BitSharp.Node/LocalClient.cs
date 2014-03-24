@@ -42,7 +42,7 @@ namespace BitSharp.Node
         private static readonly int MAX_BLOCKCHAIN_LOOKAHEAD = 100.MILLION();
         // don't limit the first 100,000 block downloading as they are so small it will slow down their processing
         private static readonly int MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT = 100.THOUSAND();
-        private static readonly int REQUEST_LIFETIME_SECONDS = 30;
+        private static readonly int REQUEST_LIFETIME_SECONDS = 5;
 
         private static readonly Random random = new Random();
 
@@ -88,7 +88,7 @@ namespace BitSharp.Node
             this.knownAddressCache = new BoundedCache<NetworkAddressKey, NetworkAddressWithTime>("KnownAddressCache", knownAddressStorage);
 
             this.connectWorker = new WorkerMethod("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
-            this.requestBlocksWorker = new WorkerMethod("LocalClient.RequestBlocksWorker", RequestBlocksWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
+            this.requestBlocksWorker = new WorkerMethod("LocalClient.RequestBlocksWorker", RequestBlocksWorker, true, TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(5000));
             this.requestHeadersWorker = new WorkerMethod("LocalClient.RequestHeadersWorker", RequestHeadersWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
             this.requestTransactionsWorker = new WorkerMethod("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
             this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
