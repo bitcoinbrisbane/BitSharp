@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using BitSharp.Common;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -19,7 +20,7 @@ namespace BitSharp.Data.Test
             var sameTxOutput = new TxOutput
             (
                 value: randomTxOutput.Value,
-                scriptPublicKey: ImmutableList.Create(randomTxOutput.ScriptPublicKey.ToArray())
+                scriptPublicKey: ImmutableArray.Create(randomTxOutput.ScriptPublicKey.ToArray())
             );
 
             var differentTxOutputValue = new TxOutput

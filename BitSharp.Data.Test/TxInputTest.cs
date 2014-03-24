@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using BitSharp.Common;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -23,7 +24,7 @@ namespace BitSharp.Data.Test
                     txHash: randomTxInput.PreviousTxOutputKey.TxHash,
                     txOutputIndex: randomTxInput.PreviousTxOutputKey.TxOutputIndex
                 ),
-                scriptSignature: ImmutableList.Create(randomTxInput.ScriptSignature.ToArray()),
+                scriptSignature: ImmutableArray.Create<byte>(randomTxInput.ScriptSignature.ToArray()),
                 sequence: randomTxInput.Sequence
             );
 

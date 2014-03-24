@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BitSharp.Common;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -10,11 +11,11 @@ namespace BitSharp.Network
 {
     public class NetworkAddressKey
     {
-        public readonly ImmutableList<byte> IPv6Address;
+        public readonly ImmutableArray<byte> IPv6Address;
         public readonly UInt16 Port;
         private readonly int _hashCode;
 
-        public NetworkAddressKey(ImmutableList<byte> IPv6Address, UInt16 Port)
+        public NetworkAddressKey(ImmutableArray<byte> IPv6Address, UInt16 Port)
         {
             this.IPv6Address = IPv6Address;
             this.Port = Port;

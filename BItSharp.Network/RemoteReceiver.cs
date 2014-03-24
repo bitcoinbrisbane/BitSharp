@@ -32,7 +32,7 @@ namespace BitSharp.Network
         public event Action<GetBlocksPayload> OnGetBlocks;
         public event Action<GetBlocksPayload> OnGetHeaders;
         public event Action<InventoryPayload> OnGetData;
-        public event Action<ImmutableList<byte>> OnPing;
+        public event Action<ImmutableArray<byte>> OnPing;
 
         private readonly Socket socket;
         private readonly bool persistent;
@@ -161,7 +161,7 @@ namespace BitSharp.Network
                     Command: command,
                     PayloadSize: payloadSize,
                     PayloadChecksum: payloadChecksum,
-                    Payload: payload.ToImmutableList()
+                    Payload: payload.ToImmutableArray()
                 );
             }
 
@@ -268,7 +268,7 @@ namespace BitSharp.Network
                     {
                         var handler = this.OnPing;
                         if (handler != null)
-                            handler(payload.ToImmutableList());
+                            handler(payload.ToImmutableArray());
                     }
                     break;
 

@@ -12,12 +12,12 @@ namespace BitSharp.Script
 {
     public class Stack
     {
-        private Stack<ImmutableList<byte>> stack = new Stack<ImmutableList<byte>>();
+        private Stack<ImmutableArray<byte>> stack = new Stack<ImmutableArray<byte>>();
 
         public int Count { get { return stack.Count; } }
 
         // Peek
-        public ImmutableList<byte> PeekBytes()
+        public ImmutableArray<byte> PeekBytes()
         {
             return stack.Peek();
         }
@@ -33,7 +33,7 @@ namespace BitSharp.Script
         }
         
         // Pop
-        public ImmutableList<byte> PopBytes()
+        public ImmutableArray<byte> PopBytes()
         {
             return stack.Pop();
         }
@@ -51,10 +51,10 @@ namespace BitSharp.Script
         // Push
         public void PushBytes(byte[] value)
         {
-            stack.Push(value.ToImmutableList());
+            stack.Push(value.ToImmutableArray());
         }
 
-        public void PushBytes(ImmutableList<byte> value)
+        public void PushBytes(ImmutableArray<byte> value)
         {
             stack.Push(value);
         }
@@ -62,17 +62,17 @@ namespace BitSharp.Script
         public void PushBool(bool value)
         {
             if (value)
-                stack.Push(ImmutableList.Create((byte)1));
+                stack.Push(ImmutableArray.Create<byte>(1));
             else
-                stack.Push(ImmutableList.Create<byte>());
+                stack.Push(ImmutableArray.Create<byte>());
         }
 
         public void PushBigInteger(BigInteger value)
         {
-            stack.Push(value.ToByteArray().ToImmutableList());
+            stack.Push(value.ToByteArray().ToImmutableArray());
         }
 
-        private bool CastToBool(ImmutableList<byte> value)
+        private bool CastToBool(ImmutableArray<byte> value)
         {
             for (var i = 0; i < value.Count; i++)
             {
@@ -89,7 +89,7 @@ namespace BitSharp.Script
             return false;
         }
 
-        private BigInteger CastToBigInteger(ImmutableList<byte> value)
+        private BigInteger CastToBigInteger(ImmutableArray<byte> value)
         {
             return new BigInteger(value.ToArray());
         }

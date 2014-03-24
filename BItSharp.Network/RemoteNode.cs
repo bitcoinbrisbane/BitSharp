@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BitSharp.Common.ExtensionMethods;
 using System.Collections.Immutable;
+using BitSharp.Common;
 
 namespace BitSharp.Network
 {
@@ -19,7 +20,7 @@ namespace BitSharp.Network
         public event Action<RemoteNode, GetBlocksPayload> OnGetBlocks;
         public event Action<RemoteNode, GetBlocksPayload> OnGetHeaders;
         public event Action<RemoteNode, InventoryPayload> OnGetData;
-        public event Action<RemoteNode, ImmutableList<byte>> OnPing;
+        public event Action<RemoteNode, ImmutableArray<byte>> OnPing;
         public event Action<RemoteNode> OnDisconnect;
 
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1);
@@ -168,7 +169,7 @@ namespace BitSharp.Network
                 handler(this, payload);
         }
 
-        private void HandlePing(ImmutableList<byte> payload)
+        private void HandlePing(ImmutableArray<byte> payload)
         {
             var handler = this.OnPing;
             if (handler != null)

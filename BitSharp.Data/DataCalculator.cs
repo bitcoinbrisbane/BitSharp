@@ -89,15 +89,15 @@ namespace BitSharp.Data
 
         public static UInt256 CalculateMerkleRoot(IImmutableList<UInt256> txHashes)
         {
-            ImmutableList<ImmutableList<byte>> merkleTree;
+            ImmutableList<ImmutableArray<byte>> merkleTree;
             return CalculateMerkleRoot(txHashes, out merkleTree);
         }
 
-        public static UInt256 CalculateMerkleRoot(IImmutableList<UInt256> txHashes, out ImmutableList<ImmutableList<byte>> merkleTree)
+        public static UInt256 CalculateMerkleRoot(IImmutableList<UInt256> txHashes, out ImmutableList<ImmutableArray<byte>> merkleTree)
         {
-            var workingMerkleTree = new List<ImmutableList<byte>>();
+            var workingMerkleTree = ImmutableList.CreateBuilder<ImmutableArray<byte>>();
 
-            var hashes = txHashes.Select(tx => tx.ToByteArray().ToImmutableList()).ToList();
+            var hashes = txHashes.Select(txHash => txHash.ToByteArray().ToImmutableArray()).ToList();
 
             workingMerkleTree.AddRange(hashes);
             while (hashes.Count > 1)
@@ -114,12 +114,12 @@ namespace BitSharp.Data
                     Enumerable.Range(0, hashes.Count / 2)
                     .Select(i => hashes[i * 2].AddRange(hashes[i * 2 + 1]))
                     //.AsParallel().AsOrdered().WithExecutionMode(ParallelExecutionMode.ForceParallelism).WithDegreeOfParallelism(10)
-                    .Select(pair => Crypto.DoubleSHA256(pair.ToArray()).ToImmutableList())
+                    .Select(pair => Crypto.DoubleSHA256(pair.ToArray()).ToImmutableArray())
                     .ToList();
             }
             Debug.Assert(hashes.Count == 1);
 
-            merkleTree = workingMerkleTree.ToImmutableList();
+            merkleTree = workingMerkleTree.ToImmutable();
             return new UInt256(hashes[0].ToArray());
         }
 

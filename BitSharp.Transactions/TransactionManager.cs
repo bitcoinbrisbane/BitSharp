@@ -80,7 +80,7 @@ namespace BitSharp.Transactions
 
             var publicAddress = CreatePublicAddress(publicKey);
             var publicKeyScript = CreatePublicKeyScript(publicAddress);
-            var txSignature = scriptEngine.TxSignature(publicKeyScript.ToImmutableList(), tx, inputIndex, hashType);
+            var txSignature = scriptEngine.TxSignature(publicKeyScript.ToImmutableArray(), tx, inputIndex, hashType);
             var txSignatureHash = Crypto.DoubleSHA256(txSignature);
 
             //Debug.WriteLine("Signing Tx:       {0}".Format2(txSignature.ToHexDataString()));
@@ -129,7 +129,7 @@ namespace BitSharp.Transactions
                             txHash: 0,
                             txOutputIndex: 0
                         ),
-                        scriptSignature: ImmutableList.Create(coinbase),
+                        scriptSignature: ImmutableArray.Create(coinbase),
                         sequence: 0
                     )
                 ),
@@ -138,7 +138,7 @@ namespace BitSharp.Transactions
                     new TxOutput
                     (
                         value: 50L * (100 * 1000 * 1000),
-                        scriptPublicKey: ImmutableList.Create(CreatePublicKeyScript(publicKey))
+                        scriptPublicKey: ImmutableArray.Create(CreatePublicKeyScript(publicKey))
                     )
                 ),
                 lockTime: 0
@@ -161,7 +161,7 @@ namespace BitSharp.Transactions
                             txHash: prevTx.Hash,
                             txOutputIndex: (UInt32)prevInputIndex
                         ),
-                        scriptSignature: ImmutableList.Create<byte>(),
+                        scriptSignature: ImmutableArray.Create<byte>(),
                         sequence: 0
                     )
                 ),
@@ -170,14 +170,14 @@ namespace BitSharp.Transactions
                     new TxOutput
                     (
                         value: value,
-                        scriptPublicKey: ImmutableList.Create(CreatePublicKeyScript(toPublicKey))
+                        scriptPublicKey: ImmutableArray.Create(CreatePublicKeyScript(toPublicKey))
                     )
                 ),
                 lockTime: 0
             );
 
             // sign the transaction
-            var scriptSignature = ImmutableList.Create(CreatePrivateKeyScript(tx, 0, hashType, fromPrivateKey, fromPublicKey));
+            var scriptSignature = ImmutableArray.Create(CreatePrivateKeyScript(tx, 0, hashType, fromPrivateKey, fromPublicKey));
 
             // add the signature script to the transaction
             tx = tx.With(Inputs: ImmutableList.Create(tx.Inputs[0].With(scriptSignature: scriptSignature)));

@@ -457,5 +457,10 @@ namespace BitSharp.Common.ExtensionMethods
         {
             return new ReadOnlyDictionaryOfDictionary<TOuterKey, TInnerKey, TInnerValue>(outerDictionary);
         }
+
+        public static void AddRange<T>(this ImmutableList<T>.Builder builder, IEnumerable<T> items)
+        {
+            builder.InsertRange(builder.Count, items);
+        }
     }
 }

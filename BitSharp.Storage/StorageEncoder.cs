@@ -188,7 +188,7 @@ namespace BitSharp.Storage
                         txHash: reader.Read32Bytes(),
                         txOutputIndex: reader.Read4Bytes()
                     ),
-                    scriptSignature: DecodeVarBytes(reader).ToImmutableList(),
+                    scriptSignature: DecodeVarBytes(reader).ToImmutableArray(),
                     sequence: reader.Read4Bytes()
                 );
             }
@@ -219,7 +219,7 @@ namespace BitSharp.Storage
                 return new TxOutput
                 (
                     value: reader.Read8Bytes(),
-                    scriptPublicKey: DecodeVarBytes(reader).ToImmutableList()
+                    scriptPublicKey: DecodeVarBytes(reader).ToImmutableArray()
                 );
             }
         }

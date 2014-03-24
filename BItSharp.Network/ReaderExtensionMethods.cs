@@ -1,4 +1,5 @@
-﻿using BitSharp.Common.ExtensionMethods;
+﻿using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -16,13 +17,13 @@ namespace BitSharp.Network.ExtensionMethods
         {
             var length = reader.ReadVarInt().ToIntChecked();
 
-            var list = new T[length];
+            var list = ImmutableList.CreateBuilder<T>();
             for (var i = 0; i < length; i++)
             {
-                list[i] = decode();
+                list.Add(decode());
             }
 
-            return list.ToImmutableList();
+            return list.ToImmutable();
         }
     }
 }

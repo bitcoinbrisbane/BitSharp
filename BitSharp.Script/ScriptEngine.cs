@@ -48,7 +48,7 @@ namespace BitSharp.Script
 
             Stack stack, altStack;
             if (
-                ExecuteOps(scriptPubKey.ToImmutableList(), tx, inputIndex, script, out stack, out altStack)
+                ExecuteOps(scriptPubKey.ToImmutableArray(), tx, inputIndex, script, out stack, out altStack)
                 && stack.Count == 1 && altStack.Count == 0)
             {
                 var success = stack.PeekBool(); //TODO Pop? does it matter?
@@ -64,7 +64,7 @@ namespace BitSharp.Script
             }
         }
 
-        private bool ExecuteOps(ImmutableList<byte> scriptPubKey, Transaction tx, int inputIndex, byte[] script, out Stack stack, out Stack altStack)
+        private bool ExecuteOps(ImmutableArray<byte> scriptPubKey, Transaction tx, int inputIndex, byte[] script, out Stack stack, out Stack altStack)
         {
             stack = new Stack();
             altStack = new Stack();
@@ -284,7 +284,7 @@ namespace BitSharp.Script
             return true;
         }
 
-        public bool VerifySignature(ImmutableList<byte> scriptPubKey, Transaction tx, byte[] sig, byte[] pubKey, int inputIndex, out byte hashType, out byte[] txSignature, out byte[] txSignatureHash, out BigIntegerBouncy x, out BigIntegerBouncy y, out BigIntegerBouncy r, out BigIntegerBouncy s)
+        public bool VerifySignature(ImmutableArray<byte> scriptPubKey, Transaction tx, byte[] sig, byte[] pubKey, int inputIndex, out byte hashType, out byte[] txSignature, out byte[] txSignatureHash, out BigIntegerBouncy x, out BigIntegerBouncy y, out BigIntegerBouncy r, out BigIntegerBouncy s)
         {
             // get the 1-byte hashType off the end of sig
             hashType = sig[sig.Length - 1];
@@ -349,13 +349,13 @@ namespace BitSharp.Script
             }
         }
 
-        public byte[] TxSignature(ImmutableList<byte> scriptPubKey, Transaction tx, int inputIndex, byte hashType)
+        public byte[] TxSignature(ImmutableArray<byte> scriptPubKey, Transaction tx, int inputIndex, byte hashType)
         {
             ///TODO
             Debug.Assert(inputIndex < tx.Inputs.Count);
 
             // Blank out other inputs' signatures
-            var empty = ImmutableList.Create<byte>();
+            var empty = ImmutableArray.Create<byte>();
             var newInputs = new TxInput[tx.Inputs.Count];
             for (var i = 0; i < tx.Inputs.Count; i++)
             {

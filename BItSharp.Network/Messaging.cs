@@ -61,7 +61,7 @@ namespace BitSharp.Network
                 Command: command,
                 PayloadSize: (UInt32)payload.Length,
                 PayloadChecksum: CalculatePayloadChecksum(payload),
-                Payload: payload.ToImmutableList()
+                Payload: payload.ToImmutableArray()
             );
 
             return message;
@@ -100,7 +100,7 @@ namespace BitSharp.Network
             (
                 Services: 1, // 1 (NODE_NETWORK services)
                 // if address is IPv4, map it onto IPv6
-                IPv6Address: IPAddressToBytes(ip).ToImmutableList(),
+                IPv6Address: IPAddressToBytes(ip).ToImmutableArray(),
                 Port: (UInt16)port
             );
         }

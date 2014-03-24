@@ -40,7 +40,7 @@ namespace BitSharp.Blockchain.Test
             var utxoBuilder = new UtxoBuilder(mockCacheContext.Object, mockParentUtxo.Object);
 
             // create an input to spend the unspent transaction's first output
-            var input1 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableList.Create<byte>(), 0);
+            var input1 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
 
             // spend the input
             utxoBuilder.Spend(input1, chainedBlock);
@@ -53,7 +53,7 @@ namespace BitSharp.Blockchain.Test
             Assert.IsTrue(memoryUtxoBuilderStorage.Storage[txHash].OutputStates[2] == OutputState.Unspent);
 
             // create an input to spend the unspent transaction's second output
-            var input2 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 1), ImmutableList.Create<byte>(), 0);
+            var input2 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 1), ImmutableArray.Create<byte>(), 0);
 
             // spend the input
             utxoBuilder.Spend(input2, chainedBlock);
@@ -66,7 +66,7 @@ namespace BitSharp.Blockchain.Test
             Assert.IsTrue(memoryUtxoBuilderStorage.Storage[txHash].OutputStates[2] == OutputState.Unspent);
 
             // create an input to spend the unspent transaction's third output
-            var input3 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 2), ImmutableList.Create<byte>(), 0);
+            var input3 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 2), ImmutableArray.Create<byte>(), 0);
 
             // spend the input
             utxoBuilder.Spend(input3, chainedBlock);
@@ -101,7 +101,7 @@ namespace BitSharp.Blockchain.Test
             var utxoBuilder = new UtxoBuilder(mockCacheContext.Object, mockParentUtxo.Object);
 
             // create an input to spend the unspent transaction
-            var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableList.Create<byte>(), 0);
+            var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
 
             // spend the input
             utxoBuilder.Spend(input, chainedBlock);

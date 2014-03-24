@@ -79,6 +79,7 @@
     <Compile Include="ConcurrentSetBuilder.cs" />
     <Compile Include="Crypto.cs" />
     <Compile Include="ExtensionMethods.cs" />
+    <Compile Include="ImmutableArray.cs" />
     <Compile Include="ImmutableBitArray.cs" />
     <Compile Include="LookAhead.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

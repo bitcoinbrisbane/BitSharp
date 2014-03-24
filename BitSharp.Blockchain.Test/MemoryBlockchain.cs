@@ -93,7 +93,7 @@ namespace BitSharp.Blockchain.Test
                             txHash: 0,
                             txOutputIndex: 0
                         ),
-                        scriptSignature: ImmutableList.Create(random.NextBytes(100)),
+                        scriptSignature: ImmutableArray.Create(random.NextBytes(100)),
                         sequence: 0
                     )
                 ),
@@ -102,7 +102,7 @@ namespace BitSharp.Blockchain.Test
                     new TxOutput
                     (
                         value: 50 * SATOSHI_PER_BTC,
-                        scriptPublicKey: ImmutableList.Create(TransactionManager.CreatePublicKeyScript(_coinbasePublicKey))
+                        scriptPublicKey: ImmutableArray.Create(TransactionManager.CreatePublicKeyScript(_coinbasePublicKey))
                     )
                 ),
                 lockTime: 0

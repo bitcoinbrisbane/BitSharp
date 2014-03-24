@@ -846,7 +846,7 @@ namespace BitSharp.Node
             }
         }
 
-        private void OnPing(RemoteNode remoteNode, ImmutableList<byte> payload)
+        private void OnPing(RemoteNode remoteNode, ImmutableArray<byte> payload)
         {
             remoteNode.Sender.SendMessageAsync(Messaging.ConstructMessage("pong", payload.ToArray())).Wait();
         }

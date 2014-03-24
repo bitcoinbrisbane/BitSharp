@@ -186,32 +186,32 @@ namespace BitSharp.Test
             }
         }
 
-        private static ImmutableList<byte> GetSigFromScriptSig(ImmutableList<byte> scriptSig)
+        private static ImmutableArray<byte> GetSigFromScriptSig(ImmutableArray<byte> scriptSig)
         {
             Debug.Assert(scriptSig[0] >= (int)ScriptOp.OP_PUSHBYTES1 && scriptSig[0] <= (int)ScriptOp.OP_PUSHBYTES75);
             // The first byte of scriptSig will be OP_PUSHBYTES, so the first byte indicates how many bytes to take to get sig from scriptSig
-            return scriptSig.Skip(1).Take(scriptSig[0]).ToImmutableList();
+            return scriptSig.Skip(1).Take(scriptSig[0]).ToImmutableArray();
         }
 
-        private static byte GetHashTypeFromScriptSig(ImmutableList<byte> scriptSig)
+        private static byte GetHashTypeFromScriptSig(ImmutableArray<byte> scriptSig)
         {
             return GetSigFromScriptSig(scriptSig).Last();
         }
 
-        private static ImmutableList<byte> GetPubKeyFromScripts(ImmutableList<byte> scriptSig, ImmutableList<byte> pubKey)
+        private static ImmutableArray<byte> GetPubKeyFromScripts(ImmutableArray<byte> scriptSig, ImmutableArray<byte> pubKey)
         {
             if (scriptSig.Count > scriptSig[0] + 1)
             {
-                var result = scriptSig.Skip(1 + scriptSig[0] + 1).Take(scriptSig.Skip(1 + scriptSig[0]).First()).ToImmutableList();
+                var result = scriptSig.Skip(1 + scriptSig[0] + 1).Take(scriptSig.Skip(1 + scriptSig[0]).First()).ToImmutableArray();
                 return result;
             }
             else
             {
-                return pubKey.Skip(1).Take(pubKey.Count - 2).ToImmutableList();
+                return pubKey.Skip(1).Take(pubKey.Count - 2).ToImmutableArray();
             }
         }
 
-        private static ImmutableList<byte> GetScriptFromInputPrevOutput(TxInput input, TxOutput prevOutput)
+        private static ImmutableArray<byte> GetScriptFromInputPrevOutput(TxInput input, TxOutput prevOutput)
         {
             return input.ScriptSignature.AddRange(prevOutput.ScriptPublicKey);
         }

@@ -25,7 +25,7 @@ namespace BitSharp.Network
                 return new Block
                 (
                     header: DecodeBlockHeader(stream, blockHash),
-                    transactions: reader.DecodeList<Transaction>(() => DecodeTransaction(stream))
+                    transactions: reader.DecodeList(() => DecodeTransaction(stream))
                 );
             }
         }
@@ -127,7 +127,7 @@ namespace BitSharp.Network
                         txHash: reader.Read32Bytes(),
                         txOutputIndex: reader.Read4Bytes()
                     ),
-                    scriptSignature: reader.ReadVarBytes().ToImmutableList(),
+                    scriptSignature: reader.ReadVarBytes().ToImmutableArray(),
                     sequence: reader.Read4Bytes()
                 );
             }
@@ -158,7 +158,7 @@ namespace BitSharp.Network
                 return new TxOutput
                 (
                     value: reader.Read8Bytes(),
-                    scriptPublicKey: reader.ReadVarBytes().ToImmutableList()
+                    scriptPublicKey: reader.ReadVarBytes().ToImmutableArray()
                 );
             }
         }
@@ -325,7 +325,7 @@ namespace BitSharp.Network
                 var command = reader.ReadFixedString(12);
                 var payloadSize = reader.Read4Bytes();
                 var payloadChecksum = reader.Read4Bytes();
-                var payload = reader.ReadBytes(payloadSize.ToIntChecked()).ToImmutableList();
+                var payload = reader.ReadBytes(payloadSize.ToIntChecked()).ToImmutableArray();
 
                 return new Message
                 (
@@ -364,7 +364,7 @@ namespace BitSharp.Network
                 return new NetworkAddress
                 (
                     Services: reader.Read8Bytes(),
-                    IPv6Address: reader.ReadBytes(16).ToImmutableList(),
+                    IPv6Address: reader.ReadBytes(16).ToImmutableArray(),
                     Port: reader.Read2BytesBE()
                 );
             }
@@ -473,7 +473,7 @@ namespace BitSharp.Network
             {
                 return new NetworkAddressKey
                 (
-                    IPv6Address: reader.ReadVarBytes().ToImmutableList(),
+                    IPv6Address: reader.ReadVarBytes().ToImmutableArray(),
                     Port: reader.ReadUInt16()
                 );
             }

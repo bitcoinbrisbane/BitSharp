@@ -13,9 +13,9 @@ namespace BitSharp.Data
     public class TxOutput
     {
         private readonly UInt64 _value;
-        private readonly ImmutableList<byte> _scriptPublicKey;
+        private readonly ImmutableArray<byte> _scriptPublicKey;
 
-        public TxOutput(UInt64 value, ImmutableList<byte> scriptPublicKey)
+        public TxOutput(UInt64 value, ImmutableArray<byte> scriptPublicKey)
         {
             this._value = value;
             this._scriptPublicKey = scriptPublicKey;
@@ -23,9 +23,9 @@ namespace BitSharp.Data
 
         public UInt64 Value { get { return this._value; } }
 
-        public ImmutableList<byte> ScriptPublicKey { get { return this._scriptPublicKey; } }
+        public ImmutableArray<byte> ScriptPublicKey { get { return this._scriptPublicKey; } }
 
-        public TxOutput With(UInt64? Value = null, ImmutableList<byte> ScriptPublicKey = null)
+        public TxOutput With(UInt64? Value = null, ImmutableArray<byte>? ScriptPublicKey = null)
         {
             return new TxOutput
             (

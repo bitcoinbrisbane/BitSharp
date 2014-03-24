@@ -13,10 +13,10 @@ namespace BitSharp.Data
     public class TxInput
     {
         private readonly TxOutputKey _previousTxOutputKey;
-        private readonly ImmutableList<byte> _scriptSignature;
+        private readonly ImmutableArray<byte> _scriptSignature;
         private readonly UInt32 _sequence;
 
-        public TxInput(TxOutputKey previousTxOutputKey, ImmutableList<byte> scriptSignature, UInt32 sequence)
+        public TxInput(TxOutputKey previousTxOutputKey, ImmutableArray<byte> scriptSignature, UInt32 sequence)
         {
             this._previousTxOutputKey = previousTxOutputKey;
             this._scriptSignature = scriptSignature;
@@ -25,11 +25,11 @@ namespace BitSharp.Data
 
         public TxOutputKey PreviousTxOutputKey { get { return this._previousTxOutputKey; } }
 
-        public ImmutableList<byte> ScriptSignature { get { return this._scriptSignature; } }
+        public ImmutableArray<byte> ScriptSignature { get { return this._scriptSignature; } }
 
         public UInt32 Sequence { get { return this._sequence; } }
 
-        public TxInput With(TxOutputKey previousTxOutput = null, ImmutableList<byte> scriptSignature = null, UInt32? sequence = null)
+        public TxInput With(TxOutputKey previousTxOutput = null, ImmutableArray<byte>? scriptSignature = null, UInt32? sequence = null)
         {
             return new TxInput
             (
