@@ -1,6 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
+using BitSharp.Network;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -17,6 +18,7 @@ namespace BitSharp.Storage
         private readonly MemoryStorage<UInt256, IImmutableList<UInt256>> _blockTxHashesStorage;
         private readonly MemoryStorage<UInt256, Transaction> _transactionStorage;
         private readonly MemoryStorage<UInt256, string> _invalidBlockStorage;
+        private readonly MemoryStorage<NetworkAddressKey, NetworkAddressWithTime> _knownAddressStorage;
 
         public MemoryStorageContext()
         {
@@ -25,6 +27,7 @@ namespace BitSharp.Storage
             this._blockTxHashesStorage = new MemoryStorage<UInt256, IImmutableList<UInt256>>(this);
             this._transactionStorage = new MemoryStorage<UInt256, Transaction>(this);
             this._invalidBlockStorage = new MemoryStorage<UInt256, string>(this);
+            this._knownAddressStorage = new MemoryStorage<NetworkAddressKey, NetworkAddressWithTime>(this);
         }
 
         public MemoryStorage<UInt256, BlockHeader> BlockHeaderStorage { get { return this._blockHeaderStorage; } }
@@ -36,6 +39,8 @@ namespace BitSharp.Storage
         public MemoryStorage<UInt256, Transaction> TransactionStorage { get { return this._transactionStorage; } }
 
         public MemoryStorage<UInt256, string> InvalidBlockStorage { get { return this._invalidBlockStorage; } }
+
+        public MemoryStorage<NetworkAddressKey, NetworkAddressWithTime> KnownAddressStorage { get { return this._knownAddressStorage; } }
 
         IBoundedStorage<UInt256, BlockHeader> IStorageContext.BlockHeaderStorage { get { return this._blockHeaderStorage; } }
 

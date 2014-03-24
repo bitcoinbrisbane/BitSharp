@@ -52,14 +52,15 @@ namespace BitSharp.Client
 
 #if !TEST_TOOL
                 var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION());
+                var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
 #else
                 //if (Directory.Exists(Path.Combine(Config.LocalStoragePath, "data-test")))
                 //    Directory.Delete(Path.Combine(Config.LocalStoragePath, "data-test"), recursive: true);
                 //var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data-test"));
                 var storageContext = new MemoryStorageContext();
+                var knownAddressStorage = storageContext.KnownAddressStorage;
 #endif
 
-                var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
                 this.storageContext = storageContext;
                 this.cacheContext = new CacheContext(this.storageContext);
 
@@ -93,8 +94,8 @@ namespace BitSharp.Client
                 this.DataContext = this.viewModel;
 
 #if TEST_TOOL
-                var bitcoinjThread = new Timer(
-                    state =>
+                var bitcoinjThread = new Thread(
+                    ()=>
                     {
                         var projectFolder = Environment.CurrentDirectory;
                         while (projectFolder.Contains(@"\BitSharp.Client"))
@@ -111,11 +112,8 @@ namespace BitSharp.Client
                             };
 
                         var javaProcess = Process.Start(javaProcessStartInfo);
-
-                        javaProcess.WaitForExit((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
-                        Console.ReadLine();
-                    },
-                    state: null, dueTime: TimeSpan.FromSeconds(5).Milliseconds, period: Timeout.Infinite);
+                    });
+                bitcoinjThread.Start();
 #endif
             }
             catch (Exception e)
