@@ -53,9 +53,10 @@ namespace BitSharp.Client
 #if !TEST_TOOL
                 var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data"));
 #else
-                if (Directory.Exists(Path.Combine(Config.LocalStoragePath, "data-test")))
-                    Directory.Delete(Path.Combine(Config.LocalStoragePath, "data-test"), recursive: true);
-                var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data-test"));
+                //if (Directory.Exists(Path.Combine(Config.LocalStoragePath, "data-test")))
+                //    Directory.Delete(Path.Combine(Config.LocalStoragePath, "data-test"), recursive: true);
+                //var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data-test"));
+                var storageContext = new MemoryStorageContext();
 #endif
                 
                 var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
