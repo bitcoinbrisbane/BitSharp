@@ -53,7 +53,7 @@ namespace BitSharp.Daemon
 
         protected override void SubStart()
         {
-            this.targetBlockWatcher.CheckAllChainedBlocks();
+            this.targetBlockWatcher.Start();
         }
 
         protected override void WorkAction()
@@ -76,8 +76,18 @@ namespace BitSharp.Daemon
 
                     foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
                         newTargetChainedBlocks.RemoveBlock(rewindBlock);
+
+                    var invalid = false;
                     foreach (var advanceBlock in deltaBlockPath.AdvanceBlocks)
-                        newTargetChainedBlocks.AddBlock(advanceBlock);
+                    {
+                        if (this.cacheContext.InvalidBlockCache.ContainsKey(advanceBlock.BlockHash))
+                            invalid = true;
+
+                        if (!invalid)
+                            newTargetChainedBlocks.AddBlock(advanceBlock);
+                        else
+                            this.cacheContext.InvalidBlockCache.TryAdd(advanceBlock.BlockHash, "");
+                    }
 
                     //Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetBlock.BlockHash.ToHexNumberString(), targetBlock.Height, targetBlock.TotalWork.ToString("X")));
                     this.targetChainedBlocks = newTargetChainedBlocks.ToImmutable();

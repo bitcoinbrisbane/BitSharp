@@ -20,6 +20,8 @@ namespace BitSharp.Daemon
         private ChainedBlock targetBlock;
         private readonly ReaderWriterLockSlim targetBlockLock;
 
+        private readonly WorkerMethod rescanWorker;
+
         public TargetBlockWatcher(ICacheContext cacheContext)
         {
             this.cacheContext = cacheContext;
@@ -27,12 +29,12 @@ namespace BitSharp.Daemon
             this.targetBlock = null;
             this.targetBlockLock = new ReaderWriterLockSlim();
 
+            this.rescanWorker = new WorkerMethod("RescanWorker", CheckAllChainedBlocks, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
+
             // wire up cache events
             this.cacheContext.ChainedBlockCache.OnAddition += CheckChainedBlock;
-            this.cacheContext.ChainedBlockCache.OnModification += CheckChainedBlock;
 
-            this.cacheContext.InvalidBlockCache.OnAddition += AddInvalidBlock;
-            this.cacheContext.InvalidBlockCache.OnModification += AddInvalidBlock;
+            this.cacheContext.InvalidBlockCache.OnAddition += HandleInvalidBlock;
         }
 
         public ChainedBlock TargetBlock { get { return this.targetBlock; } }
@@ -41,16 +43,27 @@ namespace BitSharp.Daemon
         {
             // cleanup events
             this.cacheContext.ChainedBlockCache.OnAddition -= CheckChainedBlock;
-            this.cacheContext.ChainedBlockCache.OnModification -= CheckChainedBlock;
 
-            this.cacheContext.InvalidBlockCache.OnAddition -= AddInvalidBlock;
-            this.cacheContext.InvalidBlockCache.OnModification -= AddInvalidBlock;
+            this.cacheContext.InvalidBlockCache.OnAddition -= HandleInvalidBlock;
+
+            this.rescanWorker.Dispose();
         }
 
-        public void CheckAllChainedBlocks()
+        public void Start()
+        {
+            this.rescanWorker.Start();
+            this.rescanWorker.NotifyWork();
+        }
+
+        private void CheckAllChainedBlocks()
         {
             new MethodTimer().Time(() =>
             {
+                this.targetBlockLock.DoWrite(() =>
+                {
+                    this.targetBlock = null;
+                });
+
                 foreach (var chainedBlock in this.cacheContext.ChainedBlockCache.Values)
                 {
                     //TODO
@@ -94,23 +107,9 @@ namespace BitSharp.Daemon
             }
         }
 
-        private void AddInvalidBlock(UInt256 blockHash, string data)
+        private void HandleInvalidBlock(UInt256 blockHash, string data)
         {
-            var wasTargetBlockInvalid = false;
-            this.targetBlockLock.DoWrite(() =>
-            {
-                if (this.targetBlock != null
-                    && this.targetBlock.BlockHash == blockHash)
-                {
-                    this.targetBlock = null;
-                    wasTargetBlockInvalid = true;
-                }
-            });
-
-            if (wasTargetBlockInvalid)
-            {
-                this.CheckAllChainedBlocks();
-            }
+            this.rescanWorker.NotifyWork();
         }
     }
 }
