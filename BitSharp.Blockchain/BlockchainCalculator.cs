@@ -41,7 +41,7 @@ namespace BitSharp.Blockchain
 
             // calculate the new blockchain along the target path
             chainStateBuilder.IsConsistent = true;
-            foreach (var pathElement in BlockAndInputsLookAhead(chainStateBuilder.ChainedBlocks.NavigateTowards(getTargetChainedBlocks), maxLookAhead: 100))
+            foreach (var pathElement in BlockAndInputsLookAhead(chainStateBuilder.ChainedBlocks.NavigateTowards(getTargetChainedBlocks), lookAhead: 1))
             {
                 chainStateBuilder.IsConsistent = false;
 
@@ -286,7 +286,7 @@ namespace BitSharp.Blockchain
             }
         }
 
-        public IEnumerable<Tuple<int, ChainedBlock, Block, ImmutableDictionary<UInt256, Transaction>>> BlockAndInputsLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chainedBlocks, int maxLookAhead)
+        public IEnumerable<Tuple<int, ChainedBlock, Block, ImmutableDictionary<UInt256, Transaction>>> BlockAndInputsLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chainedBlocks, int lookAhead)
         {
             return chainedBlocks
                 .Select(
@@ -311,7 +311,7 @@ namespace BitSharp.Blockchain
 
                         return Tuple.Create(chainedBlockDirection, chainedBlock, block, prevInputTxes.ToImmutable());
                     })
-                .LookAhead(maxLookAhead, this.shutdownToken);
+                .LookAhead(lookAhead, this.shutdownToken);
         }
 
         private UInt256 CalculateHash(BlockHeader blockHeader)
