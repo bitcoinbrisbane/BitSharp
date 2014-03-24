@@ -727,7 +727,7 @@ namespace BitSharp.Node
                 ChainedBlock chainedBlock;
                 if (this.blockchainDaemon.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
                 {
-                    if (chainedBlock.Height <= targetChainedBlocksLocal.BlockList.Count
+                    if (chainedBlock.Height < targetChainedBlocksLocal.BlockList.Count
                         && chainedBlock.BlockHash == targetChainedBlocksLocal.BlockList[chainedBlock.Height].BlockHash)
                     {
                         matchingChainedBlock = chainedBlock;
@@ -771,7 +771,7 @@ namespace BitSharp.Node
                 ChainedBlock chainedBlock;
                 if (this.blockchainDaemon.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
                 {
-                    if (chainedBlock.Height <= targetChainedBlocksLocal.BlockList.Count
+                    if (chainedBlock.Height < targetChainedBlocksLocal.BlockList.Count
                         && chainedBlock.BlockHash == targetChainedBlocksLocal.BlockList[chainedBlock.Height].BlockHash)
                     {
                         matchingChainedBlock = chainedBlock;
