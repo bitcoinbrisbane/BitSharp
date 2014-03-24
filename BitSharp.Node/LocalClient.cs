@@ -70,6 +70,8 @@ namespace BitSharp.Node
         private ConcurrentDictionary<IPEndPoint, RemoteNode> pendingPeers = new ConcurrentDictionary<IPEndPoint, RemoteNode>();
         private ConcurrentDictionary<IPEndPoint, RemoteNode> connectedPeers = new ConcurrentDictionary<IPEndPoint, RemoteNode>();
 
+        private int requestBlockQueueIndex = 0;
+        private List<ChainedBlock> requestBlockQueue;
         private readonly ConcurrentDictionary<UInt256, DateTime> requestedBlocks = new ConcurrentDictionary<UInt256, DateTime>();
         private readonly ConcurrentDictionary<UInt256, DateTime> requestedTransactions = new ConcurrentDictionary<UInt256, DateTime>();
 
@@ -256,23 +258,37 @@ namespace BitSharp.Node
                         requestTasks.Add(task);
                 }
 
-                var chainStateLocal = this.blockchainDaemon.ChainState;
-                var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
-                if (targetChainedBlocksLocal != null)
+                if (this.requestBlockQueue == null || this.requestBlockQueueIndex >= this.requestBlockQueue.Count)
                 {
-                    var targetBlockHash = targetChainedBlocksLocal.LastBlock.BlockHash;
+                    var chainStateLocal = this.blockchainDaemon.ChainState;
+                    var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
 
-                    foreach (var requestBlockTuple in chainStateLocal.CurrentChainedBlocks.NavigateTowards(targetChainedBlocksLocal))
+                    if (targetChainedBlocksLocal != null)
+                    {
+                        this.requestBlockQueue = chainStateLocal.CurrentChainedBlocks.NavigateTowards(targetChainedBlocksLocal)
+                                .Select(x => x.Item2)
+                                .Where(x => !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash))
+                                .Reverse()
+                                .ToList();
+                        this.requestBlockQueueIndex = 0;
+                    }
+                }
+
+                if (this.requestBlockQueue != null)
+                {
+                    for (; this.requestBlockQueueIndex < this.requestBlockQueue.Count; this.requestBlockQueueIndex++)
                     {
                         // cooperative loop
                         this.shutdownToken.Token.ThrowIfCancellationRequested();
 
-                        var requestBlockDirection = requestBlockTuple.Item1;
-                        var requestBlock = requestBlockTuple.Item2;
+                        //if (requestTasks.Count > requestAmount)
+                        if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
+                            break;
+
+                        var requestBlock = this.requestBlockQueue[this.requestBlockQueueIndex];
 
                         // limit how far ahead the target blockchain will be downloaded
-                        if (requestBlockDirection > 0
-                            && requestBlock.Height >= MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT
+                        if (requestBlock.Height >= MAX_BLOCKCHAIN_LOOKAHEAD_START_HEIGHT
                             && requestBlock.Height - this.blockchainDaemon.CurrentBuilderHeight > MAX_BLOCKCHAIN_LOOKAHEAD)
                             break;
 
@@ -281,10 +297,6 @@ namespace BitSharp.Node
                             var task = RequestBlock(connectedPeersLocal.RandomOrDefault(), requestBlock.BlockHash);
                             if (task != null)
                                 requestTasks.Add(task);
-
-                            //if (requestTasks.Count > requestAmount)
-                            if (this.requestedBlocks.Count > MAX_BLOCK_REQUESTS)
-                                break;
                         }
                     }
                 }
