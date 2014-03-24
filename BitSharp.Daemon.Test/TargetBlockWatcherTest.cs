@@ -1,6 +1,5 @@
 ﻿using BitSharp.Data;
 using BitSharp.Storage;
-using BitSharp.Storage.Test;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;

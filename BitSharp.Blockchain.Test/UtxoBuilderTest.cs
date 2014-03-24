@@ -1,7 +1,6 @@
 ﻿using BitSharp.Common;
 using BitSharp.Data;
 using BitSharp.Storage;
-using BitSharp.Storage.Test;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System;

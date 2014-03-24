@@ -4,7 +4,6 @@ using BitSharp.Daemon;
 using BitSharp.Network;
 using BitSharp.Script;
 using BitSharp.Storage;
-using BitSharp.Storage.Test;
 using System;
 using System.Diagnostics;
 using System.IO;

@@ -77,6 +77,8 @@
     <Compile Include="IUnboundedCache.cs" />
     <Compile Include="IBoundedCache.cs" />
     <Compile Include="IUnboundedStorage.cs" />
+    <Compile Include="MemoryStorage.cs" />
+    <Compile Include="MemoryStorageContext.cs" />
     <Compile Include="MemoryUtxo.cs" />
     <Compile Include="MemoryUtxoBuilderStorage.cs" />
     <Compile Include="IStorageContext.cs" />

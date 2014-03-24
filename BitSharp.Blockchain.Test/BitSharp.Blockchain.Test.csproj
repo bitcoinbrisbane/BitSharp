@@ -109,10 +109,6 @@
       <Project>{3099c2ee-055d-4856-9d86-f9f495f9c761}</Project>
       <Name>BitSharp.Data</Name>
     </ProjectReference>
-    <ProjectReference Include="..\BitSharp.Storage.Test\BitSharp.Storage.Test.csproj">
-      <Project>{b63ceb56-b2f4-4c0a-9324-b24ed2c3ea9b}</Project>
-      <Name>BitSharp.Storage.Test</Name>
-    </ProjectReference>
     <ProjectReference Include="..\BitSharp.Storage\BitSharp.Storage.csproj">
       <Project>{1955dd75-ab8a-46df-9060-5b0af06338f2}</Project>
       <Name>BitSharp.Storage</Name>

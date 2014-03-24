@@ -84,8 +84,6 @@
   </Choose>
   <ItemGroup>
     <Compile Include="MemoryBlockchainStorage.cs" />
-    <Compile Include="MemoryStorage.cs" />
-    <Compile Include="MemoryStorageContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StorageEncoderTest.cs" />
   </ItemGroup>
