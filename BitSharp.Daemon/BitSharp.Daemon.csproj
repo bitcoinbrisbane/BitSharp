@@ -78,7 +78,7 @@
     <Compile Include="ChainStateWorker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ChainingWorker.cs" />
-    <Compile Include="TargetBlockWatcher.cs" />
+    <Compile Include="TargetBlockWorker.cs" />
     <Compile Include="TargetChainWorker.cs" />
   </ItemGroup>
   <ItemGroup>

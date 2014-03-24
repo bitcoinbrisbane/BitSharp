@@ -51,6 +51,7 @@ namespace BitSharp.Daemon.Test
 
                 // start worker and wait for initial chain
                 targetChainWorker.Start();
+                workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
                 // verify chained to block 0
@@ -87,6 +88,7 @@ namespace BitSharp.Daemon.Test
                 AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2 }, targetChainWorker.TargetChainedBlocks.BlockList);
 
                 // verify no other work was done
+                Assert.IsFalse(workNotifyEvent.WaitOne(0));
                 Assert.IsFalse(workStoppedEvent.WaitOne(0));
             }
         }

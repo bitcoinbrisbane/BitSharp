@@ -4,6 +4,7 @@ using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Storage;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Daemon
 {
-    internal class TargetBlockWatcher : IDisposable
+    internal class TargetBlockWorker : Worker
     {
         public event Action OnTargetBlockChanged;
 
@@ -20,16 +21,21 @@ namespace BitSharp.Daemon
         private ChainedBlock targetBlock;
         private readonly ReaderWriterLockSlim targetBlockLock;
 
-        private readonly WorkerMethod rescanWorker;
+        private readonly ConcurrentQueue<ChainedBlock> chainedBlockQueue;
 
-        public TargetBlockWatcher(ICacheContext cacheContext)
+        private readonly AutoResetEvent rescanEvent;
+
+        public TargetBlockWorker(ICacheContext cacheContext, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
+            : base("TargetBlockWorker", initialNotify, minIdleTime, maxIdleTime)
         {
             this.cacheContext = cacheContext;
 
             this.targetBlock = null;
             this.targetBlockLock = new ReaderWriterLockSlim();
 
-            this.rescanWorker = new WorkerMethod("RescanWorker", CheckAllChainedBlocks, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
+            this.chainedBlockQueue = new ConcurrentQueue<ChainedBlock>();
+
+            this.rescanEvent = new AutoResetEvent(false);
 
             // wire up cache events
             this.cacheContext.ChainedBlockCache.OnAddition += CheckChainedBlock;
@@ -39,20 +45,20 @@ namespace BitSharp.Daemon
 
         public ChainedBlock TargetBlock { get { return this.targetBlock; } }
 
-        public void Dispose()
+        protected override void SubDispose()
         {
             // cleanup events
             this.cacheContext.ChainedBlockCache.OnAddition -= CheckChainedBlock;
 
             this.cacheContext.InvalidBlockCache.OnAddition -= HandleInvalidBlock;
 
-            this.rescanWorker.Dispose();
+            this.rescanEvent.Dispose();
         }
 
-        public void Start()
+        protected override void SubStart()
         {
-            this.rescanWorker.Start();
-            this.rescanWorker.NotifyWork();
+            this.rescanEvent.Set();
+            this.NotifyWork();
         }
 
         private void CheckAllChainedBlocks()
@@ -72,7 +78,7 @@ namespace BitSharp.Daemon
                         winningBlock = chainedBlock;
                     }
                 }
-                
+
                 if (winningBlock != null)
                     CheckChainedBlock(winningBlock.BlockHash, winningBlock);
             });
@@ -87,22 +93,38 @@ namespace BitSharp.Daemon
             }
             catch (MissingDataException) { return; }
 
-            if (this.cacheContext.InvalidBlockCache.ContainsKey(chainedBlock.BlockHash))
-                return;
+            this.chainedBlockQueue.Enqueue(chainedBlock);
 
-            var wasChanged = false;
-            this.targetBlockLock.DoWrite(() =>
+            this.NotifyWork();
+        }
+
+        protected override void WorkAction()
+        {
+            var currentTargetBlock = this.targetBlock;
+
+            if (this.rescanEvent.WaitOne(0))
             {
-                if (this.targetBlock == null
-                    || chainedBlock.TotalWork > this.targetBlock.TotalWork)
+                currentTargetBlock = null;
+                this.chainedBlockQueue.EnqueueRange(this.cacheContext.ChainedBlockCache.Values);
+            }
+
+            ChainedBlock chainedBlock;
+            while (this.chainedBlockQueue.TryDequeue(out chainedBlock))
+            {
+                if (this.cacheContext.InvalidBlockCache.ContainsKey(chainedBlock.BlockHash))
+                    continue;
+
+                if (currentTargetBlock == null
+                    || chainedBlock.TotalWork > currentTargetBlock.TotalWork)
                 {
-                    this.targetBlock = chainedBlock;
-                    wasChanged = true;
+                    currentTargetBlock = chainedBlock;
                 }
-            });
+            }
 
-            if (wasChanged)
+            if (currentTargetBlock != this.targetBlock)
             {
+                this.targetBlock = currentTargetBlock;
+
                 var handler = this.OnTargetBlockChanged;
                 if (handler != null)
                     handler();
@@ -111,7 +133,8 @@ namespace BitSharp.Daemon
 
         private void HandleInvalidBlock(UInt256 blockHash, string data)
         {
-            this.rescanWorker.NotifyWork();
+            this.rescanEvent.Set();
+            this.NotifyWork();
         }
     }
 }

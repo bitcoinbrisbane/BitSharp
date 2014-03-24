@@ -22,7 +22,7 @@ namespace BitSharp.Daemon
         private readonly IBlockchainRules rules;
         private readonly ICacheContext cacheContext;
 
-        private readonly TargetBlockWatcher targetBlockWatcher;
+        private readonly TargetBlockWorker targetBlockWorker;
         private ChainedBlocks targetChainedBlocks;
 
         public TargetChainWorker(IBlockchainRules rules, ICacheContext cacheContext, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
@@ -31,36 +31,43 @@ namespace BitSharp.Daemon
             this.rules = rules;
             this.cacheContext = cacheContext;
 
-            this.targetBlockWatcher = new TargetBlockWatcher(cacheContext);
+            this.targetBlockWorker = new TargetBlockWorker(cacheContext, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
 
-            this.targetBlockWatcher.OnTargetBlockChanged += NotifyWork;
+            this.targetBlockWorker.OnTargetBlockChanged += NotifyWork;
         }
 
         protected override void SubDispose()
         {
             // cleanup events
-            this.targetBlockWatcher.OnTargetBlockChanged -= NotifyWork;
+            this.targetBlockWorker.OnTargetBlockChanged -= NotifyWork;
 
             // cleanup workers
-            this.targetBlockWatcher.Dispose();
+            this.targetBlockWorker.Dispose();
         }
 
         public ICacheContext CacheContext { get { return this.cacheContext; } }
 
         public ChainedBlocks TargetChainedBlocks { get { return this.targetChainedBlocks; } }
 
-        public ChainedBlock WinningBlock { get { return this.targetBlockWatcher.TargetBlock; } }
+        public ChainedBlock WinningBlock { get { return this.targetBlockWorker.TargetBlock; } }
+
+        internal TargetBlockWorker TargetBlockWorker { get { return this.targetBlockWorker; } }
 
         protected override void SubStart()
         {
-            this.targetBlockWatcher.Start();
+            this.targetBlockWorker.Start();
+        }
+
+        protected override void SubStop()
+        {
+            this.targetBlockWorker.Stop();
         }
 
         protected override void WorkAction()
         {
             try
             {
-                var targetBlockLocal = this.targetBlockWatcher.TargetBlock;
+                var targetBlockLocal = this.targetBlockWorker.TargetBlock;
                 var targetChainedBlocksLocal = this.targetChainedBlocks;
 
                 if (targetBlockLocal != null &&
