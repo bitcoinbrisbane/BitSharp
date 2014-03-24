@@ -46,6 +46,7 @@ namespace BitSharp.Daemon
         private readonly ChainingWorker chainingWorker;
         private readonly TargetChainWorker targetChainWorker;
         private readonly ChainStateWorker chainStateWorker;
+        private readonly WorkerMethod gcWorker;
 
         public BlockchainDaemon(IBlockchainRules rules, ICacheContext cacheContext)
         {
@@ -96,6 +97,24 @@ namespace BitSharp.Daemon
                     if (handler != null)
                         handler(this, EventArgs.Empty);
                 };
+
+            this.gcWorker = new WorkerMethod("GC Worker",
+                () =>
+                {
+                    Debug.WriteLine(
+                        string.Join("\n",
+                            new string('-', 80),
+                            "GC Memory:      {0,10:#,##0.00} MB",
+                            "Process Memory: {1,10:#,##0.00} MB",
+                            new string('-', 80)
+                        )
+                        .Format2
+                        (
+                        /*0*/ (float)GC.GetTotalMemory(false) / 1.MILLION(),
+                        /*1*/ (float)Process.GetCurrentProcess().PrivateMemorySize64 / 1.MILLION()
+                        ));
+
+                }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromSeconds(30));
         }
 
         public IBlockchainRules Rules { get { return this.rules; } }
@@ -133,6 +152,7 @@ namespace BitSharp.Daemon
                 this.chainingWorker.Start();
                 this.targetChainWorker.Start();
                 this.chainStateWorker.Start();
+                this.gcWorker.Start();
             }
             catch (Exception)
             {
@@ -160,6 +180,7 @@ namespace BitSharp.Daemon
                 this.chainingWorker,
                 this.targetChainWorker,
                 this.chainStateWorker,
+                this.gcWorker,
                 this.shutdownToken
             }.DisposeList();
         }

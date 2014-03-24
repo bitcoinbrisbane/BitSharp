@@ -135,11 +135,9 @@ namespace BitSharp.Blockchain
 
             Debug.WriteLine(
                 string.Join("\n",
-                    new string('-', 80),
+                    new string('-', 200),
                     "Height: {0,10} | Duration: {1} hh:mm:ss | Validation: {2} hh:mm:ss | Blocks/s: {3,7} | Tx/s: {4,7} | Inputs/s: {5,7} | Total Tx: {6,7} | Total Inputs: {7,7} | Utxo Size: {8,7}",
-                    "GC Memory:      {9,10:#,##0.00} MB",
-                    "Process Memory: {10,10:#,##0.00} MB",
-                    new string('-', 80)
+                    new string('-', 200)
                 )
                 .Format2
                 (
@@ -151,9 +149,7 @@ namespace BitSharp.Blockchain
                 /*5*/ currentInputRate.ToString("#,##0"),
                 /*6*/ chainStateBuilder.Stats.totalTxCount.ToString("#,##0"),
                 /*7*/ chainStateBuilder.Stats.totalInputCount.ToString("#,##0"),
-                /*8*/ chainStateBuilder.Utxo.Count.ToString("#,##0"),
-                /*9*/ (float)GC.GetTotalMemory(false) / 1.MILLION(),
-                /*10*/ (float)Process.GetCurrentProcess().PrivateMemorySize64 / 1.MILLION()
+                /*8*/ chainStateBuilder.Utxo.Count.ToString("#,##0")
                 ));
         }
 
