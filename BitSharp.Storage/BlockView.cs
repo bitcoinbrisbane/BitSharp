@@ -84,6 +84,7 @@ namespace BitSharp.Storage
 
         public bool TryAdd(UInt256 blockHash, Block block)
         {
+            // return true if any TryAdd returns true during the writing of the block
             var result = false;
 
             // write the block header
@@ -98,7 +99,7 @@ namespace BitSharp.Storage
             }
 
             // write the transaction hash list
-            result |= this.cacheContext.BlockTxHashesCache.TryAdd(blockHash, txHashesList.ToImmutableList());
+            result |= this.cacheContext.BlockTxHashesCache.TryAdd(blockHash, txHashesList.ToImmutable());
 
             return result;
         }
