@@ -75,28 +75,5 @@ namespace BitSharp.Common
             
             return bytes;
         }
-
-        public override bool Equals(object obj)
-        {
-            if (!(obj is ImmutableBitArray))
-                return false;
-
-            return (ImmutableBitArray)obj == this;
-        }
-
-        public override int GetHashCode()
-        {
-            return this.bitArray.GetHashCode();
-        }
-
-        public static bool operator ==(ImmutableBitArray left, ImmutableBitArray right)
-        {
-            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.SequenceEqual(right));
-        }
-
-        public static bool operator !=(ImmutableBitArray left, ImmutableBitArray right)
-        {
-            return !(left == right);
-        }
     }
 }

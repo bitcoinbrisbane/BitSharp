@@ -71,8 +71,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BlockchainKey.cs" />
-    <Compile Include="BlockchainMetadata.cs" />
     <Compile Include="BlockchainPathBuilder.cs" />
     <Compile Include="BlockchainPath.cs" />
     <Compile Include="ChainedBlock.cs" />

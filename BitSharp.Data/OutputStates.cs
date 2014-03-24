@@ -65,29 +65,6 @@ namespace BitSharp.Data
             return this.bitArray.ToByteArray();
         }
 
-        public override bool Equals(object obj)
-        {
-            if (!(obj is OutputStates))
-                return false;
-
-            return (OutputStates)obj == this;
-        }
-
-        public override int GetHashCode()
-        {
-            return this.bitArray.GetHashCode();
-        }
-
-        public static bool operator ==(OutputStates left, OutputStates right)
-        {
-            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.SequenceEqual(right));
-        }
-
-        public static bool operator !=(OutputStates left, OutputStates right)
-        {
-            return !(left == right);
-        }
-
         private bool Encode(OutputState state)
         {
             return state == OutputState.Unspent;

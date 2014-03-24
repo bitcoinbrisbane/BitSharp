@@ -82,60 +82,6 @@ namespace BitSharp.Data.Test
             );
         }
 
-        //public static Blockchain RandomBlockchain(RandomDataOptions options = default(RandomDataOptions))
-        //{
-        //    //TODO blockCount algorithm isn't exact
-        //    var blockCount = random.Next((options != null ? options.BlockCount : null) ?? 100) + ((options != null ? options.MinimumBlockCount : null) ?? 1);
-        //    var blockList = new List<Block>(blockCount);
-        //    var chainedBlockList = new List<ChainedBlock>(blockCount);
-
-        //    var previousBlockHash = UInt256.Zero;
-        //    var totalWork = new BigInteger(0);
-        //    for (var i = 0; i < blockCount; i++)
-        //    {
-        //        var block = RandomData.RandomBlock(options);
-        //        block = block.With(Header: block.Header.With(PreviousBlock: previousBlockHash));
-        //        blockList.Add(block);
-
-        //        previousBlockHash = block.Hash;
-        //        totalWork += block.Header.CalculateWork();
-
-        //        chainedBlockList.Add(new ChainedBlock(block.Hash, block.Header.PreviousBlock, i, totalWork));
-        //    }
-
-        //    var blockListHashes = blockList.Select(x => x.Hash).ToImmutableHashSet();
-        //    var utxo = blockList.SelectMany(block =>
-        //        block.Transactions.Select((tx, txIndex) =>
-        //            new UnspentTx(tx.Hash, random.NextImmutableBitArray((options != null ? options.TxOutputCount : null) ?? 100))))
-        //        .ToImmutableDictionary(unspentTx => unspentTx.TxHash, unspentTx => unspentTx);
-
-        //    return new Blockchain
-        //    (
-        //        chainedBlockList.ToImmutableList(),
-        //        blockListHashes,
-        //        null //TODO new MemoryUtxo(blockListHashes.Last(), utxo)
-        //    );
-        //}
-
-        public static BlockchainKey RandomBlockchainKey()
-        {
-            return new BlockchainKey
-            (
-                guid: Guid.NewGuid(),
-                rootBlockHash: random.NextUInt256()
-            );
-        }
-
-        public static BlockchainMetadata RandomBlockchainMetadata()
-        {
-            return new BlockchainMetadata
-            (
-                guid: Guid.NewGuid(),
-                rootBlockHash: random.NextUInt256(),
-                totalWork: random.NextUBigIntegerBytes(64)
-            );
-        }
-
         public static ChainedBlock RandomChainedBlock()
         {
             return new ChainedBlock

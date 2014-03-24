@@ -38,23 +38,5 @@ namespace BitSharp.Data
                 sequence ?? this.Sequence
             );
         }
-
-        public override bool Equals(object obj)
-        {
-            if (!(obj is TxInput))
-                return false;
-
-            return (TxInput)obj == this;
-        }
-
-        public static bool operator ==(TxInput left, TxInput right)
-        {
-            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.PreviousTxOutputKey == right.PreviousTxOutputKey && left.ScriptSignature.SequenceEqual(right.ScriptSignature) && left.Sequence == right.Sequence);
-        }
-
-        public static bool operator !=(TxInput left, TxInput right)
-        {
-            return !(left == right);
-        }
     }
 }

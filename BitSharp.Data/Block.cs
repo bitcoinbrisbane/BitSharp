@@ -40,23 +40,5 @@ namespace BitSharp.Data
         {
             return this.With(Transactions: this.Transactions.AddRange(transactions));
         }
-
-        public override bool Equals(object obj)
-        {
-            if (!(obj is Block))
-                return false;
-
-            return (Block)obj == this;
-        }
-
-        public static bool operator ==(Block left, Block right)
-        {
-            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.Header == right.Header && left.Transactions.SequenceEqual(right.Transactions));
-        }
-
-        public static bool operator !=(Block left, Block right)
-        {
-            return !(left == right);
-        }
     }
 }
