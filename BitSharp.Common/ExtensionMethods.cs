@@ -221,6 +221,14 @@ namespace BitSharp.Common.ExtensionMethods
             }
         }
 
+        public static int ToIntChecked(this long value)
+        {
+            checked
+            {
+                return (int)value;
+            }
+        }
+
         public static byte[] NextBytes(this Random random, long length)
         {
             var buffer = (byte[])Array.CreateInstance(typeof(byte), length);

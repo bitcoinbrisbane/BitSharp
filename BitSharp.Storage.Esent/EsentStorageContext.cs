@@ -2,10 +2,13 @@
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Storage.Esent;
+using Microsoft.Isam.Esent.Collections.Generic;
+using Microsoft.Isam.Esent.Interop;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,8 +23,14 @@ namespace BitSharp.Storage.Esent
         private readonly TransactionStorage _transactionStorage;
         private readonly InvalidBlockStorage _invalidBlockStorage;
 
-        public EsentStorageContext(string baseDirectory)
+        public EsentStorageContext(string baseDirectory, long cacheSizeMaxBytes)
         {
+            var esentAssembly = typeof(PersistentDictionary<string, string>).Assembly;
+            var type = esentAssembly.GetType("Microsoft.Isam.Esent.Collections.Generic.CollectionsSystemParameters");
+            var method = type.GetMethod("Init");
+            method.Invoke(null, null);
+            SystemParameters.CacheSizeMax = (cacheSizeMaxBytes / SystemParameters.DatabasePageSize).ToIntChecked();
+
             this.baseDirectory = baseDirectory;
             this._blockHeaderStorage = new BlockHeaderStorage(this);
             this._chainedBlockStorage = new ChainedBlockStorage(this);
@@ -48,7 +57,7 @@ namespace BitSharp.Storage.Esent
 
         IBoundedStorage<UInt256, IImmutableList<UInt256>> IStorageContext.BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
-        IUnboundedStorage<UInt256, Transaction> IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
+        IUnboundedStorage<UInt256, BitSharp.Data.Transaction> IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
 
         IBoundedStorage<UInt256, string> IStorageContext.InvalidBlockStorage { get { return this._invalidBlockStorage; } }
 

@@ -51,7 +51,7 @@ namespace BitSharp.Client
                 Debug.WriteLine(DateTime.Now);
 
 #if !TEST_TOOL
-                var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data"));
+                var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION());
 #else
                 //if (Directory.Exists(Path.Combine(Config.LocalStoragePath, "data-test")))
                 //    Directory.Delete(Path.Combine(Config.LocalStoragePath, "data-test"), recursive: true);

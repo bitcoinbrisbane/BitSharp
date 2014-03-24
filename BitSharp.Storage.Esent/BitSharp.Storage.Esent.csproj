@@ -52,6 +52,12 @@
     <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Esent.Collections">
+      <HintPath>..\packages\ManagedEsent.1.9.0.1\lib\net40\Esent.Collections.dll</HintPath>
+    </Reference>
+    <Reference Include="Esent.Interop">
+      <HintPath>..\packages\ManagedEsent.1.9.0.1\lib\net40\Esent.Interop.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable">
       <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.30\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
@@ -99,14 +105,6 @@
     <ProjectReference Include="..\BitSharp.Storage\BitSharp.Storage.csproj">
       <Project>{1955dd75-ab8a-46df-9060-5b0af06338f2}</Project>
       <Name>BitSharp.Storage</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\EsentCollections\EsentCollections.csproj">
-      <Project>{cf2d4ee4-0d11-404d-b800-c4dcfec42588}</Project>
-      <Name>EsentCollections</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\EsentInterop\EsentInterop.csproj">
-      <Project>{e929e163-52a0-4aac-917b-6d7faf70c45e}</Project>
-      <Name>EsentInterop</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
