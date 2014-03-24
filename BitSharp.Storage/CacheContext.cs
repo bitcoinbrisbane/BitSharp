@@ -45,7 +45,7 @@ namespace BitSharp.Storage
 
         public IUnboundedCache<UInt256, Transaction> TransactionCache { get { return this.transactionCache; } }
 
-        public IBoundedCache<UInt256, string> InvalidBlockCache        {            get { return this.invalidBlockCache; }        }
+        public IBoundedCache<UInt256, string> InvalidBlockCache { get { return this.invalidBlockCache; } }
 
         public IUnboundedCache<UInt256, Block> BlockView { get { return this.blockView; } }
 
