@@ -58,19 +58,19 @@ namespace BitSharp.Client
                 //var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data-test"));
                 var storageContext = new MemoryStorageContext();
 #endif
-                
+
                 var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
                 this.storageContext = storageContext;
                 this.cacheContext = new CacheContext(this.storageContext);
-                
+
 #if !TEST_TOOL
                 this.rules = new MainnetRules(this.cacheContext);
 #else
                 this.rules = new ComparisonToolTestNetRules(this.cacheContext);
 #endif
-                
+
                 this.blockchainDaemon = new BlockchainDaemon(this.rules, this.cacheContext);
-                
+
 #if !TEST_TOOL
                 this.localClient = new LocalClient(LocalClientType.MainNet, this.blockchainDaemon, knownAddressStorage);
 #else
@@ -91,6 +91,32 @@ namespace BitSharp.Client
                 this.localClient.Start();
 
                 this.DataContext = this.viewModel;
+
+#if TEST_TOOL
+                var bitcoinjThread = new Timer(
+                    state =>
+                    {
+                        var projectFolder = Environment.CurrentDirectory;
+                        while (projectFolder.Contains(@"\BitSharp.Client"))
+                            projectFolder = Path.GetDirectoryName(projectFolder);
+
+                        File.Delete(Path.Combine(projectFolder, "Bitcoinj-comparison.log"));
+
+                        var javaProcessStartInfo = new ProcessStartInfo
+                            {
+                                FileName = @"C:\Program Files\Java\jdk1.7.0_25\bin\java.exe",
+                                WorkingDirectory = projectFolder,
+                                Arguments = @"-Djava.util.logging.config.file={0}\bitcoinj.log.properties -jar {0}\bitcoinj.jar".Format2(projectFolder),
+                                UseShellExecute = false
+                            };
+
+                        var javaProcess = Process.Start(javaProcessStartInfo);
+
+                        javaProcess.WaitForExit((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
+                        Console.ReadLine();
+                    },
+                    state: null, dueTime: TimeSpan.FromSeconds(5).Milliseconds, period: Timeout.Infinite);
+#endif
             }
             catch (Exception e)
             {
