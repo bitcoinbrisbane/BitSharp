@@ -123,6 +123,18 @@ namespace BitSharp.Daemon
 
         public ChainedBlock WinningBlock { get { return this.targetChainWorker.WinningBlock; } }
 
+        public int WinningBlockHeight
+        {
+            get
+            {
+                var winningBlockLocal = this.targetChainWorker.WinningBlock;
+                if (winningBlockLocal != null)
+                    return winningBlockLocal.Height;
+                else
+                    return -1;
+            }
+        }
+
         public ChainedBlocks TargetChainedBlocks { get { return this.targetChainWorker.TargetChainedBlocks; } }
 
         public ChainState ChainState { get { return this.chainStateWorker.ChainState; } }

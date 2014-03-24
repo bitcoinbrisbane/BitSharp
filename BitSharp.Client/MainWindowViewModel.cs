@@ -49,7 +49,7 @@ namespace BitSharp.Client
 
             this.blockchainDaemon.OnWinningBlockChanged +=
                 (sender, block) =>
-                    WinningBlockchainHeight = this.blockchainDaemon.TargetChainedBlocks.Height;
+                    WinningBlockchainHeight = this.blockchainDaemon.WinningBlockHeight;
 
             this.blockchainDaemon.OnCurrentBlockchainChanged +=
                 (sender, chainState) =>
