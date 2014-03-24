@@ -12,7 +12,7 @@ namespace BitSharp.Common
 {
     public static class LookAheadMethods
     {
-        public static IEnumerable<T> LookAhead<T>(this IEnumerable<T> values, int maxLookAhead, CancellationToken? cancelToken = null)
+        public static IEnumerable<T> LookAhead<T>(this IEnumerable<T> values, int lookAhead, CancellationToken? cancelToken = null)
         {
             var readValues = new ConcurrentQueue<T>();
 
@@ -26,7 +26,6 @@ namespace BitSharp.Common
             {
                 try
                 {
-                    var currentLookAhead = 1;
                     using (var valuesEnumerator = values.GetEnumerator())
                     {
                         while (!finished)
@@ -37,7 +36,7 @@ namespace BitSharp.Common
 
                             var value = valuesEnumerator.Current;
 
-                            if (readValues.Count < 1 + currentLookAhead)
+                            if (readValues.Count < 1 + lookAhead)
                             {
                                 if (valuesEnumerator.MoveNext())
                                 {
@@ -51,16 +50,7 @@ namespace BitSharp.Common
                             }
                             else
                             {
-                                if (currentLookAhead < maxLookAhead
-                                    && valueReadEvent.WaitOne(0))
-                                {
-                                    //Debug.WriteLine("Increasing look ahead to: {0}".Format2(currentLookAhead));
-                                    currentLookAhead++;
-                                }
-                                else
-                                {
-                                    valueReadEvent.WaitOne();
-                                }
+                                valueReadEvent.WaitOne();
                             }
                         }
                     }
