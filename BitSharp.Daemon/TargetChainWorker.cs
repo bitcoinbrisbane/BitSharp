@@ -25,21 +25,28 @@ namespace BitSharp.Daemon
         private readonly TargetBlockWorker targetBlockWorker;
         private ChainedBlocks targetChainedBlocks;
 
+        private readonly AutoResetEvent rescanEvent;
+
         public TargetChainWorker(IBlockchainRules rules, ICacheContext cacheContext, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
             : base("TargetChainWorker", initialNotify, minIdleTime, maxIdleTime)
         {
             this.rules = rules;
             this.cacheContext = cacheContext;
 
+            this.rescanEvent = new AutoResetEvent(false);
+
             this.targetBlockWorker = new TargetBlockWorker(cacheContext, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
 
             this.targetBlockWorker.OnTargetBlockChanged += NotifyWork;
+
+            this.cacheContext.InvalidBlockCache.OnAddition += HandleInvalidBlock;
         }
 
         protected override void SubDispose()
         {
             // cleanup events
             this.targetBlockWorker.OnTargetBlockChanged -= NotifyWork;
+            this.cacheContext.InvalidBlockCache.OnAddition -= HandleInvalidBlock;
 
             // cleanup workers
             this.targetBlockWorker.Dispose();
@@ -67,6 +74,11 @@ namespace BitSharp.Daemon
         {
             try
             {
+                if (this.rescanEvent.WaitOne(0))
+                {
+                    this.targetChainedBlocks = null;
+                }
+
                 var targetBlockLocal = this.targetBlockWorker.TargetBlock;
                 var targetChainedBlocksLocal = this.targetChainedBlocks;
 
@@ -82,7 +94,15 @@ namespace BitSharp.Daemon
                         new BlockchainWalker().GetBlockchainPath(newTargetChainedBlocks.LastBlock, targetBlockLocal, blockHash => this.CacheContext.ChainedBlockCache[blockHash]));
 
                     foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
+                    {
+                        if (this.cacheContext.InvalidBlockCache.ContainsKey(rewindBlock.BlockHash))
+                        {
+                            this.rescanEvent.Set();
+                            return;
+                        }
+
                         newTargetChainedBlocks.RemoveBlock(rewindBlock);
+                    }
 
                     var invalid = false;
                     foreach (var advanceBlock in deltaBlockPath.AdvanceBlocks)
@@ -105,6 +125,12 @@ namespace BitSharp.Daemon
                 }
             }
             catch (MissingDataException) { }
+        }
+
+        private void HandleInvalidBlock(UInt256 blockHash, string data)
+        {
+            this.rescanEvent.Set();
+            this.NotifyWork();
         }
     }
 }
