@@ -731,6 +731,8 @@ namespace BitSharp.Node
         private void OnGetBlocks(RemoteNode remoteNode, GetBlocksPayload payload)
         {
             var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
+            if (targetChainedBlocksLocal == null)
+                return;
 
             ChainedBlock matchingChainedBlock = null;
             foreach (var blockHash in payload.BlockLocatorHashes)
@@ -776,6 +778,8 @@ namespace BitSharp.Node
             }
 
             var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
+            if (targetChainedBlocksLocal == null)
+                return;
 
             ChainedBlock matchingChainedBlock = null;
             foreach (var blockHash in payload.BlockLocatorHashes)
