@@ -18,6 +18,12 @@ namespace BitSharp.Daemon.Test
     [TestClass]
     public class TargetChainWorkerTest
     {
+        //TODO
+        // where i have:
+        //      wait for worker (chained block addition)
+        //      wait for worker (target block changed)
+        // these two notifications could potentially complete in one loop, and then the second wait will hang forever
+
         [TestMethod]
         public void TestSimpleChain()
         {
@@ -65,11 +71,10 @@ namespace BitSharp.Daemon.Test
                 // add block 1
                 memoryCacheContext.ChainedBlockCache[chainedBlock1.BlockHash] = chainedBlock1;
 
-                // wait for target block worker event
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
-
-                // wait for worker
+                // wait for worker (target block changed)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
@@ -81,11 +86,10 @@ namespace BitSharp.Daemon.Test
                 // add block 2
                 memoryCacheContext.ChainedBlockCache[chainedBlock2.BlockHash] = chainedBlock2;
 
-                // wait for target block worker event
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
-
-                // wait for worker
+                // wait for worker (target block changed)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
@@ -149,11 +153,10 @@ namespace BitSharp.Daemon.Test
                 // add block 4
                 memoryCacheContext.ChainedBlockCache[chainedBlock4.BlockHash] = chainedBlock4;
 
-                // wait for target block worker event
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
-
-                // wait for worker
+                // wait for worker (target block changed)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
@@ -165,7 +168,7 @@ namespace BitSharp.Daemon.Test
                 // add block 3
                 memoryCacheContext.ChainedBlockCache[chainedBlock3.BlockHash] = chainedBlock3;
 
-                // wait for worker
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
@@ -177,7 +180,7 @@ namespace BitSharp.Daemon.Test
                 // add block 2
                 memoryCacheContext.ChainedBlockCache[chainedBlock2.BlockHash] = chainedBlock2;
 
-                // wait for worker
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
@@ -189,7 +192,7 @@ namespace BitSharp.Daemon.Test
                 // add block 1
                 memoryCacheContext.ChainedBlockCache[chainedBlock1.BlockHash] = chainedBlock1;
 
-                // wait for worker
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
@@ -258,11 +261,10 @@ namespace BitSharp.Daemon.Test
                 // add block 1
                 memoryCacheContext.ChainedBlockCache[chainedBlock1.BlockHash] = chainedBlock1;
 
-                // wait for target block worker event
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
-
-                // wait for worker
+                // wait for worker (target block changed)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
@@ -274,11 +276,10 @@ namespace BitSharp.Daemon.Test
                 // add block 2
                 memoryCacheContext.ChainedBlockCache[chainedBlock2.BlockHash] = chainedBlock2;
 
-                // wait for target block worker event
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
-
-                // wait for worker
+                // wait for worker (target block changed)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
@@ -290,11 +291,10 @@ namespace BitSharp.Daemon.Test
                 // add block 3A
                 memoryCacheContext.ChainedBlockCache[chainedBlock3A.BlockHash] = chainedBlock3A;
 
-                // wait for target block worker event
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
-
-                // wait for worker
+                // wait for worker (target block changed)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
@@ -306,11 +306,10 @@ namespace BitSharp.Daemon.Test
                 // add block 4A
                 memoryCacheContext.ChainedBlockCache[chainedBlock4A.BlockHash] = chainedBlock4A;
 
-                // wait for target block worker event
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
-
-                // wait for worker
+                // wait for worker (target block changed)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
@@ -322,11 +321,10 @@ namespace BitSharp.Daemon.Test
                 // add block 5A
                 memoryCacheContext.ChainedBlockCache[chainedBlock5A.BlockHash] = chainedBlock5A;
 
-                // wait for target block worker event
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
-
-                // wait for worker
+                // wait for worker (target block changed)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
@@ -338,7 +336,7 @@ namespace BitSharp.Daemon.Test
                 // add block 3B
                 memoryCacheContext.ChainedBlockCache[chainedBlock3B.BlockHash] = chainedBlock3B;
 
-                // wait for worker
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
@@ -350,11 +348,10 @@ namespace BitSharp.Daemon.Test
                 // add block 4B
                 memoryCacheContext.ChainedBlockCache[chainedBlock4B.BlockHash] = chainedBlock4B;
 
-                // wait for target block worker event
+                // wait for worker (chained block addition)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
-
-                // wait for worker
+                // wait for worker (target block changed)
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
