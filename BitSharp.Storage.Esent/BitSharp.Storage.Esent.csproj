@@ -76,7 +76,6 @@
     <Compile Include="ChainedBlockStorage.cs" />
     <Compile Include="KnownAddressStorage.cs" />
     <Compile Include="PersistentByteDictionary.cs" />
-    <Compile Include="PersistentUInt256ByteDictionary.cs" />
     <Compile Include="PersistentUtxo.cs" />
     <Compile Include="PersistentUtxoBuilderStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

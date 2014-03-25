@@ -14,7 +14,7 @@ namespace BitSharp.Storage.Esent
     public class PersistentUtxoBuilderStorage : IUtxoBuilderStorage
     {
         private readonly string directory;
-        private readonly PersistentUInt256ByteDictionary utxo;
+        private readonly PersistentByteDictionary utxo;
         private bool closed = false;
 
         public PersistentUtxoBuilderStorage(Utxo parentUtxo)
@@ -23,11 +23,11 @@ namespace BitSharp.Storage.Esent
             if (parentUtxo is PersistentUtxo)
             {
                 ((PersistentUtxo)parentUtxo).Duplicate(this.directory);
-                this.utxo = new PersistentUInt256ByteDictionary(this.directory);
+                this.utxo = new PersistentByteDictionary(this.directory);
             }
             else
             {
-                this.utxo = new PersistentUInt256ByteDictionary(this.directory);
+                this.utxo = new PersistentByteDictionary(this.directory);
                 foreach (var unspentTx in parentUtxo.UnspentTransactions())
                 {
                     this.Add(unspentTx.TxHash, unspentTx);
@@ -42,12 +42,12 @@ namespace BitSharp.Storage.Esent
 
         public bool ContainsKey(UInt256 txHash)
         {
-            return this.utxo.ContainsKey(txHash);
+            return this.utxo.ContainsKey(txHash.ToByteArray());
         }
 
         public bool Remove(UInt256 txHash)
         {
-            return this.utxo.Remove(txHash);
+            return this.utxo.Remove(txHash.ToByteArray());
         }
 
         public void Clear()
@@ -57,7 +57,7 @@ namespace BitSharp.Storage.Esent
 
         public void Add(UInt256 txHash, UnspentTx unspentTx)
         {
-            this.utxo.Add(txHash, StorageEncoder.EncodeUnspentTx(unspentTx));
+            this.utxo.Add(txHash.ToByteArray(), StorageEncoder.EncodeUnspentTx(unspentTx));
         }
 
         public int Count { get { return this.utxo.Count; } }
@@ -66,11 +66,11 @@ namespace BitSharp.Storage.Esent
         {
             get
             {
-                return StorageEncoder.DecodeUnspentTx(txHash, this.utxo[txHash]);
+                return StorageEncoder.DecodeUnspentTx(txHash, this.utxo[txHash.ToByteArray()]);
             }
             set
             {
-                this.utxo[txHash] = StorageEncoder.EncodeUnspentTx(value);
+                this.utxo[txHash.ToByteArray()] = StorageEncoder.EncodeUnspentTx(value);
             }
         }
 
@@ -102,7 +102,7 @@ namespace BitSharp.Storage.Esent
             if (!this.closed)
             {
                 this.utxo.Dispose();
-                
+
                 try { Directory.Delete(this.directory, recursive: true); }
                 catch (IOException) { }
             }

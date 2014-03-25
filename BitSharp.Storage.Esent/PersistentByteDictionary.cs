@@ -1,6 +1,4 @@
-﻿//#define BYTE_ARRAY_SUPPORTED
-
-using Microsoft.Isam.Esent.Collections.Generic;
+﻿using Microsoft.Isam.Esent.Collections.Generic;
 using BitSharp.Common.ExtensionMethods;
 using System;
 using System.Collections.Generic;
@@ -14,18 +12,11 @@ namespace BitSharp.Storage.Esent
     public class PersistentByteDictionary : IDictionary<byte[], byte[]>, IDisposable
     {
 
-#if BYTE_ARRAY_SUPPORTED
-        private PersistentDictionary<string, byte[]> dict;
-#else
         private PersistentDictionary<string, string> dict;
-#endif
+
         public PersistentByteDictionary(string directory)
         {
-#if BYTE_ARRAY_SUPPORTED
-            this.dict = new PersistentDictionary<string, byte[]>(directory);
-#else
             this.dict = new PersistentDictionary<string, string>(directory);
-#endif
         }
 
         public PersistentByteDictionary(IEnumerable<KeyValuePair<byte[], byte[]>> dictionary, string directory)
@@ -44,11 +35,7 @@ namespace BitSharp.Storage.Esent
 
         public void Add(byte[] key, byte[] value)
         {
-#if BYTE_ARRAY_SUPPORTED
-            this.dict.Add(Encode(key), value);
-#else
             this.dict.Add(Encode(key), Encode(value));
-#endif
         }
 
         public bool ContainsKey(byte[] key)
@@ -58,11 +45,7 @@ namespace BitSharp.Storage.Esent
 
         public ICollection<byte[]> Keys
         {
-#if BYTE_ARRAY_SUPPORTED
             get { return new PersistentByteDictionaryKeyCollection(this.dict.Keys); }
-#else
-            get { return new PersistentByteDictionaryKeyCollection(this.dict.Keys); }
-#endif
         }
 
         public bool Remove(byte[] key)
@@ -72,9 +55,6 @@ namespace BitSharp.Storage.Esent
 
         public bool TryGetValue(byte[] key, out byte[] value)
         {
-#if BYTE_ARRAY_SUPPORTED
-            return this.dict.TryGetValue(Encode(key), out value);
-#else
             string s;
             if (this.dict.TryGetValue(Encode(key), out s))
             {
@@ -86,35 +66,22 @@ namespace BitSharp.Storage.Esent
                 value = default(byte[]);
                 return false;
             }
-#endif
         }
 
         public ICollection<byte[]> Values
         {
-#if BYTE_ARRAY_SUPPORTED
-            get { return this.dict.Values; }
-#else
             get { return new PersistentByteDictionaryValueCollection(this.dict.Values); }
-#endif
         }
 
         public byte[] this[byte[] key]
         {
             get
             {
-#if BYTE_ARRAY_SUPPORTED
-                return this.dict[Encode(key)];
-#else
                 return Decode(this.dict[Encode(key)]);
-#endif
             }
             set
             {
-#if BYTE_ARRAY_SUPPORTED
-                this.dict[Encode(key)] = value;
-#else
                 this.dict[Encode(key)] = Encode(value);
-#endif
             }
         }
 
@@ -160,19 +127,11 @@ namespace BitSharp.Storage.Esent
 
         public IEnumerator<KeyValuePair<byte[], byte[]>> GetEnumerator()
         {
-#if BYTE_ARRAY_SUPPORTED
-            foreach (var item in
-                this.dict.Select(x => new KeyValuePair<byte[], byte[]>(Decode(x.Key), x.Value)))
-            {
-                yield return item;
-            }
-#else
             foreach (var item in
                 this.dict.Select(x => new KeyValuePair<byte[], byte[]>(Decode(x.Key), Decode(x.Value))))
             {
                 yield return item;
             }
-#endif
         }
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
@@ -203,17 +162,9 @@ namespace BitSharp.Storage.Esent
 
         public class PersistentByteDictionaryKeyCollection : ICollection<byte[]>
         {
-#if BYTE_ARRAY_SUPPORTED
-            PersistentDictionaryKeyCollection<string, byte[]> keyCollection;
-#else
             PersistentDictionaryKeyCollection<string, string> keyCollection;
-#endif
 
-#if BYTE_ARRAY_SUPPORTED
-            public PersistentByteDictionaryKeyCollection(PersistentDictionaryKeyCollection<string, byte[]> keyCollection)
-#else
             public PersistentByteDictionaryKeyCollection(PersistentDictionaryKeyCollection<string, string> keyCollection)
-#endif
             {
                 this.keyCollection = keyCollection;
             }
@@ -272,17 +223,9 @@ namespace BitSharp.Storage.Esent
 
         public class PersistentByteDictionaryValueCollection : ICollection<byte[]>
         {
-#if BYTE_ARRAY_SUPPORTED
-            PersistentDictionaryValueCollection<string, byte[]> valueCollection;
-#else
             PersistentDictionaryValueCollection<string, string> valueCollection;
-#endif
 
-#if BYTE_ARRAY_SUPPORTED
-            public PersistentByteDictionaryValueCollection(PersistentDictionaryValueCollection<string, byte[]> valueCollection)
-#else
             public PersistentByteDictionaryValueCollection(PersistentDictionaryValueCollection<string, string> valueCollection)
-#endif
             {
                 this.valueCollection = valueCollection;
             }

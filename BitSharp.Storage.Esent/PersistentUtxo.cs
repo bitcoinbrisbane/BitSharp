@@ -17,7 +17,7 @@ namespace BitSharp.Storage.Esent
     {
         private readonly UInt256 blockHash;
         private readonly string directory;
-        private PersistentUInt256ByteDictionary utxo;
+        private PersistentByteDictionary utxo;
         private readonly ReaderWriterLockSlim utxoLock;
 
         static internal string GetDirectory(UInt256 blockHash)
@@ -29,7 +29,7 @@ namespace BitSharp.Storage.Esent
         {
             this.blockHash = blockHash;
             this.directory = GetDirectory(blockHash);
-            this.utxo = new PersistentUInt256ByteDictionary(this.directory);
+            this.utxo = new PersistentByteDictionary(this.directory);
             this.utxoLock = new ReaderWriterLockSlim();
         }
 
@@ -50,7 +50,7 @@ namespace BitSharp.Storage.Esent
             {
                 foreach (var rawUnspentTx in utxo)
                 {
-                    yield return StorageEncoder.DecodeUnspentTx(rawUnspentTx.Key, rawUnspentTx.Value);
+                    yield return StorageEncoder.DecodeUnspentTx(new UInt256(rawUnspentTx.Key), rawUnspentTx.Value);
                 }
             }
             finally
@@ -61,12 +61,12 @@ namespace BitSharp.Storage.Esent
 
         public bool ContainsKey(Common.UInt256 txHash)
         {
-            return this.utxoLock.DoRead(() => utxo.ContainsKey(txHash));
+            return this.utxoLock.DoRead(() => utxo.ContainsKey(txHash.ToByteArray()));
         }
 
         public UnspentTx this[Common.UInt256 txHash]
         {
-            get { return this.utxoLock.DoRead(() => StorageEncoder.DecodeUnspentTx(txHash, this.utxo[txHash])); }
+            get { return this.utxoLock.DoRead(() => StorageEncoder.DecodeUnspentTx(txHash, this.utxo[txHash.ToByteArray()])); }
         }
 
         internal void Duplicate(string destDirectory)
@@ -79,7 +79,7 @@ namespace BitSharp.Storage.Esent
                 foreach (var srcFile in Directory.GetFiles(this.directory, "*.edb"))
                     File.Copy(srcFile, Path.Combine(destDirectory, Path.GetFileName(srcFile)));
 
-                this.utxo = new PersistentUInt256ByteDictionary(this.directory);
+                this.utxo = new PersistentByteDictionary(this.directory);
             });
         }
 
