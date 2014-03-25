@@ -11,7 +11,6 @@ namespace BitSharp.Storage.Esent
 {
     public class PersistentByteDictionary : IDictionary<byte[], byte[]>, IDisposable
     {
-
         private PersistentDictionary<string, string> dict;
 
         public PersistentByteDictionary(string directory)

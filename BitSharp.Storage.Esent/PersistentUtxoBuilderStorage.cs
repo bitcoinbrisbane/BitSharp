@@ -85,7 +85,7 @@ namespace BitSharp.Storage.Esent
             this.Dispose();
 
             //TODO obviously a stop gap here...
-            var destPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", PersistentUtxo.GetDirectory(blockHash));
+            var destPath = PersistentUtxo.GetDirectory(blockHash);
             if (Directory.Exists(destPath))
                 Directory.Delete(destPath, recursive: true);
             Directory.CreateDirectory(destPath);
