@@ -11,9 +11,9 @@ namespace BitSharp.Blockchain
     public class ChainState
     {
         private readonly ChainedBlocks currentChainedBlocks;
-        private readonly Utxo currentUtxo;
+        private readonly IUtxoStorage currentUtxo;
 
-        public ChainState(ChainedBlocks currentChainedBlocks, Utxo currentUtxo)
+        public ChainState(ChainedBlocks currentChainedBlocks, IUtxoStorage currentUtxo)
         {
             this.currentChainedBlocks = currentChainedBlocks;
             this.currentUtxo = currentUtxo;
@@ -21,7 +21,7 @@ namespace BitSharp.Blockchain
 
         public ChainedBlocks CurrentChainedBlocks { get { return this.currentChainedBlocks; } }
 
-        public Utxo CurrentUtxo { get { return this.currentUtxo; } }
+        public IUtxoStorage CurrentUtxo { get { return this.currentUtxo; } }
 
         public ChainedBlock CurrentBlock { get { return this.currentChainedBlocks.LastBlock; } }
 

@@ -26,7 +26,7 @@ namespace BitSharp.Blockchain.Test
             var unspentTx = new UnspentTx(txHash, 3, OutputState.Unspent);
 
             // mock a parent utxo containing the unspent transaction
-            var mockParentUtxo = new Mock<Utxo>();
+            var mockParentUtxo = new Mock<IUtxoStorage>();
             mockParentUtxo.Setup(utxo => utxo.UnspentTransactions()).Returns(new[] { unspentTx });
 
             // initialize memory utxo builder storage
@@ -87,7 +87,7 @@ namespace BitSharp.Blockchain.Test
             var unspentTx = new UnspentTx(txHash, 1, OutputState.Unspent);
 
             // mock a parent utxo containing the unspent transaction
-            var mockParentUtxo = new Mock<Utxo>();
+            var mockParentUtxo = new Mock<IUtxoStorage>();
             mockParentUtxo.Setup(utxo => utxo.UnspentTransactions()).Returns(new[] { unspentTx });
 
             // initialize memory utxo builder storage

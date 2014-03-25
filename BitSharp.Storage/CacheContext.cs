@@ -49,7 +49,7 @@ namespace BitSharp.Storage
 
         public IUnboundedCache<UInt256, Block> BlockView { get { return this.blockView; } }
 
-        public IUtxoBuilderStorage ToUtxoBuilder(Utxo utxo)
+        public IUtxoStorageBuilderStorage ToUtxoBuilder(IUtxoStorage utxo)
         {
             return this.storageContext.ToUtxoBuilder(utxo);
         }

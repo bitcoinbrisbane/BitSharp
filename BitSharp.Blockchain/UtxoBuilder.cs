@@ -15,9 +15,9 @@ namespace BitSharp.Blockchain
     public class UtxoBuilder : IDisposable
     {
         private readonly ICacheContext cacheContext;
-        private readonly IUtxoBuilderStorage utxoBuilderStorage;
+        private readonly IUtxoStorageBuilderStorage utxoBuilderStorage;
 
-        public UtxoBuilder(ICacheContext cacheContext, Utxo parentUtxo)
+        public UtxoBuilder(ICacheContext cacheContext, IUtxoStorage parentUtxo)
         {
             this.cacheContext = cacheContext;
             this.utxoBuilderStorage = cacheContext.ToUtxoBuilder(parentUtxo);
@@ -179,7 +179,7 @@ namespace BitSharp.Blockchain
             this.utxoBuilderStorage.Flush();
         }
 
-        public Utxo Close(UInt256 blockHash)
+        public IUtxoStorage Close(UInt256 blockHash)
         {
             return utxoBuilderStorage.Close(blockHash);
         }

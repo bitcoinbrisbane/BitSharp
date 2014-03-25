@@ -29,7 +29,7 @@ namespace BitSharp.Storage
         IUnboundedCache<UInt256, Block> BlockView { get; }
 
         //TODO
-        IUtxoBuilderStorage ToUtxoBuilder(Utxo utxo);
+        IUtxoStorageBuilderStorage ToUtxoBuilder(IUtxoStorage utxo);
 
         //TODO
         //IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks();

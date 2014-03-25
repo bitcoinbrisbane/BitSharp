@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Data
 {
-    public class GenesisUtxo : Utxo
+    public class GenesisUtxo : IUtxoStorage
     {
         // genesis block coinbase is not included in utxo, it is unspendable
 

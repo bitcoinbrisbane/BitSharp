@@ -88,7 +88,7 @@
     <Compile Include="TxOutput.cs" />
     <Compile Include="UnspentTx.cs" />
     <Compile Include="TxOutputKey.cs" />
-    <Compile Include="Utxo.cs" />
+    <Compile Include="IUtxoStorage.cs" />
     <Compile Include="WriterExtensionMethods.cs" />
   </ItemGroup>
   <ItemGroup>

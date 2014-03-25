@@ -77,7 +77,7 @@ namespace BitSharp.Storage.MongoDB
         //    return this.ChainedBlockStorage.SelectMaxTotalWorkBlocks();
         //}
 
-        public IUtxoBuilderStorage ToUtxoBuilder(Utxo utxo)
+        public IUtxoStorageBuilderStorage ToUtxoBuilder(IUtxoStorage utxo)
         {
             return new PersistentUtxoBuilderStorage(utxo);
         }

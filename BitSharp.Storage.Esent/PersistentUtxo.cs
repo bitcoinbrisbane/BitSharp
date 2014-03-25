@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage.Esent
 {
-    public class PersistentUtxo : Utxo
+    public class PersistentUtxo : IUtxoStorage
     {
         private readonly UInt256 blockHash;
         private readonly string directory;

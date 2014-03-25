@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Data
 {
-    public interface Utxo : IDisposable
+    public interface IUtxoStorage : IDisposable
     {
         UInt256 BlockHash { get; }
 
