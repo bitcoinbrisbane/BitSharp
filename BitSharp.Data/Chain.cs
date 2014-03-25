@@ -10,30 +10,30 @@ namespace BitSharp.Data
 {
     public class Chain
     {
-        private readonly ImmutableList<ChainedBlock> blockList;
+        private readonly ImmutableList<ChainedBlock> blocks;
 
-        public Chain(ImmutableList<ChainedBlock> blockList)
+        public Chain(ImmutableList<ChainedBlock> blocks)
         {
-            if (blockList.Count == 0
-                || blockList[0].Height != 0)
+            if (blocks.Count == 0
+                || blocks[0].Height != 0)
                 throw new InvalidOperationException();
 
-            this.blockList = blockList;
+            this.blocks = blocks;
         }
 
-        public ChainedBlock GenesisBlock { get { return this.blockList.First(); } }
+        public ChainedBlock GenesisBlock { get { return this.blocks.First(); } }
 
-        public ChainedBlock LastBlock { get { return this.blockList.Last(); } }
+        public ChainedBlock LastBlock { get { return this.blocks.Last(); } }
 
-        public int Height { get { return this.blockList.Count() - 1; } }
+        public int Height { get { return this.blocks.Count() - 1; } }
 
-        public ImmutableList<ChainedBlock> BlockList { get { return this.blockList; } }
+        public ImmutableList<ChainedBlock> Blocks { get { return this.blocks; } }
 
         public IEnumerable<ChainedBlock> ReadFromGenesis()
         {
             var expectedHeight = 0;
             var expectedPrevBlockHash = this.GenesisBlock.PreviousBlockHash;
-            foreach (var block in this.blockList)
+            foreach (var block in this.blocks)
             {
                 if (block.Height != expectedHeight
                     || block.PreviousBlockHash != expectedPrevBlockHash)
@@ -70,18 +70,18 @@ namespace BitSharp.Data
                         throw new InvalidOperationException();
 
                     yield return Tuple.Create(-1, currentBlock);
-                    currentBlock = this.blockList[currentBlock.Height - 1];
+                    currentBlock = this.blocks[currentBlock.Height - 1];
                 }
                 // currently behind target chain
                 else
                 {
                     // on same chain, can advance
-                    if (targetChain.BlockList[currentBlock.Height] == currentBlock)
+                    if (targetChain.Blocks[currentBlock.Height] == currentBlock)
                     {
                         // another block is available
                         if (targetChain.Height >= currentBlock.Height + 1)
                         {
-                            currentBlock = targetChain.BlockList[currentBlock.Height + 1];
+                            currentBlock = targetChain.Blocks[currentBlock.Height + 1];
                             yield return Tuple.Create(+1, currentBlock);
                         }
                         // no further blocks are available
@@ -97,7 +97,7 @@ namespace BitSharp.Data
                             throw new InvalidOperationException();
 
                         yield return Tuple.Create(-1, currentBlock);
-                        currentBlock = this.blockList[currentBlock.Height - 1];
+                        currentBlock = this.blocks[currentBlock.Height - 1];
                     }
                 }
             }

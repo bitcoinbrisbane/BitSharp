@@ -481,7 +481,7 @@ namespace BitSharp.Node
             var targetChainLocal = this.blockchainDaemon.TargetChain;
             if (targetChainLocal != null)
             {
-                var blockLocatorHashes = CalculateBlockLocatorHashes(targetChainLocal.BlockList);
+                var blockLocatorHashes = CalculateBlockLocatorHashes(targetChainLocal.Blocks);
 
                 await remoteNode.Sender.SendGetHeaders(blockLocatorHashes, hashStop: 0);
             }
@@ -492,7 +492,7 @@ namespace BitSharp.Node
             var targetChainLocal = this.blockchainDaemon.TargetChain;
             if (targetChainLocal != null)
             {
-                var blockLocatorHashes = CalculateBlockLocatorHashes(targetChainLocal.BlockList);
+                var blockLocatorHashes = CalculateBlockLocatorHashes(targetChainLocal.Blocks);
 
                 await remoteNode.Sender.SendGetBlocks(blockLocatorHashes, hashStop: 0);
             }
@@ -741,8 +741,8 @@ namespace BitSharp.Node
                 ChainedBlock chainedBlock;
                 if (this.blockchainDaemon.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
                 {
-                    if (chainedBlock.Height < targetChainLocal.BlockList.Count
-                        && chainedBlock.BlockHash == targetChainLocal.BlockList[chainedBlock.Height].BlockHash)
+                    if (chainedBlock.Height < targetChainLocal.Blocks.Count
+                        && chainedBlock.BlockHash == targetChainLocal.Blocks[chainedBlock.Height].BlockHash)
                     {
                         matchingChainedBlock = chainedBlock;
                         break;
@@ -758,9 +758,9 @@ namespace BitSharp.Node
             var count = 0;
             var limit = 500;
             var invVectors = new InventoryVector[limit];
-            for (var i = matchingChainedBlock.Height; i < targetChainLocal.BlockList.Count && count <= limit; i++, count++)
+            for (var i = matchingChainedBlock.Height; i < targetChainLocal.Blocks.Count && count <= limit; i++, count++)
             {
-                var chainedBlock = targetChainLocal.BlockList[i];
+                var chainedBlock = targetChainLocal.Blocks[i];
                 invVectors[count] = new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, chainedBlock.BlockHash);
 
                 if (chainedBlock.BlockHash == payload.HashStop)
@@ -788,8 +788,8 @@ namespace BitSharp.Node
                 ChainedBlock chainedBlock;
                 if (this.blockchainDaemon.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
                 {
-                    if (chainedBlock.Height < targetChainLocal.BlockList.Count
-                        && chainedBlock.BlockHash == targetChainLocal.BlockList[chainedBlock.Height].BlockHash)
+                    if (chainedBlock.Height < targetChainLocal.Blocks.Count
+                        && chainedBlock.BlockHash == targetChainLocal.Blocks[chainedBlock.Height].BlockHash)
                     {
                         matchingChainedBlock = chainedBlock;
                         break;
@@ -805,12 +805,12 @@ namespace BitSharp.Node
             var count = 0;
             var limit = 500;
             var blockHeaders = new BlockHeader[limit];
-            for (var i = matchingChainedBlock.Height; i < targetChainLocal.BlockList.Count && count <= limit; i++, count++)
+            for (var i = matchingChainedBlock.Height; i < targetChainLocal.Blocks.Count && count <= limit; i++, count++)
             {
-                var chainedBlock = targetChainLocal.BlockList[i];
+                var chainedBlock = targetChainLocal.Blocks[i];
 
                 BlockHeader blockHeader;
-                if (this.blockchainDaemon.CacheContext.BlockHeaderCache.TryGetValue(targetChainLocal.BlockList[i].BlockHash, out blockHeader))
+                if (this.blockchainDaemon.CacheContext.BlockHeaderCache.TryGetValue(targetChainLocal.Blocks[i].BlockHash, out blockHeader))
                 {
                     blockHeaders[count] = blockHeader;
                 }

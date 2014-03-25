@@ -157,7 +157,7 @@ namespace BitSharp.Blockchain
                 if (chain.Height == 0)
                 {
                     // lookup genesis block header
-                    var genesisBlockHeader = this.CacheContext.BlockHeaderCache[chain.BlockList[0].BlockHash];
+                    var genesisBlockHeader = this.CacheContext.BlockHeaderCache[chain.Blocks[0].BlockHash];
 
                     return genesisBlockHeader.CalculateTarget();
                 }
@@ -176,7 +176,7 @@ namespace BitSharp.Blockchain
                     var prevBlockHeader = this.CacheContext.BlockHeaderCache[chain.LastBlock.PreviousBlockHash];
 
                     // get the block difficultyInterval blocks ago
-                    var startChainedBlock = chain.BlockList.Reverse().Skip(DifficultyInternal).First();
+                    var startChainedBlock = chain.Blocks.Reverse().Skip(DifficultyInternal).First();
                     var startBlockHeader = this.CacheContext.BlockHeaderCache[startChainedBlock.BlockHash];
                     //Debug.Assert(startChainedBlock.Height == blockchain.Height - DifficultyInternal);
 

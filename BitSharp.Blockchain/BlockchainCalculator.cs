@@ -220,15 +220,15 @@ namespace BitSharp.Blockchain
                 //TODO delete corrupted data? could get stuck in a fail-loop on the winning chain otherwise
 
                 // verify blockchain has blocks
-                if (blockchain.BlockList.Count == 0)
+                if (blockchain.Blocks.Count == 0)
                     throw new ValidationException(0);
 
                 // verify genesis block hash
-                if (blockchain.BlockList[0].BlockHash != genesisBlock.Hash)
-                    throw new ValidationException(blockchain.BlockList[0].BlockHash);
+                if (blockchain.Blocks[0].BlockHash != genesisBlock.Hash)
+                    throw new ValidationException(blockchain.Blocks[0].BlockHash);
 
                 // get genesis block header
-                var chainGenesisBlockHeader = this.CacheContext.BlockHeaderCache[blockchain.BlockList[0].BlockHash];
+                var chainGenesisBlockHeader = this.CacheContext.BlockHeaderCache[blockchain.Blocks[0].BlockHash];
 
                 // verify genesis block header
                 if (
@@ -246,13 +246,13 @@ namespace BitSharp.Blockchain
 
                 // setup expected previous block hash value to verify each chain actually does link
                 var expectedPreviousBlockHash = genesisBlock.Header.PreviousBlock;
-                for (var height = 0; height < blockchain.BlockList.Count; height++)
+                for (var height = 0; height < blockchain.Blocks.Count; height++)
                 {
                     // cooperative loop
                     this.shutdownToken.ThrowIfCancellationRequested();
 
                     // get the current link in the chain
-                    var chainedBlock = blockchain.BlockList[height];
+                    var chainedBlock = blockchain.Blocks[height];
 
                     // verify height
                     if (chainedBlock.Height != height)

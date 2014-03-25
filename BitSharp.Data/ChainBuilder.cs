@@ -9,20 +9,20 @@ namespace BitSharp.Data
 {
     public class ChainBuilder
     {
-        private readonly ImmutableList<ChainedBlock>.Builder blockList;
+        private readonly ImmutableList<ChainedBlock>.Builder blocks;
 
         public ChainBuilder(Chain parentChain)
         {
-            this.blockList = parentChain.BlockList.ToBuilder();
+            this.blocks = parentChain.Blocks.ToBuilder();
         }
 
-        public ChainedBlock GenesisBlock { get { return this.blockList.First(); } }
+        public ChainedBlock GenesisBlock { get { return this.blocks.First(); } }
 
-        public ChainedBlock LastBlock { get { return this.blockList.Last(); } }
+        public ChainedBlock LastBlock { get { return this.blocks.Last(); } }
 
-        public int Height { get { return this.blockList.Count() - 1; } }
+        public int Height { get { return this.blocks.Count() - 1; } }
 
-        public ImmutableList<ChainedBlock> BlockList { get { return this.blockList.ToImmutable(); } }
+        public ImmutableList<ChainedBlock> Blocks { get { return this.blocks.ToImmutable(); } }
 
         public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(Chain targetChain)
         {
@@ -41,22 +41,22 @@ namespace BitSharp.Data
                 || block.Height != lastBlock.Height + 1)
                 throw new InvalidOperationException();
 
-            this.blockList.Add(block);
+            this.blocks.Add(block);
         }
 
         public void RemoveBlock(ChainedBlock block)
         {
             var lastBlock = this.LastBlock;
             if (block != lastBlock
-                || this.blockList.Count == 0)
+                || this.blocks.Count == 0)
                 throw new InvalidOperationException();
 
-            this.blockList.RemoveAt(this.blockList.Count - 1);
+            this.blocks.RemoveAt(this.blocks.Count - 1);
         }
 
         public Chain ToImmutable()
         {
-            return new Chain(this.blockList.ToImmutable());
+            return new Chain(this.blocks.ToImmutable());
         }
     }
 }
