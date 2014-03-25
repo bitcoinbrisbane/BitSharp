@@ -87,6 +87,7 @@
     <Compile Include="MainnetRules.cs" />
     <Compile Include="Miner.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utxo.cs" />
     <Compile Include="UtxoBuilder.cs" />
     <Compile Include="ValidationException.cs" />
   </ItemGroup>

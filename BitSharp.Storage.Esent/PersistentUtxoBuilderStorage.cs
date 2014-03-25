@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage.Esent
 {
-    public class PersistentUtxoBuilderStorage : IUtxoStorageBuilderStorage
+    public class PersistentUtxoBuilderStorage : IUtxoBuilderStorage
     {
         private readonly string directory;
         private readonly PersistentByteDictionary utxo;

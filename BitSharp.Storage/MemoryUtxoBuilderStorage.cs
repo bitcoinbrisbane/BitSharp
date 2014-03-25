@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class MemoryUtxoBuilderStorage : IUtxoStorageBuilderStorage
+    public class MemoryUtxoBuilderStorage : IUtxoBuilderStorage
     {
         private ImmutableDictionary<UInt256, UnspentTx>.Builder utxo;
 

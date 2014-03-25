@@ -65,7 +65,7 @@ namespace BitSharp.Storage
         //    }
         //}
 
-        public IUtxoStorageBuilderStorage ToUtxoBuilder(IUtxoStorage utxo)
+        public IUtxoBuilderStorage ToUtxoBuilder(IUtxoStorage utxo)
         {
             return new MemoryUtxoBuilderStorage(utxo);
         }

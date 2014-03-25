@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public interface IUtxoStorageBuilderStorage : IDisposable
+    public interface IUtxoBuilderStorage : IDisposable
     {
         bool ContainsKey(UInt256 txHash);
 

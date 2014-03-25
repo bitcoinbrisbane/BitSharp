@@ -26,18 +26,19 @@ namespace BitSharp.Blockchain.Test
             var unspentTx = new UnspentTx(txHash, 3, OutputState.Unspent);
 
             // mock a parent utxo containing the unspent transaction
-            var mockParentUtxo = new Mock<IUtxoStorage>();
-            mockParentUtxo.Setup(utxo => utxo.UnspentTransactions()).Returns(new[] { unspentTx });
+            var mockParentUtxoStorage = new Mock<IUtxoStorage>();
+            mockParentUtxoStorage.Setup(utxo => utxo.UnspentTransactions()).Returns(new[] { unspentTx });
+            var parentUtxo = new Utxo(mockParentUtxoStorage.Object);
 
             // initialize memory utxo builder storage
-            var memoryUtxoBuilderStorage = new MemoryUtxoBuilderStorage(mockParentUtxo.Object);
+            var memoryUtxoBuilderStorage = new MemoryUtxoBuilderStorage(mockParentUtxoStorage.Object);
 
             // mock a cache context
             var mockCacheContext = new Mock<ICacheContext>();
-            mockCacheContext.Setup(cc => cc.ToUtxoBuilder(mockParentUtxo.Object)).Returns(memoryUtxoBuilderStorage);
+            mockCacheContext.Setup(cc => cc.ToUtxoBuilder(mockParentUtxoStorage.Object)).Returns(memoryUtxoBuilderStorage);
 
             // initialize utxo builder
-            var utxoBuilder = new UtxoBuilder(mockCacheContext.Object, mockParentUtxo.Object);
+            var utxoBuilder = new UtxoBuilder(mockCacheContext.Object, parentUtxo);
 
             // create an input to spend the unspent transaction's first output
             var input1 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
@@ -87,18 +88,19 @@ namespace BitSharp.Blockchain.Test
             var unspentTx = new UnspentTx(txHash, 1, OutputState.Unspent);
 
             // mock a parent utxo containing the unspent transaction
-            var mockParentUtxo = new Mock<IUtxoStorage>();
-            mockParentUtxo.Setup(utxo => utxo.UnspentTransactions()).Returns(new[] { unspentTx });
+            var mockParentUtxoStorage = new Mock<IUtxoStorage>();
+            mockParentUtxoStorage.Setup(utxo => utxo.UnspentTransactions()).Returns(new[] { unspentTx });
+            var parentUtxo = new Utxo(mockParentUtxoStorage.Object);
 
             // initialize memory utxo builder storage
-            var memoryUtxoBuilderStorage = new MemoryUtxoBuilderStorage(mockParentUtxo.Object);
+            var memoryUtxoBuilderStorage = new MemoryUtxoBuilderStorage(mockParentUtxoStorage.Object);
 
             // mock a cache context
             var mockCacheContext = new Mock<ICacheContext>();
-            mockCacheContext.Setup(cc => cc.ToUtxoBuilder(mockParentUtxo.Object)).Returns(memoryUtxoBuilderStorage);
+            mockCacheContext.Setup(cc => cc.ToUtxoBuilder(mockParentUtxoStorage.Object)).Returns(memoryUtxoBuilderStorage);
 
             // initialize utxo builder
-            var utxoBuilder = new UtxoBuilder(mockCacheContext.Object, mockParentUtxo.Object);
+            var utxoBuilder = new UtxoBuilder(mockCacheContext.Object, parentUtxo);
 
             // create an input to spend the unspent transaction
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);

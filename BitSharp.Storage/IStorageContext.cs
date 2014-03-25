@@ -23,6 +23,6 @@ namespace BitSharp.Storage
 
         //IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks();
         
-        IUtxoStorageBuilderStorage ToUtxoBuilder(IUtxoStorage utxo);
+        IUtxoBuilderStorage ToUtxoBuilder(IUtxoStorage utxo);
     }
 }
