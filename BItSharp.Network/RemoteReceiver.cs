@@ -25,7 +25,7 @@ namespace BitSharp.Network
         public event Action OnVersionAcknowledged;
         public event Action<ImmutableArray<InventoryVector>> OnInventoryVectors;
         public event Action<ImmutableArray<InventoryVector>> OnNotFound;
-        public event Action<Block> OnBlock;
+        public event Action<RemoteNode, Block> OnBlock;
         public event Action<BlockHeader> OnBlockHeader;
         public event Action<Transaction> OnTransaction;
         public event Action<ImmutableArray<NetworkAddressWithTime>> OnReceivedAddresses;
@@ -34,11 +34,13 @@ namespace BitSharp.Network
         public event Action<InventoryPayload> OnGetData;
         public event Action<ImmutableArray<byte>> OnPing;
 
+        private readonly RemoteNode owner;
         private readonly Socket socket;
         private readonly bool persistent;
 
-        public RemoteReceiver(Socket socket, bool persistent)
+        public RemoteReceiver(RemoteNode owner, Socket socket, bool persistent)
         {
+            this.owner = owner;
             this.socket = socket;
             this.persistent = persistent;
         }
@@ -189,7 +191,7 @@ namespace BitSharp.Network
 
                         var handler = this.OnBlock;
                         if (handler != null)
-                            handler(block);
+                            handler(this.owner, block);
                     }
                     break;
 
