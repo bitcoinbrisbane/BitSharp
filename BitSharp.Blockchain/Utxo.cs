@@ -46,7 +46,7 @@ namespace BitSharp.Blockchain
             UnspentTx prevTx;
             if (this.utxoStorage.TryGetValue(prevTxOutput.TxHash, out prevTx))
             {
-                var prevTxOutputIndex = (int)prevTxOutput.TxOutputIndex;
+                var prevTxOutputIndex = unchecked((int)prevTxOutput.TxOutputIndex);
                 if (prevTxOutputIndex < 0 || prevTxOutputIndex >= prevTx.OutputStates.Length)
                     return false;
 
