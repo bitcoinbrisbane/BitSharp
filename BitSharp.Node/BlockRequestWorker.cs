@@ -49,11 +49,15 @@ namespace BitSharp.Node
             this.missingBlockQueue = new SortedSet<ChainedBlock>(new HeightComparer());
 
             this.localClient.OnBlock += HandleBlock;
+            this.blockchainDaemon.OnChainStateChanged += HandleChainStateChanged;
+            this.blockchainDaemon.OnChainStateBuilderChanged += HandleChainStateChanged;
         }
 
         protected override void SubDispose()
         {
             this.localClient.OnBlock -= HandleBlock;
+            this.blockchainDaemon.OnChainStateChanged -= HandleChainStateChanged;
+            this.blockchainDaemon.OnChainStateBuilderChanged -= HandleChainStateChanged;
         }
 
         protected override void WorkAction()
@@ -221,6 +225,11 @@ namespace BitSharp.Node
                 peerBlockRequests.TryRemove(block.Hash, out ignore);
             }
 
+            this.NotifyWork();
+        }
+
+        private void HandleChainStateChanged(object sender, EventArgs e)
+        {
             this.NotifyWork();
         }
 
