@@ -1,4 +1,5 @@
 ﻿//#define TEST_TOOL
+//#define MONGODB
 
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Blockchain;
@@ -24,6 +25,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using BitSharp.Network;
+using BitSharp.Storage.MongoDB;
 
 namespace BitSharp.Client
 {
@@ -50,32 +52,35 @@ namespace BitSharp.Client
 
                 Debug.WriteLine(DateTime.Now);
 
-#if !TEST_TOOL
-                var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION());
-                var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
-#else
+#if TEST_TOOL
                 //if (Directory.Exists(Path.Combine(Config.LocalStoragePath, "data-test")))
                 //    Directory.Delete(Path.Combine(Config.LocalStoragePath, "data-test"), recursive: true);
                 //var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data-test"));
                 var storageContext = new MemoryStorageContext();
                 var knownAddressStorage = storageContext.KnownAddressStorage;
+#elif MONGODB
+                var storageContext = new MongoDBStorageContext(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION());
+                var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
+#else
+                var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION());
+                var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
 #endif
 
                 this.storageContext = storageContext;
                 this.cacheContext = new CacheContext(this.storageContext);
 
-#if !TEST_TOOL
-                this.rules = new MainnetRules(this.cacheContext);
-#else
+#if TEST_TOOL
                 this.rules = new ComparisonToolTestNetRules(this.cacheContext);
+#else
+                this.rules = new MainnetRules(this.cacheContext);
 #endif
 
                 this.blockchainDaemon = new BlockchainDaemon(this.rules, this.cacheContext);
 
-#if !TEST_TOOL
-                this.localClient = new LocalClient(LocalClientType.MainNet, this.blockchainDaemon, knownAddressStorage);
-#else
+#if TEST_TOOL
                 this.localClient = new LocalClient(LocalClientType.ComparisonToolTestNet, this.blockchainDaemon, knownAddressStorage);
+#else
+                this.localClient = new LocalClient(LocalClientType.MainNet, this.blockchainDaemon, knownAddressStorage);
 #endif
 
                 // setup view model
