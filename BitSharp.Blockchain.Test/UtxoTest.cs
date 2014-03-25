@@ -107,7 +107,6 @@ namespace BitSharp.Blockchain.Test
             Assert.IsFalse(canSpend);
         }
 
-
         [TestMethod]
         public void TestCanSpend_IndexOutOfRange()
         {
