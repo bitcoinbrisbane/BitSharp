@@ -17,7 +17,7 @@ namespace BitSharp.Storage.MongoDB
     public class ChainedBlockStorage : MongoDBDataStorage<ChainedBlock>
     {
         public ChainedBlockStorage(MongoDBStorageContext storageContext)
-            : base(storageContext, "chain",
+            : base(storageContext, "chainedBlocks",
                 chainedBlock => StorageEncoder.EncodeChainedBlock(chainedBlock),
                 (blockHash, bytes) => StorageEncoder.DecodeChainedBlock(bytes))
         { }
