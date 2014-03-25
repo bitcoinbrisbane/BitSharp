@@ -38,7 +38,7 @@ namespace BitSharp.Network
             this.remoteEndPoint = remoteEndPoint;
 
             this.socket = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            this.receiver = new RemoteReceiver(this.socket, persistent: false);
+            this.receiver = new RemoteReceiver(this, this.socket, persistent: false);
             this.sender = new RemoteSender(this.socket);
 
             WireNode();
@@ -52,7 +52,7 @@ namespace BitSharp.Network
             this.localEndPoint = (IPEndPoint)socket.LocalEndPoint;
             this.remoteEndPoint = (IPEndPoint)socket.RemoteEndPoint;
 
-            this.receiver = new RemoteReceiver(this.socket, persistent: false);
+            this.receiver = new RemoteReceiver(this, this.socket, persistent: false);
             this.sender = new RemoteSender(this.socket);
 
             WireNode();
