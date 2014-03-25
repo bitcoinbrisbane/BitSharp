@@ -1,6 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
+using BitSharp.Storage.Esent;
 using BitSharp.Storage.MongoDB;
 using MongoDB.Driver;
 using System;
@@ -78,8 +79,7 @@ namespace BitSharp.Storage.MongoDB
 
         public IUtxoBuilderStorage ToUtxoBuilder(Utxo utxo)
         {
-            return new MemoryUtxoBuilderStorage(utxo);
-            //return new PersistentUtxoBuilderStorage(utxo);
+            return new PersistentUtxoBuilderStorage(utxo);
         }
 
         public void Dispose()
