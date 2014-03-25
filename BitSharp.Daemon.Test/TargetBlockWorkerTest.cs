@@ -27,14 +27,13 @@ namespace BitSharp.Daemon.Test
             using (var targetBlockWorker = new TargetBlockWorker(memoryCacheContext, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue))
             {
                 // monitor event firing
-                var onTargetBlockChangedCount = 0;
-                targetBlockWorker.OnTargetBlockChanged += () => onTargetBlockChangedCount++;
-
-                // monitor event firing
                 var workNotifyEvent = new AutoResetEvent(false);
                 var workStoppedEvent = new AutoResetEvent(false);
+                var onTargetBlockChangedCount = 0;
+                
                 targetBlockWorker.OnNotifyWork += () => workNotifyEvent.Set();
                 targetBlockWorker.OnWorkStopped += () => workStoppedEvent.Set();
+                targetBlockWorker.OnTargetBlockChanged += () => onTargetBlockChangedCount++;
 
                 // start worker and wait for intial target
                 targetBlockWorker.Start();
