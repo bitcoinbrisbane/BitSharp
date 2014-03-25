@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BitSharp.Common;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -9,11 +10,11 @@ namespace BitSharp.Data
 {
     public class ChainBuilder
     {
-        private readonly ImmutableList<ChainedBlock>.Builder blocks;
+        private readonly ConcurrentListBuilder<ChainedBlock> blocks;
 
         public ChainBuilder(Chain parentChain)
         {
-            this.blocks = parentChain.Blocks.ToBuilder();
+            this.blocks = new ConcurrentListBuilder<ChainedBlock>(parentChain.Blocks);
         }
 
         public ChainedBlock GenesisBlock { get { return this.blocks.First(); } }
