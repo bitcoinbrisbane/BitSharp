@@ -103,6 +103,8 @@ namespace BitSharp.Storage
             // write the transaction hash list
             result |= this.cacheContext.BlockTxHashesCache.TryAdd(blockHash, txHashesList.ToImmutable());
 
+            this.missingData.Remove(blockHash);
+
             return result;
         }
 
