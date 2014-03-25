@@ -86,7 +86,7 @@ namespace BitSharp.Storage.MongoDB
                     return false;
                 }
             }
-            catch (WriteConcernException e)
+            catch (WriteConcernException)
             {
                 return false;
             }
