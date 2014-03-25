@@ -54,7 +54,7 @@ namespace BitSharp.Blockchain
         {
             return new ChainState(
                 ChainedBlocks.CreateForGenesisBlock(genesisBlock),
-                Utxo.CreateForGenesisBlock(genesisBlock)
+                Utxo.CreateForGenesisBlock(genesisBlock.BlockHash)
             );
         }
     }

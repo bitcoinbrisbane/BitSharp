@@ -38,19 +38,24 @@ namespace BitSharp.Blockchain
             get { return this.utxoStorage.Count; }
         }
 
-        public IEnumerable<UnspentTx> UnspentTransactions()
+        public bool CanSpend(TxOutputKey prevTxOutput)
         {
-            return this.utxoStorage.UnspentTransactions();
-        }
+            if (prevTxOutput == null)
+                throw new ArgumentNullException("prevTxOutput");
 
-        public bool ContainsKey(UInt256 txHash)
-        {
-            return this.utxoStorage.ContainsKey(txHash);
-        }
+            UnspentTx prevTx;
+            if (this.utxoStorage.TryGetValue(prevTxOutput.TxHash, out prevTx))
+            {
+                var prevTxOutputIndex = (int)prevTxOutput.TxOutputIndex;
+                if (prevTxOutputIndex < 0 || prevTxOutputIndex >= prevTx.OutputStates.Length)
+                    return false;
 
-        public UnspentTx this[UInt256 txHash]
-        {
-            get { return this.utxoStorage[txHash]; }
+                return prevTx.OutputStates[prevTxOutputIndex] == OutputState.Unspent;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         public void DisposeDelete()
@@ -58,9 +63,9 @@ namespace BitSharp.Blockchain
             this.utxoStorage.DisposeDelete();
         }
 
-        public static Utxo CreateForGenesisBlock(ChainedBlock genesisBlock)
+        public static Utxo CreateForGenesisBlock(UInt256 blockHash)
         {
-            return new Utxo(new GenesisUtxoStorage(genesisBlock.BlockHash));
+            return new Utxo(new GenesisUtxoStorage(blockHash));
         }
     }
 }

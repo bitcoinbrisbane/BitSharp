@@ -39,9 +39,10 @@ namespace BitSharp.Storage
             return false;
         }
 
-        public UnspentTx this[UInt256 txHash]
+        public bool TryGetValue(UInt256 txHash, out UnspentTx unspentTx)
         {
-            get { return null; }
+            unspentTx = default(UnspentTx);
+            return false;
         }
 
         public void DisposeDelete()

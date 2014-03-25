@@ -18,7 +18,7 @@ namespace BitSharp.Storage
 
         bool ContainsKey(UInt256 txHash);
 
-        UnspentTx this[UInt256 txHash] { get; }
+        bool TryGetValue(UInt256 txHash, out UnspentTx unspentTx);
 
         void DisposeDelete();
     }

@@ -64,9 +64,21 @@ namespace BitSharp.Storage.Esent
             return this.utxoLock.DoRead(() => utxo.ContainsKey(txHash.ToByteArray()));
         }
 
-        public UnspentTx this[Common.UInt256 txHash]
+        public bool TryGetValue(UInt256 txHash, out UnspentTx unspentTx)
         {
-            get { return this.utxoLock.DoRead(() => StorageEncoder.DecodeUnspentTx(txHash, this.utxo[txHash.ToByteArray()])); }
+            UnspentTx unspentTxLocal = null;
+            this.utxoLock.DoRead(
+                () =>
+                {
+                    byte[] unspentTxBytes;
+                    if (this.utxo.TryGetValue(txHash.ToByteArray(), out unspentTxBytes))
+                    {
+                        unspentTxLocal = StorageEncoder.DecodeUnspentTx(txHash, unspentTxBytes);
+                    }
+                });
+
+            unspentTx = unspentTxLocal;
+            return unspentTxLocal != null;
         }
 
         internal void Duplicate(string destDirectory)

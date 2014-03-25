@@ -42,9 +42,9 @@ namespace BitSharp.Storage
             return this._utxo.ContainsKey(txHash);
         }
 
-        public UnspentTx this[UInt256 txHash]
+        public bool TryGetValue(UInt256 txHash, out UnspentTx unspentTx)
         {
-            get { return this._utxo[txHash]; }
+            return this._utxo.TryGetValue(txHash, out unspentTx);
         }
 
         public void Dispose()
