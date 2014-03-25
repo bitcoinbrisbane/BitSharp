@@ -17,7 +17,7 @@ namespace BitSharp.Daemon
 {
     public class TargetChainWorker : Worker
     {
-        public event EventHandler<ChainedBlock> OnWinningBlockChanged;
+        public event EventHandler<ChainedBlock> OnTargetChainChanged;
 
         private readonly IBlockchainRules rules;
         private readonly ICacheContext cacheContext;
@@ -119,7 +119,7 @@ namespace BitSharp.Daemon
                     //Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetBlock.BlockHash.ToHexNumberString(), targetBlock.Height, targetBlock.TotalWork.ToString("X")));
                     this.targetChainedBlocks = newTargetChainedBlocks.ToImmutable();
 
-                    var handler = this.OnWinningBlockChanged;
+                    var handler = this.OnTargetChainChanged;
                     if (handler != null)
                         handler(this, targetBlockLocal);
                 }

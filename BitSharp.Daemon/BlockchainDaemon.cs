@@ -72,7 +72,7 @@ namespace BitSharp.Daemon
             this.targetChainWorker = new TargetChainWorker(rules, cacheContext, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
             this.chainStateWorker = new ChainStateWorker(rules, cacheContext, () => this.targetChainWorker.TargetChainedBlocks, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
 
-            this.targetChainWorker.OnWinningBlockChanged +=
+            this.targetChainWorker.OnTargetChainChanged +=
                 (sender, targetBlock) =>
                 {
                     this.chainStateWorker.NotifyWork();
