@@ -47,7 +47,7 @@ namespace BitSharp.Daemon.Test
                 var workNotifyEvent = new AutoResetEvent(false);
                 var workStoppedEvent = new AutoResetEvent(false);
                 var onTargetChainChangedCount = 0;
-                
+
                 targetChainWorker.OnNotifyWork += () => workNotifyEvent.Set();
                 targetChainWorker.OnWorkStopped += () => workStoppedEvent.Set();
                 targetChainWorker.OnTargetChainChanged += (sender, chainedBlock) => onTargetChainChangedCount++;
@@ -197,6 +197,171 @@ namespace BitSharp.Daemon.Test
                 Assert.AreEqual(chainedBlock4, targetChainWorker.WinningBlock);
                 AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3, chainedBlock4 }, targetChainWorker.TargetChainedBlocks.BlockList);
                 Assert.AreEqual(2, onTargetChainChangedCount);
+
+                // verify no other work was done
+                Assert.IsFalse(workNotifyEvent.WaitOne(0));
+                Assert.IsFalse(workStoppedEvent.WaitOne(0));
+            }
+        }
+
+        [TestMethod]
+        public void TestTargetChainReorganize()
+        {
+            // initialize data
+            var chainedBlock0 = new ChainedBlock(blockHash: 0, previousBlockHash: 9999, height: 0, totalWork: 0);
+            var chainedBlock1 = new ChainedBlock(blockHash: 1, previousBlockHash: chainedBlock0.BlockHash, height: 1, totalWork: 1);
+            var chainedBlock2 = new ChainedBlock(blockHash: 2, previousBlockHash: chainedBlock1.BlockHash, height: 2, totalWork: 2);
+
+            var chainedBlock3A = new ChainedBlock(blockHash: 3, previousBlockHash: chainedBlock2.BlockHash, height: 3, totalWork: 3);
+            var chainedBlock4A = new ChainedBlock(blockHash: 4, previousBlockHash: chainedBlock3A.BlockHash, height: 4, totalWork: 4);
+            var chainedBlock5A = new ChainedBlock(blockHash: 5, previousBlockHash: chainedBlock4A.BlockHash, height: 5, totalWork: 5);
+
+            var chainedBlock3B = new ChainedBlock(blockHash: 103, previousBlockHash: chainedBlock2.BlockHash, height: 3, totalWork: 3);
+            var chainedBlock4B = new ChainedBlock(blockHash: 104, previousBlockHash: chainedBlock3B.BlockHash, height: 4, totalWork: 10);
+
+            // initialize storage
+            var memoryCacheContext = new CacheContext(new MemoryStorageContext());
+
+            // store genesis block
+            memoryCacheContext.ChainedBlockCache[chainedBlock0.BlockHash] = chainedBlock0;
+
+            // mock rules
+            var mockRules = new Mock<IBlockchainRules>();
+            mockRules.Setup(rules => rules.GenesisChainedBlock).Returns(chainedBlock0);
+
+            // initialize the target chain worker
+            using (var targetChainWorker = new TargetChainWorker(mockRules.Object, memoryCacheContext, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue))
+            {
+                // verify initial state
+                Assert.AreEqual(null, targetChainWorker.WinningBlock);
+                Assert.AreEqual(null, targetChainWorker.TargetChainedBlocks);
+
+                // monitor event firing
+                var workNotifyEvent = new AutoResetEvent(false);
+                var workStoppedEvent = new AutoResetEvent(false);
+                var onTargetChainChangedCount = 0;
+
+                targetChainWorker.OnNotifyWork += () => workNotifyEvent.Set();
+                targetChainWorker.OnWorkStopped += () => workStoppedEvent.Set();
+                targetChainWorker.OnTargetChainChanged += (sender, chainedBlock) => onTargetChainChangedCount++;
+
+                // start worker and wait for initial chain
+                targetChainWorker.Start();
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // verify chained to block 0
+                Assert.AreEqual(chainedBlock0, targetChainWorker.WinningBlock);
+                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                Assert.AreEqual(1, onTargetChainChangedCount);
+
+                // add block 1
+                memoryCacheContext.ChainedBlockCache[chainedBlock1.BlockHash] = chainedBlock1;
+
+                // wait for target block worker event
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // wait for worker
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // verify chained to block 1
+                Assert.AreEqual(chainedBlock1, targetChainWorker.WinningBlock);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                Assert.AreEqual(2, onTargetChainChangedCount);
+
+                // add block 2
+                memoryCacheContext.ChainedBlockCache[chainedBlock2.BlockHash] = chainedBlock2;
+
+                // wait for target block worker event
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // wait for worker
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // verify chained to block 2
+                Assert.AreEqual(chainedBlock2, targetChainWorker.WinningBlock);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                Assert.AreEqual(3, onTargetChainChangedCount);
+
+                // add block 3A
+                memoryCacheContext.ChainedBlockCache[chainedBlock3A.BlockHash] = chainedBlock3A;
+
+                // wait for target block worker event
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // wait for worker
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // verify chained to block 3A
+                Assert.AreEqual(chainedBlock3A, targetChainWorker.WinningBlock);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3A }, targetChainWorker.TargetChainedBlocks.BlockList);
+                Assert.AreEqual(4, onTargetChainChangedCount);
+
+                // add block 4A
+                memoryCacheContext.ChainedBlockCache[chainedBlock4A.BlockHash] = chainedBlock4A;
+
+                // wait for target block worker event
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // wait for worker
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // verify chained to block 4A
+                Assert.AreEqual(chainedBlock4A, targetChainWorker.WinningBlock);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3A, chainedBlock4A }, targetChainWorker.TargetChainedBlocks.BlockList);
+                Assert.AreEqual(5, onTargetChainChangedCount);
+
+                // add block 5A
+                memoryCacheContext.ChainedBlockCache[chainedBlock5A.BlockHash] = chainedBlock5A;
+
+                // wait for target block worker event
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // wait for worker
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // verify chained to block 5A
+                Assert.AreEqual(chainedBlock5A, targetChainWorker.WinningBlock);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3A, chainedBlock4A, chainedBlock5A }, targetChainWorker.TargetChainedBlocks.BlockList);
+                Assert.AreEqual(6, onTargetChainChangedCount);
+
+                // add block 3B
+                memoryCacheContext.ChainedBlockCache[chainedBlock3B.BlockHash] = chainedBlock3B;
+
+                // wait for worker
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // verify no chaining done
+                Assert.AreEqual(chainedBlock5A, targetChainWorker.WinningBlock);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3A, chainedBlock4A, chainedBlock5A }, targetChainWorker.TargetChainedBlocks.BlockList);
+                Assert.AreEqual(6, onTargetChainChangedCount);
+
+                // add block 4B
+                memoryCacheContext.ChainedBlockCache[chainedBlock4B.BlockHash] = chainedBlock4B;
+
+                // wait for target block worker event
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // wait for worker
+                workNotifyEvent.WaitOne();
+                workStoppedEvent.WaitOne();
+
+                // verify chained to block 4B
+                Assert.AreEqual(chainedBlock4B, targetChainWorker.WinningBlock);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3B, chainedBlock4B }, targetChainWorker.TargetChainedBlocks.BlockList);
+                Assert.AreEqual(7, onTargetChainChangedCount);
 
                 // verify no other work was done
                 Assert.IsFalse(workNotifyEvent.WaitOne(0));
