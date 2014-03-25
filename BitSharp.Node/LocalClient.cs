@@ -265,7 +265,7 @@ namespace BitSharp.Node
 
                     if (targetChainedBlocksLocal != null)
                     {
-                        this.requestBlockQueue = chainStateLocal.CurrentChainedBlocks.NavigateTowards(targetChainedBlocksLocal)
+                        this.requestBlockQueue = chainStateLocal.ChainedBlocks.NavigateTowards(targetChainedBlocksLocal)
                             .Select(x => x.Item2)
                             .Where(x => !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash))
                             .Take(MAX_BLOCK_REQUESTS * 10)
@@ -889,7 +889,7 @@ namespace BitSharp.Node
                 // send our local version
                 var nodeId = (((UInt64)random.Next()) << 32) + (UInt64)random.Next(); //TODO should be generated and verified on version message
 
-                var currentHeight = this.blockchainDaemon.ChainState.CurrentChainedBlocks.Height;
+                var currentHeight = this.blockchainDaemon.ChainState.Height;
                 await remoteNode.Sender.SendVersion(Messaging.GetExternalIPEndPoint(), remoteNode.RemoteEndPoint, nodeId, (UInt32)currentHeight);
 
                 // wait for our local version to be acknowledged by the remote peer

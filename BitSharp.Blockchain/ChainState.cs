@@ -1,4 +1,5 @@
-﻿using BitSharp.Data;
+﻿using BitSharp.Common;
+using BitSharp.Data;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -10,20 +11,44 @@ namespace BitSharp.Blockchain
 {
     public class ChainState
     {
-        private readonly ChainedBlocks currentChainedBlocks;
-        private readonly Utxo currentUtxo;
+        private readonly ChainedBlocks chainedBlocks;
+        private readonly Utxo utxo;
 
-        public ChainState(ChainedBlocks currentChainedBlocks, Utxo currentUtxo)
+        public ChainState(ChainedBlocks chainedBlocks, Utxo utxo)
         {
-            this.currentChainedBlocks = currentChainedBlocks;
-            this.currentUtxo = currentUtxo;
+            this.chainedBlocks = chainedBlocks;
+            this.utxo = utxo;
         }
 
-        public ChainedBlocks CurrentChainedBlocks { get { return this.currentChainedBlocks; } }
+        public ChainedBlocks ChainedBlocks { get { return this.chainedBlocks; } }
 
-        public Utxo CurrentUtxo { get { return this.currentUtxo; } }
+        public Utxo Utxo { get { return this.utxo; } }
 
-        public ChainedBlock CurrentBlock { get { return this.currentChainedBlocks.LastBlock; } }
+        public ChainedBlock LastBlock { get { return this.chainedBlocks.LastBlock; } }
+
+        public UInt256 LastBlockHash
+        {
+            get
+            {
+                var lastBlockLocal = this.LastBlock;
+                if (lastBlockLocal != null)
+                    return this.LastBlock.BlockHash;
+                else
+                    return UInt256.Zero;
+            }
+        }
+
+        public int Height
+        {
+            get
+            {
+                var lastBlockLocal = this.LastBlock;
+                if (lastBlockLocal != null)
+                    return this.LastBlock.Height;
+                else
+                    return -1;
+            }
+        }
 
         public static ChainState CreateForGenesisBlock(ChainedBlock genesisBlock)
         {

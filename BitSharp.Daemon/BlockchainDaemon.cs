@@ -156,9 +156,9 @@ namespace BitSharp.Daemon
                 var chainStateBuilderLocal = this.chainStateWorker.ChainStateBuilder;
 
                 if (chainStateBuilderLocal != null)
-                    return chainStateBuilderLocal.ChainedBlocks.Height;
+                    return chainStateBuilderLocal.Height;
                 else
-                    return chainStateLocal.CurrentBlock.Height;
+                    return chainStateLocal.Height;
             }
         }
 

@@ -222,19 +222,19 @@ namespace BitSharp.Blockchain
             var blockTarget = block.Header.CalculateTarget();
             if (blockTarget > requiredTarget)
             {
-                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Block target {2} did not match required target of {3}".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height, blockTarget.ToHexNumberString(), requiredTarget.ToHexNumberString()));
+                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Block target {2} did not match required target of {3}".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.Height, blockTarget.ToHexNumberString(), requiredTarget.ToHexNumberString()));
             }
 
             // validate block's proof of work against its stated target
             if (block.Hash > blockTarget || block.Hash > requiredTarget)
             {
-                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Block did not match its own target of {2}".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height, blockTarget.ToHexNumberString()));
+                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Block did not match its own target of {2}".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.Height, blockTarget.ToHexNumberString()));
             }
 
             // ensure there is at least 1 transaction
             if (block.Transactions.Count == 0)
             {
-                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Zero transactions present".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height));
+                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Zero transactions present".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.Height));
             }
 
             //TODO apply real coinbase rule
@@ -244,7 +244,7 @@ namespace BitSharp.Blockchain
             // check that coinbase has only one input
             if (coinbaseTx.Inputs.Count != 1)
             {
-                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Coinbase transaction does not have exactly one input".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height));
+                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Coinbase transaction does not have exactly one input".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.Height));
             }
 
             // validate transactions in parallel
@@ -257,7 +257,7 @@ namespace BitSharp.Blockchain
 
                     long unspentValueInner;
                     //TODO utxo will not be correct at transaction if a tx hash is reused within the same block
-                    ValidateTransaction(chainStateBuilder.ChainedBlocks.Height, block, tx, txIndex, chainStateBuilder.Utxo, out unspentValueInner, prevInputTxes);
+                    ValidateTransaction(chainStateBuilder.Height, block, tx, txIndex, chainStateBuilder.Utxo, out unspentValueInner, prevInputTxes);
 
                     Interlocked.Add(ref unspentValue, unspentValueInner);
                 });
@@ -281,8 +281,8 @@ namespace BitSharp.Blockchain
 
             // calculate the expected reward in coinbase
             var expectedReward = (long)(50 * SATOSHI_PER_BTC);
-            if (chainStateBuilder.ChainedBlocks.Height / 210000 <= 32)
-                expectedReward /= (long)Math.Pow(2, chainStateBuilder.ChainedBlocks.Height / 210000);
+            if (chainStateBuilder.Height / 210000 <= 32)
+                expectedReward /= (long)Math.Pow(2, chainStateBuilder.Height / 210000);
             expectedReward += unspentValue;
 
             // calculate the actual reward in coinbase
@@ -293,7 +293,7 @@ namespace BitSharp.Blockchain
             // ensure coinbase has correct reward
             if (actualReward > expectedReward)
             {
-                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Coinbase value is greater than reward + fees".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.ChainedBlocks.Height));
+                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Coinbase value is greater than reward + fees".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.Height));
             }
 
             // all validation has passed

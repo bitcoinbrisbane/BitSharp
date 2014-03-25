@@ -62,7 +62,7 @@ namespace BitSharp.Daemon
                 var chainStateLocal = this.chainState;
 
                 if (this.chainStateBuilder != null
-                    && this.chainStateBuilder.ChainedBlocks.LastBlock.BlockHash != chainStateLocal.CurrentBlock.BlockHash
+                    && this.chainStateBuilder.LastBlockHash != chainStateLocal.LastBlockHash
                     && DateTime.UtcNow - this.chainStateBuilderTime > TimeSpan.FromSeconds(MAX_BUILDER_LIFETIME_SECONDS))
                 {
                     var newChainedBlocks = this.chainStateBuilder.ChainedBlocks.ToImmutable();
@@ -81,8 +81,8 @@ namespace BitSharp.Daemon
                     this.chainStateBuilder =
                         new ChainStateBuilder
                         (
-                            chainStateLocal.CurrentChainedBlocks.ToBuilder(),
-                            new UtxoBuilder(this.cacheContext, chainStateLocal.CurrentUtxo)
+                            chainStateLocal.ChainedBlocks.ToBuilder(),
+                            new UtxoBuilder(this.cacheContext, chainStateLocal.Utxo)
                         );
                 }
 
@@ -148,7 +148,7 @@ namespace BitSharp.Daemon
 
                 //TODO stop gap
                 if (oldChainState != null)
-                    oldChainState.CurrentUtxo.DisposeDelete();
+                    oldChainState.Utxo.DisposeDelete();
             }
             finally
             {

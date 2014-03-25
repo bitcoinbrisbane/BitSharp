@@ -101,7 +101,7 @@ namespace BitSharp.Blockchain
 
                     var txInterval = 100.THOUSAND();
                     if (
-                        chainStateBuilder.ChainedBlocks.Height % 10.THOUSAND() == 0
+                        chainStateBuilder.Height % 10.THOUSAND() == 0
                         || (chainStateBuilder.Stats.totalTxCount % txInterval < (chainStateBuilder.Stats.totalTxCount - txCount) % txInterval || txCount >= txInterval))
                     {
                         LogBlockchainProgress(chainStateBuilder);
@@ -141,7 +141,7 @@ namespace BitSharp.Blockchain
                 )
                 .Format2
                 (
-                /*0*/ chainStateBuilder.ChainedBlocks.Height.ToString("#,##0"),
+                /*0*/ chainStateBuilder.Height.ToString("#,##0"),
                 /*1*/ chainStateBuilder.Stats.totalStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
                 /*2*/ chainStateBuilder.Stats.validateStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
                 /*3*/ currentBlockRate.ToString("#,##0"),
@@ -188,7 +188,7 @@ namespace BitSharp.Blockchain
 
         private void RollbackUtxo(ChainStateBuilder chainStateBuilder, Block block)
         {
-            var blockHeight = chainStateBuilder.ChainedBlocks.Height;
+            var blockHeight = chainStateBuilder.Height;
             var utxoBuilder = chainStateBuilder.Utxo;
 
             for (var txIndex = block.Transactions.Count - 1; txIndex >= 1; txIndex--)
@@ -196,19 +196,19 @@ namespace BitSharp.Blockchain
                 var tx = block.Transactions[txIndex];
 
                 // remove outputs
-                utxoBuilder.Unmint(tx, chainStateBuilder.ChainedBlocks.LastBlock);
+                utxoBuilder.Unmint(tx, chainStateBuilder.LastBlock);
 
                 // remove inputs in reverse order
                 for (var inputIndex = tx.Inputs.Count - 1; inputIndex >= 0; inputIndex--)
                 {
                     var input = tx.Inputs[inputIndex];
-                    utxoBuilder.Unspend(input, chainStateBuilder.ChainedBlocks.LastBlock);
+                    utxoBuilder.Unspend(input, chainStateBuilder.LastBlock);
                 }
             }
 
             // remove coinbase outputs
             var coinbaseTx = block.Transactions[0];
-            utxoBuilder.Unmint(coinbaseTx, chainStateBuilder.ChainedBlocks.LastBlock);
+            utxoBuilder.Unmint(coinbaseTx, chainStateBuilder.LastBlock);
         }
 
         public void RevalidateBlockchain(ChainedBlocks blockchain, Block genesisBlock)
