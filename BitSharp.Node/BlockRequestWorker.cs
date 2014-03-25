@@ -136,24 +136,24 @@ namespace BitSharp.Node
             foreach (var peer in this.localClient.ConnectedPeers)
             {
                 // retrieve the peer's currently requested blocks
-                var blockRequests = this.blockRequestsByPeer.AddOrUpdate(
+                var peerBlockRequests = this.blockRequestsByPeer.AddOrUpdate(
                     peer.Key,
                     addKey => new ConcurrentDictionary<UInt256, DateTime>(),
                     (existingKey, existingValue) => existingValue);
 
                 // remove any stale requests from the peer's list of requests
-                blockRequests.RemoveWhere(x => (now - x.Value) > TimeSpan.FromSeconds(STALE_REQUEST_SECONDS));
+                peerBlockRequests.RemoveWhere(x => (now - x.Value) > TimeSpan.FromSeconds(STALE_REQUEST_SECONDS));
 
                 // determine the number of requests that can be sent to the peer
-                var requestCount = REQUESTS_PER_PEER - blockRequests.Count;
+                var requestCount = REQUESTS_PER_PEER - peerBlockRequests.Count;
                 if (requestCount > 0)
                 {
                     // iterate through the blocks that should be requested for this peer
                     var invVectors = new List<InventoryVector>();
-                    foreach (var requestBlock in GetRequestBlocksForPeer(requestCount))
+                    foreach (var requestBlock in GetRequestBlocksForPeer(requestCount, peerBlockRequests))
                     {
                         // track block requests
-                        blockRequests[requestBlock] = now;
+                        peerBlockRequests[requestBlock] = now;
                         this.allBlockRequests[requestBlock] = now;
 
                         // add block to inv request
@@ -170,7 +170,7 @@ namespace BitSharp.Node
                 this.NotifyWork();
         }
 
-        private IEnumerable<UInt256> GetRequestBlocksForPeer(int count)
+        private IEnumerable<UInt256> GetRequestBlocksForPeer(int count, ConcurrentDictionary<UInt256, DateTime> peerBlockRequests)
         {
             if (count < 0)
                 throw new ArgumentOutOfRangeException("count");
@@ -181,11 +181,14 @@ namespace BitSharp.Node
             var currentCount = 0;
             foreach (var missingBlock in this.missingBlockQueue)
             {
-                yield return missingBlock.BlockHash;
+                if (!peerBlockRequests.ContainsKey(missingBlock.BlockHash))
+                {
+                    yield return missingBlock.BlockHash;
 
-                currentCount++;
-                if (currentCount >= count)
-                    yield break;
+                    currentCount++;
+                    if (currentCount >= count)
+                        yield break;
+                }
             }
 
             // iterate through the blocks on the target chain, each peer will request a separate chunk of blocks
@@ -193,7 +196,8 @@ namespace BitSharp.Node
             {
                 var requestBlock = this.targetChainQueue[this.targetChainQueueIndex].BlockHash;
 
-                if (!this.allBlockRequests.ContainsKey(requestBlock)
+                if (!peerBlockRequests.ContainsKey(requestBlock)
+                    && !this.allBlockRequests.ContainsKey(requestBlock)
                     && !this.cacheContext.BlockView.ContainsKey(requestBlock))
                 {
                     yield return requestBlock;
@@ -209,10 +213,10 @@ namespace BitSharp.Node
             DateTime ignore;
             this.allBlockRequests.TryRemove(block.Hash, out ignore);
 
-            ConcurrentDictionary<UInt256, DateTime> blockRequests;
-            if (this.blockRequestsByPeer.TryGetValue(remoteNode.RemoteEndPoint, out blockRequests))
+            ConcurrentDictionary<UInt256, DateTime> peerBlockRequests;
+            if (this.blockRequestsByPeer.TryGetValue(remoteNode.RemoteEndPoint, out peerBlockRequests))
             {
-                blockRequests.TryRemove(block.Hash, out ignore);
+                peerBlockRequests.TryRemove(block.Hash, out ignore);
             }
 
             this.NotifyWork();
