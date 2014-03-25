@@ -465,5 +465,10 @@ namespace BitSharp.Common.ExtensionMethods
         {
             builder.InsertRange(builder.Count, items);
         }
+
+        public static void RemoveWhere<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, Func<KeyValuePair<TKey, TValue>, bool> predicate)
+        {
+            dictionary.RemoveRange(dictionary.Where(predicate).Select(x => x.Key));
+        }
     }
 }
