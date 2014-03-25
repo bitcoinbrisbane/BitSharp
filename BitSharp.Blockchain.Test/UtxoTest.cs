@@ -21,7 +21,7 @@ namespace BitSharp.Blockchain.Test
             // prepare utxo storage
             var utxoDictionary = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
 
-            // prepare unspent transaction
+            // prepare unspent output
             var txHash = new UInt256(0);
             utxoDictionary.Add(txHash, new UnspentTx(txHash, length: 1, state: OutputState.Unspent));
 
@@ -45,7 +45,7 @@ namespace BitSharp.Blockchain.Test
             // prepare utxo storage
             var utxoDictionary = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
 
-            // prepare spent transaction
+            // prepare spent output
             var txHash = new UInt256(0);
             utxoDictionary.Add(txHash, new UnspentTx(txHash, length: 1, state: OutputState.Spent));
 
@@ -89,7 +89,7 @@ namespace BitSharp.Blockchain.Test
             // prepare utxo storage
             var utxoDictionary = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
 
-            // prepare unspent transaction
+            // prepare unspent output
             var txHash = new UInt256(0);
             utxoDictionary.Add(txHash, new UnspentTx(txHash, length: 1, state: OutputState.Unspent));
 
@@ -103,7 +103,7 @@ namespace BitSharp.Blockchain.Test
             // check if output can be spent
             var canSpend = utxo.CanSpend(prevTxOutput);
 
-            // verify transaction cannot be spent
+            // verify output cannot be spent
             Assert.IsFalse(canSpend);
         }
 
@@ -114,7 +114,7 @@ namespace BitSharp.Blockchain.Test
             // prepare utxo storage
             var utxoDictionary = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
 
-            // prepare unspent transaction
+            // prepare unspent output
             var txHash = new UInt256(0);
             utxoDictionary.Add(txHash, new UnspentTx(txHash, length: 1, state: OutputState.Unspent));
 
@@ -128,7 +128,7 @@ namespace BitSharp.Blockchain.Test
             // check if output can be spent
             var canSpend = utxo.CanSpend(prevTxOutput);
 
-            // verify transaction cannot be spent
+            // verify output cannot be spent
             Assert.IsFalse(canSpend);
         }
     }
