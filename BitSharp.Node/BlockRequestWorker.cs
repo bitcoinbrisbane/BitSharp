@@ -22,6 +22,7 @@ namespace BitSharp.Node
         private const int REQUESTS_PER_PEER = 10;
         private const int UPCOMING_AS_MISSING_CHUNK_COUNT = 100;
         private const int TARGET_CHAIN_CHUNK_COUNT = 1000;
+        private const int MAX_TARGET_CHAIN_LOOKAHEAD = 10000;
         private const int STALE_REQUEST_SECONDS = 60;
 
         private readonly LocalClient localClient;
@@ -114,6 +115,7 @@ namespace BitSharp.Node
             {
                 this.targetChainQueue = currentChainLocal.NavigateTowards(targetChainLocal)
                     .Select(x => x.Item2)
+                    .Where(x => x.Height - currentChainLocal.Height <= MAX_TARGET_CHAIN_LOOKAHEAD)
                     .Where(x => !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash))
                     .Take(TARGET_CHAIN_CHUNK_COUNT)
                     .ToList();
