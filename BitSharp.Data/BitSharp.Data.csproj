@@ -76,7 +76,6 @@
     <Compile Include="BlockchainPathBuilder.cs" />
     <Compile Include="BlockchainPath.cs" />
     <Compile Include="ChainedBlock.cs" />
-    <Compile Include="ChainState.cs" />
     <Compile Include="ChainedBlocks.cs" />
     <Compile Include="DataCalculator.cs" />
     <Compile Include="GenesisUtxo.cs" />
