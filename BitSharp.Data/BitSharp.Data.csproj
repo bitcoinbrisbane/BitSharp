@@ -75,6 +75,7 @@
   <ItemGroup>
     <Compile Include="BlockchainPathBuilder.cs" />
     <Compile Include="BlockchainPath.cs" />
+    <Compile Include="ChainBuilder.cs" />
     <Compile Include="ChainedBlock.cs" />
     <Compile Include="Chain.cs" />
     <Compile Include="DataCalculator.cs" />
