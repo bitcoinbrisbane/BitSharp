@@ -19,7 +19,7 @@ namespace BitSharp.Node
 {
     public class BlockRequestWorker : Worker
     {
-        private const int REQUESTS_PER_PEER = 10;
+        private const int REQUESTS_PER_PEER = 100;
         private const int UPCOMING_AS_MISSING_CHUNK_COUNT = 100;
         private const int TARGET_CHAIN_CHUNK_COUNT = 1000;
         private const int MAX_TARGET_CHAIN_LOOKAHEAD = 10000;
