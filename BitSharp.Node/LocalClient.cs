@@ -266,10 +266,10 @@ namespace BitSharp.Node
                     if (targetChainedBlocksLocal != null)
                     {
                         this.requestBlockQueue = chainStateLocal.CurrentChainedBlocks.NavigateTowards(targetChainedBlocksLocal)
-                                .Select(x => x.Item2)
-                                .Where(x => !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash))
-                                .Take(MAX_BLOCK_REQUESTS * 10)
-                                .ToList();
+                            .Select(x => x.Item2)
+                            .Where(x => !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash))
+                            .Take(MAX_BLOCK_REQUESTS * 10)
+                            .ToList();
                         this.requestBlockQueueIndex = 0;
                     }
                 }
