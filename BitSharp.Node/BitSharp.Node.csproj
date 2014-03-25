@@ -83,6 +83,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BlockRequestWorker.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="LocalClient.cs" />
