@@ -47,6 +47,8 @@ namespace BitSharp.Network
 
         public async Task SendBlock(Block block)
         {
+            await Task.Yield();
+
             var sendBlockMessage = Messaging.ConstructMessage("block", NetworkEncoder.EncodeBlock(block));
             
             await SendMessageAsync(sendBlockMessage);
@@ -59,8 +61,7 @@ namespace BitSharp.Network
 
         public async Task SendGetData(ImmutableArray<InventoryVector> invVectors)
         {
-            //TODO
-            await Task.Delay(0);
+            await Task.Yield();
 
             var getDataPayload = Messaging.ConstructInventoryPayload(invVectors);
             var getDataMessage = Messaging.ConstructMessage("getdata", NetworkEncoder.EncodeInventoryPayload(getDataPayload));
@@ -70,6 +71,8 @@ namespace BitSharp.Network
 
         public async Task SendGetHeaders(ImmutableArray<UInt256> blockLocatorHashes, UInt256 hashStop)
         {
+            await Task.Yield();
+
             var getHeadersPayload = Messaging.ConstructGetBlocksPayload(blockLocatorHashes, hashStop);
             var getBlocksMessage = Messaging.ConstructMessage("getheaders", NetworkEncoder.EncodeGetBlocksPayload(getHeadersPayload));
 
@@ -78,6 +81,8 @@ namespace BitSharp.Network
 
         public async Task SendGetBlocks(ImmutableArray<UInt256> blockLocatorHashes, UInt256 hashStop)
         {
+            await Task.Yield();
+
             var getBlocksPayload = Messaging.ConstructGetBlocksPayload(blockLocatorHashes, hashStop);
             var getBlocksMessage = Messaging.ConstructMessage("getblocks", NetworkEncoder.EncodeGetBlocksPayload(getBlocksPayload));
 
@@ -86,6 +91,8 @@ namespace BitSharp.Network
 
         public async Task SendHeaders(ImmutableArray<BlockHeader> blockHeaders)
         {
+            await Task.Yield();
+
             using (var payloadStream = new MemoryStream())
             using (var payloadWriter = new BinaryWriter(payloadStream))
             {
@@ -102,6 +109,8 @@ namespace BitSharp.Network
 
         public async Task SendInventory(ImmutableArray<InventoryVector> invVectors)
         {
+            await Task.Yield();
+
             var invPayload = Messaging.ConstructInventoryPayload(invVectors);
             var invMessage = Messaging.ConstructMessage("inv", NetworkEncoder.EncodeInventoryPayload(invPayload));
 
@@ -110,6 +119,8 @@ namespace BitSharp.Network
 
         public async Task SendTransaction(Transaction transaction)
         {
+            await Task.Yield();
+
             var sendTxMessage = Messaging.ConstructMessage("tx", NetworkEncoder.EncodeTransaction(transaction));
 
             await SendMessageAsync(sendTxMessage);
@@ -117,6 +128,8 @@ namespace BitSharp.Network
 
         public async Task SendVersion(IPEndPoint localEndPoint, IPEndPoint remoteEndPoint, UInt64 nodeId, UInt32 startBlockHeight)
         {
+            await Task.Yield();
+
             var versionPayload = Messaging.ConstructVersionPayload(localEndPoint, remoteEndPoint, nodeId, startBlockHeight);
             var versionMessage = Messaging.ConstructMessage("version", NetworkEncoder.EncodeVersionPayload(versionPayload, withRelay: false));
 
