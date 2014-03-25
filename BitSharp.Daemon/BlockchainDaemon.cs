@@ -148,6 +148,20 @@ namespace BitSharp.Daemon
 
         public ChainState ChainState { get { return this.chainStateWorker.ChainState; } }
 
+        public Chain CurrentBuilderChain
+        {
+            get
+            {
+                var chainStateLocal = this.chainStateWorker.ChainState;
+                var chainStateBuilderLocal = this.chainStateWorker.ChainStateBuilder;
+
+                if (chainStateBuilderLocal != null)
+                    return chainStateBuilderLocal.Chain.ToImmutable();
+                else
+                    return chainStateLocal.Chain;
+            }
+        }
+
         public int CurrentBuilderHeight
         {
             get
