@@ -70,7 +70,7 @@ namespace BitSharp.Client
                 this.cacheContext = new CacheContext(this.storageContext);
 
 #if TEST_TOOL
-                this.rules = new ComparisonToolTestNetRules(this.cacheContext);
+                this.rules = new Testnet2Rules(this.cacheContext);
 #else
                 this.rules = new MainnetRules(this.cacheContext);
 #endif
