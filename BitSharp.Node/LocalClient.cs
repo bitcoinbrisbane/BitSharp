@@ -93,7 +93,7 @@ namespace BitSharp.Node
             this.requestTransactionsWorker = new WorkerMethod("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
             this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
-            this.blockchainDaemon.OnWinningBlockChanged += OnWinningBlockChanged;
+            this.blockchainDaemon.OnTargetChainChanged += OnTargetChainChanged;
 
             switch (this.Type)
             {
@@ -133,7 +133,7 @@ namespace BitSharp.Node
 
         public void Dispose()
         {
-            this.blockchainDaemon.OnWinningBlockChanged -= OnWinningBlockChanged;
+            this.blockchainDaemon.OnTargetChainChanged -= OnTargetChainChanged;
 
             this.shutdownToken.Cancel();
 
@@ -151,7 +151,7 @@ namespace BitSharp.Node
             }.DisposeList();
         }
 
-        private void OnWinningBlockChanged(object sender, EventArgs e)
+        private void OnTargetChainChanged(object sender, EventArgs e)
         {
             this.requestHeadersWorker.NotifyWork();
         }

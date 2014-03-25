@@ -33,9 +33,10 @@ namespace BitSharp.Daemon
     //TODO compact UTXO's and other immutables in the blockchains on a thread
     public class BlockchainDaemon : IDisposable
     {
-        public event EventHandler OnWinningBlockChanged;
-        public event EventHandler OnCurrentBlockchainChanged;
-        public event EventHandler OnCurrentBuilderHeightChanged;
+        public event EventHandler OnTargetBlockChanged;
+        public event EventHandler OnTargetChainChanged;
+        public event EventHandler OnChainStateChanged;
+        public event EventHandler OnChainStateBuilderChanged;
 
         private readonly ICacheContext cacheContext;
 
@@ -72,12 +73,20 @@ namespace BitSharp.Daemon
             this.targetChainWorker = new TargetChainWorker(rules, cacheContext, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
             this.chainStateWorker = new ChainStateWorker(rules, cacheContext, () => this.targetChainWorker.TargetChainedBlocks, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
 
+            this.targetChainWorker.OnTargetBlockChanged +=
+                () =>
+                {
+                    var handler = this.OnTargetBlockChanged;
+                    if (handler != null)
+                        handler(this, EventArgs.Empty);
+                };
+
             this.targetChainWorker.OnTargetChainChanged +=
-                (sender, targetBlock) =>
+                () =>
                 {
                     this.chainStateWorker.NotifyWork();
 
-                    var handler = this.OnWinningBlockChanged;
+                    var handler = this.OnTargetChainChanged;
                     if (handler != null)
                         handler(this, EventArgs.Empty);
                 };
@@ -85,7 +94,7 @@ namespace BitSharp.Daemon
             this.chainStateWorker.OnChainStateChanged +=
                 () =>
                 {
-                    var handler = this.OnCurrentBlockchainChanged;
+                    var handler = this.OnChainStateChanged;
                     if (handler != null)
                         handler(this, EventArgs.Empty);
                 };
@@ -93,7 +102,7 @@ namespace BitSharp.Daemon
             this.chainStateWorker.OnChainStateBuilderChanged +=
                 () =>
                 {
-                    var handler = this.OnCurrentBuilderHeightChanged;
+                    var handler = this.OnChainStateBuilderChanged;
                     if (handler != null)
                         handler(this, EventArgs.Empty);
                 };
@@ -121,15 +130,15 @@ namespace BitSharp.Daemon
 
         public ICacheContext CacheContext { get { return this.cacheContext; } }
 
-        public ChainedBlock WinningBlock { get { return this.targetChainWorker.WinningBlock; } }
+        public ChainedBlock TargetBlock { get { return this.targetChainWorker.TargetBlock; } }
 
-        public int WinningBlockHeight
+        public int TargetBlockHeight
         {
             get
             {
-                var winningBlockLocal = this.targetChainWorker.WinningBlock;
-                if (winningBlockLocal != null)
-                    return winningBlockLocal.Height;
+                var targetBlockLocal = this.targetChainWorker.TargetBlock;
+                if (targetBlockLocal != null)
+                    return targetBlockLocal.Height;
                 else
                     return -1;
             }

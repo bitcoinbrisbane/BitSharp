@@ -17,7 +17,8 @@ namespace BitSharp.Daemon
 {
     public class TargetChainWorker : Worker
     {
-        public event EventHandler<ChainedBlock> OnTargetChainChanged;
+        public event Action OnTargetBlockChanged;
+        public event Action OnTargetChainChanged;
 
         private readonly IBlockchainRules rules;
         private readonly ICacheContext cacheContext;
@@ -37,7 +38,7 @@ namespace BitSharp.Daemon
 
             this.targetBlockWorker = new TargetBlockWorker(cacheContext, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
 
-            this.targetBlockWorker.OnTargetBlockChanged += NotifyWork;
+            this.targetBlockWorker.OnTargetBlockChanged += HandleTargetBlockChanged;
             this.cacheContext.ChainedBlockCache.OnAddition += HandleChainedBlock;
             this.cacheContext.InvalidBlockCache.OnAddition += HandleInvalidBlock;
         }
@@ -57,7 +58,7 @@ namespace BitSharp.Daemon
 
         public ChainedBlocks TargetChainedBlocks { get { return this.targetChainedBlocks; } }
 
-        public ChainedBlock WinningBlock { get { return this.targetBlockWorker.TargetBlock; } }
+        public ChainedBlock TargetBlock { get { return this.targetBlockWorker.TargetBlock; } }
 
         internal TargetBlockWorker TargetBlockWorker { get { return this.targetBlockWorker; } }
 
@@ -122,10 +123,19 @@ namespace BitSharp.Daemon
 
                     var handler = this.OnTargetChainChanged;
                     if (handler != null)
-                        handler(this, targetBlockLocal);
+                        handler();
                 }
             }
             catch (MissingDataException) { }
+        }
+
+        private void HandleTargetBlockChanged()
+        {
+            this.NotifyWork();
+
+            var handler = this.OnTargetBlockChanged;
+            if (handler != null)
+                handler();
         }
 
         private void HandleChainedBlock(UInt256 blockHash, ChainedBlock chainedBlock)
