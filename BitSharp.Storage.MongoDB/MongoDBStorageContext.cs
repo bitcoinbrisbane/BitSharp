@@ -29,7 +29,7 @@ namespace BitSharp.Storage.MongoDB
         public MongoDBStorageContext(string baseDirectory, long cacheSizeMaxBytes)
         {
             var settings = MongoClientSettings.FromUrl(new MongoUrl("mongodb://localhost"));
-            settings.WriteConcern.W = 0;
+            //settings.WriteConcern.W = 0;
             //settings.WriteConcern.FSync = false;
             //settings.WriteConcern.Journal = false;
             this.client = new MongoClient(settings);
