@@ -46,7 +46,7 @@ namespace BitSharp.Daemon
         protected override void SubDispose()
         {
             // cleanup events
-            this.targetBlockWorker.OnTargetBlockChanged -= NotifyWork;
+            this.targetBlockWorker.OnTargetBlockChanged -= HandleTargetBlockChanged;
             this.cacheContext.ChainedBlockCache.OnAddition -= HandleChainedBlock;
             this.cacheContext.InvalidBlockCache.OnAddition -= HandleInvalidBlock;
 
@@ -132,7 +132,7 @@ namespace BitSharp.Daemon
         private void HandleTargetBlockChanged()
         {
             this.NotifyWork();
-
+            
             var handler = this.OnTargetBlockChanged;
             if (handler != null)
                 handler();
