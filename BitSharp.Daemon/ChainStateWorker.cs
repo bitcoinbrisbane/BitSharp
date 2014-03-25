@@ -22,7 +22,7 @@ namespace BitSharp.Daemon
         private readonly IBlockchainRules rules;
         private readonly ICacheContext cacheContext;
         private readonly BlockchainCalculator calculator;
-        private Func<ChainedBlocks> getTargetChainedBlocks;
+        private Func<Chain> getTargetChain;
 
         private ChainState chainState;
         private readonly ReaderWriterLockSlim chainStateLock;
@@ -30,13 +30,13 @@ namespace BitSharp.Daemon
         private ChainStateBuilder chainStateBuilder;
         private DateTime chainStateBuilderTime;
 
-        public ChainStateWorker(IBlockchainRules rules, ICacheContext cacheContext, Func<ChainedBlocks> getTargetChainedBlocks, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
+        public ChainStateWorker(IBlockchainRules rules, ICacheContext cacheContext, Func<Chain> getTargetChain, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
             : base("ChainStateWorker", initialNotify, minIdleTime, maxIdleTime)
         {
             this.rules = rules;
             this.cacheContext = cacheContext;
             this.calculator = new BlockchainCalculator(this.rules, this.cacheContext, this.ShutdownToken.Token);
-            this.getTargetChainedBlocks = getTargetChainedBlocks;
+            this.getTargetChain = getTargetChain;
 
             this.chainState = ChainState.CreateForGenesisBlock(this.rules.GenesisChainedBlock);
             this.chainStateLock = new ReaderWriterLockSlim();
@@ -65,13 +65,13 @@ namespace BitSharp.Daemon
                     && this.chainStateBuilder.LastBlockHash != chainStateLocal.LastBlockHash
                     && DateTime.UtcNow - this.chainStateBuilderTime > TimeSpan.FromSeconds(MAX_BUILDER_LIFETIME_SECONDS))
                 {
-                    var newChainedBlocks = this.chainStateBuilder.ChainedBlocks.ToImmutable();
-                    var newUtxo = this.chainStateBuilder.Utxo.Close(newChainedBlocks.LastBlock.BlockHash);
+                    var newChain = this.chainStateBuilder.Chain.ToImmutable();
+                    var newUtxo = this.chainStateBuilder.Utxo.Close(newChain.LastBlock.BlockHash);
 
                     this.chainStateBuilder.Dispose();
                     this.chainStateBuilder = null;
 
-                    UpdateCurrentBlockchain(new ChainState(newChainedBlocks, newUtxo));
+                    UpdateCurrentBlockchain(new ChainState(newChain, newUtxo));
                     chainStateLocal = this.chainState;
                 }
 
@@ -81,7 +81,7 @@ namespace BitSharp.Daemon
                     this.chainStateBuilder =
                         new ChainStateBuilder
                         (
-                            chainStateLocal.ChainedBlocks.ToBuilder(),
+                            chainStateLocal.Chain.ToBuilder(),
                             new UtxoBuilder(this.cacheContext, chainStateLocal.Utxo)
                         );
                 }
@@ -92,7 +92,7 @@ namespace BitSharp.Daemon
                     var startTime = new Stopwatch();
                     startTime.Start();
 
-                    this.calculator.CalculateBlockchainFromExisting(this.chainStateBuilder, getTargetChainedBlocks, cancelToken.Token,
+                    this.calculator.CalculateBlockchainFromExisting(this.chainStateBuilder, getTargetChain, cancelToken.Token,
                         () =>
                         {
                             var handler = this.OnChainStateBuilderChanged;

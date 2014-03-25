@@ -21,7 +21,7 @@ namespace BitSharp.Daemon
         private readonly IBlockchainRules rules;
         private readonly ICacheContext cacheContext;
         private readonly ConcurrentQueue<BlockHeader> blockHeaders;
-        private readonly Dictionary<UInt256, Dictionary<UInt256, BlockHeader>> unchainedBlocksByPrevious;
+        private readonly Dictionary<UInt256, Dictionary<UInt256, BlockHeader>> unchainByPrevious;
 
         public ChainingWorker(IBlockchainRules rules, ICacheContext cacheContext, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
             : base("ChainingWorker", initialNotify, minIdleTime, maxIdleTime)
@@ -29,7 +29,7 @@ namespace BitSharp.Daemon
             this.rules = rules;
             this.cacheContext = cacheContext;
             this.blockHeaders = new ConcurrentQueue<BlockHeader>();
-            this.unchainedBlocksByPrevious = new Dictionary<UInt256, Dictionary<UInt256, BlockHeader>>();
+            this.unchainByPrevious = new Dictionary<UInt256, Dictionary<UInt256, BlockHeader>>();
 
             this.cacheContext.BlockHeaderCache.OnAddition += ChainBlockHeader;
             this.QueueAllBlockHeaders();
@@ -41,11 +41,11 @@ namespace BitSharp.Daemon
             this.cacheContext.BlockHeaderCache.OnAddition -= ChainBlockHeader;
         }
 
-        public IReadOnlyDictionary<UInt256, IReadOnlyDictionary<UInt256, BlockHeader>> UnchainedBlocksByPrevious
+        public IReadOnlyDictionary<UInt256, IReadOnlyDictionary<UInt256, BlockHeader>> UnchainByPrevious
         {
             get
             {
-                return this.unchainedBlocksByPrevious.AsReadOnly();
+                return this.unchainByPrevious.AsReadOnly();
             }
         }
 
@@ -84,30 +84,30 @@ namespace BitSharp.Daemon
                                 totalWork: prevChainedBlock.TotalWork + blockHeader.CalculateWork()
                             );
 
-                        if (this.unchainedBlocksByPrevious.ContainsKey(blockHeader.Hash))
+                        if (this.unchainByPrevious.ContainsKey(blockHeader.Hash))
                         {
-                            this.blockHeaders.EnqueueRange(this.unchainedBlocksByPrevious[blockHeader.Hash].Values);
+                            this.blockHeaders.EnqueueRange(this.unchainByPrevious[blockHeader.Hash].Values);
                         }
 
-                        if (this.unchainedBlocksByPrevious.ContainsKey(blockHeader.PreviousBlock))
+                        if (this.unchainByPrevious.ContainsKey(blockHeader.PreviousBlock))
                         {
-                            this.unchainedBlocksByPrevious[blockHeader.PreviousBlock].Remove(blockHeader.Hash);
-                            if (this.unchainedBlocksByPrevious[blockHeader.PreviousBlock].Count == 0)
-                                this.unchainedBlocksByPrevious.Remove(blockHeader.PreviousBlock);
+                            this.unchainByPrevious[blockHeader.PreviousBlock].Remove(blockHeader.Hash);
+                            if (this.unchainByPrevious[blockHeader.PreviousBlock].Count == 0)
+                                this.unchainByPrevious.Remove(blockHeader.PreviousBlock);
                         }
                     }
                     else
                     {
-                        if (!this.unchainedBlocksByPrevious.ContainsKey(blockHeader.PreviousBlock))
-                            this.unchainedBlocksByPrevious[blockHeader.PreviousBlock] = new Dictionary<UInt256, BlockHeader>();
-                        this.unchainedBlocksByPrevious[blockHeader.PreviousBlock][blockHeader.Hash] = blockHeader;
+                        if (!this.unchainByPrevious.ContainsKey(blockHeader.PreviousBlock))
+                            this.unchainByPrevious[blockHeader.PreviousBlock] = new Dictionary<UInt256, BlockHeader>();
+                        this.unchainByPrevious[blockHeader.PreviousBlock][blockHeader.Hash] = blockHeader;
                     }
                 }
                 else
                 {
-                    if (this.unchainedBlocksByPrevious.ContainsKey(blockHeader.Hash))
+                    if (this.unchainByPrevious.ContainsKey(blockHeader.Hash))
                     {
-                        this.blockHeaders.EnqueueRange(this.unchainedBlocksByPrevious[blockHeader.Hash].Values);
+                        this.blockHeaders.EnqueueRange(this.unchainByPrevious[blockHeader.Hash].Values);
                     }
                 }
             }

@@ -47,7 +47,7 @@ namespace BitSharp.Daemon.Test
             {
                 // verify initial state
                 Assert.AreEqual(null, targetChainWorker.TargetBlock);
-                Assert.AreEqual(null, targetChainWorker.TargetChainedBlocks);
+                Assert.AreEqual(null, targetChainWorker.TargetChain);
 
                 // monitor event firing
                 var workNotifyEvent = new AutoResetEvent(false);
@@ -65,7 +65,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify chained to block 0
                 Assert.AreEqual(chainedBlock0, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(1, onTargetChainChangedCount);
 
                 // add block 1
@@ -80,7 +80,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify chained to block 1
                 Assert.AreEqual(chainedBlock1, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1 }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(2, onTargetChainChangedCount);
 
                 // add block 2
@@ -95,7 +95,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify chained to block 2
                 Assert.AreEqual(chainedBlock2, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2 }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(3, onTargetChainChangedCount);
 
                 // verify no other work was done
@@ -129,7 +129,7 @@ namespace BitSharp.Daemon.Test
             {
                 // verify initial state
                 Assert.AreEqual(null, targetChainWorker.TargetBlock);
-                Assert.AreEqual(null, targetChainWorker.TargetChainedBlocks);
+                Assert.AreEqual(null, targetChainWorker.TargetChain);
 
                 // monitor event firing
                 var workNotifyEvent = new AutoResetEvent(false);
@@ -147,7 +147,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify chained to block 0
                 Assert.AreEqual(chainedBlock0, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(1, onTargetChainChangedCount);
 
                 // add block 4
@@ -162,7 +162,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify no work done, but the target block should still be updated
                 Assert.AreEqual(chainedBlock4, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(1, onTargetChainChangedCount);
 
                 // add block 3
@@ -174,7 +174,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify no work done
                 Assert.AreEqual(chainedBlock4, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(1, onTargetChainChangedCount);
 
                 // add block 2
@@ -186,7 +186,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify no work done
                 Assert.AreEqual(chainedBlock4, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(1, onTargetChainChangedCount);
 
                 // add block 1
@@ -198,7 +198,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify chained to block 4
                 Assert.AreEqual(chainedBlock4, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3, chainedBlock4 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3, chainedBlock4 }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(2, onTargetChainChangedCount);
 
                 // verify no other work was done
@@ -237,7 +237,7 @@ namespace BitSharp.Daemon.Test
             {
                 // verify initial state
                 Assert.AreEqual(null, targetChainWorker.TargetBlock);
-                Assert.AreEqual(null, targetChainWorker.TargetChainedBlocks);
+                Assert.AreEqual(null, targetChainWorker.TargetChain);
 
                 // monitor event firing
                 var workNotifyEvent = new AutoResetEvent(false);
@@ -255,7 +255,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify chained to block 0
                 Assert.AreEqual(chainedBlock0, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0 }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(1, onTargetChainChangedCount);
 
                 // add block 1
@@ -270,7 +270,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify chained to block 1
                 Assert.AreEqual(chainedBlock1, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1 }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(2, onTargetChainChangedCount);
 
                 // add block 2
@@ -285,7 +285,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify chained to block 2
                 Assert.AreEqual(chainedBlock2, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2 }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2 }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(3, onTargetChainChangedCount);
 
                 // add block 3A
@@ -300,7 +300,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify chained to block 3A
                 Assert.AreEqual(chainedBlock3A, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3A }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3A }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(4, onTargetChainChangedCount);
 
                 // add block 4A
@@ -315,7 +315,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify chained to block 4A
                 Assert.AreEqual(chainedBlock4A, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3A, chainedBlock4A }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3A, chainedBlock4A }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(5, onTargetChainChangedCount);
 
                 // add block 5A
@@ -330,7 +330,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify chained to block 5A
                 Assert.AreEqual(chainedBlock5A, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3A, chainedBlock4A, chainedBlock5A }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3A, chainedBlock4A, chainedBlock5A }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(6, onTargetChainChangedCount);
 
                 // add block 3B
@@ -342,7 +342,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify no chaining done
                 Assert.AreEqual(chainedBlock5A, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3A, chainedBlock4A, chainedBlock5A }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3A, chainedBlock4A, chainedBlock5A }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(6, onTargetChainChangedCount);
 
                 // add block 4B
@@ -357,7 +357,7 @@ namespace BitSharp.Daemon.Test
 
                 // verify chained to block 4B
                 Assert.AreEqual(chainedBlock4B, targetChainWorker.TargetBlock);
-                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3B, chainedBlock4B }, targetChainWorker.TargetChainedBlocks.BlockList);
+                AssertBlockListEquals(new[] { chainedBlock0, chainedBlock1, chainedBlock2, chainedBlock3B, chainedBlock4B }, targetChainWorker.TargetChain.BlockList);
                 Assert.AreEqual(7, onTargetChainChangedCount);
 
                 // verify no other work was done

@@ -12,13 +12,13 @@ namespace BitSharp.Blockchain
 {
     public class ChainStateBuilder
     {
-        private readonly ChainedBlocksBuilder chainedBlocks;
+        private readonly ChainBuilder chain;
         private readonly UtxoBuilder utxo;
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(ChainedBlocksBuilder chainedBlocks, UtxoBuilder utxo)
+        public ChainStateBuilder(ChainBuilder chain, UtxoBuilder utxo)
         {
-            this.chainedBlocks = chainedBlocks;
+            this.chain = chain;
             this.utxo = utxo;
             this.stats = new BuilderStats();
             this.IsConsistent = true;
@@ -31,11 +31,11 @@ namespace BitSharp.Blockchain
 
         public bool IsConsistent { get; set; }
 
-        public ChainedBlocksBuilder ChainedBlocks { get { return this.chainedBlocks; } }
+        public ChainBuilder Chain { get { return this.chain; } }
 
         public UtxoBuilder Utxo { get { return this.utxo; } }
 
-        public ChainedBlock LastBlock { get { return this.chainedBlocks.LastBlock; } }
+        public ChainedBlock LastBlock { get { return this.chain.LastBlock; } }
 
         public UInt256 LastBlockHash
         {

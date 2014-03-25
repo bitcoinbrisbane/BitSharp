@@ -76,7 +76,7 @@
     <Compile Include="BlockchainPathBuilder.cs" />
     <Compile Include="BlockchainPath.cs" />
     <Compile Include="ChainedBlock.cs" />
-    <Compile Include="ChainedBlocks.cs" />
+    <Compile Include="Chain.cs" />
     <Compile Include="DataCalculator.cs" />
     <Compile Include="OutputStates.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

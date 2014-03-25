@@ -101,17 +101,17 @@ namespace BitSharp.Client
         public void ViewBlockchainFirst()
         {
             var chainStateLocal = this.blockchainDaemon.ChainState;
-            if (chainStateLocal.ChainedBlocks.BlockList.Count == 0)
+            if (chainStateLocal.Chain.BlockList.Count == 0)
                 return;
 
-            var targetBlock = chainStateLocal.ChainedBlocks.BlockList.First();
+            var targetBlock = chainStateLocal.Chain.BlockList.First();
             SetViewBlockchain(targetBlock);
         }
 
         public void ViewBlockchainPrevious()
         {
             var chainStateLocal = this.blockchainDaemon.ChainState;
-            if (chainStateLocal.ChainedBlocks.BlockList.Count == 0)
+            if (chainStateLocal.Chain.BlockList.Count == 0)
                 return;
 
             var height = this.viewChainState.Height - 1;
@@ -125,7 +125,7 @@ namespace BitSharp.Client
         public void ViewBlockchainNext()
         {
             var chainStateLocal = this.blockchainDaemon.ChainState;
-            if (chainStateLocal.ChainedBlocks.BlockList.Count == 0)
+            if (chainStateLocal.Chain.BlockList.Count == 0)
                 return;
 
             var height = this.viewChainState.Height + 1;

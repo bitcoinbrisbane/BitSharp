@@ -149,23 +149,23 @@ namespace BitSharp.Blockchain
             return new UInt256(targetBytes);
         }
 
-        public virtual UInt256 GetRequiredNextTarget(ChainedBlocks chainedBlocks)
+        public virtual UInt256 GetRequiredNextTarget(Chain chain)
         {
             try
             {
                 // genesis block, use its target
-                if (chainedBlocks.Height == 0)
+                if (chain.Height == 0)
                 {
                     // lookup genesis block header
-                    var genesisBlockHeader = this.CacheContext.BlockHeaderCache[chainedBlocks.BlockList[0].BlockHash];
+                    var genesisBlockHeader = this.CacheContext.BlockHeaderCache[chain.BlockList[0].BlockHash];
 
                     return genesisBlockHeader.CalculateTarget();
                 }
                 // not on an adjustment interval, use previous block's target
-                else if (chainedBlocks.Height % DifficultyInternal != 0)
+                else if (chain.Height % DifficultyInternal != 0)
                 {
                     // lookup the previous block on the current blockchain
-                    var prevBlockHeader = this.CacheContext.BlockHeaderCache[chainedBlocks.LastBlock.PreviousBlockHash];
+                    var prevBlockHeader = this.CacheContext.BlockHeaderCache[chain.LastBlock.PreviousBlockHash];
 
                     return prevBlockHeader.CalculateTarget();
                 }
@@ -173,10 +173,10 @@ namespace BitSharp.Blockchain
                 else
                 {
                     // lookup the previous block on the current blockchain
-                    var prevBlockHeader = this.CacheContext.BlockHeaderCache[chainedBlocks.LastBlock.PreviousBlockHash];
+                    var prevBlockHeader = this.CacheContext.BlockHeaderCache[chain.LastBlock.PreviousBlockHash];
 
                     // get the block difficultyInterval blocks ago
-                    var startChainedBlock = chainedBlocks.BlockList.Reverse().Skip(DifficultyInternal).First();
+                    var startChainedBlock = chain.BlockList.Reverse().Skip(DifficultyInternal).First();
                     var startBlockHeader = this.CacheContext.BlockHeaderCache[startChainedBlock.BlockHash];
                     //Debug.Assert(startChainedBlock.Height == blockchain.Height - DifficultyInternal);
 
@@ -205,7 +205,7 @@ namespace BitSharp.Blockchain
             {
                 // invalid bits
                 Debugger.Break();
-                throw new ValidationException(chainedBlocks.LastBlock.BlockHash);
+                throw new ValidationException(chain.LastBlock.BlockHash);
             }
         }
 
@@ -216,7 +216,7 @@ namespace BitSharp.Blockchain
                 return;
 
             // calculate the next required target
-            var requiredTarget = GetRequiredNextTarget(chainStateBuilder.ChainedBlocks.ToImmutable());
+            var requiredTarget = GetRequiredNextTarget(chainStateBuilder.Chain.ToImmutable());
 
             // validate block's target against the required target
             var blockTarget = block.Header.CalculateTarget();

@@ -27,7 +27,7 @@ namespace BitSharp.Blockchain.Test
         private ChainedBlock chainedBlockX0;
         private ChainedBlock chainedBlockX1;
 
-        private ImmutableDictionary<UInt256, ChainedBlock> chainedBlocks;
+        private ImmutableDictionary<UInt256, ChainedBlock> chain;
         private Func<UInt256, ChainedBlock> getChainedBlock;
 
         [TestInitialize]
@@ -47,11 +47,11 @@ namespace BitSharp.Blockchain.Test
             this.chainedBlockX0 = new ChainedBlock(9000, 9999, 0, 0);
             this.chainedBlockX1 = new ChainedBlock(9001, 9000, 1, 0);
 
-            this.chainedBlocks = ImmutableDictionary.CreateRange(
+            this.chain = ImmutableDictionary.CreateRange(
                 new[] { chainedBlock0, chainedBlock1, chainedBlockA2, chainedBlockA3, chainedBlockA4, chainedBlockB2, chainedBlockB3, chainedBlockB4, chainedBlockX0, chainedBlockX1 }
                 .Select(x => new KeyValuePair<UInt256, ChainedBlock>(x.BlockHash, x)));
 
-            this.getChainedBlock = blockHash => this.chainedBlocks[blockHash];
+            this.getChainedBlock = blockHash => this.chain[blockHash];
         }
 
         [TestMethod]

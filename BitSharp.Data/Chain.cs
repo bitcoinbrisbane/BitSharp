@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Data
 {
-    public class ChainedBlocks
+    public class Chain
     {
         private readonly ImmutableList<ChainedBlock> blockList;
 
-        public ChainedBlocks(ImmutableList<ChainedBlock> blockList)
+        public Chain(ImmutableList<ChainedBlock> blockList)
         {
             if (blockList.Count == 0
                 || blockList[0].Height != 0)
@@ -45,26 +45,26 @@ namespace BitSharp.Data
             }
         }
 
-        public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(ChainedBlocks targetChainedBlocks)
+        public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(Chain targetChain)
         {
-            return this.NavigateTowards(() => targetChainedBlocks);
+            return this.NavigateTowards(() => targetChain);
         }
 
-        public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(Func<ChainedBlocks> getTargetChainedBlocks)
+        public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(Func<Chain> getTargetChain)
         {
             var currentBlock = this.LastBlock;
             while (true)
             {
-                var targetChainedBlocks = getTargetChainedBlocks();
-                if (targetChainedBlocks == null)
+                var targetChain = getTargetChain();
+                if (targetChain == null)
                     yield break;
-                else if (targetChainedBlocks.GenesisBlock != this.GenesisBlock)
+                else if (targetChain.GenesisBlock != this.GenesisBlock)
                     throw new InvalidOperationException();
 
-                var targetBlock = targetChainedBlocks.LastBlock;
+                var targetBlock = targetChain.LastBlock;
 
                 // if currently ahead of target chain, must rewind
-                if (currentBlock.Height > targetChainedBlocks.Height)
+                if (currentBlock.Height > targetChain.Height)
                 {
                     if (currentBlock.Height == 0)
                         throw new InvalidOperationException();
@@ -76,12 +76,12 @@ namespace BitSharp.Data
                 else
                 {
                     // on same chain, can advance
-                    if (targetChainedBlocks.BlockList[currentBlock.Height] == currentBlock)
+                    if (targetChain.BlockList[currentBlock.Height] == currentBlock)
                     {
                         // another block is available
-                        if (targetChainedBlocks.Height >= currentBlock.Height + 1)
+                        if (targetChain.Height >= currentBlock.Height + 1)
                         {
-                            currentBlock = targetChainedBlocks.BlockList[currentBlock.Height + 1];
+                            currentBlock = targetChain.BlockList[currentBlock.Height + 1];
                             yield return Tuple.Create(+1, currentBlock);
                         }
                         // no further blocks are available
@@ -103,24 +103,24 @@ namespace BitSharp.Data
             }
         }
 
-        public ChainedBlocksBuilder ToBuilder()
+        public ChainBuilder ToBuilder()
         {
-            return new ChainedBlocksBuilder(this);
+            return new ChainBuilder(this);
         }
 
-        public static ChainedBlocks CreateForGenesisBlock(ChainedBlock genesisBlock)
+        public static Chain CreateForGenesisBlock(ChainedBlock genesisBlock)
         {
-            return new ChainedBlocks(ImmutableList.Create<ChainedBlock>(genesisBlock));
+            return new Chain(ImmutableList.Create<ChainedBlock>(genesisBlock));
         }
     }
 
-    public class ChainedBlocksBuilder
+    public class ChainBuilder
     {
         private readonly ImmutableList<ChainedBlock>.Builder blockList;
 
-        public ChainedBlocksBuilder(ChainedBlocks parentChainedBlocks)
+        public ChainBuilder(Chain parentChain)
         {
-            this.blockList = parentChainedBlocks.BlockList.ToBuilder();
+            this.blockList = parentChain.BlockList.ToBuilder();
         }
 
         public ChainedBlock GenesisBlock { get { return this.blockList.First(); } }
@@ -131,14 +131,14 @@ namespace BitSharp.Data
 
         public ImmutableList<ChainedBlock> BlockList { get { return this.blockList.ToImmutable(); } }
 
-        public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(ChainedBlocks targetChainedBlocks)
+        public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(Chain targetChain)
         {
-            return this.NavigateTowards(() => targetChainedBlocks);
+            return this.NavigateTowards(() => targetChain);
         }
 
-        public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(Func<ChainedBlocks> getTargetChainedBlocks)
+        public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(Func<Chain> getTargetChain)
         {
-            return this.ToImmutable().NavigateTowards(getTargetChainedBlocks);
+            return this.ToImmutable().NavigateTowards(getTargetChain);
         }
 
         public void AddBlock(ChainedBlock block)
@@ -161,9 +161,9 @@ namespace BitSharp.Data
             this.blockList.RemoveAt(this.blockList.Count - 1);
         }
 
-        public ChainedBlocks ToImmutable()
+        public Chain ToImmutable()
         {
-            return new ChainedBlocks(this.blockList.ToImmutable());
+            return new Chain(this.blockList.ToImmutable());
         }
     }
 }

@@ -24,7 +24,7 @@ namespace BitSharp.Daemon
         private readonly ICacheContext cacheContext;
 
         private readonly TargetBlockWorker targetBlockWorker;
-        private ChainedBlocks targetChainedBlocks;
+        private Chain targetChain;
 
         private readonly AutoResetEvent rescanEvent;
 
@@ -56,7 +56,7 @@ namespace BitSharp.Daemon
 
         public ICacheContext CacheContext { get { return this.cacheContext; } }
 
-        public ChainedBlocks TargetChainedBlocks { get { return this.targetChainedBlocks; } }
+        public Chain TargetChain { get { return this.targetChain; } }
 
         public ChainedBlock TargetBlock { get { return this.targetBlockWorker.TargetBlock; } }
 
@@ -78,22 +78,22 @@ namespace BitSharp.Daemon
             {
                 if (this.rescanEvent.WaitOne(0))
                 {
-                    this.targetChainedBlocks = null;
+                    this.targetChain = null;
                 }
 
                 var targetBlockLocal = this.targetBlockWorker.TargetBlock;
-                var targetChainedBlocksLocal = this.targetChainedBlocks;
+                var targetChainLocal = this.targetChain;
 
                 if (targetBlockLocal != null &&
-                    (targetChainedBlocksLocal == null || targetBlockLocal.BlockHash != targetChainedBlocksLocal.LastBlock.BlockHash))
+                    (targetChainLocal == null || targetBlockLocal.BlockHash != targetChainLocal.LastBlock.BlockHash))
                 {
-                    var newTargetChainedBlocks =
-                        targetChainedBlocksLocal != null
-                        ? targetChainedBlocksLocal.ToBuilder()
-                        : new ChainedBlocksBuilder(ChainedBlocks.CreateForGenesisBlock(this.rules.GenesisChainedBlock));
+                    var newTargetChain =
+                        targetChainLocal != null
+                        ? targetChainLocal.ToBuilder()
+                        : new ChainBuilder(Chain.CreateForGenesisBlock(this.rules.GenesisChainedBlock));
 
                     var deltaBlockPath = new MethodTimer(false).Time("deltaBlockPath", () =>
-                        new BlockchainWalker().GetBlockchainPath(newTargetChainedBlocks.LastBlock, targetBlockLocal, blockHash => this.CacheContext.ChainedBlockCache[blockHash]));
+                        new BlockchainWalker().GetBlockchainPath(newTargetChain.LastBlock, targetBlockLocal, blockHash => this.CacheContext.ChainedBlockCache[blockHash]));
 
                     foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
                     {
@@ -103,7 +103,7 @@ namespace BitSharp.Daemon
                             return;
                         }
 
-                        newTargetChainedBlocks.RemoveBlock(rewindBlock);
+                        newTargetChain.RemoveBlock(rewindBlock);
                     }
 
                     var invalid = false;
@@ -113,13 +113,13 @@ namespace BitSharp.Daemon
                             invalid = true;
 
                         if (!invalid)
-                            newTargetChainedBlocks.AddBlock(advanceBlock);
+                            newTargetChain.AddBlock(advanceBlock);
                         else
                             this.cacheContext.InvalidBlockCache.TryAdd(advanceBlock.BlockHash, "");
                     }
 
                     //Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetBlock.BlockHash.ToHexNumberString(), targetBlock.Height, targetBlock.TotalWork.ToString("X")));
-                    this.targetChainedBlocks = newTargetChainedBlocks.ToImmutable();
+                    this.targetChain = newTargetChain.ToImmutable();
 
                     var handler = this.OnTargetChainChanged;
                     if (handler != null)

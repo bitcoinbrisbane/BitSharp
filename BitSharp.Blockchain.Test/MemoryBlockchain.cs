@@ -219,17 +219,17 @@ namespace BitSharp.Blockchain.Test
             //TODO when there is a tie this method is not deterministic, causing TestSimpleBlockchainSplit to fail
 
             throw new NotImplementedException();
-            //var leafChainedBlocks =
-            //    this.CacheContext.ChainedBlockCache.FindLeafChainedBlocks()
+            //var leafChain =
+            //    this.CacheContext.ChainedBlockCache.FindLeafChain()
             //     .ToDictionary(x => x.BlockHash, x => x);
 
             //while (true)
             //{
-            //    var newWinner = this._rules.SelectWinningChainedBlock(leafChainedBlocks.Values.ToList());
+            //    var newWinner = this._rules.SelectWinningChainedBlock(leafChain.Values.ToList());
             //    if (newWinner == null)
             //        break;
 
-            //    leafChainedBlocks.Remove(newWinner.BlockHash);
+            //    leafChain.Remove(newWinner.BlockHash);
             //    try
             //    {
             //        // try to use the blockchain

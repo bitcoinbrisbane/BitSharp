@@ -34,14 +34,14 @@ namespace BitSharp.Blockchain
 
         public ICacheContext CacheContext { get { return this._cacheContext; } }
 
-        public void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<ChainedBlocks> getTargetChainedBlocks, CancellationToken cancelToken, Action onProgress = null)
+        public void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, CancellationToken cancelToken, Action onProgress = null)
         {
             chainStateBuilder.Stats.totalStopwatch.Start();
             chainStateBuilder.Stats.currentRateStopwatch.Start();
 
             // calculate the new blockchain along the target path
             chainStateBuilder.IsConsistent = true;
-            foreach (var pathElement in BlockAndInputsLookAhead(chainStateBuilder.ChainedBlocks.NavigateTowards(getTargetChainedBlocks), lookAhead: 1))
+            foreach (var pathElement in BlockAndInputsLookAhead(chainStateBuilder.Chain.NavigateTowards(getTargetChain), lookAhead: 1))
             {
                 chainStateBuilder.IsConsistent = false;
 
@@ -61,7 +61,7 @@ namespace BitSharp.Blockchain
                 {
                     RollbackUtxo(chainStateBuilder, block);
 
-                    chainStateBuilder.ChainedBlocks.RemoveBlock(chainedBlock);
+                    chainStateBuilder.Chain.RemoveBlock(chainedBlock);
                 }
                 else if (direction > 0)
                 {
@@ -70,7 +70,7 @@ namespace BitSharp.Blockchain
                     new MethodTimer(false).Time("CalculateUtxo", () =>
                         CalculateUtxo(chainedBlock, block, chainStateBuilder.Utxo, out txCount, out inputCount));
 
-                    chainStateBuilder.ChainedBlocks.AddBlock(chainedBlock);
+                    chainStateBuilder.Chain.AddBlock(chainedBlock);
 
                     // validate the block
                     // validation utxo includes all transactions added in the same block, any double spends will have failed the block above
@@ -211,7 +211,7 @@ namespace BitSharp.Blockchain
             utxoBuilder.Unmint(coinbaseTx, chainStateBuilder.LastBlock);
         }
 
-        public void RevalidateBlockchain(ChainedBlocks blockchain, Block genesisBlock)
+        public void RevalidateBlockchain(Chain blockchain, Block genesisBlock)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -286,9 +286,9 @@ namespace BitSharp.Blockchain
             }
         }
 
-        public IEnumerable<Tuple<int, ChainedBlock, Block, ImmutableDictionary<UInt256, Transaction>>> BlockAndInputsLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chainedBlocks, int lookAhead)
+        public IEnumerable<Tuple<int, ChainedBlock, Block, ImmutableDictionary<UInt256, Transaction>>> BlockAndInputsLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chain, int lookAhead)
         {
-            return chainedBlocks
+            return chain
                 .Select(
                     chainedBlockTuple =>
                     {

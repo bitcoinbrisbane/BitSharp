@@ -261,11 +261,11 @@ namespace BitSharp.Node
                 if (this.requestBlockQueue == null || this.requestBlockQueueIndex >= this.requestBlockQueue.Count)
                 {
                     var chainStateLocal = this.blockchainDaemon.ChainState;
-                    var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
+                    var targetChainLocal = this.blockchainDaemon.TargetChain;
 
-                    if (targetChainedBlocksLocal != null)
+                    if (targetChainLocal != null)
                     {
-                        this.requestBlockQueue = chainStateLocal.ChainedBlocks.NavigateTowards(targetChainedBlocksLocal)
+                        this.requestBlockQueue = chainStateLocal.Chain.NavigateTowards(targetChainLocal)
                             .Select(x => x.Item2)
                             .Where(x => !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash))
                             .Take(MAX_BLOCK_REQUESTS * 10)
@@ -478,10 +478,10 @@ namespace BitSharp.Node
 
         private async Task SendGetHeaders(RemoteNode remoteNode)
         {
-            var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
-            if (targetChainedBlocksLocal != null)
+            var targetChainLocal = this.blockchainDaemon.TargetChain;
+            if (targetChainLocal != null)
             {
-                var blockLocatorHashes = CalculateBlockLocatorHashes(targetChainedBlocksLocal.BlockList);
+                var blockLocatorHashes = CalculateBlockLocatorHashes(targetChainLocal.BlockList);
 
                 await remoteNode.Sender.SendGetHeaders(blockLocatorHashes, hashStop: 0);
             }
@@ -489,10 +489,10 @@ namespace BitSharp.Node
 
         private async Task SendGetBlocks(RemoteNode remoteNode)
         {
-            var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
-            if (targetChainedBlocksLocal != null)
+            var targetChainLocal = this.blockchainDaemon.TargetChain;
+            if (targetChainLocal != null)
             {
-                var blockLocatorHashes = CalculateBlockLocatorHashes(targetChainedBlocksLocal.BlockList);
+                var blockLocatorHashes = CalculateBlockLocatorHashes(targetChainLocal.BlockList);
 
                 await remoteNode.Sender.SendGetBlocks(blockLocatorHashes, hashStop: 0);
             }
@@ -731,8 +731,8 @@ namespace BitSharp.Node
 
         private void OnGetBlocks(RemoteNode remoteNode, GetBlocksPayload payload)
         {
-            var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
-            if (targetChainedBlocksLocal == null)
+            var targetChainLocal = this.blockchainDaemon.TargetChain;
+            if (targetChainLocal == null)
                 return;
 
             ChainedBlock matchingChainedBlock = null;
@@ -741,8 +741,8 @@ namespace BitSharp.Node
                 ChainedBlock chainedBlock;
                 if (this.blockchainDaemon.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
                 {
-                    if (chainedBlock.Height < targetChainedBlocksLocal.BlockList.Count
-                        && chainedBlock.BlockHash == targetChainedBlocksLocal.BlockList[chainedBlock.Height].BlockHash)
+                    if (chainedBlock.Height < targetChainLocal.BlockList.Count
+                        && chainedBlock.BlockHash == targetChainLocal.BlockList[chainedBlock.Height].BlockHash)
                     {
                         matchingChainedBlock = chainedBlock;
                         break;
@@ -758,9 +758,9 @@ namespace BitSharp.Node
             var count = 0;
             var limit = 500;
             var invVectors = new InventoryVector[limit];
-            for (var i = matchingChainedBlock.Height; i < targetChainedBlocksLocal.BlockList.Count && count <= limit; i++, count++)
+            for (var i = matchingChainedBlock.Height; i < targetChainLocal.BlockList.Count && count <= limit; i++, count++)
             {
-                var chainedBlock = targetChainedBlocksLocal.BlockList[i];
+                var chainedBlock = targetChainLocal.BlockList[i];
                 invVectors[count] = new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, chainedBlock.BlockHash);
 
                 if (chainedBlock.BlockHash == payload.HashStop)
@@ -778,8 +778,8 @@ namespace BitSharp.Node
                 this.blockchainDaemon.ForceWorkAndWait();
             }
 
-            var targetChainedBlocksLocal = this.blockchainDaemon.TargetChainedBlocks;
-            if (targetChainedBlocksLocal == null)
+            var targetChainLocal = this.blockchainDaemon.TargetChain;
+            if (targetChainLocal == null)
                 return;
 
             ChainedBlock matchingChainedBlock = null;
@@ -788,8 +788,8 @@ namespace BitSharp.Node
                 ChainedBlock chainedBlock;
                 if (this.blockchainDaemon.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
                 {
-                    if (chainedBlock.Height < targetChainedBlocksLocal.BlockList.Count
-                        && chainedBlock.BlockHash == targetChainedBlocksLocal.BlockList[chainedBlock.Height].BlockHash)
+                    if (chainedBlock.Height < targetChainLocal.BlockList.Count
+                        && chainedBlock.BlockHash == targetChainLocal.BlockList[chainedBlock.Height].BlockHash)
                     {
                         matchingChainedBlock = chainedBlock;
                         break;
@@ -805,12 +805,12 @@ namespace BitSharp.Node
             var count = 0;
             var limit = 500;
             var blockHeaders = new BlockHeader[limit];
-            for (var i = matchingChainedBlock.Height; i < targetChainedBlocksLocal.BlockList.Count && count <= limit; i++, count++)
+            for (var i = matchingChainedBlock.Height; i < targetChainLocal.BlockList.Count && count <= limit; i++, count++)
             {
-                var chainedBlock = targetChainedBlocksLocal.BlockList[i];
+                var chainedBlock = targetChainLocal.BlockList[i];
 
                 BlockHeader blockHeader;
-                if (this.blockchainDaemon.CacheContext.BlockHeaderCache.TryGetValue(targetChainedBlocksLocal.BlockList[i].BlockHash, out blockHeader))
+                if (this.blockchainDaemon.CacheContext.BlockHeaderCache.TryGetValue(targetChainLocal.BlockList[i].BlockHash, out blockHeader))
                 {
                     blockHeaders[count] = blockHeader;
                 }

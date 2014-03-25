@@ -71,7 +71,7 @@ namespace BitSharp.Daemon
             // create workers
             this.chainingWorker = new ChainingWorker(rules, cacheContext, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
             this.targetChainWorker = new TargetChainWorker(rules, cacheContext, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
-            this.chainStateWorker = new ChainStateWorker(rules, cacheContext, () => this.targetChainWorker.TargetChainedBlocks, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
+            this.chainStateWorker = new ChainStateWorker(rules, cacheContext, () => this.targetChainWorker.TargetChain, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
 
             this.targetChainWorker.OnTargetBlockChanged +=
                 () =>
@@ -144,7 +144,7 @@ namespace BitSharp.Daemon
             }
         }
 
-        public ChainedBlocks TargetChainedBlocks { get { return this.targetChainWorker.TargetChainedBlocks; } }
+        public Chain TargetChain { get { return this.targetChainWorker.TargetChain; } }
 
         public ChainState ChainState { get { return this.chainStateWorker.ChainState; } }
 
