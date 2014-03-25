@@ -369,11 +369,11 @@ namespace BitSharp.Daemon.Test
             }
         }
 
-        private static void AssertBlockListEquals(ChainedBlock[] chainedBlocks, IImmutableList<ChainedBlock> blockList)
+        private static void AssertBlockListEquals(ChainedBlock[] expected, IImmutableList<ChainedBlock> actual)
         {
-            Assert.AreEqual(chainedBlocks.Length, blockList.Count);
-            for (var i = 0; i < blockList.Count; i++)
-                Assert.AreEqual(chainedBlocks[i], blockList[i]);
+            Assert.AreEqual(expected.Length, actual.Count);
+            for (var i = 0; i < actual.Count; i++)
+                Assert.AreEqual(expected[i], actual[i]);
         }
     }
 }
