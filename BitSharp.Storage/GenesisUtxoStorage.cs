@@ -1,19 +1,20 @@
 ﻿using BitSharp.Common;
+using BitSharp.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Data
+namespace BitSharp.Storage
 {
-    public class GenesisUtxo : IUtxoStorage
+    public class GenesisUtxoStorage : IUtxoStorage
     {
         // genesis block coinbase is not included in utxo, it is unspendable
 
         private readonly UInt256 blockHash;
 
-        public GenesisUtxo(UInt256 blockHash)
+        public GenesisUtxoStorage(UInt256 blockHash)
         {
             this.blockHash = blockHash;
         }

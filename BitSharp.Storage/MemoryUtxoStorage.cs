@@ -9,12 +9,12 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class MemoryUtxo : IUtxoStorage
+    public class MemoryUtxoStorage : IUtxoStorage
     {
         private UInt256 _blockHash;
         private ImmutableDictionary<UInt256, UnspentTx> _utxo;
 
-        public MemoryUtxo(UInt256 blockHash, ImmutableDictionary<UInt256, UnspentTx> utxo)
+        public MemoryUtxoStorage(UInt256 blockHash, ImmutableDictionary<UInt256, UnspentTx> utxo)
         {
             this._blockHash = blockHash;
             this._utxo = utxo;

@@ -75,13 +75,15 @@
   <ItemGroup>
     <Compile Include="BlockView.cs" />
     <Compile Include="BoundedFullCache.cs" />
+    <Compile Include="GenesisUtxoStorage.cs" />
     <Compile Include="ICacheContext.cs" />
     <Compile Include="IUnboundedCache.cs" />
     <Compile Include="IBoundedCache.cs" />
     <Compile Include="IUnboundedStorage.cs" />
+    <Compile Include="IUtxoStorage.cs" />
     <Compile Include="MemoryStorage.cs" />
     <Compile Include="MemoryStorageContext.cs" />
-    <Compile Include="MemoryUtxo.cs" />
+    <Compile Include="MemoryUtxoStorage.cs" />
     <Compile Include="MemoryUtxoBuilderStorage.cs" />
     <Compile Include="IStorageContext.cs" />
     <Compile Include="MissingDataException.cs" />

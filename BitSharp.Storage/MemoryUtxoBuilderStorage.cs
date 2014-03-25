@@ -15,9 +15,9 @@ namespace BitSharp.Storage
 
         public MemoryUtxoBuilderStorage(IUtxoStorage parentUtxo)
         {
-            if (parentUtxo is MemoryUtxo)
+            if (parentUtxo is MemoryUtxoStorage)
             {
-                this.utxo = ((MemoryUtxo)parentUtxo).Dictionary.ToBuilder();
+                this.utxo = ((MemoryUtxoStorage)parentUtxo).Dictionary.ToBuilder();
             }
             else
             {
@@ -68,7 +68,7 @@ namespace BitSharp.Storage
 
         public IUtxoStorage Close(UInt256 blockHash)
         {
-            return new MemoryUtxo(blockHash, this.utxo.ToImmutable());
+            return new MemoryUtxoStorage(blockHash, this.utxo.ToImmutable());
         }
 
         public void Dispose()

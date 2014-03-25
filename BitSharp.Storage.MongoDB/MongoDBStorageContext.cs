@@ -79,7 +79,7 @@ namespace BitSharp.Storage.MongoDB
 
         public IUtxoBuilderStorage ToUtxoBuilder(IUtxoStorage utxo)
         {
-            return new PersistentUtxoBuilderStorage(utxo);
+            return new UtxoBuilderStorage(utxo);
         }
 
         public void Dispose()

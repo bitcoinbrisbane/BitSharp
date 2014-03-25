@@ -11,18 +11,18 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage.Esent
 {
-    public class PersistentUtxoBuilderStorage : IUtxoBuilderStorage
+    public class UtxoBuilderStorage : IUtxoBuilderStorage
     {
         private readonly string directory;
         private readonly PersistentByteDictionary utxo;
         private bool closed = false;
 
-        public PersistentUtxoBuilderStorage(IUtxoStorage parentUtxo)
+        public UtxoBuilderStorage(IUtxoStorage parentUtxo)
         {
             this.directory = GetDirectory();
-            if (parentUtxo is PersistentUtxo)
+            if (parentUtxo is UtxoStorage)
             {
-                ((PersistentUtxo)parentUtxo).Duplicate(this.directory);
+                ((UtxoStorage)parentUtxo).Duplicate(this.directory);
                 this.utxo = new PersistentByteDictionary(this.directory);
             }
             else
@@ -35,7 +35,7 @@ namespace BitSharp.Storage.Esent
             }
         }
 
-        ~PersistentUtxoBuilderStorage()
+        ~UtxoBuilderStorage()
         {
             this.Dispose();
         }
@@ -85,7 +85,7 @@ namespace BitSharp.Storage.Esent
             this.Dispose();
 
             //TODO obviously a stop gap here...
-            var destPath = PersistentUtxo.GetDirectory(blockHash);
+            var destPath = UtxoStorage.GetDirectory(blockHash);
             if (Directory.Exists(destPath))
                 Directory.Delete(destPath, recursive: true);
             Directory.CreateDirectory(destPath);
@@ -94,7 +94,7 @@ namespace BitSharp.Storage.Esent
                 File.Move(srcFile, Path.Combine(destPath, Path.GetFileName(srcFile)));
             Directory.Delete(this.directory, recursive: true);
 
-            return new PersistentUtxo(blockHash);
+            return new UtxoStorage(blockHash);
         }
 
         public void Dispose()

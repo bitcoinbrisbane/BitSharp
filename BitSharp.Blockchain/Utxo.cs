@@ -1,5 +1,6 @@
 ﻿using BitSharp.Common;
 using BitSharp.Data;
+using BitSharp.Storage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -59,7 +60,7 @@ namespace BitSharp.Blockchain
 
         public static Utxo CreateForGenesisBlock(ChainedBlock genesisBlock)
         {
-            return new Utxo(new GenesisUtxo(genesisBlock.BlockHash));
+            return new Utxo(new GenesisUtxoStorage(genesisBlock.BlockHash));
         }
     }
 }

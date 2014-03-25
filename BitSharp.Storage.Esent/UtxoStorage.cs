@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage.Esent
 {
-    public class PersistentUtxo : IUtxoStorage
+    public class UtxoStorage : IUtxoStorage
     {
         private readonly UInt256 blockHash;
         private readonly string directory;
@@ -25,7 +25,7 @@ namespace BitSharp.Storage.Esent
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", blockHash.ToString());
         }
 
-        internal PersistentUtxo(UInt256 blockHash)
+        internal UtxoStorage(UInt256 blockHash)
         {
             this.blockHash = blockHash;
             this.directory = GetDirectory(blockHash);
