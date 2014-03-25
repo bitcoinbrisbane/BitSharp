@@ -63,15 +63,18 @@ namespace BitSharp.Node
         protected override void WorkAction()
         {
             // update list of missing blocks to request
-            UpdateMissingBlockQueue();
+            new MethodTimer(false).Time("UpdateMissingBlockQueue", () =>
+                UpdateMissingBlockQueue());
 
             // update list of blocks on target chain to request
-            UpdateTargetChainQueue();
+            new MethodTimer(false).Time("UpdateTargetChainQueue", () =>
+                UpdateTargetChainQueue());
 
             // send out request to peers
             //      missing blocks will be requested from every peer
             //      target chain blocks will be requested from each peer in non-overlapping chunks
-            SendBlockRequests();
+            new MethodTimer(false).Time("SendBlockRequests", () =>
+                SendBlockRequests());
         }
 
         private void UpdateMissingBlockQueue()
@@ -100,10 +103,11 @@ namespace BitSharp.Node
                     currentChainLocal.NavigateTowards(targetChainLocal)
                     .Select(x => x.Item2)
                     .Take(UPCOMING_AS_MISSING_CHUNK_COUNT)
-                    .Where(x => !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash)))
+                    .Where(x =>
+                        !this.missingBlockQueue.Contains(x)
+                        && !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash)))
                 {
-                    if (!this.missingBlockQueue.Contains(upcomingBlock))
-                        this.missingBlockQueue.Add(upcomingBlock);
+                    this.missingBlockQueue.Add(upcomingBlock);
                 }
             }
         }
@@ -119,7 +123,7 @@ namespace BitSharp.Node
             {
                 this.targetChainQueue = currentChainLocal.NavigateTowards(targetChainLocal)
                     .Select(x => x.Item2)
-                    .Where(x => x.Height - currentChainLocal.Height <= MAX_TARGET_CHAIN_LOOKAHEAD)
+                    .Take(MAX_TARGET_CHAIN_LOOKAHEAD)
                     .Where(x => !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash))
                     .Take(TARGET_CHAIN_CHUNK_COUNT)
                     .ToList();
