@@ -38,7 +38,7 @@ namespace BitSharp.Daemon
             this.targetBlockWorker = new TargetBlockWorker(cacheContext, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
 
             this.targetBlockWorker.OnTargetBlockChanged += NotifyWork;
-
+            this.cacheContext.ChainedBlockCache.OnAddition += HandleChainedBlock;
             this.cacheContext.InvalidBlockCache.OnAddition += HandleInvalidBlock;
         }
 
@@ -46,6 +46,7 @@ namespace BitSharp.Daemon
         {
             // cleanup events
             this.targetBlockWorker.OnTargetBlockChanged -= NotifyWork;
+            this.cacheContext.ChainedBlockCache.OnAddition -= HandleChainedBlock;
             this.cacheContext.InvalidBlockCache.OnAddition -= HandleInvalidBlock;
 
             // cleanup workers
@@ -125,6 +126,11 @@ namespace BitSharp.Daemon
                 }
             }
             catch (MissingDataException) { }
+        }
+
+        private void HandleChainedBlock(UInt256 blockHash, ChainedBlock chainedBlock)
+        {
+            this.NotifyWork();
         }
 
         private void HandleInvalidBlock(UInt256 blockHash, string data)
