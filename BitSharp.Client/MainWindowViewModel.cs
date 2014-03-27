@@ -15,12 +15,17 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace BitSharp.Client
 {
     public class MainWindowViewModel : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
+
+        private readonly DateTime startTime;
+        private string runningTime;
+        private readonly DispatcherTimer runningTimeTimer;
 
         private readonly BlockchainDaemon blockchainDaemon;
 
@@ -32,6 +37,16 @@ namespace BitSharp.Client
 
         public MainWindowViewModel(BlockchainDaemon blockchainDaemon)
         {
+            this.startTime = DateTime.UtcNow;
+            this.runningTimeTimer = new DispatcherTimer();
+            runningTimeTimer.Tick += (sender, e) =>
+            {
+                var runningTime = (DateTime.UtcNow - this.startTime);
+                this.RunningTime = "{0:#,#00}:{1:mm':'ss}".Format2(Math.Floor(runningTime.TotalHours), runningTime);
+            };
+            runningTimeTimer.Interval = TimeSpan.FromMilliseconds(100);
+            runningTimeTimer.Start();
+
             this.blockchainDaemon = blockchainDaemon;
 
             this.viewChainState = this.blockchainDaemon.ChainState;
@@ -42,6 +57,10 @@ namespace BitSharp.Client
 
             this.blockchainDaemon.CacheContext.BlockTxHashesCache.OnAddition +=
                 (blockHash, block) =>
+                    DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockTxHashesCache.Count;
+
+            this.blockchainDaemon.CacheContext.BlockTxHashesCache.OnRemoved +=
+                (blockHash) =>
                     DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockTxHashesCache.Count;
 
             this.blockchainDaemon.OnTargetBlockChanged +=
@@ -55,6 +74,12 @@ namespace BitSharp.Client
             this.blockchainDaemon.OnChainStateBuilderChanged +=
                 (sender, height) =>
                     CurrentBlockchainHeight = this.blockchainDaemon.CurrentBuilderHeight;
+        }
+
+        public string RunningTime
+        {
+            get { return this.runningTime; }
+            set { SetValue(ref this.runningTime, value); }
         }
 
         public long WinningBlockchainHeight
@@ -210,7 +235,7 @@ namespace BitSharp.Client
 
         private void SetValue<T>(ref T currentValue, T newValue, [CallerMemberName] string propertyName = "") where T : IEquatable<T>
         {
-            if (!currentValue.Equals(newValue))
+            if (currentValue == null || !currentValue.Equals(newValue))
             {
                 currentValue = newValue;
 
