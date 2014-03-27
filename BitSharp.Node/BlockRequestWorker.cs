@@ -20,10 +20,10 @@ namespace BitSharp.Node
     public class BlockRequestWorker : Worker
     {
         private const int REQUESTS_PER_PEER = 100;
-        private const int UPCOMING_AS_MISSING_CHUNK_COUNT = 100;
-        private const int TARGET_CHAIN_CHUNK_COUNT = 1000;
-        private const int MAX_TARGET_CHAIN_LOOKAHEAD = 10000;
         private const int STALE_REQUEST_SECONDS = 60;
+
+        private const int TARGET_CHAIN_CHUNK_COUNT = 1000;
+        private const int UPCOMING_AS_MISSING_CHUNK_COUNT = 100;
 
         private readonly LocalClient localClient;
         private readonly BlockchainDaemon blockchainDaemon;
@@ -37,6 +37,15 @@ namespace BitSharp.Node
         private List<ChainedBlock> targetChainQueue;
         private int targetChainQueueIndex;
         private DateTime targetChainQueueTime;
+
+        private readonly TimeSpan[] blockTimes;
+        private int blockTimesIndex;
+        private readonly ReaderWriterLockSlim blockTimesIndexLock;
+
+        private int targetChainLookAhead;
+
+        private readonly WorkerMethod flushWorker;
+        private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
 
         public BlockRequestWorker(LocalClient localClient, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
             : base("BlockRequestWorker", initialNotify, minIdleTime, maxIdleTime)
@@ -52,6 +61,15 @@ namespace BitSharp.Node
             this.localClient.OnBlock += HandleBlock;
             this.blockchainDaemon.OnChainStateChanged += HandleChainStateChanged;
             this.blockchainDaemon.OnChainStateBuilderChanged += HandleChainStateChanged;
+
+            this.blockTimes = new TimeSpan[1000];
+            this.blockTimesIndex = -1;
+            this.blockTimesIndexLock = new ReaderWriterLockSlim();
+
+            this.targetChainLookAhead = 1;
+
+            this.flushWorker = new WorkerMethod("BlockRequestWorker.FlushWorker", FlushWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
+            this.flushQueue = new ConcurrentQueue<Tuple<RemoteNode, Block>>();
         }
 
         protected override void SubDispose()
@@ -59,6 +77,18 @@ namespace BitSharp.Node
             this.localClient.OnBlock -= HandleBlock;
             this.blockchainDaemon.OnChainStateChanged -= HandleChainStateChanged;
             this.blockchainDaemon.OnChainStateBuilderChanged -= HandleChainStateChanged;
+
+            this.flushWorker.Dispose();
+        }
+
+        protected override void SubStart()
+        {
+            this.flushWorker.Start();
+        }
+
+        protected override void SubStop()
+        {
+            this.flushWorker.Stop();
         }
 
         protected override void WorkAction()
@@ -103,7 +133,7 @@ namespace BitSharp.Node
                 foreach (var upcomingBlock in
                     currentChainLocal.NavigateTowards(targetChainLocal)
                     .Select(x => x.Item2)
-                    .Take(UPCOMING_AS_MISSING_CHUNK_COUNT)
+                    .Take(Math.Min(UPCOMING_AS_MISSING_CHUNK_COUNT, this.targetChainLookAhead))
                     .Where(x =>
                         !this.missingBlockQueue.Contains(x)
                         && !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash)))
@@ -130,7 +160,7 @@ namespace BitSharp.Node
             {
                 this.targetChainQueue = currentChainLocal.NavigateTowards(targetChainLocal)
                     .Select(x => x.Item2)
-                    .Take(MAX_TARGET_CHAIN_LOOKAHEAD)
+                    .Take(this.targetChainLookAhead)
                     .Where(x => !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash))
                     .Take(TARGET_CHAIN_CHUNK_COUNT)
                     .ToList();
@@ -223,20 +253,48 @@ namespace BitSharp.Node
             }
         }
 
+        private void FlushWorkerMethod()
+        {
+            Tuple<RemoteNode, Block> tuple;
+            while (this.flushQueue.TryDequeue(out tuple))
+            {
+                var remoteNode = tuple.Item1;
+                var block = tuple.Item2;
+
+                this.cacheContext.BlockView.TryAdd(block.Hash, block);
+
+                DateTime requestTime;
+                if (this.allBlockRequests.TryRemove(block.Hash, out requestTime))
+                {
+                    var blockTimesIndexLocal = this.blockTimesIndexLock.DoWrite(() =>
+                    {
+                        this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;
+                        return this.blockTimesIndex;
+                    });
+                    this.blockTimes[blockTimesIndexLocal] = DateTime.UtcNow - requestTime;
+
+                    var lookAheadTime = TimeSpan.FromTicks((long)this.blockTimes.Average(x => x.Ticks))
+                        + TimeSpan.FromSeconds(5);
+
+                    this.targetChainLookAhead = (int)Math.Max(1, lookAheadTime.Ticks / this.blockchainDaemon.ChainStateBlockProcessingTime.Ticks);
+                }
+
+                ConcurrentDictionary<UInt256, DateTime> peerBlockRequests;
+                if (this.blockRequestsByPeer.TryGetValue(remoteNode.RemoteEndPoint, out peerBlockRequests))
+                {
+                    peerBlockRequests.TryRemove(block.Hash, out requestTime);
+                }
+
+                this.NotifyWork();
+            }
+            
+            //Debug.WriteLine("Look-ahead: {0}".Format2(this.lookAhead));
+        }
+
         private void HandleBlock(RemoteNode remoteNode, Block block)
         {
-            this.cacheContext.BlockView.TryAdd(block.Hash, block);
-
-            DateTime ignore;
-            this.allBlockRequests.TryRemove(block.Hash, out ignore);
-
-            ConcurrentDictionary<UInt256, DateTime> peerBlockRequests;
-            if (this.blockRequestsByPeer.TryGetValue(remoteNode.RemoteEndPoint, out peerBlockRequests))
-            {
-                peerBlockRequests.TryRemove(block.Hash, out ignore);
-            }
-
-            this.NotifyWork();
+            this.flushQueue.Enqueue(Tuple.Create(remoteNode, block));
+            this.flushWorker.NotifyWork();
         }
 
         private void HandleChainStateChanged(object sender, EventArgs e)
