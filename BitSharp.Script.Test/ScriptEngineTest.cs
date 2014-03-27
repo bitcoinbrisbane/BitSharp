@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
-using Org.BouncyCastle.Math;
 using BitSharp;
 using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
@@ -71,7 +70,7 @@ namespace BitSharp.Test
             Block block; Transaction tx; IDictionary<UInt256, Transaction> txLookup;
             BlockHelperTestData.GetFirstTransaction(provider, out block, out tx, out txLookup);
 
-            TestTransactionVerifySignature(BlockHelperTestData.TX_0_HASH_TYPES, BlockHelperTestData.TX_0_SIGNATURES, BlockHelperTestData.TX_0_SIGNATURE_HASHES, BlockHelperTestData.TX_0_X, BlockHelperTestData.TX_0_Y, BlockHelperTestData.TX_0_R, BlockHelperTestData.TX_0_S, tx, txLookup);
+            TestTransactionVerifySignature(BlockHelperTestData.TX_0_HASH_TYPES, BlockHelperTestData.TX_0_SIGNATURES, BlockHelperTestData.TX_0_SIGNATURE_HASHES, tx, txLookup);
         }
 
         [TestMethod]
@@ -80,7 +79,7 @@ namespace BitSharp.Test
             Block block; Transaction tx; IDictionary<UInt256, Transaction> txLookup;
             BlockHelperTestData.GetFirstMultiInputTransaction(provider, out block, out tx, out txLookup);
 
-            TestTransactionVerifySignature(BlockHelperTestData.TX_0_MULTI_INPUT_HASH_TYPES, BlockHelperTestData.TX_0_MULTI_INPUT_SIGNATURES, BlockHelperTestData.TX_0_MULTI_INPUT_SIGNATURE_HASHES, BlockHelperTestData.TX_0_MULTI_INPUT_X, BlockHelperTestData.TX_0_MULTI_INPUT_Y, BlockHelperTestData.TX_0_MULTI_INPUT_R, BlockHelperTestData.TX_0_MULTI_INPUT_S, tx, txLookup);
+            TestTransactionVerifySignature(BlockHelperTestData.TX_0_MULTI_INPUT_HASH_TYPES, BlockHelperTestData.TX_0_MULTI_INPUT_SIGNATURES, BlockHelperTestData.TX_0_MULTI_INPUT_SIGNATURE_HASHES, tx, txLookup);
         }
 
         [TestMethod]
@@ -89,7 +88,7 @@ namespace BitSharp.Test
             Block block; Transaction tx; IDictionary<UInt256, Transaction> txLookup;
             BlockHelperTestData.GetFirstHash160Transaction(provider, out block, out tx, out txLookup);
 
-            TestTransactionVerifySignature(BlockHelperTestData.TX_0_HASH160_HASH_TYPES, BlockHelperTestData.TX_0_HASH160_SIGNATURES, BlockHelperTestData.TX_0_HASH160_SIGNATURE_HASHES, BlockHelperTestData.TX_0_HASH160_X, BlockHelperTestData.TX_0_HASH160_Y, BlockHelperTestData.TX_0_HASH160_R, BlockHelperTestData.TX_0_HASH160_S, tx, txLookup);
+            TestTransactionVerifySignature(BlockHelperTestData.TX_0_HASH160_HASH_TYPES, BlockHelperTestData.TX_0_HASH160_SIGNATURES, BlockHelperTestData.TX_0_HASH160_SIGNATURE_HASHES, tx, txLookup);
         }
 
         [TestMethod]
@@ -134,7 +133,7 @@ namespace BitSharp.Test
             }
         }
 
-        private void TestTransactionVerifySignature(byte[] expectedHashTypes, byte[][] expectedSignatures, byte[][] expectedSignatureHashes, byte[][] expectedX, byte[][] expectedY, byte[][] expectedR, byte[][] expectedS, Transaction tx, IDictionary<UInt256, Transaction> txLookup)
+        private void TestTransactionVerifySignature(byte[] expectedHashTypes, byte[][] expectedSignatures, byte[][] expectedSignatureHashes, Transaction tx, IDictionary<UInt256, Transaction> txLookup)
         {
             var scriptEngine = new ScriptEngine();
 
@@ -147,24 +146,16 @@ namespace BitSharp.Test
                 var sig = GetSigFromScriptSig(input.ScriptSignature);
                 var pubKey = GetPubKeyFromScripts(input.ScriptSignature, prevOutput.ScriptPublicKey);
 
-                byte[] txSignature, txSignatureHash; BigInteger x, y, r, s;
-                var result = scriptEngine.VerifySignature(prevOutput.ScriptPublicKey, tx, sig.ToArray(), pubKey.ToArray(), inputIndex, out hashType, out txSignature, out txSignatureHash, out x, out y, out r, out s);
+                byte[] txSignature, txSignatureHash;
+                var result = scriptEngine.VerifySignature(prevOutput.ScriptPublicKey, tx, sig.ToArray(), pubKey.ToArray(), inputIndex, out hashType, out txSignature, out txSignatureHash);
 
                 Debug.WriteLine(hashType);
                 Debug.WriteLine(txSignature.ToHexDataString());
                 Debug.WriteLine(txSignatureHash.ToHexNumberString());
-                Debug.WriteLine(x.ToHexNumberString());
-                Debug.WriteLine(y.ToHexNumberString());
-                Debug.WriteLine(r.ToHexNumberString());
-                Debug.WriteLine(s.ToHexNumberString());
 
                 Assert.AreEqual(expectedHashTypes[inputIndex], hashType);
                 CollectionAssert.AreEqual(expectedSignatures[inputIndex].ToList(), txSignature.ToList());
                 CollectionAssert.AreEqual(expectedSignatureHashes[inputIndex].ToList(), txSignatureHash.ToList());
-                CollectionAssert.AreEqual(expectedX[inputIndex], x.ToByteArrayUnsigned());
-                CollectionAssert.AreEqual(expectedY[inputIndex], y.ToByteArrayUnsigned());
-                CollectionAssert.AreEqual(expectedR[inputIndex], r.ToByteArrayUnsigned());
-                CollectionAssert.AreEqual(expectedS[inputIndex], s.ToByteArrayUnsigned());
                 Assert.IsTrue(result);
             }
         }

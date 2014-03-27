@@ -2,7 +2,6 @@
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Org.BouncyCastle.Math;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

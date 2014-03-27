@@ -49,7 +49,6 @@ namespace BitSharp.Client
                 //TODO
                 //MainnetRules.BypassValidation = true;
                 MainnetRules.IgnoreScriptErrors = true;
-                ScriptEngine.BypassVerifySignature = true;
 
                 Debug.WriteLine(DateTime.Now);
 

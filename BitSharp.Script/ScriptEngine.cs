@@ -1,11 +1,4 @@
-﻿using Org.BouncyCastle.Asn1;
-using Org.BouncyCastle.Asn1.Ocsp;
-using Org.BouncyCastle.Asn1.Sec;
-using Org.BouncyCastle.Asn1.X9;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.Crypto.Signers;
-using Org.BouncyCastle.Math.EC;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -16,26 +9,16 @@ using System.IO;
 using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using System.Collections.Concurrent;
-using BigIntegerBouncy = Org.BouncyCastle.Math.BigInteger;
 using System.Threading;
 using System.Collections.Immutable;
 using BitSharp.Data;
+//TODO need to figure out licensing
+//using Secp256k1;
 
 namespace BitSharp.Script
 {
     public class ScriptEngine
     {
-        public static bool BypassVerifySignature { get; set; }
-
-        private readonly X9ECParameters curve;
-        private readonly ECDomainParameters domainParameters;
-
-        public ScriptEngine()
-        {
-            this.curve = SecNamedCurves.GetByName("secp256k1");
-            this.domainParameters = new ECDomainParameters(curve.Curve, curve.G, curve.N, curve.H, curve.GetSeed());
-        }
-
         public bool VerifyScript(UInt256 blockHash, int txIndex, byte[] scriptPubKey, Transaction tx, int inputIndex, byte[] script)
         {
             //            logger.LogTrace(
@@ -222,8 +205,8 @@ namespace BitSharp.Script
 
                                 var startTime = DateTime.UtcNow;
 
-                                byte hashType; byte[] txSignature, txSignatureHash; BigIntegerBouncy x, y, r, s;
-                                var result = VerifySignature(scriptPubKey, tx, sig, pubKey, inputIndex, out hashType, out txSignature, out txSignatureHash, out x, out y, out r, out s);
+                                byte hashType; byte[] txSignature, txSignatureHash;
+                                var result = VerifySignature(scriptPubKey, tx, sig, pubKey, inputIndex, out hashType, out txSignature, out txSignatureHash);
                                 stack.PushBool(result);
 
                                 var finishTime = DateTime.UtcNow;
@@ -285,7 +268,7 @@ namespace BitSharp.Script
             return true;
         }
 
-        public bool VerifySignature(ImmutableArray<byte> scriptPubKey, Transaction tx, byte[] sig, byte[] pubKey, int inputIndex, out byte hashType, out byte[] txSignature, out byte[] txSignatureHash, out BigIntegerBouncy x, out BigIntegerBouncy y, out BigIntegerBouncy r, out BigIntegerBouncy s)
+        public bool VerifySignature(ImmutableArray<byte> scriptPubKey, Transaction tx, byte[] sig, byte[] pubKey, int inputIndex, out byte hashType, out byte[] txSignature, out byte[] txSignatureHash)
         {
             // get the 1-byte hashType off the end of sig
             hashType = sig[sig.Length - 1];
@@ -299,55 +282,11 @@ namespace BitSharp.Script
             // get the hash of the simplified/signing version of the transaction
             txSignatureHash = Crypto.DoubleSHA256(txSignature);
 
-            // load pubKey
-            ReadPubKey(pubKey, out x, out y);
-            var publicKeyPoint = curve.Curve.CreatePoint(x, y, withCompression: false);
-            var publicKeyParameters = new ECPublicKeyParameters(publicKeyPoint, domainParameters);
+            // verify that signature is valid for pubKey and the simplified/signing transaction's hash
+            //var result = Signatures.Verify(txSignatureHash, sigDER, pubKey);
 
-            // load sig
-            ReadSigKey(sigDER, out r, out s);
-
-            // init signer
-            var signer = new ECDsaSigner();
-            signer.Init(forSigning: false, parameters: publicKeyParameters);
-
-            // verify that sig is a valid signature from pubKey for the simplified/signing transaction's hash
-            var txSignatureHash2 = txSignatureHash;
-            var r2 = r;
-            var s2 = s;
-            //TODO
-            var result = BypassVerifySignature || new MethodTimer(false).Time("ECDsa Verify", () => signer.VerifySignature(txSignatureHash2.ToArray(), r2, s2));
-
-            return result;
-        }
-
-        private void ReadPubKey(byte[] pubKey, out BigIntegerBouncy x, out BigIntegerBouncy y)
-        {
-            // public key is encoded as 0x04<x><y>
-            // where <x> and <y> are 32-byte unsigned, positive, big-endian integers
-            // for a total length of 65 bytes
-
-            if (pubKey.Length != 65 || pubKey[0] != 0x04)
-                throw new Exception("TODO wrong public key type");
-
-            x = new BigIntegerBouncy(1, pubKey.ToArray(), 1, 32);
-            y = new BigIntegerBouncy(1, pubKey.ToArray(), 33, 32);
-        }
-
-        private void ReadSigKey(byte[] sig, out BigIntegerBouncy r, out BigIntegerBouncy s)
-        {
-            // sig is two DER encoded integers: r and s
-            // total length is variable
-
-            using (var stream = new Asn1InputStream(sig.ToArray()))
-            {
-                var sequence = (DerSequence)stream.ReadObject();
-                r = ((DerInteger)sequence[0]).Value;
-                s = ((DerInteger)sequence[1]).Value;
-
-                Debug.Assert(sequence.Count == 2);
-                //TODO Debug.Assert(sig.SequenceEqual(sequence.GetDerEncoded()));
-            }
+            //return result == Signatures.VerifyResult.Verified;
+            return true;
         }
 
         public byte[] TxSignature(ImmutableArray<byte> scriptPubKey, Transaction tx, int inputIndex, byte hashType)

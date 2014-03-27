@@ -11,7 +11,6 @@ using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BigIntegerBouncy = Org.BouncyCastle.Math.BigInteger;
 
 namespace BitSharp.Common.ExtensionMethods
 {
@@ -68,16 +67,6 @@ namespace BitSharp.Common.ExtensionMethods
             return ToHexNumberString(value.ToByteArray());
         }
 
-        public static string ToHexNumberString(this BigIntegerBouncy value)
-        {
-            return value.ToByteArray().Reverse().ToHexNumberString();
-        }
-
-        public static string ToHexNumberStringUnsigned(this BigIntegerBouncy value)
-        {
-            return value.ToByteArrayUnsigned().Reverse().ToHexNumberString();
-        }
-
         public static string ToHexDataString(this byte[] value)
         {
             return string.Format("[{0}]", Bits.ToString(value).Replace("-", ",").ToLower());
@@ -96,16 +85,6 @@ namespace BitSharp.Common.ExtensionMethods
         public static string ToHexDataString(this BigInteger value)
         {
             return ToHexDataString(value.ToByteArray());
-        }
-
-        public static string ToHexDataString(this BigIntegerBouncy value)
-        {
-            return value.ToByteArray().Reverse().ToHexDataString();
-        }
-
-        public static string ToHexDataStringUnsigned(this BigIntegerBouncy value)
-        {
-            return value.ToByteArrayUnsigned().Reverse().ToHexDataString();
         }
 
         private static readonly DateTime unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);

@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Script;
 using BitSharp.Common;
-using BigIntegerBouncy = Org.BouncyCastle.Math.BigInteger;
 using System.Numerics;
 using System.Collections.Immutable;
 
@@ -72,10 +71,6 @@ namespace BitSharp.Script
                     else if (args[i] is ImmutableList<byte>)
                     {
                         args[i] = ((ImmutableList<byte>)args[i]).ToHexDataString();
-                    }
-                    else if (args[i] is BigIntegerBouncy)
-                    {
-                        args[i] = ((BigIntegerBouncy)args[i]).ToByteArrayUnsigned().Reverse().ToHexNumberString();
                     }
                     else if (args[i] is BigInteger)
                     {
