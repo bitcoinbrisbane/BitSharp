@@ -18,6 +18,7 @@ namespace BitSharp.Storage
     {
         public event Action<TKey, TValue> OnAddition;
         public event Action<TKey, TValue> OnModification;
+        public event Action<TKey> OnRemoved;
         public event Action<TKey> OnMissing;
 
         private readonly string name;
@@ -97,10 +98,8 @@ namespace BitSharp.Storage
 
             this.missingData.Remove(key);
 
-            //TODO?
-            RemoveKnownKey(key);
-            //if (RemoveKnownKey(key) || result)
-            //    RaiseOnRemoved(key);
+            if (RemoveKnownKey(key) || result)
+                RaiseOnRemoved(key);
 
             return result;            
         }
@@ -131,6 +130,11 @@ namespace BitSharp.Storage
             }
         }
 
+        public void Flush()
+        {
+            this.dataStorage.Flush();
+        }
+
         // add a key to the known list, fire event if new
         private bool AddKnownKey(TKey key)
         {
@@ -159,6 +163,13 @@ namespace BitSharp.Storage
             var handler = this.OnModification;
             if (handler != null)
                 handler(key, value);
+        }
+
+        private void RaiseOnRemoved(TKey key)
+        {
+            var handler = this.OnRemoved;
+            if (handler != null)
+                handler(key);
         }
 
         private void RaiseOnMissing(TKey key)

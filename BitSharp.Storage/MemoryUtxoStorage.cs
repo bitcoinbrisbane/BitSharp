@@ -12,17 +12,17 @@ namespace BitSharp.Storage
     public class MemoryUtxoStorage : IUtxoStorage
     {
         private UInt256 blockHash;
-        private ImmutableDictionary<UInt256, OutputStates> unspentTransactions;
+        private ImmutableDictionary<UInt256, UnspentTx> unspentTransactions;
         private ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs;
 
-        public MemoryUtxoStorage(UInt256 blockHash, ImmutableDictionary<UInt256, OutputStates> unspentTransactions, ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs)
+        public MemoryUtxoStorage(UInt256 blockHash, ImmutableDictionary<UInt256, UnspentTx> unspentTransactions, ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs)
         {
             this.blockHash = blockHash;
             this.unspentTransactions = unspentTransactions;
             this.unspentOutputs = unspentOutputs;
         }
 
-        public ImmutableDictionary<UInt256, OutputStates> UnspentTransactions { get { return this.unspentTransactions; } }
+        public ImmutableDictionary<UInt256, UnspentTx> UnspentTransactions { get { return this.unspentTransactions; } }
 
         public ImmutableDictionary<TxOutputKey, TxOutput> UnspentOutputs { get { return this.unspentOutputs; } }
 
@@ -41,12 +41,12 @@ namespace BitSharp.Storage
             return this.unspentTransactions.ContainsKey(txHash);
         }
 
-        public bool TryGetTransaction(UInt256 txHash, out OutputStates outputStates)
+        public bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx)
         {
-            return this.unspentTransactions.TryGetValue(txHash, out outputStates);
+            return this.unspentTransactions.TryGetValue(txHash, out unspentTx);
         }
 
-        IEnumerable<KeyValuePair<UInt256, OutputStates>> IUtxoStorage.UnspentTransactions()
+        IEnumerable<KeyValuePair<UInt256, UnspentTx>> IUtxoStorage.UnspentTransactions()
         {
             return this.unspentTransactions;
         }

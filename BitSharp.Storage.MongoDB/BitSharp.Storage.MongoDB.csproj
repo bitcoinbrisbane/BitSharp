@@ -72,6 +72,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BlockHeaderStorage.cs" />
+    <Compile Include="BlockRollbackStorage.cs" />
     <Compile Include="BlockTxHashesStorage.cs" />
     <Compile Include="ChainedBlockStorage.cs" />
     <Compile Include="KnownAddressStorage.cs" />

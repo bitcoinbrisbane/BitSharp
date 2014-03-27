@@ -29,5 +29,7 @@ namespace BitSharp.Storage
         bool TryRemove(TKey key);
 
         TValue this[TKey key] { get; set; }
+
+        void Flush();
     }
 }

@@ -95,6 +95,11 @@ namespace BitSharp.Storage.MongoDB
             }
         }
 
+        public void Flush()
+        {
+            throw new NotSupportedException();
+        }
+
         public IEnumerator<KeyValuePair<NetworkAddressKey, NetworkAddressWithTime>> GetEnumerator()
         {
             foreach (var keyPair in this.collection)

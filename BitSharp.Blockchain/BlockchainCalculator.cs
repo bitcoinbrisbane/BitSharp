@@ -38,12 +38,14 @@ namespace BitSharp.Blockchain
         {
             chainStateBuilder.Stats.totalStopwatch.Start();
             chainStateBuilder.Stats.currentRateStopwatch.Start();
+            var didWork = false;
 
             // calculate the new blockchain along the target path
             chainStateBuilder.IsConsistent = true;
             foreach (var pathElement in BlockAndInputsLookAhead(chainStateBuilder.Chain.NavigateTowards(getTargetChain), lookAhead: 1))
             {
                 chainStateBuilder.IsConsistent = false;
+                didWork = true;
 
                 // cooperative loop
                 if (this.shutdownToken.IsCancellationRequested)
@@ -79,6 +81,10 @@ namespace BitSharp.Blockchain
                     new MethodTimer(false).Time("CalculateUtxo", () =>
                         CalculateUtxo(chainedBlock, block, chainStateBuilder.Utxo, out txCount, out inputCount));
 
+                    // collect rollback informatino and store it
+                    var blockRollbackInformation = chainStateBuilder.Utxo.CollectBlockRollbackInformation();
+                    this.CacheContext.BlockRollbackCache[block.Hash] = blockRollbackInformation;
+
                     // flush utxo progress
                     //chainStateBuilder.Utxo.Flush();
 
@@ -93,12 +99,11 @@ namespace BitSharp.Blockchain
                     chainStateBuilder.Stats.totalTxCount += txCount;
                     chainStateBuilder.Stats.totalInputCount += inputCount;
 
-                    var txInterval = 100.THOUSAND();
-                    if (
-                        chainStateBuilder.Height % 10.THOUSAND() == 0
-                        || (chainStateBuilder.Stats.totalTxCount % txInterval < (chainStateBuilder.Stats.totalTxCount - txCount) % txInterval || txCount >= txInterval))
+                    var txInterval = TimeSpan.FromSeconds(15);
+                    if (DateTime.UtcNow - chainStateBuilder.Stats.lastLogTime >= txInterval)
                     {
                         LogBlockchainProgress(chainStateBuilder);
+                        chainStateBuilder.Stats.lastLogTime = DateTime.UtcNow;
 
                         chainStateBuilder.Stats.currentBlockCount = 0;
                         chainStateBuilder.Stats.currentTxCount = 0;
@@ -116,7 +121,9 @@ namespace BitSharp.Blockchain
             if (onProgress != null)
                 onProgress();
 
-            LogBlockchainProgress(chainStateBuilder);
+            if (didWork)
+                LogBlockchainProgress(chainStateBuilder);
+            
             chainStateBuilder.Stats.totalStopwatch.Stop();
             chainStateBuilder.Stats.currentRateStopwatch.Stop();
         }
@@ -185,6 +192,10 @@ namespace BitSharp.Blockchain
             var blockHeight = chainStateBuilder.Height;
             var utxoBuilder = chainStateBuilder.Utxo;
 
+            var blockRollbackInformation = this.CacheContext.BlockRollbackCache[block.Hash];
+            var blockRollbackDictionary = new Dictionary<UInt256, UInt256>();
+            blockRollbackDictionary.AddRange(blockRollbackInformation);
+
             for (var txIndex = block.Transactions.Count - 1; txIndex >= 1; txIndex--)
             {
                 var tx = block.Transactions[txIndex];
@@ -196,7 +207,7 @@ namespace BitSharp.Blockchain
                 for (var inputIndex = tx.Inputs.Count - 1; inputIndex >= 0; inputIndex--)
                 {
                     var input = tx.Inputs[inputIndex];
-                    utxoBuilder.Unspend(input, chainStateBuilder.LastBlock);
+                    utxoBuilder.Unspend(input, chainStateBuilder.LastBlock, blockRollbackDictionary);
                 }
             }
 

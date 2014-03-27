@@ -43,13 +43,15 @@ namespace BitSharp.Daemon
             {
                 var block = chainState.Chain.Blocks[i];
 
-                IImmutableList<UInt256> blockTxHashes;
-                if (this.cacheContext.BlockTxHashesCache.TryGetValue(block.BlockHash, out blockTxHashes))
-                {
-                    foreach (var txHash in blockTxHashes)
-                        this.cacheContext.TransactionCache.TryRemove(txHash);
+                this.cacheContext.BlockTxHashesCache.TryRemove(block.BlockHash);
 
-                    this.cacheContext.BlockTxHashesCache.TryRemove(block.BlockHash);
+                IImmutableList<KeyValuePair<UInt256, UInt256>> blockRollbackInformation;
+                if (this.cacheContext.BlockRollbackCache.TryGetValue(block.BlockHash, out blockRollbackInformation))
+                {
+                    foreach (var keyPair in blockRollbackInformation)
+                        this.cacheContext.TransactionCache.TryRemove(keyPair.Key);
+
+                    this.cacheContext.BlockRollbackCache.TryRemove(block.BlockHash);
                 }
             }
         }

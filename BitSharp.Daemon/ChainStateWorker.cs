@@ -31,6 +31,10 @@ namespace BitSharp.Daemon
         private ChainStateBuilder chainStateBuilder;
         private DateTime chainStateBuilderTime;
 
+        private readonly TimeSpan[] blockTimes;
+        private int blockTimesIndex;
+        private TimeSpan blockProcessingTime;
+
         public ChainStateWorker(IBlockchainRules rules, ICacheContext cacheContext, Func<Chain> getTargetChain, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
             : base("ChainStateWorker", initialNotify, minIdleTime, maxIdleTime)
         {
@@ -41,9 +45,15 @@ namespace BitSharp.Daemon
 
             this.chainState = ChainState.CreateForGenesisBlock(this.rules.GenesisChainedBlock);
             this.chainStateLock = new ReaderWriterLockSlim();
+
+            this.blockTimes = new TimeSpan[1000];
+            this.blockTimesIndex = -1;
+            this.blockProcessingTime = TimeSpan.Zero;
         }
 
         public ChainState ChainState { get { return this.chainState; } }
+
+        public TimeSpan BlockProcessingTime { get { return this.blockProcessingTime; } }
 
         internal ChainStateBuilder ChainStateBuilder { get { return this.chainStateBuilder; } }
 
@@ -66,6 +76,16 @@ namespace BitSharp.Daemon
                     && this.chainStateBuilder.LastBlockHash != chainStateLocal.LastBlockHash
                     && DateTime.UtcNow - this.chainStateBuilderTime > TimeSpan.FromSeconds(MAX_BUILDER_LIFETIME_SECONDS))
                 {
+                    // ensure rollback information is fully saved, back to pruning limit, before considering new chain state committed
+                    var blocksPerDay = 144;
+                    var pruneBuffer = blocksPerDay * 7;
+                    foreach (var block in this.chainStateBuilder.Chain.Blocks.Reverse().Take(pruneBuffer))
+                    {
+                        if (!this.cacheContext.BlockRollbackCache.ContainsKey(block.BlockHash))
+                            throw new InvalidOperationException();
+                    }
+                    this.cacheContext.BlockRollbackCache.Flush();
+
                     var newChain = this.chainStateBuilder.Chain.ToImmutable();
                     var newUtxo = this.chainStateBuilder.Utxo.Close(newChain.LastBlock.BlockHash);
 
@@ -93,9 +113,15 @@ namespace BitSharp.Daemon
                     var startTime = new Stopwatch();
                     startTime.Start();
 
+                    var blockStartTime = DateTime.UtcNow;
                     this.calculator.CalculateBlockchainFromExisting(this.chainStateBuilder, getTargetChain, cancelToken.Token,
                         () =>
                         {
+                            this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;
+                            this.blockTimes[this.blockTimesIndex] = DateTime.UtcNow - blockStartTime;
+                            this.blockProcessingTime = TimeSpan.FromTicks((long)this.blockTimes.Average(x => x.Ticks));
+                            blockStartTime = DateTime.UtcNow;
+
                             var handler = this.OnChainStateBuilderChanged;
                             if (handler != null)
                                 handler();
@@ -126,6 +152,10 @@ namespace BitSharp.Daemon
                 {
                     this.chainStateBuilder.Dispose();
                     this.chainStateBuilder = null;
+
+                    var builderHandler = this.OnChainStateBuilderChanged;
+                    if (builderHandler != null)
+                        builderHandler();
                 }
 
                 if (e is ValidationException)
@@ -136,14 +166,6 @@ namespace BitSharp.Daemon
 
                 // try again on failure
                 this.NotifyWork();
-
-                var handler = this.OnChainStateChanged;
-                if (handler != null)
-                    handler();
-
-                var builderHandler = this.OnChainStateBuilderChanged;
-                if (builderHandler != null)
-                    builderHandler();
             }
 
             // collect after processing

@@ -79,6 +79,7 @@ namespace BitSharp.Blockchain
             public long currentBlockCount;
             public long currentTxCount;
             public long currentInputCount;
+            public DateTime lastLogTime = DateTime.UtcNow;
 
             internal BuilderStats() { }
         }

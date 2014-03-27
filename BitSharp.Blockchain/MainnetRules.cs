@@ -21,7 +21,7 @@ namespace BitSharp.Blockchain
     {
         public static bool BypassValidation { get; set; }
 
-        public static bool BypassExecuteScript { get; set; }
+        public static bool IgnoreScriptErrors { get; set; }
 
         private const UInt64 SATOSHI_PER_BTC = 100 * 1000 * 1000;
 
@@ -247,6 +247,10 @@ namespace BitSharp.Blockchain
                 throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Coinbase transaction does not have exactly one input".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.Height));
             }
 
+            var blockTxIndices = new Dictionary<UInt256, int>();
+            for (var i = 0; i < block.Transactions.Count; i++)
+                blockTxIndices.Add(block.Transactions[i].Hash, i);
+
             // validate transactions in parallel
             long unspentValue = 0L;
             try
@@ -257,7 +261,7 @@ namespace BitSharp.Blockchain
 
                     long unspentValueInner;
                     //TODO utxo will not be correct at transaction if a tx hash is reused within the same block
-                    ValidateTransaction(chainStateBuilder.Height, block, tx, txIndex, chainStateBuilder.Utxo, out unspentValueInner/*, prevInputTxes*/);
+                    ValidateTransaction(chainStateBuilder.Height, block, tx, txIndex, chainStateBuilder.Utxo, out unspentValueInner, blockTxIndices/*, prevInputTxes*/);
 
                     Interlocked.Add(ref unspentValue, unspentValueInner);
                 });
@@ -277,7 +281,7 @@ namespace BitSharp.Blockchain
             }
 
             //TODO utxo will not be correct at transaction if a tx hash is reused within the same block
-            ValidateTransactionScripts(block, chainStateBuilder.Utxo/*, prevInputTxes*/);
+            ValidateTransactionScripts(block, chainStateBuilder.Utxo, blockTxIndices/*, prevInputTxes*/);
 
             // calculate the expected reward in coinbase
             var expectedReward = (long)(50 * SATOSHI_PER_BTC);
@@ -300,7 +304,7 @@ namespace BitSharp.Blockchain
         }
 
         //TODO utxo needs to be as-at transaction, with regards to a transaction being fully spent and added back in in the same block
-        public virtual void ValidateTransaction(int blockHeight, Block block, Transaction tx, int txIndex, UtxoBuilder utxoBuilder, out long unspentValue/*, ImmutableDictionary<UInt256, Transaction> prevInputTxes = null*/)
+        public virtual void ValidateTransaction(int blockHeight, Block block, Transaction tx, int txIndex, UtxoBuilder utxoBuilder, out long unspentValue, Dictionary<UInt256, int> blockTxIndices/*, ImmutableDictionary<UInt256, Transaction> prevInputTxes = null*/)
         {
             unspentValue = -1;
 
@@ -319,19 +323,7 @@ namespace BitSharp.Blockchain
                 //if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Count)
                 //    throw new ValidationException(block.Hash);
                 //var prevOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
-                TxOutput prevOutput;
-                if (!utxoBuilder.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
-                {
-                    var prevTx = block.Transactions.FirstOrDefault(x => x.Hash == input.PreviousTxOutputKey.TxHash);
-                    if (prevTx == null)
-                        throw new ValidationException(block.Hash);
-
-                    var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
-                    if (outputIndex < 0 || outputIndex >= prevTx.Outputs.Count)
-                        throw new ValidationException(block.Hash);
-
-                    prevOutput = prevTx.Outputs[outputIndex];
-                }
+                var prevOutput = LookupPreviousOutput(input.PreviousTxOutputKey, block, blockTxIndices, utxoBuilder);
 
                 previousOutputs.Add(input.PreviousTxOutputKey, Tuple.Create(input, inputIndex, prevOutput));
             }
@@ -380,57 +372,13 @@ namespace BitSharp.Blockchain
         }
 
         //TODO utxo needs to be as-at transaction, with regards to a transaction being fully spent and added back in in the same block
-        public virtual void ValidateTransactionScripts(Block block, UtxoBuilder utxoBuilder/*, ImmutableDictionary<UInt256, Transaction> prevInputTxes = null*/)
+        public virtual void ValidateTransactionScripts(Block block, UtxoBuilder utxoBuilder, Dictionary<UInt256, int> blockTxIndices/*, ImmutableDictionary<UInt256, Transaction> prevInputTxes = null*/)
         {
-            if (BypassExecuteScript)
-                return;
-
-            // lookup all previous outputs
-            var prevOutputMissing = false;
-            var previousOutputs = new Dictionary<TxOutputKey, Tuple<Transaction, TxInput, int, TxOutput>>();
-            for (var txIndex = 1; txIndex < block.Transactions.Count; txIndex++)
-            {
-                var tx = block.Transactions[txIndex];
-                for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
-                {
-                    var input = tx.Inputs[inputIndex];
-
-                    // find previous transaction
-                    //var prevTx = prevInputTxes != null ? prevInputTxes[input.PreviousTxOutputKey.TxHash]
-                    //    : this.CacheContext.TransactionCache[input.PreviousTxOutputKey.TxHash];
-
-                    // find previous transaction output
-                    //if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Count)
-                    //    throw new ValidationException(block.Hash);
-                    //var prevOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
-                    TxOutput prevOutput;
-                    if (!utxoBuilder.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
-                    {
-                        var prevTx = block.Transactions.FirstOrDefault(x => x.Hash == input.PreviousTxOutputKey.TxHash);
-                        if (prevTx == null)
-                            throw new ValidationException(block.Hash);
-
-                        var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
-                        if (outputIndex < 0 || outputIndex >= prevTx.Outputs.Count)
-                            throw new ValidationException(block.Hash);
-
-                        prevOutput = prevTx.Outputs[outputIndex];
-                    }
-
-                    previousOutputs.Add(input.PreviousTxOutputKey, Tuple.Create(tx, input, inputIndex, prevOutput));
-                }
-            }
-
-            if (prevOutputMissing)
-            {
-                throw new ValidationException(block.Hash);
-            }
-
             var exceptions = new ConcurrentBag<Exception>();
 
             var scriptEngine = new ScriptEngine();
 
-            Parallel.ForEach(previousOutputs.Values, (tuple, loopState) =>
+            Parallel.ForEach(GetAllInputsIndexed(block, blockTxIndices, utxoBuilder), (tuple, loopState) =>
             {
                 try
                 {
@@ -444,18 +392,71 @@ namespace BitSharp.Blockchain
                     if (!scriptEngine.VerifyScript(0 /*TODO blockHash*/, 0 /*TODO txIndex*/, prevOutput.ScriptPublicKey.ToArray(), tx, inputIndex, script.ToArray()))
                     {
                         exceptions.Add(new ValidationException(block.Hash));
-                        loopState.Break();
+                        if (!IgnoreScriptErrors)
+                            loopState.Break();
                     }
                 }
                 catch (Exception e)
                 {
                     exceptions.Add(e);
-                    loopState.Break();
+                    if (!IgnoreScriptErrors)
+                        loopState.Break();
                 }
             });
 
             if (exceptions.Count > 0)
-                throw new AggregateException(exceptions.ToArray());
+            {
+                if (!IgnoreScriptErrors)
+                    throw new AggregateException(exceptions.ToArray());
+                //else
+                //    Debug.WriteLine("Ignoring script error in block: {0}".Format2(block.Hash));
+            }
+        }
+
+        private IEnumerable<Tuple<Transaction, TxInput, int, TxOutput>> GetAllInputsIndexed(Block block, Dictionary<UInt256, int> blockTxIndices, UtxoBuilder utxoBuilder)
+        {
+            for (var txIndex = 1; txIndex < block.Transactions.Count; txIndex++)
+            {
+                var tx = block.Transactions[txIndex];
+                
+                for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
+                {
+                    var input = tx.Inputs[inputIndex];
+                    var prevOutput = LookupPreviousOutput(input.PreviousTxOutputKey, block, blockTxIndices, utxoBuilder);
+
+                    yield return Tuple.Create(tx, input, inputIndex, prevOutput);
+                }
+            }
+        }
+
+        private TxOutput LookupPreviousOutput(TxOutputKey txOutputKey, Block block, Dictionary<UInt256, int> blockTxIndices, UtxoBuilder utxoBuilder)
+        {
+            TxOutput prevOutput;
+            if (utxoBuilder.TryGetOutput(txOutputKey, out prevOutput))
+            {
+                return prevOutput;
+            }
+            else
+            {
+                Transaction prevTx;
+                int prevTxIndex;
+                if (blockTxIndices.TryGetValue(txOutputKey.TxHash, out prevTxIndex))
+                {
+                    Debug.Assert(prevTxIndex >= 0 && prevTxIndex < block.Transactions.Count);
+                    prevTx = block.Transactions[prevTxIndex];
+                    Debug.Assert(prevTx.Hash == txOutputKey.TxHash);
+                }
+                else
+                {
+                    throw new ValidationException(block.Hash);
+                }
+
+                var outputIndex = unchecked((int)txOutputKey.TxOutputIndex);
+                if (outputIndex < 0 || outputIndex >= prevTx.Outputs.Count)
+                    throw new ValidationException(block.Hash);
+
+                return prevTx.Outputs[outputIndex];
+            }
         }
     }
 }

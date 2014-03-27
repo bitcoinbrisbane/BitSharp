@@ -117,6 +117,11 @@ namespace BitSharp.Storage.Esent
             }
         }
 
+        public void Flush()
+        {
+            this.dict.Flush();
+        }
+
         public IEnumerator<KeyValuePair<UInt256, TValue>> GetEnumerator()
         {
             foreach (var keyPair in this.dict)

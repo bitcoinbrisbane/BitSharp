@@ -11,7 +11,7 @@ namespace BitSharp.Storage
 {
     public class MemoryUtxoBuilderStorage : IUtxoBuilderStorage
     {
-        private ImmutableDictionary<UInt256, OutputStates>.Builder unspentTransactions;
+        private ImmutableDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
         private ImmutableDictionary<TxOutputKey, TxOutput>.Builder unspentOutputs;
 
         public MemoryUtxoBuilderStorage(IUtxoStorage parentUtxo)
@@ -28,7 +28,7 @@ namespace BitSharp.Storage
             }
         }
 
-        public ImmutableDictionary<UInt256, OutputStates>.Builder UnspentTransactionsDictionary { get { return this.unspentTransactions; } }
+        public ImmutableDictionary<UInt256, UnspentTx>.Builder UnspentTransactionsDictionary { get { return this.unspentTransactions; } }
 
         public ImmutableDictionary<TxOutputKey, TxOutput>.Builder UnspentOutputsDictionary { get { return this.unspentOutputs; } }
 
@@ -42,14 +42,14 @@ namespace BitSharp.Storage
             return this.unspentTransactions.ContainsKey(txHash);
         }
 
-        public bool TryGetTransaction(UInt256 txHash, out OutputStates outputStates)
+        public bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx)
         {
-            return this.unspentTransactions.TryGetValue(txHash, out outputStates);
+            return this.unspentTransactions.TryGetValue(txHash, out unspentTx);
         }
 
-        public void AddTransaction(UInt256 txHash, OutputStates outputStates)
+        public void AddTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
-            this.unspentTransactions.Add(txHash, outputStates);
+            this.unspentTransactions.Add(txHash, unspentTx);
         }
 
         public bool RemoveTransaction(UInt256 txHash)
@@ -57,12 +57,12 @@ namespace BitSharp.Storage
             return this.unspentTransactions.Remove(txHash);
         }
 
-        public void UpdateTransaction(UInt256 txHash, OutputStates outputStates)
+        public void UpdateTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
-            this.unspentTransactions[txHash] = outputStates;
+            this.unspentTransactions[txHash] = unspentTx;
         }
 
-        IEnumerable<KeyValuePair<UInt256, OutputStates>> IUtxoBuilderStorage.UnspentTransactions()
+        IEnumerable<KeyValuePair<UInt256, UnspentTx>> IUtxoBuilderStorage.UnspentTransactions()
         {
             return this.unspentTransactions;
         }
@@ -103,7 +103,15 @@ namespace BitSharp.Storage
 
         public IUtxoStorage Close(UInt256 blockHash)
         {
-            return new MemoryUtxoStorage(blockHash, this.unspentTransactions.ToImmutable(), this.unspentOutputs.ToImmutable());
+            var compactUnspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
+            foreach (var unspentTransaction in this.unspentTransactions)
+                compactUnspentTransactions.Add(unspentTransaction);
+
+            var compactUnspentOutputs = ImmutableDictionary.CreateBuilder<TxOutputKey, TxOutput>();
+            foreach (var unspentOutput in this.unspentOutputs)
+                compactUnspentOutputs.Add(unspentOutput);
+
+            return new MemoryUtxoStorage(blockHash, compactUnspentTransactions.ToImmutable(), compactUnspentOutputs.ToImmutable());
         }
 
         public void Dispose()

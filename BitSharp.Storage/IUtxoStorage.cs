@@ -17,9 +17,9 @@ namespace BitSharp.Storage
 
         bool ContainsTransaction(UInt256 txHash);
 
-        bool TryGetTransaction(UInt256 txHash, out OutputStates outputStates);
+        bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx);
 
-        IEnumerable<KeyValuePair<UInt256, OutputStates>> UnspentTransactions();
+        IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions();
 
         
         int OutputCount { get; }

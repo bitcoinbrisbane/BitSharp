@@ -19,6 +19,8 @@ namespace BitSharp.Storage
 
         IUnboundedStorage<UInt256, Transaction> TransactionStorage { get; }
 
+        IBoundedStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> BlockRollbackStorage { get; }
+
         IBoundedStorage<UInt256, string> InvalidBlockStorage { get; }
 
         //IEnumerable<ChainedBlock> SelectMaxTotalWorkBlocks();

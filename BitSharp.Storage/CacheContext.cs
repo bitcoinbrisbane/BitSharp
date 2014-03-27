@@ -22,6 +22,7 @@ namespace BitSharp.Storage
         private readonly IBoundedCache<UInt256, ChainedBlock> chainedBlockCache;
         private readonly IBoundedCache<UInt256, IImmutableList<UInt256>> blockTxHashesCache;
         private readonly IUnboundedCache<UInt256, Transaction> transactionCache;
+        private readonly IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> blockRollbackCache;
         private readonly IBoundedCache<UInt256, string> invalidBlockCache;
         private readonly IUnboundedCache<UInt256, Block> blockView;
 
@@ -33,6 +34,7 @@ namespace BitSharp.Storage
             this.chainedBlockCache = new BoundedFullCache<UInt256, ChainedBlock>("Chained Block Cache", storageContext.ChainedBlockStorage);
             this.blockTxHashesCache = new BoundedCache<UInt256, IImmutableList<UInt256>>("Block TX Hashes Cache", storageContext.BlockTxHashesStorage);
             this.transactionCache = new UnboundedCache<UInt256, Transaction>("Transaction Cache", storageContext.TransactionStorage);
+            this.blockRollbackCache = new BoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>>("Block Rollback Cache", storageContext.BlockRollbackStorage);
             this.invalidBlockCache = new BoundedCache<UInt256, string>("Invalid Block Cache", storageContext.InvalidBlockStorage);
             this.blockView = new BlockView(this);
         }
@@ -44,6 +46,8 @@ namespace BitSharp.Storage
         public IBoundedCache<UInt256, IImmutableList<UInt256>> BlockTxHashesCache { get { return this.blockTxHashesCache; } }
 
         public IUnboundedCache<UInt256, Transaction> TransactionCache { get { return this.transactionCache; } }
+
+        public IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> BlockRollbackCache { get { return this.blockRollbackCache; } }
 
         public IBoundedCache<UInt256, string> InvalidBlockCache { get { return this.invalidBlockCache; } }
 

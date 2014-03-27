@@ -310,12 +310,12 @@ namespace BitSharp.Storage
             }
         }
 
-        public static UnspentTx DecodeUnspentTx(UInt256 txHash, Stream stream)
+        public static UnspentTx DecodeUnspentTx(Stream stream)
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
                 return new UnspentTx(
-                    txHash: txHash,
+                    confirmedBlockHash: reader.Read32Bytes(),
                     outputStates: new OutputStates(
                         bytes: reader.ReadVarBytes(),
                         length: reader.ReadInt32())
@@ -323,11 +323,11 @@ namespace BitSharp.Storage
             }
         }
 
-        public static UnspentTx DecodeUnspentTx(UInt256 txHash, byte[] bytes)
+        public static UnspentTx DecodeUnspentTx(UInt256 confirmedBlockHash, byte[] bytes)
         {
             using (var stream = new MemoryStream(bytes))
             {
-                return DecodeUnspentTx(txHash, stream);
+                return DecodeUnspentTx(stream);
             }
         }
 
@@ -335,6 +335,7 @@ namespace BitSharp.Storage
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
+                writer.Write32Bytes(unspentTx.ConfirmedBlockHash);
                 writer.WriteVarBytes(unspentTx.OutputStates.ToByteArray());
                 writer.WriteInt32(unspentTx.OutputStates.Length);
             }

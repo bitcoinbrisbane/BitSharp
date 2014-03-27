@@ -24,6 +24,8 @@ namespace BitSharp.Storage
 
         IUnboundedCache<UInt256, Transaction> TransactionCache { get; }
 
+        IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> BlockRollbackCache { get; }
+
         IBoundedCache<UInt256, string> InvalidBlockCache { get; }
 
         IUnboundedCache<UInt256, Block> BlockView { get; }

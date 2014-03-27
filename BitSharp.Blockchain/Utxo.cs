@@ -51,6 +51,11 @@ namespace BitSharp.Blockchain
             return this.utxoStorage.ContainsOutput(txOutputKey);
         }
 
+        public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> GetUnspentOutputs()
+        {
+            return this.utxoStorage.UnspentOutputs();
+        }
+
         public void DisposeDelete()
         {
             this.utxoStorage.DisposeDelete();

@@ -55,24 +55,24 @@ namespace BitSharp.Storage.Esent
             return this.unspentTransactions.ContainsKey(txHash.ToByteArray());
         }
 
-        public bool TryGetTransaction(UInt256 txHash, out OutputStates outputStates)
+        public bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx)
         {
             byte[] bytes;
             if (this.unspentTransactions.TryGetValue(txHash.ToByteArray(), out bytes))
             {
-                outputStates = StorageEncoder.DecodeOutputStates(txHash, bytes);
+                unspentTx = StorageEncoder.DecodeUnspentTx(txHash, bytes);
                 return true;
             }
             else
             {
-                outputStates = default(OutputStates);
+                unspentTx = default(UnspentTx);
                 return false;
             }
         }
 
-        public void AddTransaction(UInt256 txHash, OutputStates outputStates)
+        public void AddTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
-            this.unspentTransactions.Add(txHash.ToByteArray(), StorageEncoder.EncodeOutputStates(outputStates));
+            this.unspentTransactions.Add(txHash.ToByteArray(), StorageEncoder.EncodeUnspentTx(unspentTx));
         }
 
         public bool RemoveTransaction(UInt256 txHash)
@@ -80,19 +80,19 @@ namespace BitSharp.Storage.Esent
             return this.unspentTransactions.Remove(txHash.ToByteArray());
         }
 
-        public void UpdateTransaction(UInt256 txHash, OutputStates outputStates)
+        public void UpdateTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
-            this.unspentTransactions[txHash.ToByteArray()] = StorageEncoder.EncodeOutputStates(outputStates);
+            this.unspentTransactions[txHash.ToByteArray()] = StorageEncoder.EncodeUnspentTx(unspentTx);
         }
 
-        public IEnumerable<KeyValuePair<UInt256, OutputStates>> UnspentTransactions()
+        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions()
         {
             return this.unspentTransactions.Select(keyPair =>
             {
                 var txHash = new UInt256(keyPair.Key);
-                var outputStates = StorageEncoder.DecodeOutputStates(txHash, keyPair.Value);
+                var unspentTx = StorageEncoder.DecodeUnspentTx(txHash, keyPair.Value);
 
-                return new KeyValuePair<UInt256, OutputStates>(txHash, outputStates);
+                return new KeyValuePair<UInt256, UnspentTx>(txHash, unspentTx);
             });
         }
 

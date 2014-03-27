@@ -111,6 +111,11 @@ namespace BitSharp.Storage.Esent
             }
         }
 
+        public void Flush()
+        {
+            this.dict.Flush();
+        }
+
         public IEnumerator<KeyValuePair<NetworkAddressKey, NetworkAddressWithTime>> GetEnumerator()
         {
             foreach (var keyPair in this.dict)

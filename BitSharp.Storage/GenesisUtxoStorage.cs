@@ -34,15 +34,15 @@ namespace BitSharp.Storage
             return false;
         }
 
-        public bool TryGetTransaction(UInt256 txHash, out OutputStates outputStates)
+        public bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx)
         {
-            outputStates = default(OutputStates);
+            unspentTx = default(UnspentTx);
             return false;
         }
 
-        public IEnumerable<KeyValuePair<UInt256, OutputStates>> UnspentTransactions()
+        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions()
         {
-            return Enumerable.Empty<KeyValuePair<UInt256, OutputStates>>();
+            return Enumerable.Empty<KeyValuePair<UInt256, UnspentTx>>();
         }
 
         public int OutputCount

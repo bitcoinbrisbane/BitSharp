@@ -19,11 +19,11 @@ namespace BitSharp.Blockchain.Test
         public void TestCanSpend_Unspent()
         {
             // prepare utxo storage
-            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, OutputStates>();
+            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare unspent output
             var txHash = new UInt256(0);
-            unspentTransactions.Add(txHash, new OutputStates(length: 1, state: OutputState.Unspent));
+            unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, length: 1, state: OutputState.Unspent));
 
             // prepare utxo
             var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), null);
@@ -43,11 +43,11 @@ namespace BitSharp.Blockchain.Test
         public void TestCanSpend_Spent()
         {
             // prepare utxo storage
-            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, OutputStates>();
+            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare spent output
             var txHash = new UInt256(0);
-            unspentTransactions.Add(txHash, new OutputStates(length: 1, state: OutputState.Spent));
+            unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, length: 1, state: OutputState.Spent));
 
             // prepare utxo
             var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), null);
@@ -67,7 +67,7 @@ namespace BitSharp.Blockchain.Test
         public void TestCanSpend_Missing()
         {
             // prepare utxo storage
-            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, OutputStates>();
+            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare utxo
             var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), null);
@@ -87,11 +87,11 @@ namespace BitSharp.Blockchain.Test
         public void TestCanSpend_NegativeIndex()
         {
             // prepare utxo storage
-            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, OutputStates>();
+            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare unspent output
             var txHash = new UInt256(0);
-            unspentTransactions.Add(txHash, new OutputStates(length: 1, state: OutputState.Unspent));
+            unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, length: 1, state: OutputState.Unspent));
 
             // prepare utxo
             var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), null);
@@ -111,11 +111,11 @@ namespace BitSharp.Blockchain.Test
         public void TestCanSpend_IndexOutOfRange()
         {
             // prepare utxo storage
-            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, OutputStates>();
+            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare unspent output
             var txHash = new UInt256(0);
-            unspentTransactions.Add(txHash, new OutputStates(length: 1, state: OutputState.Unspent));
+            unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, length: 1, state: OutputState.Unspent));
 
             // prepare utxo
             var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), null);

@@ -74,6 +74,10 @@ namespace BitSharp.Storage
             }
         }
 
+        public void Flush()
+        {
+        }
+
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
         {
             return this.storage.GetEnumerator();

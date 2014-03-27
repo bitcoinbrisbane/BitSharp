@@ -106,6 +106,11 @@ namespace BitSharp.Storage.MongoDB
             }
         }
 
+        public void Flush()
+        {
+            throw new NotSupportedException();
+        }
+
         public IEnumerator<KeyValuePair<UInt256, TValue>> GetEnumerator()
         {
             return this.collection.Select(x => new KeyValuePair<UInt256, TValue>(new UInt256(x.Key), this.decoder(new UInt256(x.Key), x.Value))).GetEnumerator();

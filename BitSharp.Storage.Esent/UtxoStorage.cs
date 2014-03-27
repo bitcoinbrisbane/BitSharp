@@ -55,34 +55,34 @@ namespace BitSharp.Storage.Esent
                 this.unspentTransactions.ContainsKey(txHash.ToByteArray()));
         }
 
-        public bool TryGetTransaction(UInt256 txHash, out OutputStates outputStates)
+        public bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx)
         {
             bool result = false;
-            OutputStates outputStatesLocal = default(OutputStates);
+            UnspentTx unspentTxLocal = default(UnspentTx);
 
             this.utxoLock.DoRead(() =>
             {
                 byte[] bytes;
                 if (this.unspentTransactions.TryGetValue(txHash.ToByteArray(), out bytes))
                 {
-                    outputStatesLocal = StorageEncoder.DecodeOutputStates(txHash, bytes);
+                    unspentTxLocal = StorageEncoder.DecodeUnspentTx(txHash, bytes);
                     result = true;
                 }
             });
 
-            outputStates = outputStatesLocal;
+            unspentTx = unspentTxLocal;
             return result;
         }
 
-        public IEnumerable<KeyValuePair<UInt256, OutputStates>> UnspentTransactions()
+        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions()
         {
             return this.utxoLock.DoRead(() =>
                 this.unspentTransactions.Select(keyPair =>
                 {
                     var txHash = new UInt256(keyPair.Key);
-                    var outputStates = StorageEncoder.DecodeOutputStates(txHash, keyPair.Value);
+                    var unspentTx = StorageEncoder.DecodeUnspentTx(txHash, keyPair.Value);
 
-                    return new KeyValuePair<UInt256, OutputStates>(txHash, outputStates);
+                    return new KeyValuePair<UInt256, UnspentTx>(txHash, unspentTx);
                 }));
         }
 

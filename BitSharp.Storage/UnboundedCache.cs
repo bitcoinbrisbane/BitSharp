@@ -85,5 +85,10 @@ namespace BitSharp.Storage
                 this.missingData.Remove(key);
             }
         }
+
+        public void Flush()
+        {
+            this.dataStorage.Flush();
+        }
     }
 }

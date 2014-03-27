@@ -17,6 +17,7 @@ namespace BitSharp.Storage
         private readonly MemoryStorage<UInt256, ChainedBlock> _chainedBlockStorage;
         private readonly MemoryStorage<UInt256, IImmutableList<UInt256>> _blockTxHashesStorage;
         private readonly MemoryStorage<UInt256, Transaction> _transactionStorage;
+        private readonly MemoryStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> _blockRollbackStorage;
         private readonly MemoryStorage<UInt256, string> _invalidBlockStorage;
         private readonly MemoryStorage<NetworkAddressKey, NetworkAddressWithTime> _knownAddressStorage;
 
@@ -27,6 +28,7 @@ namespace BitSharp.Storage
             this._blockTxHashesStorage = new MemoryStorage<UInt256, IImmutableList<UInt256>>(this);
             this._transactionStorage = new MemoryStorage<UInt256, Transaction>(this);
             this._invalidBlockStorage = new MemoryStorage<UInt256, string>(this);
+            this._blockRollbackStorage = new MemoryStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>>(this);
             this._knownAddressStorage = new MemoryStorage<NetworkAddressKey, NetworkAddressWithTime>(this);
         }
 
@@ -37,6 +39,8 @@ namespace BitSharp.Storage
         public MemoryStorage<UInt256, IImmutableList<UInt256>> BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
         public MemoryStorage<UInt256, Transaction> TransactionStorage { get { return this._transactionStorage; } }
+
+        public MemoryStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> BlockRollbackStorage { get { return this._blockRollbackStorage; } }
 
         public MemoryStorage<UInt256, string> InvalidBlockStorage { get { return this._invalidBlockStorage; } }
 
@@ -49,6 +53,8 @@ namespace BitSharp.Storage
         IBoundedStorage<UInt256, IImmutableList<UInt256>> IStorageContext.BlockTxHashesStorage { get { return this._blockTxHashesStorage; } }
 
         IUnboundedStorage<UInt256, Transaction> IStorageContext.TransactionStorage { get { return this._transactionStorage; } }
+
+        IBoundedStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> IStorageContext.BlockRollbackStorage { get { return this._blockRollbackStorage; } }
 
         IBoundedStorage<UInt256, string> IStorageContext.InvalidBlockStorage { get { return this._invalidBlockStorage; } }
 

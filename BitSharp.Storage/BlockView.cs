@@ -147,5 +147,10 @@ namespace BitSharp.Storage
                 this.missingData.Remove(blockHash);
             }
         }
+
+        public void Flush()
+        {
+            throw new NotSupportedException();
+        }
     }
 }

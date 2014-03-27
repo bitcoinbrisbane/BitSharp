@@ -97,7 +97,7 @@ namespace BitSharp.Data.Test
         {
             return new UnspentTx
             (
-                txHash: random.NextUInt256(),
+                confirmedBlockHash: random.NextUInt256(),
                 outputStates: new OutputStates(random.NextImmutableBitArray(random.Next((options != null ? options.TxOutputCount : null) ?? 100)))
             );
         }
