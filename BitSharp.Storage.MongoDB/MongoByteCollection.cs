@@ -92,6 +92,12 @@ namespace BitSharp.Storage.MongoDB
             }
         }
 
+        public bool TryRemove(byte[] key)
+        {
+            this.collection.Remove(Query<MongoKeyValuePair>.EQ(x => x._id, key));
+            return true;
+        }
+        
         public byte[] this[byte[] key]
         {
             get

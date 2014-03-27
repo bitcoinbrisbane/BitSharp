@@ -90,6 +90,11 @@ namespace BitSharp.Storage.Esent
             }
         }
 
+        public bool TryRemove(NetworkAddressKey networkAddressKey)
+        {
+            return this.dict.Remove(EncodeKey(networkAddressKey));
+        }
+
         public NetworkAddressWithTime this[NetworkAddressKey networkAddressKey]
         {
             get

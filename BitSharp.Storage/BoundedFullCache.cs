@@ -56,13 +56,13 @@ namespace BitSharp.Storage
             get { return this.cache.Values.Select(x => x); }
         }
 
-        public virtual bool ContainsKey(TKey key)
+        public bool ContainsKey(TKey key)
         {
             return this.cache.ContainsKey(key);
         }
 
         // try to get a value
-        public virtual bool TryGetValue(TKey key, out TValue value)
+        public bool TryGetValue(TKey key, out TValue value)
         {
             if (this.cache.TryGetValue(key, out value))
             {
@@ -75,7 +75,7 @@ namespace BitSharp.Storage
             }
         }
 
-        public virtual bool TryAdd(TKey key, TValue value)
+        public bool TryAdd(TKey key, TValue value)
         {
             this.missingData.Remove(key);
             if (this.cache.TryAdd(key, value))
@@ -91,7 +91,26 @@ namespace BitSharp.Storage
             }
         }
 
-        public virtual TValue this[TKey key]
+        public bool TryRemove(TKey key)
+        {
+            this.missingData.Remove(key);
+
+            TValue ignore;
+            if (this.cache.TryRemove(key, out ignore))
+            {
+                //TODO?
+                //RaiseOnRemoved
+                this.dataStorage.TryRemove(key);
+
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public TValue this[TKey key]
         {
             get
             {

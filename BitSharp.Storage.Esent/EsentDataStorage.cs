@@ -100,6 +100,11 @@ namespace BitSharp.Storage.Esent
             }
         }
 
+        public bool TryRemove(UInt256 key)
+        {
+            return this.dict.Remove(key.ToByteArray());
+        }
+
         public TValue this[UInt256 key]
         {
             get

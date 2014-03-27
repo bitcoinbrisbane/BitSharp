@@ -56,6 +56,12 @@ namespace BitSharp.Storage
             return this.storage.TryAdd(key, value);
         }
 
+        public bool TryRemove(TKey key)
+        {
+            TValue ignore;
+            return this.storage.TryRemove(key, out ignore);
+        }
+
         public TValue this[TKey key]
         {
             get

@@ -47,6 +47,7 @@ namespace BitSharp.Daemon
         private readonly ChainingWorker chainingWorker;
         private readonly TargetChainWorker targetChainWorker;
         private readonly ChainStateWorker chainStateWorker;
+        private readonly PruningWorker pruningWorker;
         private readonly WorkerMethod gcWorker;
 
         public BlockchainDaemon(IBlockchainRules rules, ICacheContext cacheContext)
@@ -72,6 +73,7 @@ namespace BitSharp.Daemon
             this.chainingWorker = new ChainingWorker(rules, cacheContext, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
             this.targetChainWorker = new TargetChainWorker(rules, cacheContext, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
             this.chainStateWorker = new ChainStateWorker(rules, cacheContext, () => this.targetChainWorker.TargetChain, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
+            this.pruningWorker = new PruningWorker(rules, cacheContext, () => this.ChainState, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromMinutes(5));
 
             this.targetChainWorker.OnTargetBlockChanged +=
                 () =>
@@ -94,6 +96,8 @@ namespace BitSharp.Daemon
             this.chainStateWorker.OnChainStateChanged +=
                 () =>
                 {
+                    this.pruningWorker.NotifyWork();
+                    
                     var handler = this.OnChainStateChanged;
                     if (handler != null)
                         handler(this, EventArgs.Empty);
@@ -187,6 +191,7 @@ namespace BitSharp.Daemon
                 this.chainingWorker.Start();
                 this.targetChainWorker.Start();
                 this.chainStateWorker.Start();
+                this.pruningWorker.Start();
                 this.gcWorker.Start();
             }
             catch (Exception)
@@ -215,6 +220,7 @@ namespace BitSharp.Daemon
                 this.chainingWorker,
                 this.targetChainWorker,
                 this.chainStateWorker,
+                this.pruningWorker,
                 this.gcWorker,
                 this.shutdownToken
             }.DisposeList();

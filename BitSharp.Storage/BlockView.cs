@@ -108,6 +108,11 @@ namespace BitSharp.Storage
             return result;
         }
 
+        public bool TryRemove(UInt256 blockHash)
+        {
+            throw new NotSupportedException();
+        }
+
         public Block this[UInt256 blockHash]
         {
             get

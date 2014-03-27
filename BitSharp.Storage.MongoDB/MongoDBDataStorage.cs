@@ -89,6 +89,11 @@ namespace BitSharp.Storage.MongoDB
             return this.collection.TryAdd(key.ToByteArray(), this.encoder(value));
         }
 
+        public bool TryRemove(UInt256 key)
+        {
+            return this.collection.TryRemove(key.ToByteArray());
+        }
+
         public TValue this[UInt256 key]
         {
             get

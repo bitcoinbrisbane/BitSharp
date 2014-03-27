@@ -78,6 +78,11 @@ namespace BitSharp.Storage.MongoDB
             return this.collection.TryAdd(EncodeKey(networkAddressKey), EncodeValue(networkAddressWithTime));
         }
 
+        public bool TryRemove(NetworkAddressKey networkAddressKey)
+        {
+            return this.collection.TryRemove(EncodeKey(networkAddressKey));
+        }
+
         public NetworkAddressWithTime this[NetworkAddressKey networkAddressKey]
         {
             get

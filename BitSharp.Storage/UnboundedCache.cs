@@ -53,9 +53,14 @@ namespace BitSharp.Storage
 
         public bool TryAdd(TKey key, TValue value)
         {
-            var result = this.dataStorage.TryAdd(key, value);
             this.missingData.Remove(key);
-            return result;
+            return this.dataStorage.TryAdd(key, value);
+        }
+
+        public bool TryRemove(TKey key)
+        {
+            this.missingData.Remove(key);
+            return this.dataStorage.TryRemove(key);
         }
 
         public TValue this[TKey key]
