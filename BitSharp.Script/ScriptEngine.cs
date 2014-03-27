@@ -1,4 +1,6 @@
-﻿using System;
+﻿//#define SIPA
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -12,8 +14,10 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Collections.Immutable;
 using BitSharp.Data;
-//TODO need to figure out licensing
-//using Secp256k1;
+
+#if SIPA
+using Secp256k1;
+#endif
 
 namespace BitSharp.Script
 {
@@ -282,11 +286,12 @@ namespace BitSharp.Script
             // get the hash of the simplified/signing version of the transaction
             txSignatureHash = Crypto.DoubleSHA256(txSignature);
 
+#if SIPA
             // verify that signature is valid for pubKey and the simplified/signing transaction's hash
-            //var result = Signatures.Verify(txSignatureHash, sigDER, pubKey);
-
-            //return result == Signatures.VerifyResult.Verified;
+            return Signatures.Verify(txSignatureHash, sigDER, pubKey) == Signatures.VerifyResult.Verified;
+#else
             return true;
+#endif
         }
 
         public byte[] TxSignature(ImmutableArray<byte> scriptPubKey, Transaction tx, int inputIndex, byte hashType)
