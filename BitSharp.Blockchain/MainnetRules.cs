@@ -321,7 +321,17 @@ namespace BitSharp.Blockchain
                 //var prevOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
                 TxOutput prevOutput;
                 if (!utxoBuilder.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
-                    throw new ValidationException(block.Hash);
+                {
+                    var prevTx = block.Transactions.FirstOrDefault(x => x.Hash == input.PreviousTxOutputKey.TxHash);
+                    if (prevTx == null)
+                        throw new ValidationException(block.Hash);
+
+                    var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
+                    if (outputIndex < 0 || outputIndex >= prevTx.Outputs.Count)
+                        throw new ValidationException(block.Hash);
+
+                    prevOutput = prevTx.Outputs[outputIndex];
+                }
 
                 previousOutputs.Add(input.PreviousTxOutputKey, Tuple.Create(input, inputIndex, prevOutput));
             }
@@ -395,7 +405,17 @@ namespace BitSharp.Blockchain
                     //var prevOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
                     TxOutput prevOutput;
                     if (!utxoBuilder.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
-                        throw new ValidationException(block.Hash);
+                    {
+                        var prevTx = block.Transactions.FirstOrDefault(x => x.Hash == input.PreviousTxOutputKey.TxHash);
+                        if (prevTx == null)
+                            throw new ValidationException(block.Hash);
+
+                        var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
+                        if (outputIndex < 0 || outputIndex >= prevTx.Outputs.Count)
+                            throw new ValidationException(block.Hash);
+
+                        prevOutput = prevTx.Outputs[outputIndex];
+                    }
 
                     previousOutputs.Add(input.PreviousTxOutputKey, Tuple.Create(tx, input, inputIndex, prevOutput));
                 }
