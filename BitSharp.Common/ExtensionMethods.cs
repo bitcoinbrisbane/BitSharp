@@ -470,5 +470,11 @@ namespace BitSharp.Common.ExtensionMethods
         {
             dictionary.RemoveRange(dictionary.Where(predicate).Select(x => x.Key));
         }
+
+        public static void AddRange<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, IEnumerable<KeyValuePair<TKey, TValue>> keyPairs)
+        {
+            foreach (var keyPair in keyPairs)
+                dictionary.Add(keyPair);
+        }
     }
 }
