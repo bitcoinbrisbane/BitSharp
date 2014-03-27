@@ -1,4 +1,5 @@
 ﻿//#define TEST_TOOL
+//#define MEMORY
 //#define MONGODB
 
 using BitSharp.Common.ExtensionMethods;
@@ -47,7 +48,7 @@ namespace BitSharp.Client
             {
                 //TODO
                 //MainnetRules.BypassValidation = true;
-                MainnetRules.BypassExecuteScript = true;
+                MainnetRules.IgnoreScriptErrors = true;
                 ScriptEngine.BypassVerifySignature = true;
 
                 Debug.WriteLine(DateTime.Now);
@@ -56,6 +57,9 @@ namespace BitSharp.Client
                 //if (Directory.Exists(Path.Combine(Config.LocalStoragePath, "data-test")))
                 //    Directory.Delete(Path.Combine(Config.LocalStoragePath, "data-test"), recursive: true);
                 //var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data-test"));
+                var storageContext = new MemoryStorageContext();
+                var knownAddressStorage = storageContext.KnownAddressStorage;
+#elif MEMORY
                 var storageContext = new MemoryStorageContext();
                 var knownAddressStorage = storageContext.KnownAddressStorage;
 #elif MONGODB
