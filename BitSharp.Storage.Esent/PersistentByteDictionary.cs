@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Base32;
 
 namespace BitSharp.Storage.Esent
 {
@@ -34,12 +35,12 @@ namespace BitSharp.Storage.Esent
 
         public void Add(byte[] key, byte[] value)
         {
-            this.dict.Add(Encode(key), Encode(value));
+            this.dict.Add(EncodeKey(key), EncodeValue(value));
         }
 
         public bool ContainsKey(byte[] key)
         {
-            return this.dict.ContainsKey(Encode(key));
+            return this.dict.ContainsKey(EncodeKey(key));
         }
 
         public ICollection<byte[]> Keys
@@ -49,15 +50,15 @@ namespace BitSharp.Storage.Esent
 
         public bool Remove(byte[] key)
         {
-            return this.dict.Remove(Encode(key));
+            return this.dict.Remove(EncodeKey(key));
         }
 
         public bool TryGetValue(byte[] key, out byte[] value)
         {
             string s;
-            if (this.dict.TryGetValue(Encode(key), out s))
+            if (this.dict.TryGetValue(EncodeKey(key), out s))
             {
-                value = Decode(s);
+                value = DecodeValue(s);
                 return true;
             }
             else
@@ -76,11 +77,11 @@ namespace BitSharp.Storage.Esent
         {
             get
             {
-                return Decode(this.dict[Encode(key)]);
+                return DecodeValue(this.dict[EncodeKey(key)]);
             }
             set
             {
-                this.dict[Encode(key)] = Encode(value);
+                this.dict[EncodeKey(key)] = EncodeValue(value);
             }
         }
 
@@ -127,7 +128,7 @@ namespace BitSharp.Storage.Esent
         public IEnumerator<KeyValuePair<byte[], byte[]>> GetEnumerator()
         {
             foreach (var item in
-                this.dict.Select(x => new KeyValuePair<byte[], byte[]>(Decode(x.Key), Decode(x.Value))))
+                this.dict.Select(x => new KeyValuePair<byte[], byte[]>(DecodeKey(x.Key), DecodeValue(x.Value))))
             {
                 yield return item;
             }
@@ -149,12 +150,22 @@ namespace BitSharp.Storage.Esent
             this.dict.Flush();
         }
 
-        private static string Encode(byte[] bytes)
+        private static string EncodeKey(byte[] bytes)
+        {
+            return Base32Encoder.Encode(bytes);
+        }
+
+        private static string EncodeValue(byte[] bytes)
         {
             return Convert.ToBase64String(bytes);
         }
+        
+        private static byte[] DecodeKey(string s)
+        {
+            return Base32Encoder.Decode(s);
+        }
 
-        private static byte[] Decode(string s)
+        private static byte[] DecodeValue(string s)
         {
             return Convert.FromBase64String(s);
         }
@@ -170,7 +181,7 @@ namespace BitSharp.Storage.Esent
 
             public void Add(byte[] item)
             {
-                this.keyCollection.Add(Encode(item));
+                this.keyCollection.Add(EncodeKey(item));
             }
 
             public void Clear()
@@ -180,7 +191,7 @@ namespace BitSharp.Storage.Esent
 
             public bool Contains(byte[] item)
             {
-                return this.keyCollection.Contains(Encode(item));
+                return this.keyCollection.Contains(EncodeKey(item));
             }
 
             public void CopyTo(byte[][] array, int arrayIndex)
@@ -204,13 +215,13 @@ namespace BitSharp.Storage.Esent
 
             public bool Remove(byte[] item)
             {
-                return this.keyCollection.Remove(Encode(item));
+                return this.keyCollection.Remove(EncodeKey(item));
             }
 
             public IEnumerator<byte[]> GetEnumerator()
             {
                 foreach (var key in this.keyCollection)
-                    yield return Decode(key);
+                    yield return DecodeKey(key);
 
             }
 
@@ -231,7 +242,7 @@ namespace BitSharp.Storage.Esent
 
             public void Add(byte[] item)
             {
-                this.valueCollection.Add(Encode(item));
+                this.valueCollection.Add(EncodeValue(item));
             }
 
             public void Clear()
@@ -241,7 +252,7 @@ namespace BitSharp.Storage.Esent
 
             public bool Contains(byte[] item)
             {
-                return this.valueCollection.Contains(Encode(item));
+                return this.valueCollection.Contains(EncodeValue(item));
             }
 
             public void CopyTo(byte[][] array, int arrayIndex)
@@ -265,7 +276,7 @@ namespace BitSharp.Storage.Esent
 
             public bool Remove(byte[] item)
             {
-                return this.valueCollection.Remove(Encode(item));
+                return this.valueCollection.Remove(EncodeValue(item));
             }
 
             public IEnumerator<byte[]> GetEnumerator()
@@ -274,7 +285,7 @@ namespace BitSharp.Storage.Esent
                 stopwatch.Start();
 
                 foreach (var value in this.valueCollection)
-                    yield return Decode(value);
+                    yield return DecodeValue(value);
 
                 stopwatch.Stop();
                 Debug.WriteLine(stopwatch.ElapsedSecondsFloat());
