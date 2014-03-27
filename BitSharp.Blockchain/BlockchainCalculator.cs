@@ -65,24 +65,19 @@ namespace BitSharp.Blockchain
                 }
                 else if (direction > 0)
                 {
+                    // add the block to the current chain
+                    chainStateBuilder.Chain.AddBlock(chainedBlock);
+
                     // validate the block
                     chainStateBuilder.Stats.validateStopwatch.Start();
-                    try
-                    {
-                        new MethodTimer(false).Time("ValidateBlock", () =>
-                            this.Rules.ValidateBlock(block, chainStateBuilder/*, prevInputTxes*/));
-                    }
-                    finally
-                    {
-                        chainStateBuilder.Stats.validateStopwatch.Stop();
-                    }
+                    new MethodTimer(false).Time("ValidateBlock", () =>
+                        this.Rules.ValidateBlock(block, chainStateBuilder/*, prevInputTxes*/));
+                    chainStateBuilder.Stats.validateStopwatch.Stop();
 
                     // calculate the new block utxo, double spends will be checked for
                     long txCount = 0, inputCount = 0;
                     new MethodTimer(false).Time("CalculateUtxo", () =>
                         CalculateUtxo(chainedBlock, block, chainStateBuilder.Utxo, out txCount, out inputCount));
-
-                    chainStateBuilder.Chain.AddBlock(chainedBlock);
 
                     // flush utxo progress
                     //chainStateBuilder.Utxo.Flush();
