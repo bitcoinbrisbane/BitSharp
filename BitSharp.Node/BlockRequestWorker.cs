@@ -36,6 +36,7 @@ namespace BitSharp.Node
 
         private List<ChainedBlock> targetChainQueue;
         private int targetChainQueueIndex;
+        private DateTime targetChainQueueTime;
 
         public BlockRequestWorker(LocalClient localClient, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
             : base("BlockRequestWorker", initialNotify, minIdleTime, maxIdleTime)
@@ -116,6 +117,12 @@ namespace BitSharp.Node
         {
             var currentChainLocal = this.blockchainDaemon.CurrentBuilderChain;
             var targetChainLocal = this.blockchainDaemon.TargetChain;
+
+            // update the target chain queue at most once per second
+            if (this.targetChainQueueTime != null && DateTime.UtcNow - targetChainQueueTime < TimeSpan.FromSeconds(1))
+                return;
+            else
+                this.targetChainQueueTime = DateTime.UtcNow;
 
             // find missing blocks on the target chain to be requested, taking a chunk at a time
             if (targetChainLocal != null &&
