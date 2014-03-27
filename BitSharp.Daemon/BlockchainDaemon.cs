@@ -49,6 +49,7 @@ namespace BitSharp.Daemon
         private readonly ChainStateWorker chainStateWorker;
         private readonly PruningWorker pruningWorker;
         private readonly WorkerMethod gcWorker;
+        private readonly WorkerMethod utxoScanWorker;
 
         public BlockchainDaemon(IBlockchainRules rules, ICacheContext cacheContext)
         {
@@ -73,7 +74,7 @@ namespace BitSharp.Daemon
             this.chainingWorker = new ChainingWorker(rules, cacheContext, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
             this.targetChainWorker = new TargetChainWorker(rules, cacheContext, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
             this.chainStateWorker = new ChainStateWorker(rules, cacheContext, () => this.targetChainWorker.TargetChain, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
-            this.pruningWorker = new PruningWorker(rules, cacheContext, () => this.ChainState, initialNotify: false, minIdleTime: TimeSpan.FromMinutes(5), maxIdleTime: TimeSpan.FromMinutes(5));
+            this.pruningWorker = new PruningWorker(rules, cacheContext, () => this.ChainState, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5));
 
             this.targetChainWorker.OnTargetBlockChanged +=
                 () =>
@@ -97,7 +98,8 @@ namespace BitSharp.Daemon
                 () =>
                 {
                     this.pruningWorker.NotifyWork();
-                    
+                    this.utxoScanWorker.NotifyWork();
+
                     var handler = this.OnChainStateChanged;
                     if (handler != null)
                         handler(this, EventArgs.Empty);
@@ -126,8 +128,25 @@ namespace BitSharp.Daemon
                         /*0*/ (float)GC.GetTotalMemory(false) / 1.MILLION(),
                         /*1*/ (float)Process.GetCurrentProcess().PrivateMemorySize64 / 1.MILLION()
                         ));
-
                 }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromSeconds(30));
+
+            this.utxoScanWorker = new WorkerMethod("UTXO Scan Worker",
+                () =>
+                {
+                    var chainStateLocal = this.ChainState;
+                    if (chainStateLocal == null)
+                        return;
+
+                    new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.OutputCount), () =>
+                    {
+                        foreach (var output in chainStateLocal.Utxo.GetUnspentOutputs())
+                        {
+                            if (new UInt256(Crypto.DoubleSHA256(output.Value.ScriptPublicKey.ToArray())) == UInt256.Zero)
+                            {
+                            }
+                        }
+                    });
+                }, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
         }
 
         public IBlockchainRules Rules { get { return this.rules; } }
@@ -180,6 +199,11 @@ namespace BitSharp.Daemon
             }
         }
 
+        public TimeSpan ChainStateBlockProcessingTime
+        {
+            get { return this.chainStateWorker.BlockProcessingTime; }
+        }
+
         public void Start()
         {
             try
@@ -193,6 +217,7 @@ namespace BitSharp.Daemon
                 this.chainStateWorker.Start();
                 this.pruningWorker.Start();
                 this.gcWorker.Start();
+                //this.utxoScanWorker.Start();
             }
             catch (Exception)
             {
@@ -222,6 +247,7 @@ namespace BitSharp.Daemon
                 this.chainStateWorker,
                 this.pruningWorker,
                 this.gcWorker,
+                this.utxoScanWorker,
                 this.shutdownToken
             }.DisposeList();
         }
