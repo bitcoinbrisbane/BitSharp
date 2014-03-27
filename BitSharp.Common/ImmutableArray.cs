@@ -163,6 +163,13 @@ namespace BitSharp.Common
             return this.array.GetEnumerator();
         }
 
+        public T[] ToArray()
+        {
+            var arrayCopy = new T[this.Count];
+            this.array.CopyTo(arrayCopy, 0);
+            return arrayCopy;
+        }
+
         #region IList<T>
 
         int IList<T>.IndexOf(T item)
