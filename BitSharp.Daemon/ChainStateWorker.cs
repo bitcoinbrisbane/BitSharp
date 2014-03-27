@@ -1,5 +1,6 @@
 ﻿using BitSharp.Blockchain;
 using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Storage;
 using System;
@@ -109,6 +110,18 @@ namespace BitSharp.Daemon
             }
             catch (Exception e)
             {
+                if (!(e is MissingDataException))
+                {
+                    Debug.WriteLine(
+                        string.Join("\n",
+                            new string('-', 200),
+                            "ChainStateWorker failure: {0}",
+                            "{1}",
+                            new string('-', 200)
+                        )
+                        .Format2(e.Message, e));
+                }
+
                 if (this.chainStateBuilder != null && !this.chainStateBuilder.IsConsistent)
                 {
                     this.chainStateBuilder.Dispose();
