@@ -24,25 +24,46 @@ namespace BitSharp.Storage
             get { return this.blockHash; }
         }
 
-        public int Count
+        public int TransactionCount
         {
             get { return 0; }
         }
 
-        public IEnumerable<UnspentTx> UnspentTransactions()
-        {
-            return Enumerable.Empty<UnspentTx>();
-        }
-
-        public bool ContainsKey(UInt256 txHash)
+        public bool ContainsTransaction(UInt256 txHash)
         {
             return false;
         }
 
-        public bool TryGetValue(UInt256 txHash, out UnspentTx unspentTx)
+        public bool TryGetTransaction(UInt256 txHash, out OutputStates outputStates)
         {
-            unspentTx = default(UnspentTx);
+            outputStates = default(OutputStates);
             return false;
+        }
+
+        public IEnumerable<KeyValuePair<UInt256, OutputStates>> UnspentTransactions()
+        {
+            return Enumerable.Empty<KeyValuePair<UInt256, OutputStates>>();
+        }
+
+        public int OutputCount
+        {
+            get { return 0; }
+        }
+
+        public bool ContainsOutput(TxOutputKey txOutputKey)
+        {
+            return false;
+        }
+
+        public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
+        {
+            txOutput = default(TxOutput);
+            return false;
+        }
+
+        public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs()
+        {
+            return Enumerable.Empty<KeyValuePair<TxOutputKey, TxOutput>>();
         }
 
         public void DisposeDelete()

@@ -17,7 +17,8 @@ namespace BitSharp.Storage.Esent
     {
         private readonly UInt256 blockHash;
         private readonly string directory;
-        private PersistentByteDictionary utxo;
+        private PersistentByteDictionary unspentTransactions;
+        private PersistentByteDictionary unspentOutputs;
         private readonly ReaderWriterLockSlim utxoLock;
 
         static internal string GetDirectory(UInt256 blockHash)
@@ -29,7 +30,8 @@ namespace BitSharp.Storage.Esent
         {
             this.blockHash = blockHash;
             this.directory = GetDirectory(blockHash);
-            this.utxo = new PersistentByteDictionary(this.directory);
+            this.unspentTransactions = new PersistentByteDictionary(this.directory + "_tx");
+            this.unspentOutputs = new PersistentByteDictionary(this.directory + "_output");
             this.utxoLock = new ReaderWriterLockSlim();
         }
 
@@ -38,72 +40,134 @@ namespace BitSharp.Storage.Esent
             get { return this.blockHash; }
         }
 
-        public int Count
+        public int TransactionCount
         {
-            get { return this.utxoLock.DoRead(() => this.utxo.Count); }
+            get
+            {
+                return this.utxoLock.DoRead(() =>
+                    this.unspentTransactions.Count);
+            }
         }
 
-        public IEnumerable<UnspentTx> UnspentTransactions()
+        public bool ContainsTransaction(UInt256 txHash)
         {
-            this.utxoLock.EnterReadLock();
-            try
+            return this.utxoLock.DoRead(() =>
+                this.unspentTransactions.ContainsKey(txHash.ToByteArray()));
+        }
+
+        public bool TryGetTransaction(UInt256 txHash, out OutputStates outputStates)
+        {
+            bool result = false;
+            OutputStates outputStatesLocal = default(OutputStates);
+
+            this.utxoLock.DoRead(() =>
             {
-                foreach (var rawUnspentTx in utxo)
+                byte[] bytes;
+                if (this.unspentTransactions.TryGetValue(txHash.ToByteArray(), out bytes))
                 {
-                    yield return StorageEncoder.DecodeUnspentTx(new UInt256(rawUnspentTx.Key), rawUnspentTx.Value);
+                    outputStatesLocal = StorageEncoder.DecodeOutputStates(txHash, bytes);
+                    result = true;
                 }
-            }
-            finally
-            {
-                this.utxoLock.ExitReadLock();
-            }
+            });
+
+            outputStates = outputStatesLocal;
+            return result;
         }
 
-        public bool ContainsKey(Common.UInt256 txHash)
+        public IEnumerable<KeyValuePair<UInt256, OutputStates>> UnspentTransactions()
         {
-            return this.utxoLock.DoRead(() => utxo.ContainsKey(txHash.ToByteArray()));
-        }
-
-        public bool TryGetValue(UInt256 txHash, out UnspentTx unspentTx)
-        {
-            UnspentTx unspentTxLocal = null;
-            this.utxoLock.DoRead(
-                () =>
+            return this.utxoLock.DoRead(() =>
+                this.unspentTransactions.Select(keyPair =>
                 {
-                    byte[] unspentTxBytes;
-                    if (this.utxo.TryGetValue(txHash.ToByteArray(), out unspentTxBytes))
-                    {
-                        unspentTxLocal = StorageEncoder.DecodeUnspentTx(txHash, unspentTxBytes);
-                    }
-                });
+                    var txHash = new UInt256(keyPair.Key);
+                    var outputStates = StorageEncoder.DecodeOutputStates(txHash, keyPair.Value);
 
-            unspentTx = unspentTxLocal;
-            return unspentTxLocal != null;
+                    return new KeyValuePair<UInt256, OutputStates>(txHash, outputStates);
+                }));
+        }
+
+        public int OutputCount
+        {
+            get
+            {
+                return this.utxoLock.DoRead(() =>
+                    this.unspentOutputs.Count);
+            }
+        }
+
+        public bool ContainsOutput(TxOutputKey txOutputKey)
+        {
+            return this.utxoLock.DoRead(() =>
+                this.unspentOutputs.ContainsKey(StorageEncoder.EncodeTxOutputKey(txOutputKey)));
+        }
+
+        public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
+        {
+            bool result = false;
+            TxOutput txOutputLocal = default(TxOutput);
+
+            this.utxoLock.DoRead(() =>
+            {
+                byte[] bytes;
+                if (this.unspentOutputs.TryGetValue(StorageEncoder.EncodeTxOutputKey(txOutputKey), out bytes))
+                {
+                    txOutputLocal = StorageEncoder.DecodeTxOutput(bytes);
+                    result = true;
+                }
+            });
+
+            txOutput = txOutputLocal;
+            return result;
+        }
+
+        public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs()
+        {
+            return this.utxoLock.DoRead(() =>
+                this.unspentOutputs.Select(keyPair =>
+                {
+                    var txOutputKey = StorageEncoder.DecodeTxOutputKey(keyPair.Key);
+                    var txOutput = StorageEncoder.DecodeTxOutput(keyPair.Value);
+
+                    return new KeyValuePair<TxOutputKey, TxOutput>(txOutputKey, txOutput);
+                }));
         }
 
         internal void Duplicate(string destDirectory)
         {
             this.utxoLock.DoWrite(() =>
             {
-                this.utxo.Dispose();
+                this.unspentTransactions.Dispose();
+                this.unspentOutputs.Dispose();
 
-                Directory.CreateDirectory(destDirectory);
-                foreach (var srcFile in Directory.GetFiles(this.directory, "*.edb"))
-                    File.Copy(srcFile, Path.Combine(destDirectory, Path.GetFileName(srcFile)));
+                Directory.CreateDirectory(destDirectory + "_tx");
+                foreach (var srcFile in Directory.GetFiles(this.directory + "_tx", "*.edb"))
+                    File.Copy(srcFile, Path.Combine(destDirectory + "_tx", Path.GetFileName(srcFile)));
+                Directory.CreateDirectory(destDirectory + "_output");
+                foreach (var srcFile in Directory.GetFiles(this.directory + "_output", "*.edb"))
+                    File.Copy(srcFile, Path.Combine(destDirectory + "_output", Path.GetFileName(srcFile)));
 
-                this.utxo = new PersistentByteDictionary(this.directory);
+                this.unspentTransactions = new PersistentByteDictionary(this.directory + "_tx");
+                this.unspentOutputs = new PersistentByteDictionary(this.directory + "_output");
             });
         }
 
         public void Dispose()
         {
-            this.utxo.Dispose();
+            this.utxoLock.DoWrite(() =>
+            {
+                this.unspentTransactions.Dispose();
+                this.unspentOutputs.Dispose();
+            });
         }
 
         public void DisposeDelete()
         {
             this.Dispose();
-            Directory.Delete(this.directory, recursive: true);
+
+            try { Directory.Delete(this.directory + "_tx", recursive: true); }
+            catch (IOException) { }
+            try { Directory.Delete(this.directory + "_output", recursive: true); }
+            catch (IOException) { }
         }
     }
 }

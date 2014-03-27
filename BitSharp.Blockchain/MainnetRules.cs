@@ -209,7 +209,7 @@ namespace BitSharp.Blockchain
             }
         }
 
-        public virtual void ValidateBlock(Block block, ChainStateBuilder chainStateBuilder, ImmutableDictionary<UInt256, Transaction> prevInputTxes = null)
+        public virtual void ValidateBlock(Block block, ChainStateBuilder chainStateBuilder/*, ImmutableDictionary<UInt256, Transaction> prevInputTxes = null*/)
         {
             //TODO
             if (BypassValidation)
@@ -257,7 +257,7 @@ namespace BitSharp.Blockchain
 
                     long unspentValueInner;
                     //TODO utxo will not be correct at transaction if a tx hash is reused within the same block
-                    ValidateTransaction(chainStateBuilder.Height, block, tx, txIndex, chainStateBuilder.Utxo, out unspentValueInner, prevInputTxes);
+                    ValidateTransaction(chainStateBuilder.Height, block, tx, txIndex, chainStateBuilder.Utxo, out unspentValueInner/*, prevInputTxes*/);
 
                     Interlocked.Add(ref unspentValue, unspentValueInner);
                 });
@@ -277,7 +277,7 @@ namespace BitSharp.Blockchain
             }
 
             //TODO utxo will not be correct at transaction if a tx hash is reused within the same block
-            ValidateTransactionScripts(block, chainStateBuilder.Utxo, prevInputTxes);
+            ValidateTransactionScripts(block, chainStateBuilder.Utxo/*, prevInputTxes*/);
 
             // calculate the expected reward in coinbase
             var expectedReward = (long)(50 * SATOSHI_PER_BTC);
@@ -300,7 +300,7 @@ namespace BitSharp.Blockchain
         }
 
         //TODO utxo needs to be as-at transaction, with regards to a transaction being fully spent and added back in in the same block
-        public virtual void ValidateTransaction(int blockHeight, Block block, Transaction tx, int txIndex, UtxoBuilder utxoBuilder, out long unspentValue, ImmutableDictionary<UInt256, Transaction> prevInputTxes = null)
+        public virtual void ValidateTransaction(int blockHeight, Block block, Transaction tx, int txIndex, UtxoBuilder utxoBuilder, out long unspentValue/*, ImmutableDictionary<UInt256, Transaction> prevInputTxes = null*/)
         {
             unspentValue = -1;
 
@@ -312,13 +312,16 @@ namespace BitSharp.Blockchain
                 var input = tx.Inputs[inputIndex];
 
                 // find previous transaction
-                var prevTx = prevInputTxes != null ? prevInputTxes[input.PreviousTxOutputKey.TxHash]
-                    : this.CacheContext.TransactionCache[input.PreviousTxOutputKey.TxHash];
+                //var prevTx = prevInputTxes != null ? prevInputTxes[input.PreviousTxOutputKey.TxHash]
+                //    : this.CacheContext.TransactionCache[input.PreviousTxOutputKey.TxHash];
 
                 // find previous transaction output
-                if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Count)
+                //if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Count)
+                //    throw new ValidationException(block.Hash);
+                //var prevOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
+                TxOutput prevOutput;
+                if (!utxoBuilder.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
                     throw new ValidationException(block.Hash);
-                var prevOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
 
                 previousOutputs.Add(input.PreviousTxOutputKey, Tuple.Create(input, inputIndex, prevOutput));
             }
@@ -367,7 +370,7 @@ namespace BitSharp.Blockchain
         }
 
         //TODO utxo needs to be as-at transaction, with regards to a transaction being fully spent and added back in in the same block
-        public virtual void ValidateTransactionScripts(Block block, UtxoBuilder utxoBuilder, ImmutableDictionary<UInt256, Transaction> prevInputTxes = null)
+        public virtual void ValidateTransactionScripts(Block block, UtxoBuilder utxoBuilder/*, ImmutableDictionary<UInt256, Transaction> prevInputTxes = null*/)
         {
             if (BypassExecuteScript)
                 return;
@@ -383,13 +386,16 @@ namespace BitSharp.Blockchain
                     var input = tx.Inputs[inputIndex];
 
                     // find previous transaction
-                    var prevTx = prevInputTxes != null ? prevInputTxes[input.PreviousTxOutputKey.TxHash]
-                        : this.CacheContext.TransactionCache[input.PreviousTxOutputKey.TxHash];
+                    //var prevTx = prevInputTxes != null ? prevInputTxes[input.PreviousTxOutputKey.TxHash]
+                    //    : this.CacheContext.TransactionCache[input.PreviousTxOutputKey.TxHash];
 
                     // find previous transaction output
-                    if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Count)
+                    //if (input.PreviousTxOutputKey.TxOutputIndex >= prevTx.Outputs.Count)
+                    //    throw new ValidationException(block.Hash);
+                    //var prevOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
+                    TxOutput prevOutput;
+                    if (!utxoBuilder.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
                         throw new ValidationException(block.Hash);
-                    var prevOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
 
                     previousOutputs.Add(input.PreviousTxOutputKey, Tuple.Create(tx, input, inputIndex, prevOutput));
                 }

@@ -11,55 +11,90 @@ namespace BitSharp.Storage
 {
     public class MemoryUtxoBuilderStorage : IUtxoBuilderStorage
     {
-        private ImmutableDictionary<UInt256, UnspentTx>.Builder utxo;
+        private ImmutableDictionary<UInt256, OutputStates>.Builder unspentTransactions;
+        private ImmutableDictionary<TxOutputKey, TxOutput>.Builder unspentOutputs;
 
         public MemoryUtxoBuilderStorage(IUtxoStorage parentUtxo)
         {
             if (parentUtxo is MemoryUtxoStorage)
             {
-                this.utxo = ((MemoryUtxoStorage)parentUtxo).Dictionary.ToBuilder();
+                this.unspentTransactions = ((MemoryUtxoStorage)parentUtxo).UnspentTransactions.ToBuilder();
+                this.unspentOutputs = ((MemoryUtxoStorage)parentUtxo).UnspentOutputs.ToBuilder();
             }
             else
             {
-                this.utxo = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
-                this.utxo.AddRange(parentUtxo.UnspentTransactions().Select(x => new KeyValuePair<UInt256, UnspentTx>(x.TxHash, x)));
+                this.unspentTransactions = ImmutableDictionary.CreateRange(parentUtxo.UnspentTransactions()).ToBuilder();
+                this.unspentOutputs = ImmutableDictionary.CreateRange(parentUtxo.UnspentOutputs()).ToBuilder();
             }
         }
 
-        public ImmutableDictionary<UInt256, UnspentTx>.Builder Storage { get { return this.utxo; } }
+        public ImmutableDictionary<UInt256, OutputStates>.Builder UnspentTransactionsDictionary { get { return this.unspentTransactions; } }
 
-        public bool ContainsKey(UInt256 txHash)
+        public ImmutableDictionary<TxOutputKey, TxOutput>.Builder UnspentOutputsDictionary { get { return this.unspentOutputs; } }
+
+        public int TransactionCount
         {
-            return this.utxo.ContainsKey(txHash);
+            get { return this.unspentTransactions.Count; }
         }
 
-        public bool Remove(UInt256 txHash)
+        public bool ContainsTransaction(UInt256 txHash)
         {
-            return this.utxo.Remove(txHash);
+            return this.unspentTransactions.ContainsKey(txHash);
         }
 
-        public void Clear()
+        public bool TryGetTransaction(UInt256 txHash, out OutputStates outputStates)
         {
-            this.utxo.Clear();
+            return this.unspentTransactions.TryGetValue(txHash, out outputStates);
         }
 
-        public void Add(UInt256 txHash, UnspentTx unspentTx)
+        public void AddTransaction(UInt256 txHash, OutputStates outputStates)
         {
-            this.utxo.Add(txHash, unspentTx);
+            this.unspentTransactions.Add(txHash, outputStates);
         }
 
-        public int Count { get { return this.utxo.Count; } }
-
-        public UnspentTx this[UInt256 txHash]
+        public bool RemoveTransaction(UInt256 txHash)
         {
-            get
-            {
-                return utxo[txHash];
-            }
-            set
-            {
-                utxo[txHash] = value;
-            }
+            return this.unspentTransactions.Remove(txHash);
+        }
+
+        public void UpdateTransaction(UInt256 txHash, OutputStates outputStates)
+        {
+            this.unspentTransactions[txHash] = outputStates;
+        }
+
+        IEnumerable<KeyValuePair<UInt256, OutputStates>> IUtxoBuilderStorage.UnspentTransactions()
+        {
+            return this.unspentTransactions;
+        }
+
+        public int OutputCount
+        {
+            get { return this.unspentOutputs.Count; }
+        }
+
+        public bool ContainsOutput(TxOutputKey txOutputKey)
+        {
+            return this.unspentOutputs.ContainsKey(txOutputKey);
+        }
+
+        public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
+        {
+            return this.unspentOutputs.TryGetValue(txOutputKey, out txOutput);
+        }
+
+        public void AddOutput(TxOutputKey txOutputKey, TxOutput txOutput)
+        {
+            this.unspentOutputs.Add(txOutputKey, txOutput);
+        }
+
+        public bool RemoveOutput(TxOutputKey txOutputKey)
+        {
+            return this.unspentOutputs.Remove(txOutputKey);
+        }
+
+        IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> IUtxoBuilderStorage.UnspentOutputs()
+        {
+            return this.unspentOutputs;
         }
 
         public void Flush()
@@ -68,7 +103,7 @@ namespace BitSharp.Storage
 
         public IUtxoStorage Close(UInt256 blockHash)
         {
-            return new MemoryUtxoStorage(blockHash, this.utxo.ToImmutable());
+            return new MemoryUtxoStorage(blockHash, this.unspentTransactions.ToImmutable(), this.unspentOutputs.ToImmutable());
         }
 
         public void Dispose()

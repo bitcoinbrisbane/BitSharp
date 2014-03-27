@@ -55,7 +55,7 @@ namespace BitSharp.Blockchain
                 var direction = pathElement.Item1;
                 var chainedBlock = pathElement.Item2;
                 var block = pathElement.Item3;
-                var prevInputTxes = pathElement.Item4;
+                //var prevInputTxes = pathElement.Item4;
 
                 if (direction < 0)
                 {
@@ -77,8 +77,9 @@ namespace BitSharp.Blockchain
                     chainStateBuilder.Stats.validateStopwatch.Start();
                     try
                     {
-                        new MethodTimer(false).Time("ValidateBlock", () =>
-                            this.Rules.ValidateBlock(block, chainStateBuilder, prevInputTxes));
+                        //TODO
+                        //new MethodTimer(false).Time("ValidateBlock", () =>
+                        //    this.Rules.ValidateBlock(block, chainStateBuilder/*, prevInputTxes*/));
                     }
                     finally
                     {
@@ -149,7 +150,7 @@ namespace BitSharp.Blockchain
                 /*5*/ currentInputRate.ToString("#,##0"),
                 /*6*/ chainStateBuilder.Stats.totalTxCount.ToString("#,##0"),
                 /*7*/ chainStateBuilder.Stats.totalInputCount.ToString("#,##0"),
-                /*8*/ chainStateBuilder.Utxo.Count.ToString("#,##0")
+                /*8*/ chainStateBuilder.Utxo.OutputCount.ToString("#,##0")
                 ));
         }
 
@@ -286,7 +287,7 @@ namespace BitSharp.Blockchain
             }
         }
 
-        public IEnumerable<Tuple<int, ChainedBlock, Block, ImmutableDictionary<UInt256, Transaction>>> BlockAndInputsLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chain, int lookAhead)
+        public IEnumerable<Tuple<int, ChainedBlock, Block/*, ImmutableDictionary<UInt256, Transaction>*/>> BlockAndInputsLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chain, int lookAhead)
         {
             return chain
                 .Select(
@@ -298,18 +299,18 @@ namespace BitSharp.Blockchain
                         var block = new MethodTimer(false).Time("GetBlock", () =>
                             this.CacheContext.BlockView[chainedBlock.BlockHash]);
 
-                        var prevInputTxes = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
-                        new MethodTimer(false).Time("GetPrevInputTxes", () =>
-                        {
-                            foreach (var prevInput in block.Transactions.Skip(1).SelectMany(x => x.Inputs))
-                            {
-                                var prevInputTxHash = prevInput.PreviousTxOutputKey.TxHash;
-                                if (!prevInputTxes.ContainsKey(prevInputTxHash))
-                                    prevInputTxes.Add(prevInputTxHash, this.CacheContext.TransactionCache[prevInputTxHash]);
-                            }
-                        });
+                        //var prevInputTxes = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
+                        //new MethodTimer(false).Time("GetPrevInputTxes", () =>
+                        //{
+                        //    foreach (var prevInput in block.Transactions.Skip(1).SelectMany(x => x.Inputs))
+                        //    {
+                        //        var prevInputTxHash = prevInput.PreviousTxOutputKey.TxHash;
+                        //        if (!prevInputTxes.ContainsKey(prevInputTxHash))
+                        //            prevInputTxes.Add(prevInputTxHash, this.CacheContext.TransactionCache[prevInputTxHash]);
+                        //    }
+                        //});
 
-                        return Tuple.Create(chainedBlockDirection, chainedBlock, block, prevInputTxes.ToImmutable());
+                        return Tuple.Create(chainedBlockDirection, chainedBlock, block/*, prevInputTxes.ToImmutable()*/);
                     })
                 .LookAhead(lookAhead, this.shutdownToken);
         }

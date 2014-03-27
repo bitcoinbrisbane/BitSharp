@@ -10,18 +10,34 @@ namespace BitSharp.Storage
 {
     public interface IUtxoBuilderStorage : IDisposable
     {
-        bool ContainsKey(UInt256 txHash);
+        int TransactionCount { get; }
+                
+        bool ContainsTransaction(UInt256 txHash);
 
-        bool Remove(UInt256 txHash);
+        bool TryGetTransaction(UInt256 txHash, out OutputStates outputStates);
 
-        void Clear();
+        void AddTransaction(UInt256 txHash, OutputStates outputStates);
 
-        void Add(UInt256 txHash, UnspentTx unspentTx);
+        bool RemoveTransaction(UInt256 txHash);
 
-        int Count { get; }
+        void UpdateTransaction(UInt256 txHash, OutputStates outputStates);
 
-        UnspentTx this[UInt256 txHash] { get; set; }
+        IEnumerable<KeyValuePair<UInt256, OutputStates>> UnspentTransactions();
 
+        
+        int OutputCount { get; }
+
+        bool ContainsOutput(TxOutputKey txOutputKey);
+
+        bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput);
+
+        void AddOutput(TxOutputKey txOutputKey, TxOutput txOutput);
+
+        bool RemoveOutput(TxOutputKey txOutputKey);
+        
+        IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs();
+                
+        
         void Flush();
 
         IUtxoStorage Close(UInt256 blockHash);

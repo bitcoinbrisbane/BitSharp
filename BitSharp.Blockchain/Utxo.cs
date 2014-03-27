@@ -33,29 +33,22 @@ namespace BitSharp.Blockchain
             get { return this.utxoStorage.BlockHash; }
         }
 
-        public int Count
+        public int TransactionCount
         {
-            get { return this.utxoStorage.Count; }
+            get { return this.utxoStorage.TransactionCount; }
         }
 
-        public bool CanSpend(TxOutputKey prevTxOutput)
+        public int OutputCount
         {
-            if (prevTxOutput == null)
+            get { return this.utxoStorage.OutputCount; }
+        }
+
+        public bool CanSpend(TxOutputKey txOutputKey)
+        {
+            if (txOutputKey == null)
                 throw new ArgumentNullException("prevTxOutput");
 
-            UnspentTx prevTx;
-            if (this.utxoStorage.TryGetValue(prevTxOutput.TxHash, out prevTx))
-            {
-                var prevTxOutputIndex = unchecked((int)prevTxOutput.TxOutputIndex);
-                if (prevTxOutputIndex < 0 || prevTxOutputIndex >= prevTx.OutputStates.Length)
-                    return false;
-
-                return prevTx.OutputStates[prevTxOutputIndex] == OutputState.Unspent;
-            }
-            else
-            {
-                return false;
-            }
+            return this.utxoStorage.ContainsOutput(txOutputKey);
         }
 
         public void DisposeDelete()

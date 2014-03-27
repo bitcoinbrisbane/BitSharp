@@ -12,14 +12,25 @@ namespace BitSharp.Storage
     {
         UInt256 BlockHash { get; }
 
-        int Count { get; }
+        
+        int TransactionCount { get; }
 
-        IEnumerable<UnspentTx> UnspentTransactions();
+        bool ContainsTransaction(UInt256 txHash);
 
-        bool ContainsKey(UInt256 txHash);
+        bool TryGetTransaction(UInt256 txHash, out OutputStates outputStates);
 
-        bool TryGetValue(UInt256 txHash, out UnspentTx unspentTx);
+        IEnumerable<KeyValuePair<UInt256, OutputStates>> UnspentTransactions();
 
+        
+        int OutputCount { get; }
+
+        bool ContainsOutput(TxOutputKey txOutputKey);
+
+        bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput);
+
+        IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs();
+        
+        
         void DisposeDelete();
     }
 }

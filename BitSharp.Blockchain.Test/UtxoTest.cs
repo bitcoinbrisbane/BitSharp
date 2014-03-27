@@ -19,14 +19,14 @@ namespace BitSharp.Blockchain.Test
         public void TestCanSpend_Unspent()
         {
             // prepare utxo storage
-            var utxoDictionary = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
+            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, OutputStates>();
 
             // prepare unspent output
             var txHash = new UInt256(0);
-            utxoDictionary.Add(txHash, new UnspentTx(txHash, length: 1, state: OutputState.Unspent));
+            unspentTransactions.Add(txHash, new OutputStates(length: 1, state: OutputState.Unspent));
 
             // prepare utxo
-            var utxoStorage = new MemoryUtxoStorage(0, utxoDictionary.ToImmutable());
+            var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), null);
             var utxo = new Utxo(utxoStorage);
 
             // prepare output reference
@@ -43,14 +43,14 @@ namespace BitSharp.Blockchain.Test
         public void TestCanSpend_Spent()
         {
             // prepare utxo storage
-            var utxoDictionary = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
+            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, OutputStates>();
 
             // prepare spent output
             var txHash = new UInt256(0);
-            utxoDictionary.Add(txHash, new UnspentTx(txHash, length: 1, state: OutputState.Spent));
+            unspentTransactions.Add(txHash, new OutputStates(length: 1, state: OutputState.Spent));
 
             // prepare utxo
-            var utxoStorage = new MemoryUtxoStorage(0, utxoDictionary.ToImmutable());
+            var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), null);
             var utxo = new Utxo(utxoStorage);
 
             // prepare output reference
@@ -67,10 +67,10 @@ namespace BitSharp.Blockchain.Test
         public void TestCanSpend_Missing()
         {
             // prepare utxo storage
-            var utxoDictionary = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
+            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, OutputStates>();
 
             // prepare utxo
-            var utxoStorage = new MemoryUtxoStorage(0, utxoDictionary.ToImmutable());
+            var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), null);
             var utxo = new Utxo(utxoStorage);
 
             // prepare output reference
@@ -87,14 +87,14 @@ namespace BitSharp.Blockchain.Test
         public void TestCanSpend_NegativeIndex()
         {
             // prepare utxo storage
-            var utxoDictionary = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
+            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, OutputStates>();
 
             // prepare unspent output
             var txHash = new UInt256(0);
-            utxoDictionary.Add(txHash, new UnspentTx(txHash, length: 1, state: OutputState.Unspent));
+            unspentTransactions.Add(txHash, new OutputStates(length: 1, state: OutputState.Unspent));
 
             // prepare utxo
-            var utxoStorage = new MemoryUtxoStorage(0, utxoDictionary.ToImmutable());
+            var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), null);
             var utxo = new Utxo(utxoStorage);
 
             // prepare output reference
@@ -111,14 +111,14 @@ namespace BitSharp.Blockchain.Test
         public void TestCanSpend_IndexOutOfRange()
         {
             // prepare utxo storage
-            var utxoDictionary = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
+            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, OutputStates>();
 
             // prepare unspent output
             var txHash = new UInt256(0);
-            utxoDictionary.Add(txHash, new UnspentTx(txHash, length: 1, state: OutputState.Unspent));
+            unspentTransactions.Add(txHash, new OutputStates(length: 1, state: OutputState.Unspent));
 
             // prepare utxo
-            var utxoStorage = new MemoryUtxoStorage(0, utxoDictionary.ToImmutable());
+            var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), null);
             var utxo = new Utxo(utxoStorage);
 
             // prepare output reference

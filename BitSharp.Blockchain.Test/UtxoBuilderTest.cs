@@ -23,11 +23,12 @@ namespace BitSharp.Blockchain.Test
 
             // prepare an unspent transaction
             var txHash = new UInt256(100);
-            var unspentTx = new UnspentTx(txHash, 3, OutputState.Unspent);
+            var unspentTx = new OutputStates(3, OutputState.Unspent);
 
             // mock a parent utxo containing the unspent transaction
+            var unspentTransactions = ImmutableDictionary.Create<UInt256, OutputStates>().Add(txHash, unspentTx);
             var mockParentUtxoStorage = new Mock<IUtxoStorage>();
-            mockParentUtxoStorage.Setup(utxo => utxo.UnspentTransactions()).Returns(new[] { unspentTx });
+            mockParentUtxoStorage.Setup(utxo => utxo.UnspentTransactions()).Returns(unspentTransactions);
             var parentUtxo = new Utxo(mockParentUtxoStorage.Object);
 
             // initialize memory utxo builder storage
@@ -47,11 +48,11 @@ namespace BitSharp.Blockchain.Test
             utxoBuilder.Spend(input1, chainedBlock);
 
             // verify utxo storage
-            Assert.IsTrue(memoryUtxoBuilderStorage.Storage.ContainsKey(txHash));
-            Assert.IsTrue(memoryUtxoBuilderStorage.Storage[txHash].OutputStates.Length == 3);
-            Assert.IsTrue(memoryUtxoBuilderStorage.Storage[txHash].OutputStates[0] == OutputState.Spent);
-            Assert.IsTrue(memoryUtxoBuilderStorage.Storage[txHash].OutputStates[1] == OutputState.Unspent);
-            Assert.IsTrue(memoryUtxoBuilderStorage.Storage[txHash].OutputStates[2] == OutputState.Unspent);
+            Assert.IsTrue(memoryUtxoBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
+            Assert.IsTrue(memoryUtxoBuilderStorage.UnspentTransactionsDictionary[txHash].Length == 3);
+            Assert.IsTrue(memoryUtxoBuilderStorage.UnspentTransactionsDictionary[txHash][0] == OutputState.Spent);
+            Assert.IsTrue(memoryUtxoBuilderStorage.UnspentTransactionsDictionary[txHash][1] == OutputState.Unspent);
+            Assert.IsTrue(memoryUtxoBuilderStorage.UnspentTransactionsDictionary[txHash][2] == OutputState.Unspent);
 
             // create an input to spend the unspent transaction's second output
             var input2 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 1), ImmutableArray.Create<byte>(), 0);
@@ -60,11 +61,11 @@ namespace BitSharp.Blockchain.Test
             utxoBuilder.Spend(input2, chainedBlock);
 
             // verify utxo storage
-            Assert.IsTrue(memoryUtxoBuilderStorage.Storage.ContainsKey(txHash));
-            Assert.IsTrue(memoryUtxoBuilderStorage.Storage[txHash].OutputStates.Length == 3);
-            Assert.IsTrue(memoryUtxoBuilderStorage.Storage[txHash].OutputStates[0] == OutputState.Spent);
-            Assert.IsTrue(memoryUtxoBuilderStorage.Storage[txHash].OutputStates[1] == OutputState.Spent);
-            Assert.IsTrue(memoryUtxoBuilderStorage.Storage[txHash].OutputStates[2] == OutputState.Unspent);
+            Assert.IsTrue(memoryUtxoBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
+            Assert.IsTrue(memoryUtxoBuilderStorage.UnspentTransactionsDictionary[txHash].Length == 3);
+            Assert.IsTrue(memoryUtxoBuilderStorage.UnspentTransactionsDictionary[txHash][0] == OutputState.Spent);
+            Assert.IsTrue(memoryUtxoBuilderStorage.UnspentTransactionsDictionary[txHash][1] == OutputState.Spent);
+            Assert.IsTrue(memoryUtxoBuilderStorage.UnspentTransactionsDictionary[txHash][2] == OutputState.Unspent);
 
             // create an input to spend the unspent transaction's third output
             var input3 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 2), ImmutableArray.Create<byte>(), 0);
@@ -73,7 +74,7 @@ namespace BitSharp.Blockchain.Test
             utxoBuilder.Spend(input3, chainedBlock);
 
             // verify utxo storage
-            Assert.IsFalse(memoryUtxoBuilderStorage.Storage.ContainsKey(txHash));
+            Assert.IsFalse(memoryUtxoBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
         }
 
         [TestMethod]
@@ -85,11 +86,12 @@ namespace BitSharp.Blockchain.Test
 
             // prepare an unspent transaction
             var txHash = new UInt256(100);
-            var unspentTx = new UnspentTx(txHash, 1, OutputState.Unspent);
+            var unspentTx = new OutputStates(1, OutputState.Unspent);
 
             // mock a parent utxo containing the unspent transaction
+            var unspentTransactions = ImmutableDictionary.Create<UInt256, OutputStates>().Add(txHash, unspentTx);
             var mockParentUtxoStorage = new Mock<IUtxoStorage>();
-            mockParentUtxoStorage.Setup(utxo => utxo.UnspentTransactions()).Returns(new[] { unspentTx });
+            mockParentUtxoStorage.Setup(utxo => utxo.UnspentTransactions()).Returns(unspentTransactions);
             var parentUtxo = new Utxo(mockParentUtxoStorage.Object);
 
             // initialize memory utxo builder storage
@@ -109,7 +111,7 @@ namespace BitSharp.Blockchain.Test
             utxoBuilder.Spend(input, chainedBlock);
 
             // verify utxo storage
-            Assert.IsFalse(memoryUtxoBuilderStorage.Storage.ContainsKey(txHash));
+            Assert.IsFalse(memoryUtxoBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
 
             // attempt to spend the input again
             utxoBuilder.Spend(input, chainedBlock);

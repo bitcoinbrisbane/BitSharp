@@ -323,11 +323,11 @@ namespace BitSharp.Storage
             }
         }
 
-        public static UnspentTx DecodeUnspentTx(UInt256 txhash, byte[] bytes)
+        public static UnspentTx DecodeUnspentTx(UInt256 txHash, byte[] bytes)
         {
             using (var stream = new MemoryStream(bytes))
             {
-                return DecodeUnspentTx(txhash, stream);
+                return DecodeUnspentTx(txHash, stream);
             }
         }
 
@@ -345,6 +345,82 @@ namespace BitSharp.Storage
             using (var stream = new MemoryStream())
             {
                 EncodeUnspentTx(stream, unspentTx);
+                return stream.ToArray();
+            }
+        }
+
+        public static OutputStates DecodeOutputStates(UInt256 txHash, Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new OutputStates
+                (
+                    bytes: reader.ReadVarBytes(),
+                    length: reader.ReadInt32()
+                );
+            }
+        }
+
+        public static OutputStates DecodeOutputStates(UInt256 txHash, byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeOutputStates(txHash, stream);
+            }
+        }
+
+        public static void EncodeOutputStates(Stream stream, OutputStates outputStates)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.WriteVarBytes(outputStates.ToByteArray());
+                writer.WriteInt32(outputStates.Length);
+            }
+        }
+
+        public static byte[] EncodeOutputStates(OutputStates outputStates)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeOutputStates(stream, outputStates);
+                return stream.ToArray();
+            }
+        }
+
+        public static TxOutputKey DecodeTxOutputKey(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new TxOutputKey
+                (
+                    txHash: reader.Read32Bytes(),
+                    txOutputIndex: reader.ReadUInt32()
+                );
+            }
+        }
+
+        public static TxOutputKey DecodeTxOutputKey(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeTxOutputKey(stream);
+            }
+        }
+
+        public static void EncodeTxOutputKey(Stream stream, TxOutputKey txOutputKey)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.Write32Bytes(txOutputKey.TxHash);
+                writer.Write4Bytes(txOutputKey.TxOutputIndex);
+            }
+        }
+
+        public static byte[] EncodeTxOutputKey(TxOutputKey txOutputKey)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeTxOutputKey(stream, txOutputKey);
                 return stream.ToArray();
             }
         }
