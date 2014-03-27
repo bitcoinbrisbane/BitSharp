@@ -247,7 +247,7 @@ namespace BitSharp.Common
             catch (ObjectDisposedException)
             {
                 // only throw disposed exceptions that occur in workAction()
-                if (working)
+                if (!this.isDisposed && working)
                     throw;
             }
             catch (OperationCanceledException) { }
