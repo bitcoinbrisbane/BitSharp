@@ -178,7 +178,7 @@ namespace BitSharp.Node
                 // get number of connections to attempt
                 var connectCount = Math.Min(unconnectedCount, maxConnections - (connectedCount + pendingCount));
 
-                var unconnectedPeersSorted = this.unconnectedPeers.OrderBy(x => x.Time).ToArray();
+                var unconnectedPeersSorted = this.unconnectedPeers.OrderBy(x => -x.Time.Ticks).ToArray();
                 var unconnectedPeerIndex = 0;
 
                 var connectTasks = new List<Task>();
@@ -497,7 +497,8 @@ namespace BitSharp.Node
                 }
                 else
                 {
-                    this.knownAddressCache.TryRemove(remoteEndPoint.ToNetworkAddressKey());
+                    this.knownAddressCache[remoteEndPoint.ToNetworkAddressKey()] =
+                        new NetworkAddressWithTime(0, remoteEndPoint.ToNetworkAddress(0));
                     DisconnectPeer(remoteEndPoint, null);
                     return null;
                 }
@@ -505,7 +506,8 @@ namespace BitSharp.Node
             catch (Exception e)
             {
                 //Debug.WriteLine(string.Format("Could not connect to {0}: {1}", remoteEndpoint, e.Message));
-                this.knownAddressCache.TryRemove(remoteEndPoint.ToNetworkAddressKey());
+                this.knownAddressCache[remoteEndPoint.ToNetworkAddressKey()] =
+                    new NetworkAddressWithTime(0, remoteEndPoint.ToNetworkAddress(0));
                 DisconnectPeer(remoteEndPoint, e);
                 return null;
             }
@@ -629,7 +631,7 @@ namespace BitSharp.Node
             // queue up addresses to be flushed to the database
             foreach (var address in addresses)
             {
-                this.knownAddressCache[address.GetKey()] = address;
+                this.knownAddressCache.TryAdd(address.GetKey(), address);
             }
         }
 
@@ -929,6 +931,16 @@ namespace BitSharp.Node
             {
                 return new NetworkAddressKey
                 (
+                    IPv6Address: Messaging.IPAddressToBytes(ipEndPoint.Address).ToImmutableArray(),
+                    Port: (UInt16)ipEndPoint.Port
+                );
+            }
+
+            public static NetworkAddress ToNetworkAddress(this IPEndPoint ipEndPoint, UInt64 services)
+            {
+                return new NetworkAddress
+                (
+                    Services: services,
                     IPv6Address: Messaging.IPAddressToBytes(ipEndPoint.Address).ToImmutableArray(),
                     Port: (UInt16)ipEndPoint.Port
                 );
