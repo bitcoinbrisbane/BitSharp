@@ -63,7 +63,8 @@ namespace BitSharp.Node
         private int messageCount;
 
         private int incomingCount;
-        private ConcurrentSet<IPEndPoint> unconnectedPeers = new ConcurrentSet<IPEndPoint>();
+        private ConcurrentSet<CandidatePeer> unconnectedPeers = new ConcurrentSet<CandidatePeer>();
+        private readonly ReaderWriterLockSlim unconnectedPeersLock = new ReaderWriterLockSlim();
         private ConcurrentSet<IPEndPoint> badPeers = new ConcurrentSet<IPEndPoint>();
         private ConcurrentDictionary<IPEndPoint, RemoteNode> pendingPeers = new ConcurrentDictionary<IPEndPoint, RemoteNode>();
         private ConcurrentDictionary<IPEndPoint, RemoteNode> connectedPeers = new ConcurrentDictionary<IPEndPoint, RemoteNode>();
@@ -177,19 +178,20 @@ namespace BitSharp.Node
                 // get number of connections to attempt
                 var connectCount = Math.Min(unconnectedCount, maxConnections - (connectedCount + pendingCount));
 
+                var unconnectedPeersSorted = this.unconnectedPeers.OrderBy(x => x.Time).ToArray();
+                var unconnectedPeerIndex = 0;
+
                 var connectTasks = new List<Task>();
-                for (var i = 0; i < connectCount; i++)
+                for (var i = 0; i < connectCount && unconnectedPeerIndex < unconnectedPeersSorted.Length; i++)
                 {
                     // cooperative loop
                     this.shutdownToken.Token.ThrowIfCancellationRequested();
 
                     // get a random peer to connect to
-                    var remoteEndpoint = this.unconnectedPeers.FirstOrDefault();
-                    if (remoteEndpoint != null)
-                    {
-                        this.unconnectedPeers.Remove(remoteEndpoint);
-                        connectTasks.Add(ConnectToPeer(remoteEndpoint));
-                    }
+                    var candidatePeer = unconnectedPeersSorted[unconnectedPeerIndex];
+                    unconnectedPeerIndex++;
+
+                    connectTasks.Add(ConnectToPeer(candidatePeer.IPEndPoint));
                 }
 
                 // wait for pending connection attempts to complete
@@ -414,7 +416,12 @@ namespace BitSharp.Node
                     try
                     {
                         var ipAddress = Dns.GetHostEntry(hostNameOrAddress).AddressList.First();
-                        this.unconnectedPeers.TryAdd(new IPEndPoint(ipAddress, Messaging.Port));
+                        this.unconnectedPeers.TryAdd(
+                            new CandidatePeer
+                            {
+                                IPEndPoint = new IPEndPoint(ipAddress, Messaging.Port),
+                                Time = DateTime.UtcNow
+                            });
                     }
                     catch (SocketException e)
                     {
@@ -460,7 +467,12 @@ namespace BitSharp.Node
             var count = 0;
             foreach (var knownAddress in this.knownAddressCache.Values)
             {
-                this.unconnectedPeers.TryAdd(knownAddress.NetworkAddress.ToIPEndPoint());
+                this.unconnectedPeers.TryAdd(
+                    new CandidatePeer
+                    {
+                        IPEndPoint = knownAddress.NetworkAddress.ToIPEndPoint(),
+                        Time = knownAddress.Time.UnixTimeToDateTime()
+                    });
                 count++;
             }
 
@@ -473,7 +485,7 @@ namespace BitSharp.Node
             {
                 var remoteNode = new RemoteNode(remoteEndPoint);
 
-                this.unconnectedPeers.TryRemove(remoteEndPoint);
+                this.unconnectedPeers.TryRemove(remoteEndPoint.ToCandidatePeerKey());
                 this.pendingPeers.TryAdd(remoteNode.RemoteEndPoint, remoteNode);
 
                 var success = await ConnectAndHandshake(remoteNode, isIncoming: false);
@@ -485,6 +497,7 @@ namespace BitSharp.Node
                 }
                 else
                 {
+                    this.knownAddressCache.TryRemove(remoteEndPoint.ToNetworkAddressKey());
                     DisconnectPeer(remoteEndPoint, null);
                     return null;
                 }
@@ -492,6 +505,7 @@ namespace BitSharp.Node
             catch (Exception e)
             {
                 //Debug.WriteLine(string.Format("Could not connect to {0}: {1}", remoteEndpoint, e.Message));
+                this.knownAddressCache.TryRemove(remoteEndPoint.ToNetworkAddressKey());
                 DisconnectPeer(remoteEndPoint, e);
                 return null;
             }
@@ -550,7 +564,7 @@ namespace BitSharp.Node
                         responseInvVectors.Add(invVector);
                     }
                 }
-                
+
                 connectedPeersLocal.Single().Sender.SendGetData(responseInvVectors.ToImmutableArray()).Forget();
             }
         }
@@ -607,16 +621,15 @@ namespace BitSharp.Node
                 ipEndpoints.Add(ipEndpoint);
             }
 
-            this.unconnectedPeers.UnionWith(ipEndpoints);
-            this.unconnectedPeers.ExceptWith(this.badPeers);
-            this.unconnectedPeers.ExceptWith(this.connectedPeers.Keys);
-            this.unconnectedPeers.ExceptWith(this.pendingPeers.Keys);
+            this.unconnectedPeers.UnionWith(ipEndpoints.Select(x => x.ToCandidatePeerKey()));
+            this.unconnectedPeers.ExceptWith(this.badPeers.Select(x => x.ToCandidatePeerKey()));
+            this.unconnectedPeers.ExceptWith(this.connectedPeers.Keys.Select(x => x.ToCandidatePeerKey()));
+            this.unconnectedPeers.ExceptWith(this.pendingPeers.Keys.Select(x => x.ToCandidatePeerKey()));
 
             // queue up addresses to be flushed to the database
             foreach (var address in addresses)
             {
-                //TODO enable this once i start filtering out garbage
-                //this.knownAddressCache.UpdateValue(address.GetKey(), address);
+                this.knownAddressCache[address.GetKey()] = address;
             }
         }
 
@@ -821,7 +834,7 @@ namespace BitSharp.Node
         private void DisconnectPeer(IPEndPoint remoteEndpoint, Exception e)
         {
             this.badPeers.Add(remoteEndpoint); //TODO
-            this.unconnectedPeers.Remove(remoteEndpoint);
+            this.unconnectedPeers.TryRemove(remoteEndpoint.ToCandidatePeerKey());
 
             RemoteNode pendingPeer;
             this.pendingPeers.TryRemove(remoteEndpoint, out pendingPeer);
@@ -870,6 +883,39 @@ namespace BitSharp.Node
         }
     }
 
+    internal sealed class CandidatePeer
+    {
+        public IPEndPoint IPEndPoint { get; set; }
+        public DateTime Time { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            if (!(obj is CandidatePeer))
+                return false;
+
+            var other = (CandidatePeer)obj;
+            return other.IPEndPoint.Equals(this.IPEndPoint);
+        }
+
+        public override int GetHashCode()
+        {
+            return this.IPEndPoint.GetHashCode();
+        }
+    }
+
+    internal sealed class CandidatePeerComparer : IComparer<CandidatePeer>
+    {
+        public int Compare(CandidatePeer x, CandidatePeer y)
+        {
+            if (y.Time.Ticks < x.Time.Ticks)
+                return -1;
+            else if (y.Time.Ticks > x.Time.Ticks)
+                return +1;
+            else
+                return 0;
+        }
+    }
+
     namespace ExtensionMethods
     {
         internal static class LocalClientExtensionMethods
@@ -877,6 +923,20 @@ namespace BitSharp.Node
             public static NetworkAddressKey GetKey(this NetworkAddressWithTime knownAddress)
             {
                 return new NetworkAddressKey(knownAddress.NetworkAddress.IPv6Address, knownAddress.NetworkAddress.Port);
+            }
+
+            public static NetworkAddressKey ToNetworkAddressKey(this IPEndPoint ipEndPoint)
+            {
+                return new NetworkAddressKey
+                (
+                    IPv6Address: Messaging.IPAddressToBytes(ipEndPoint.Address).ToImmutableArray(),
+                    Port: (UInt16)ipEndPoint.Port
+                );
+            }
+
+            public static CandidatePeer ToCandidatePeerKey(this IPEndPoint ipEndPoint)
+            {
+                return new CandidatePeer { IPEndPoint = ipEndPoint };
             }
         }
     }
