@@ -81,7 +81,7 @@ namespace BitSharp.Daemon
                     var pruneBuffer = blocksPerDay * 7;
                     foreach (var block in this.chainStateBuilder.Chain.Blocks.Reverse().Take(pruneBuffer))
                     {
-                        if (!this.cacheContext.BlockRollbackCache.ContainsKey(block.BlockHash))
+                        if (block.Height > 0 && !this.cacheContext.BlockRollbackCache.ContainsKey(block.BlockHash))
                             throw new InvalidOperationException();
                     }
                     this.cacheContext.BlockRollbackCache.Flush();
