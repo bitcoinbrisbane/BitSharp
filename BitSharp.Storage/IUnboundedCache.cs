@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public interface IUnboundedCache<TKey, TValue>
+    public interface IUnboundedCache<TKey, TValue> : IDisposable
     {
         string Name { get; }
 

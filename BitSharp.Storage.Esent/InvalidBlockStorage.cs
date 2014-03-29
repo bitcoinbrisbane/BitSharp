@@ -14,7 +14,7 @@ using System.Data.SqlClient;
 
 namespace BitSharp.Storage.Esent
 {
-    public class InvalidBlockStorage : EsentDataStorage<string>
+    public class InvalidBlockStorage : EsentDataStorage<string>, IInvalidBlockStorage
     {
         public InvalidBlockStorage(EsentStorageContext storageContext)
             : base(storageContext, "invalidBlocks",

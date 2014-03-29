@@ -14,7 +14,7 @@ using System.Data.SqlClient;
 
 namespace BitSharp.Storage.Esent
 {
-    public class TransactionStorage : EsentDataStorage<Transaction>
+    public class TransactionStorage : EsentDataStorage<Transaction>, ITransactionStorage
     {
         public TransactionStorage(EsentStorageContext storageContext)
             : base(storageContext, "transactions",

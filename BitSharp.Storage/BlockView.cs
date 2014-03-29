@@ -22,6 +22,10 @@ namespace BitSharp.Storage
             this.missingData = new ConcurrentSetBuilder<UInt256>();
         }
 
+        public void Dispose()
+        {
+        }
+
         public string Name
         {
             get { return "Block View"; }

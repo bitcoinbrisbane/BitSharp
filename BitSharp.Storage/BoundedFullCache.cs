@@ -38,6 +38,10 @@ namespace BitSharp.Storage
             Debug.WriteLine("{0}: Finished loading from storage: {1:#,##0}".Format2(this.Name, this.Count));
         }
 
+        public void Dispose()
+        {
+        }
+
         public string Name { get { return this.name; } }
 
         public ImmutableHashSet<TKey> MissingData { get { return this.missingData.ToImmutable(); } }

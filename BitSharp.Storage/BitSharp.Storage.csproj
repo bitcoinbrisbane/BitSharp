@@ -86,6 +86,9 @@
     <Compile Include="IStorageContext.cs" />
     <Compile Include="MissingDataException.cs" />
     <Compile Include="IUtxoBuilderStorage.cs" />
+    <Compile Include="PassthroughUnboundedCache.cs" />
+    <Compile Include="PassthroughBoundedCache.cs" />
+    <Compile Include="StorageInterfaces.cs" />
     <Compile Include="UnboundedCache.cs" />
     <Compile Include="BoundedCache.cs" />
     <Compile Include="ExtensionMethods.cs" />

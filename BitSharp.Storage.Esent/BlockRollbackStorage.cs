@@ -16,7 +16,7 @@ using System.IO;
 
 namespace BitSharp.Storage.Esent
 {
-    public class BlockRollbackStorage : EsentDataStorage<IImmutableList<KeyValuePair<UInt256, UInt256>>>
+    public class BlockRollbackStorage : EsentDataStorage<IImmutableList<KeyValuePair<UInt256, UInt256>>>, IBlockRollbackStorage
     {
         public BlockRollbackStorage(EsentStorageContext storageContext)
             : base(storageContext, "blockRollback",

@@ -14,7 +14,7 @@ using System.Data.SqlClient;
 
 namespace BitSharp.Storage.Esent
 {
-    public class ChainedBlockStorage : EsentDataStorage<ChainedBlock>
+    public class ChainedBlockStorage : EsentDataStorage<ChainedBlock>, IChainedBlockStorage
     {
         public ChainedBlockStorage(EsentStorageContext storageContext)
             : base(storageContext, "chainedBlocks",
