@@ -112,21 +112,9 @@ namespace BitSharp.Blockchain
 
         public virtual double TargetToDifficulty(UInt256 target)
         {
-            // implementation is equivalent of HighestTarget / target
-
-            // perform the division
-            UInt256 remainder;
-            var result = UInt256.DivRem(HighestTarget, target, out remainder);
-
-            // count the leading zeros in the highest target, use this to determine significant digits in the division
-            var insignificant = HighestTarget.ToByteArray().Reverse().TakeWhile(x => x == 0).Count();
-
-            // take only as many significant digits as can fit into a double (8 bytes) to calculate the fractional value
-            var remainderDouble = (double)(Bits.ToUInt64((remainder >> (8 * insignificant)).ToByteArray().Take(8).ToArray()));
-            var divisorDouble = (double)(Bits.ToUInt64((target >> (8 * insignificant)).ToByteArray().Take(8).ToArray()));
-
-            // return the difficulty whole value plus the fractional value
-            return (double)result + (remainderDouble / divisorDouble);
+            // difficulty is HighestTarget / target
+            // since these are 256-bit numbers, use division trick for BigIntegers
+            return Math.Exp(BigInteger.Log(HighestTarget.ToBigInteger()) - BigInteger.Log(target.ToBigInteger()));
         }
 
         public virtual UInt256 DifficultyToTarget(double difficulty)
@@ -418,7 +406,7 @@ namespace BitSharp.Blockchain
             for (var txIndex = 1; txIndex < block.Transactions.Count; txIndex++)
             {
                 var tx = block.Transactions[txIndex];
-                
+
                 for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
                 {
                     var input = tx.Inputs[inputIndex];
