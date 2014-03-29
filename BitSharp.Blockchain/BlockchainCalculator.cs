@@ -89,7 +89,7 @@ namespace BitSharp.Blockchain
                     this.blockRollbackCache[block.Hash] = blockRollbackInformation;
 
                     //TODO for memory mode
-                    if (false)
+                    if (true)
                     {
                         foreach (var tx in block.Transactions)
                             this.transactionCache.TryRemove(tx.Hash);

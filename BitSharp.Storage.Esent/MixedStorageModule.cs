@@ -1,6 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
+using BitSharp.Storage.Esent;
 using Microsoft.Isam.Esent.Collections.Generic;
 using Microsoft.Isam.Esent.Interop;
 using Ninject;
@@ -10,17 +11,18 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace BitSharp.Storage.Esent
 {
-    public class EsentStorageModule : NinjectModule
+    public class MixedStorageModule : NinjectModule
     {
         private readonly string baseDirectory;
         private readonly long cacheSizeMaxBytes;
 
-        public EsentStorageModule(string baseDirectory, long cacheSizeMaxBytes)
+        public MixedStorageModule(string baseDirectory, long cacheSizeMaxBytes)
         {
             this.baseDirectory = baseDirectory;
             this.cacheSizeMaxBytes = cacheSizeMaxBytes;
@@ -37,8 +39,8 @@ namespace BitSharp.Storage.Esent
             // bind concrete storage providers
             this.Bind<BlockHeaderStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<ChainedBlockStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-            this.Bind<BlockTxHashesStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-            this.Bind<TransactionStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
+            this.Bind<MemoryBlockTxHashesStorage>().ToSelf().InSingletonScope();
+            this.Bind<MemoryTransactionStorage>().ToSelf().InSingletonScope();
             this.Bind<BlockRollbackStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<InvalidBlockStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<NetworkPeerStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
@@ -51,7 +53,7 @@ namespace BitSharp.Storage.Esent
             this.Bind<IBlockRollbackStorage>().ToMethod(x => this.Kernel.Get<BlockRollbackStorage>()).InSingletonScope();
             this.Bind<IInvalidBlockStorage>().ToMethod(x => this.Kernel.Get<InvalidBlockStorage>()).InSingletonScope();
             this.Bind<INetworkPeerStorage>().ToMethod(x => this.Kernel.Get<NetworkPeerStorage>()).InSingletonScope();
-            
+
             this.Bind<IUtxoBuilderStorage>().To<UtxoBuilderStorage>();
         }
     }

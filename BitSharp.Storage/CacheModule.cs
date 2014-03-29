@@ -1,6 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
+using BitSharp.Network;
 using BitSharp.Storage;
 using Ninject;
 using Ninject.Modules;
@@ -22,6 +23,7 @@ namespace BitSharp.Storage
         private IUnboundedCache<UInt256, Transaction> transactionCache;
         private IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> blockRollbackCache;
         private IBoundedCache<UInt256, string> invalidBlockCache;
+        private IBoundedCache<NetworkAddressKey, NetworkAddressWithTime> networkPeerCache;
 
         public override void Load()
         {
@@ -49,12 +51,17 @@ namespace BitSharp.Storage
             this.invalidBlockCache = this.Kernel.Get<BoundedCache<UInt256, string>>(
                 new ConstructorArgument("name", "Invalid Block Cache"), new ConstructorArgument("dataStorage", invalidBlockStorage));
 
+            var networkPeerStroage = this.Kernel.Get<INetworkPeerStorage>();
+            this.networkPeerCache = this.Kernel.Get<BoundedCache<NetworkAddressKey, NetworkAddressWithTime>>(
+                new ConstructorArgument("name", "Network Peer Cache"), new ConstructorArgument("dataStorage", networkPeerStroage));
+
             this.Bind<BlockHeaderCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockHeaderCache);
             this.Bind<ChainedBlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.chainedBlockCache);
             this.Bind<BlockTxHashesCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockTxHashesCache);
             this.Bind<TransactionCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.transactionCache);
             this.Bind<BlockRollbackCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockRollbackCache);
             this.Bind<InvalidBlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.invalidBlockCache);
+            this.Bind<NetworkPeerCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.networkPeerCache);
         }
 
         public override void Unload()

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Blockchain
 {
-    public class ChainStateBuilder
+    public class ChainStateBuilder : IDisposable
     {
         private readonly ChainBuilder chain;
         private readonly UtxoBuilder utxo;

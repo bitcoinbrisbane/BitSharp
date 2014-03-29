@@ -53,6 +53,7 @@ namespace BitSharp.Client
 
                 var modules = new List<INinjectModule>();
 
+                // add storage module
 #if TEST_TOOL
                 modules.Add(new MemoryStorageModule());
 #elif MEMORY
@@ -65,29 +66,32 @@ namespace BitSharp.Client
                 modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION()));
 #endif
 
+                // add cache module
+                modules.Add(new CacheModule());
+
+                // add rules module
 #if TEST_TOOL
                 modules.Add(new RulesModule(RulesEnum.ComparisonToolTestNet));
-                this.rules = new Testnet2Rules(this.cacheContext);
 #else
                 modules.Add(new RulesModule(RulesEnum.MainNet));
 #endif
 
-                kernel.Bind<BlockchainDaemon>().ToSelf().InSingletonScope();
-                kernel.Bind<LocalClient>().ToSelf().InSingletonScope();
-
-                // setup view model
-                this.viewModel = new MainWindowViewModel(kernel);
-
-                InitializeComponent();
+                // initialize kernel
+                this.kernel = new StandardKernel(modules.ToArray());
 
                 // start the blockchain daemon
-                var blockchainDaemon = kernel.Get<BlockchainDaemon>();
+                this.kernel.Bind<BlockchainDaemon>().ToSelf().InSingletonScope();
+                var blockchainDaemon = this.kernel.Get<BlockchainDaemon>();
                 blockchainDaemon.Start();
 
+                // setup view model
+                this.viewModel = new MainWindowViewModel(this.kernel);
+                InitializeComponent();
                 this.viewModel.ViewBlockchainLast();
 
                 // start p2p client
-                var localClient = kernel.Get<LocalClient>();
+                this.kernel.Bind<LocalClient>().ToSelf().InSingletonScope();
+                var localClient = this.kernel.Get<LocalClient>();
                 var startThread = new Thread(() => localClient.Start());
                 startThread.Name = "LocalClient.Start";
                 startThread.Start();
@@ -120,7 +124,7 @@ namespace BitSharp.Client
             catch (Exception e)
             {
                 Debug.WriteLine(e);
-                throw;
+                Environment.Exit(-1);
             }
         }
 

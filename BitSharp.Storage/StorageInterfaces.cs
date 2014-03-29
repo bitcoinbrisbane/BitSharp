@@ -51,7 +51,7 @@ namespace BitSharp.Storage
 
     public sealed class TransactionCache : PassthroughUnboundedCache<UInt256, Transaction>
     {
-        public TransactionCache(IBoundedCache<UInt256, Transaction> cache)
+        public TransactionCache(IUnboundedCache<UInt256, Transaction> cache)
             : base(cache) { }
     }
 

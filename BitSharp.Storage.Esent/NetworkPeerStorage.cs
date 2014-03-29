@@ -15,13 +15,13 @@ using System.IO;
 
 namespace BitSharp.Storage.Esent
 {
-    public class KnownAddressStorage : IBoundedStorage<NetworkAddressKey, NetworkAddressWithTime>
+    public class NetworkPeerStorage : INetworkPeerStorage
     {
         private readonly string name;
         private readonly string directory;
         private readonly PersistentByteDictionary dict;
 
-        public KnownAddressStorage()
+        public NetworkPeerStorage()
         {
             this.name = "knownAddresses";
             this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "peers", this.name);

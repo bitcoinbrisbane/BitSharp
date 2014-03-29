@@ -24,7 +24,6 @@ namespace BitSharp.Daemon
 
         private Func<Chain> getTargetChain;
         private readonly IKernel kernel;
-        private readonly BlockchainDaemon blockchainDaemon;
         private readonly IBlockchainRules rules;
         private readonly BlockchainCalculator calculator;
         private readonly TransactionCache transactionCache;
@@ -41,14 +40,13 @@ namespace BitSharp.Daemon
         private int blockTimesIndex;
         private TimeSpan blockProcessingTime;
 
-        //TODO move pruning worker here
+        private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, IKernel kernel, BlockchainDaemon blockchainDaemon, IBlockchainRules rules, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache, InvalidBlockCache invalidBlockCache)
+        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, IKernel kernel, IBlockchainRules rules, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache, InvalidBlockCache invalidBlockCache)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime)
         {
             this.getTargetChain = getTargetChain;
             this.kernel = kernel;
-            this.blockchainDaemon = blockchainDaemon;
             this.rules = rules;
             this.transactionCache = transactionCache;
             this.blockRollbackCache = blockRollbackCache;
@@ -62,6 +60,10 @@ namespace BitSharp.Daemon
             this.blockTimes = new TimeSpan[1000];
             this.blockTimesIndex = -1;
             this.blockProcessingTime = TimeSpan.Zero;
+
+            this.pruningWorker = kernel.Get<PruningWorker>(
+                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5))),
+                new ConstructorArgument("getChainState", (Func<ChainState>)(() => this.ChainState)));
         }
 
         public ChainState ChainState { get { return this.chainState; } }
@@ -72,11 +74,21 @@ namespace BitSharp.Daemon
 
         protected override void SubDispose()
         {
-            if (this.chainStateBuilder != null)
+            new IDisposable[]
             {
-                this.chainStateBuilder.Dispose();
-                this.chainStateBuilder = null;
-            }
+                this.chainStateBuilder,
+                this.pruningWorker,
+            }.DisposeList();
+        }
+
+        protected override void SubStart()
+        {
+            this.pruningWorker.Start();
+        }
+
+        protected override void SubStop()
+        {
+            this.pruningWorker.Stop();
         }
 
         protected override void WorkAction()
@@ -110,7 +122,7 @@ namespace BitSharp.Daemon
                     UpdateCurrentBlockchain(new ChainState(newChain, newUtxo));
                     chainStateLocal = this.chainState;
 
-                    this.blockchainDaemon.PruningWorker.ForceWorkAndWait();
+                    this.pruningWorker.ForceWorkAndWait();
                 }
 
                 if (this.chainStateBuilder == null)

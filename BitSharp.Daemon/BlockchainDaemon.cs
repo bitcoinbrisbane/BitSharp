@@ -53,7 +53,6 @@ namespace BitSharp.Daemon
         private readonly ChainingWorker chainingWorker;
         private readonly TargetChainWorker targetChainWorker;
         private readonly ChainStateWorker chainStateWorker;
-        private readonly PruningWorker pruningWorker;
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
 
@@ -91,10 +90,6 @@ namespace BitSharp.Daemon
             this.chainStateWorker = kernel.Get<ChainStateWorker>(
                 new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5))),
                 new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)));
-
-            this.pruningWorker = kernel.Get<PruningWorker>(
-                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5))),
-                new ConstructorArgument("getChainState", (Func<ChainState>)(() => this.ChainState)));
 
             this.targetChainWorker.OnTargetBlockChanged +=
                 () =>
@@ -220,11 +215,6 @@ namespace BitSharp.Daemon
             get { return this.chainStateWorker.BlockProcessingTime; }
         }
 
-        internal PruningWorker PruningWorker
-        {
-            get { return this.pruningWorker; }
-        }
-
         public void Start()
         {
             try
@@ -236,7 +226,6 @@ namespace BitSharp.Daemon
                 this.chainingWorker.Start();
                 this.targetChainWorker.Start();
                 this.chainStateWorker.Start();
-                this.pruningWorker.Start();
                 this.gcWorker.Start();
                 //this.utxoScanWorker.Start();
             }
@@ -266,7 +255,6 @@ namespace BitSharp.Daemon
                 this.chainingWorker,
                 this.targetChainWorker,
                 this.chainStateWorker,
-                this.pruningWorker,
                 this.gcWorker,
                 this.utxoScanWorker,
                 this.shutdownToken

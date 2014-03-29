@@ -84,8 +84,8 @@
     <Compile Include="BlockRollbackStorage.cs" />
     <Compile Include="BlockTxHashesStorage.cs" />
     <Compile Include="ChainedBlockStorage.cs" />
-    <Compile Include="KnownAddressStorage.cs" />
-    <Compile Include="MixedStorageContext.cs" />
+    <Compile Include="NetworkPeerStorage.cs" />
+    <Compile Include="MixedStorageModule.cs" />
     <Compile Include="PersistentByteDictionary.cs" />
     <Compile Include="EsentStorageModule.cs" />
     <Compile Include="UtxoStorage.cs" />

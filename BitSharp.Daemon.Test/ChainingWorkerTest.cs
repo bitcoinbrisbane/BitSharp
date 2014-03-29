@@ -67,7 +67,7 @@ namespace BitSharp.Daemon.Test
                     totalWork: new[] { blockHeader0, blockHeader1 }.SumBigInteger(x => x.CalculateWork())
                 )
                 , chainedBlockCache[blockHeader1.Hash]);
-            Assert.AreEqual(0, chainingWorker.UnchainByPrevious.Count);
+            Assert.AreEqual(0, chainingWorker.UnchainedByPrevious.Count);
 
             // add block 2
             blockHeaderCache[blockHeader2.Hash] = blockHeader2;
@@ -86,7 +86,7 @@ namespace BitSharp.Daemon.Test
                     totalWork: new[] { blockHeader0, blockHeader1, blockHeader2 }.SumBigInteger(x => x.CalculateWork())
                 )
                 , chainedBlockCache[blockHeader2.Hash]);
-            Assert.AreEqual(0, chainingWorker.UnchainByPrevious.Count);
+            Assert.AreEqual(0, chainingWorker.UnchainedByPrevious.Count);
 
             // verify no other work was done
             Assert.IsFalse(workStoppedEvent.WaitOne(0));
@@ -133,8 +133,8 @@ namespace BitSharp.Daemon.Test
 
             // verify nothing chained
             Assert.AreEqual(1, chainedBlockCache.Count);
-            Assert.AreEqual(1, chainingWorker.UnchainByPrevious.Count);
-            AssertSingleUnchainedBlockByPrevious(blockHeader4, chainingWorker.UnchainByPrevious);
+            Assert.AreEqual(1, chainingWorker.UnchainedByPrevious.Count);
+            AssertSingleUnchainedBlockByPrevious(blockHeader4, chainingWorker.UnchainedByPrevious);
 
             // add block 3
             blockHeaderCache[blockHeader3.Hash] = blockHeader3;
@@ -144,9 +144,9 @@ namespace BitSharp.Daemon.Test
 
             // verify nothing chained
             Assert.AreEqual(1, chainedBlockCache.Count);
-            Assert.AreEqual(2, chainingWorker.UnchainByPrevious.Count);
-            AssertSingleUnchainedBlockByPrevious(blockHeader3, chainingWorker.UnchainByPrevious);
-            AssertSingleUnchainedBlockByPrevious(blockHeader4, chainingWorker.UnchainByPrevious);
+            Assert.AreEqual(2, chainingWorker.UnchainedByPrevious.Count);
+            AssertSingleUnchainedBlockByPrevious(blockHeader3, chainingWorker.UnchainedByPrevious);
+            AssertSingleUnchainedBlockByPrevious(blockHeader4, chainingWorker.UnchainedByPrevious);
 
             // add block 2
             blockHeaderCache[blockHeader2.Hash] = blockHeader2;
@@ -156,11 +156,11 @@ namespace BitSharp.Daemon.Test
 
             // verify nothing chained
             Assert.AreEqual(1, chainedBlockCache.Count);
-            Assert.AreEqual(3, chainingWorker.UnchainByPrevious.Count);
-            Assert.IsTrue(chainingWorker.UnchainByPrevious.ContainsKey(blockHeader2.PreviousBlock));
-            AssertSingleUnchainedBlockByPrevious(blockHeader2, chainingWorker.UnchainByPrevious);
-            AssertSingleUnchainedBlockByPrevious(blockHeader3, chainingWorker.UnchainByPrevious);
-            AssertSingleUnchainedBlockByPrevious(blockHeader4, chainingWorker.UnchainByPrevious);
+            Assert.AreEqual(3, chainingWorker.UnchainedByPrevious.Count);
+            Assert.IsTrue(chainingWorker.UnchainedByPrevious.ContainsKey(blockHeader2.PreviousBlock));
+            AssertSingleUnchainedBlockByPrevious(blockHeader2, chainingWorker.UnchainedByPrevious);
+            AssertSingleUnchainedBlockByPrevious(blockHeader3, chainingWorker.UnchainedByPrevious);
+            AssertSingleUnchainedBlockByPrevious(blockHeader4, chainingWorker.UnchainedByPrevious);
 
             // add block 1
             blockHeaderCache[blockHeader1.Hash] = blockHeader1;
@@ -170,7 +170,7 @@ namespace BitSharp.Daemon.Test
 
             // verify all blocks chained
             Assert.AreEqual(5, chainedBlockCache.Count);
-            Assert.AreEqual(0, chainingWorker.UnchainByPrevious.Count);
+            Assert.AreEqual(0, chainingWorker.UnchainedByPrevious.Count);
 
             // verify block 1
             Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader1.Hash));

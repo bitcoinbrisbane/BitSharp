@@ -16,16 +16,18 @@ namespace BitSharp.Blockchain
 
     public class RulesModule : NinjectModule
     {
-        private readonly RulesEnum networkRules;
+        private readonly RulesEnum rules;
 
-        public RulesModule(RulesEnum networkRules)
+        public RulesModule(RulesEnum rules)
         {
-            this.networkRules = networkRules;
+            this.rules = rules;
         }
 
         public override void Load()
         {
-            switch (this.networkRules)
+            this.Bind<RulesEnum>().ToConstant(this.rules);
+
+            switch (this.rules)
             {
                 case RulesEnum.MainNet:
                     this.Bind<IBlockchainRules>().To<MainnetRules>().InSingletonScope();

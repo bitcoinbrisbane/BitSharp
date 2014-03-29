@@ -11,7 +11,7 @@ namespace BitSharp.Storage
     {
         private readonly IUnboundedCache<TKey, TValue> cache;
 
-        public PassthroughUnboundedCache(IBoundedCache<TKey, TValue> cache)
+        public PassthroughUnboundedCache(IUnboundedCache<TKey, TValue> cache)
         {
             this.cache = cache;
         }
