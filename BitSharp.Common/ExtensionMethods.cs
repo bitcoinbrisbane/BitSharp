@@ -337,7 +337,7 @@ namespace BitSharp.Common.ExtensionMethods
         public static bool RemoveRange<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, IEnumerable<TKey> keys)
         {
             bool success = true;
-            foreach (var key in keys)
+            foreach (var key in keys.ToArray())
                 success &= dictionary.Remove(key);
 
             return success;
