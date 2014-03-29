@@ -42,6 +42,7 @@ namespace BitSharp.Node
 
         private int targetChainLookAhead;
         private int criticalTargetChainLookAhead;
+        private DateTime targetChainLookAheadTime;
 
         private readonly WorkerMethod flushWorker;
         private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
@@ -63,7 +64,7 @@ namespace BitSharp.Node
             this.blockchainDaemon.OnChainStateChanged += HandleChainStateChanged;
             this.blockchainDaemon.OnChainStateBuilderChanged += HandleChainStateChanged;
 
-            this.blockTimes = new TimeSpan[1000];
+            this.blockTimes = new TimeSpan[10000];
             this.blockTimesIndex = -1;
             this.blockTimesIndexLock = new ReaderWriterLockSlim();
 
@@ -95,6 +96,10 @@ namespace BitSharp.Node
 
         protected override void WorkAction()
         {
+            // update rates
+            new MethodTimer(false).Time("UpdateLookAhead", () =>
+                UpdateLookAhead());
+
             // update list of missing blocks to request
             new MethodTimer(false).Time("UpdateMissingBlockQueue", () =>
                 UpdateMissingBlockQueue());
@@ -108,6 +113,37 @@ namespace BitSharp.Node
             //      target chain blocks will be requested from each peer in non-overlapping chunks
             new MethodTimer(false).Time("SendBlockRequests", () =>
                 SendBlockRequests());
+        }
+
+        private void UpdateLookAhead()
+        {
+            // update periodically
+            if (DateTime.UtcNow - this.targetChainLookAheadTime <= TimeSpan.FromSeconds(5))
+                return;
+            else
+                this.targetChainLookAheadTime = DateTime.UtcNow;
+
+            // get average block processing time
+            var chainStateBlockProcessingTimeLocal = this.blockchainDaemon.AverageBlockProcessingTime();
+            if (chainStateBlockProcessingTimeLocal.Ticks == 0)
+                return;
+
+            // get average block request time
+            var avgBlockRequestTime = TimeSpan.FromTicks((long)(this.blockTimes.Where(x => x.Ticks > 0).AverageOrDefault(x => x.Ticks) ?? 0));
+            
+            // determine target chain look ahead
+            var lookAheadTime = avgBlockRequestTime + TimeSpan.FromSeconds(30);
+            this.targetChainLookAhead = (int)Math.Max(1, lookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
+
+            // determine critical target chain look ahead
+            var criticalLookAheadTime = avgBlockRequestTime + TimeSpan.FromMilliseconds(500);
+            this.criticalTargetChainLookAhead = (int)Math.Max(1, criticalLookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
+
+            Debug.WriteLine("Block Processing Time: {0}".Format2(chainStateBlockProcessingTimeLocal));
+            Debug.WriteLine("Block Processing Rate/s: {0:#,##0.000}".Format2(1 / chainStateBlockProcessingTimeLocal.TotalSeconds));
+            Debug.WriteLine("Look Ahead: {0:#,##0}".Format2(this.targetChainLookAhead));
+            Debug.WriteLine("Critical Look Ahead: {0:#,##0}".Format2(this.criticalTargetChainLookAhead));
+            Debug.WriteLine("Missing Block Queue Count: {0:#,##0}".Format2(this.missingBlockQueue.Count));
         }
 
         private void UpdateMissingBlockQueue()
@@ -293,26 +329,11 @@ namespace BitSharp.Node
                 DateTime requestTime;
                 if (this.allBlockRequests.TryRemove(block.Hash, out requestTime))
                 {
-                    var blockTimesIndexLocal = this.blockTimesIndexLock.DoWrite(() =>
+                    this.blockTimesIndexLock.DoWrite(() =>
                     {
                         this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;
-                        return this.blockTimesIndex;
+                        this.blockTimes[this.blockTimesIndex] = DateTime.UtcNow - requestTime;
                     });
-                    this.blockTimes[blockTimesIndexLocal] = DateTime.UtcNow - requestTime;
-
-                    var chainStateBlockProcessingTimeLocal = this.blockchainDaemon.ChainStateBlockProcessingTime;
-                    if (chainStateBlockProcessingTimeLocal.Ticks > 0)
-                    {
-                        var avgBlockTime = TimeSpan.FromTicks((long)this.blockTimes.Where(x => x.Ticks > 0).Average(x => x.Ticks));
-                        var lookAheadTime = avgBlockTime + TimeSpan.FromSeconds(30);
-                        this.targetChainLookAhead = (int)Math.Max(1, lookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
-
-                        var criticalLookAheadTime = avgBlockTime + TimeSpan.FromMilliseconds(500);
-                        this.criticalTargetChainLookAhead = (int)Math.Max(1, criticalLookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
-
-                        //Debug.WriteLine(chainStateBlockProcessingTimeLocal);
-                        //Debug.WriteLine("{0}, {1}".Format2(this.targetChainLookAhead, this.criticalTargetChainLookAhead));
-                    }
                 }
 
                 ConcurrentDictionary<UInt256, DateTime> peerBlockRequests;

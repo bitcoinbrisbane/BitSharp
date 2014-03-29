@@ -20,7 +20,7 @@ namespace BitSharp.Daemon
         public event Action OnChainStateChanged;
         public event Action OnChainStateBuilderChanged;
 
-        private static readonly TimeSpan MAX_BUILDER_LIFETIME = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan MAX_BUILDER_LIFETIME = TimeSpan.FromMinutes(30);
 
         private Func<Chain> getTargetChain;
         private readonly IKernel kernel;
@@ -38,7 +38,6 @@ namespace BitSharp.Daemon
 
         private readonly TimeSpan[] blockTimes;
         private int blockTimesIndex;
-        private TimeSpan blockProcessingTime;
 
         private readonly PruningWorker pruningWorker;
 
@@ -57,9 +56,8 @@ namespace BitSharp.Daemon
             this.chainState = ChainState.CreateForGenesisBlock(this.rules.GenesisChainedBlock);
             this.chainStateLock = new ReaderWriterLockSlim();
 
-            this.blockTimes = new TimeSpan[1000];
+            this.blockTimes = new TimeSpan[10000];
             this.blockTimesIndex = -1;
-            this.blockProcessingTime = TimeSpan.Zero;
 
             this.pruningWorker = kernel.Get<PruningWorker>(
                 new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5))),
@@ -68,9 +66,12 @@ namespace BitSharp.Daemon
 
         public ChainState ChainState { get { return this.chainState; } }
 
-        public TimeSpan BlockProcessingTime { get { return this.blockProcessingTime; } }
-
         internal ChainStateBuilder ChainStateBuilder { get { return this.chainStateBuilder; } }
+
+        public TimeSpan AverageBlockProcessingTime()
+        {
+            return TimeSpan.FromTicks((long)(this.blockTimes.Where(x => x.Ticks > 0).AverageOrDefault(x => x.Ticks) ?? 0));
+        }
 
         protected override void SubDispose()
         {
@@ -144,7 +145,6 @@ namespace BitSharp.Daemon
                         {
                             this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;
                             this.blockTimes[this.blockTimesIndex] = blockTime;
-                            this.blockProcessingTime = TimeSpan.FromTicks((long)this.blockTimes.Where(x => x.Ticks > 0).Average(x => x.Ticks));
 
                             var handler = this.OnChainStateBuilderChanged;
                             if (handler != null)

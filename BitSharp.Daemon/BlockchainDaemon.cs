@@ -210,9 +210,9 @@ namespace BitSharp.Daemon
             }
         }
 
-        public TimeSpan ChainStateBlockProcessingTime
+        public TimeSpan AverageBlockProcessingTime()
         {
-            get { return this.chainStateWorker.BlockProcessingTime; }
+            return this.chainStateWorker.AverageBlockProcessingTime();
         }
 
         public void Start()
