@@ -93,13 +93,20 @@ namespace BitSharp.Common
                 {
                     this.semaphore.Do(() =>
                     {
-                        if (this.isStarted && !this.isDisposed)
+                        if (!this.isDisposed)
                         {
+                            try
+                            {
+                                this.SubDispose();
+                            }
+                            catch (Exception) { }
+
                             this.shutdownToken.Cancel();
                             this.notifyEvent.Set();
                             this.forceNotifyEvent.Set();
 
-                            this.workerThread.Join(5000);
+                            if (this.workerThread.IsAlive)
+                                this.workerThread.Join(5000);
 
                             this.shutdownToken.Dispose();
                             this.notifyEvent.Dispose();
@@ -109,8 +116,6 @@ namespace BitSharp.Common
 
                             this.isStarted = false;
                             this.isDisposed = true;
-
-                            this.SubDispose();
                         }
                     });
                     this.semaphore.Dispose();

@@ -13,8 +13,8 @@ namespace BitSharp.Common.Test
         private readonly Action subStart;
         private readonly Action subStop;
 
-        public MockWorker(String name, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime, Action workAction, Action subDispose = null, Action subStart = null, Action subStop = null)
-            : base(name, initialNotify, minIdleTime, maxIdleTime)
+        public MockWorker(Action workAction, String name = "", bool initialNotify = false, TimeSpan? minIdleTime = null, TimeSpan? maxIdleTime = null, Action subDispose = null, Action subStart = null, Action subStop = null)
+            : base(name, initialNotify, minIdleTime ?? TimeSpan.Zero, maxIdleTime ?? TimeSpan.MaxValue)
         {
             if (workAction == null)
                 throw new ArgumentException("workAction");
@@ -41,7 +41,7 @@ namespace BitSharp.Common.Test
             if (this.subStart != null)
                 this.subStart();
         }
-        
+
         protected override void SubStop()
         {
             if (this.subStop != null)
