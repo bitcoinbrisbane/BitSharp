@@ -30,7 +30,7 @@ namespace BitSharp.BlockHelper.Test
                 previousBlock: 0,
                 merkleRoot: UInt256.Parse("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b", NumberStyles.HexNumber),
                 time: 1231006505,
-                bits: 486604799,
+                bits: 0x1D00FFFF,
                 nonce: 2083236893
             ),
             transactions: ImmutableArray.Create
