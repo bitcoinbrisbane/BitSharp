@@ -302,24 +302,32 @@ namespace BitSharp.Blockchain
                 .Select(
                     chainedBlockTuple =>
                     {
-                        var chainedBlockDirection = chainedBlockTuple.Item1;
-                        var chainedBlock = chainedBlockTuple.Item2;
+                        try
+                        {
+                            var chainedBlockDirection = chainedBlockTuple.Item1;
+                            var chainedBlock = chainedBlockTuple.Item2;
 
-                        var block = new MethodTimer(false).Time("GetBlock", () =>
-                            this.blockView[chainedBlock.BlockHash]);
+                            var block = new MethodTimer(false).Time("GetBlock", () =>
+                                this.blockView[chainedBlock.BlockHash]);
 
-                        //var prevInputTxes = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
-                        //new MethodTimer(false).Time("GetPrevInputTxes", () =>
-                        //{
-                        //    foreach (var prevInput in block.Transactions.Skip(1).SelectMany(x => x.Inputs))
-                        //    {
-                        //        var prevInputTxHash = prevInput.PreviousTxOutputKey.TxHash;
-                        //        if (!prevInputTxes.ContainsKey(prevInputTxHash))
-                        //            prevInputTxes.Add(prevInputTxHash, this.CacheContext.TransactionCache[prevInputTxHash]);
-                        //    }
-                        //});
+                            //var prevInputTxes = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
+                            //new MethodTimer(false).Time("GetPrevInputTxes", () =>
+                            //{
+                            //    foreach (var prevInput in block.Transactions.Skip(1).SelectMany(x => x.Inputs))
+                            //    {
+                            //        var prevInputTxHash = prevInput.PreviousTxOutputKey.TxHash;
+                            //        if (!prevInputTxes.ContainsKey(prevInputTxHash))
+                            //            prevInputTxes.Add(prevInputTxHash, this.CacheContext.TransactionCache[prevInputTxHash]);
+                            //    }
+                            //});
 
-                        return Tuple.Create(chainedBlockDirection, chainedBlock, block/*, prevInputTxes.ToImmutable()*/);
+                            return Tuple.Create(chainedBlockDirection, chainedBlock, block/*, prevInputTxes.ToImmutable()*/);
+                        }
+                        catch (MissingDataException e)
+                        {
+                            Debug.WriteLine("Stalled, MissingDataException: {0}".Format2(e.Key));
+                            throw;
+                        }
                     })
                 .LookAhead(lookAhead, this.shutdownToken);
         }
