@@ -3,6 +3,7 @@ using BitSharp.Data;
 using BitSharp.Storage;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Ninject;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -18,6 +19,9 @@ namespace BitSharp.Blockchain.Test
         [TestMethod]
         public void TestSimpleSpend()
         {
+            // prepare test kernel
+            var kernel = new StandardKernel(new MemoryStorageModule());
+
             // prepare block
             var chainedBlock = new ChainedBlock(blockHash: 1, previousBlockHash: 0, height: 0, totalWork: 0);
 
@@ -42,11 +46,10 @@ namespace BitSharp.Blockchain.Test
             var memoryUtxoBuilderStorage = new MemoryUtxoBuilderStorage(mockParentUtxoStorage.Object);
 
             // mock a cache context
-            var mockCacheContext = new Mock<ICacheContext>();
-            mockCacheContext.Setup(cc => cc.ToUtxoBuilder(mockParentUtxoStorage.Object)).Returns(memoryUtxoBuilderStorage);
+            kernel.Bind<IUtxoBuilderStorage>().To<MemoryUtxoBuilderStorage>();
 
             // initialize utxo builder
-            var utxoBuilder = new UtxoBuilder(mockCacheContext.Object, parentUtxo);
+            var utxoBuilder = new UtxoBuilder(parentUtxo, kernel, transactionCache: null);
 
             // create an input to spend the unspent transaction's first output
             var input1 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
@@ -88,6 +91,9 @@ namespace BitSharp.Blockchain.Test
         [ExpectedException(typeof(ValidationException))]
         public void TestDoubleSpend()
         {
+            // prepare test kernel
+            var kernel = new StandardKernel(new MemoryStorageModule());
+
             // prepare block
             var chainedBlock = new ChainedBlock(blockHash: 1, previousBlockHash: 0, height: 0, totalWork: 0);
 
@@ -104,12 +110,8 @@ namespace BitSharp.Blockchain.Test
             // initialize memory utxo builder storage
             var memoryUtxoBuilderStorage = new MemoryUtxoBuilderStorage(mockParentUtxoStorage.Object);
 
-            // mock a cache context
-            var mockCacheContext = new Mock<ICacheContext>();
-            mockCacheContext.Setup(cc => cc.ToUtxoBuilder(mockParentUtxoStorage.Object)).Returns(memoryUtxoBuilderStorage);
-
             // initialize utxo builder
-            var utxoBuilder = new UtxoBuilder(mockCacheContext.Object, parentUtxo);
+            var utxoBuilder = new UtxoBuilder(parentUtxo, kernel, transactionCache: null);
 
             // create an input to spend the unspent transaction
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);

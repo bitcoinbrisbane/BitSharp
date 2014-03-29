@@ -16,8 +16,8 @@ namespace BitSharp.Storage.Esent
 {
     public class InvalidBlockStorage : EsentDataStorage<string>, IInvalidBlockStorage
     {
-        public InvalidBlockStorage(EsentStorageContext storageContext)
-            : base(storageContext, "invalidBlocks",
+        public InvalidBlockStorage(string baseDirectory)
+            : base(baseDirectory, "invalidBlocks",
                 data => StorageEncoder.EncodeVarString(data),
                 (blockHash, bytes) => StorageEncoder.DecodeVarString(bytes))
         { }

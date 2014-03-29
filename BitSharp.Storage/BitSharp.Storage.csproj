@@ -74,18 +74,17 @@
     <Compile Include="BlockView.cs" />
     <Compile Include="BoundedFullCache.cs" />
     <Compile Include="GenesisUtxoStorage.cs" />
-    <Compile Include="ICacheContext.cs" />
     <Compile Include="IUnboundedCache.cs" />
     <Compile Include="IBoundedCache.cs" />
     <Compile Include="IUnboundedStorage.cs" />
     <Compile Include="IUtxoStorage.cs" />
     <Compile Include="MemoryStorage.cs" />
-    <Compile Include="MemoryStorageContext.cs" />
+    <Compile Include="MemoryStorageModule.cs" />
     <Compile Include="MemoryUtxoStorage.cs" />
     <Compile Include="MemoryUtxoBuilderStorage.cs" />
-    <Compile Include="IStorageContext.cs" />
     <Compile Include="MissingDataException.cs" />
     <Compile Include="IUtxoBuilderStorage.cs" />
+    <Compile Include="PassthroughBoundedStorage.cs" />
     <Compile Include="PassthroughUnboundedCache.cs" />
     <Compile Include="PassthroughBoundedCache.cs" />
     <Compile Include="StorageInterfaces.cs" />
@@ -94,7 +93,6 @@
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="IBoundedStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="CacheContext.cs" />
     <Compile Include="StorageEncoder.cs" />
   </ItemGroup>
   <ItemGroup>

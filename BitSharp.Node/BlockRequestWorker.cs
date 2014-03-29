@@ -23,7 +23,8 @@ namespace BitSharp.Node
 
         private readonly LocalClient localClient;
         private readonly BlockchainDaemon blockchainDaemon;
-        private readonly ICacheContext cacheContext;
+        private readonly ChainedBlockCache chainedBlockCache;
+        private readonly BlockView blockView;
 
         private readonly ConcurrentDictionary<UInt256, DateTime> allBlockRequests;
         private readonly ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>> blockRequestsByPeer;
@@ -45,12 +46,13 @@ namespace BitSharp.Node
         private readonly WorkerMethod flushWorker;
         private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
 
-        public BlockRequestWorker(LocalClient localClient, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
-            : base("BlockRequestWorker", initialNotify, minIdleTime, maxIdleTime)
+        public BlockRequestWorker(LocalClient localClient, BlockchainDaemon blockchainDaemon, ChainedBlockCache chainedBlockCache, BlockView blockView)
+            : base("BlockRequestWorker", initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30))
         {
             this.localClient = localClient;
-            this.blockchainDaemon = localClient.BlockchainDaemon;
-            this.cacheContext = localClient.CacheContext;
+            this.blockchainDaemon = blockchainDaemon;
+            this.chainedBlockCache = chainedBlockCache;
+            this.blockView = blockView;
 
             this.allBlockRequests = new ConcurrentDictionary<UInt256, DateTime>();
             this.blockRequestsByPeer = new ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>>();
@@ -114,16 +116,16 @@ namespace BitSharp.Node
             var targetChainLocal = this.blockchainDaemon.TargetChain;
 
             // remove any blocks that are no longer missing
-            this.missingBlockQueue.RemoveWhere(x => this.cacheContext.BlockView.ContainsKey(x.Value.BlockHash));
+            this.missingBlockQueue.RemoveWhere(x => this.blockView.ContainsKey(x.Value.BlockHash));
 
             // remove old missing blocks
             this.missingBlockQueue.RemoveWhere(x => x.Value.Height < currentChainLocal.Height);
 
             // add any blocks that are currently missing
-            foreach (var missingBlock in this.cacheContext.BlockView.MissingData)
+            foreach (var missingBlock in this.blockView.MissingData)
             {
                 ChainedBlock missingBlockChained;
-                if (this.cacheContext.ChainedBlockCache.TryGetValue(missingBlock, out missingBlockChained))
+                if (this.chainedBlockCache.TryGetValue(missingBlock, out missingBlockChained))
                 {
                     this.missingBlockQueue[missingBlockChained.Height] = missingBlockChained;
                 }
@@ -138,7 +140,7 @@ namespace BitSharp.Node
                     .Take(this.criticalTargetChainLookAhead)
                     .Where(x =>
                         !this.missingBlockQueue.ContainsKey(x.Height)
-                        && !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash)))
+                        && !this.blockView.ContainsKey(x.BlockHash)))
                 {
                     this.missingBlockQueue[upcomingBlock.Height] = upcomingBlock;
                 }
@@ -163,7 +165,7 @@ namespace BitSharp.Node
                 this.targetChainQueue = currentChainLocal.NavigateTowards(targetChainLocal)
                     .Select(x => x.Item2)
                     .Take(this.targetChainLookAhead)
-                    .Where(x => !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash))
+                    .Where(x => !this.blockView.ContainsKey(x.BlockHash))
                     .ToList();
                 this.targetChainQueueIndex = 0;
             }
@@ -270,7 +272,7 @@ namespace BitSharp.Node
 
                 if (!peerBlockRequests.ContainsKey(requestBlock)
                     && !this.allBlockRequests.ContainsKey(requestBlock)
-                    && !this.cacheContext.BlockView.ContainsKey(requestBlock))
+                    && !this.blockView.ContainsKey(requestBlock))
                 {
                     yield return requestBlock;
                     currentCount++;
@@ -286,7 +288,7 @@ namespace BitSharp.Node
                 var remoteNode = tuple.Item1;
                 var block = tuple.Item2;
 
-                this.cacheContext.BlockView.TryAdd(block.Hash, block);
+                this.blockView.TryAdd(block.Hash, block);
 
                 DateTime requestTime;
                 if (this.allBlockRequests.TryRemove(block.Hash, out requestTime))

@@ -25,20 +25,21 @@ namespace BitSharp.Blockchain
 
         private const UInt64 SATOSHI_PER_BTC = 100 * 1000 * 1000;
 
-        private readonly ICacheContext _cacheContext;
-        private readonly UInt256 _highestTarget;
-        private readonly Block _genesisBlock;
-        private readonly ChainedBlock _genesisChainedBlock;
-        private readonly int _difficultyInternal = 2016;
-        private readonly long _difficultyTargetTimespan = 14 * 24 * 60 * 60;
+        private readonly BlockHeaderCache blockHeaderCache;
 
-        public MainnetRules(ICacheContext cacheContext)
+        private readonly UInt256 highestTarget;
+        private readonly Block genesisBlock;
+        private readonly ChainedBlock genesisChainedBlock;
+        private readonly int difficultyInternal = 2016;
+        private readonly long difficultyTargetTimespan = 14 * 24 * 60 * 60;
+
+        public MainnetRules(BlockHeaderCache blockHeaderCache)
         {
-            this._cacheContext = cacheContext;
+            this.blockHeaderCache = blockHeaderCache;
 
-            this._highestTarget = UInt256.Parse("00000000FFFF0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
+            this.highestTarget = UInt256.Parse("00000000FFFF0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
 
-            this._genesisBlock =
+            this.genesisBlock =
                 new Block
                 (
                     header: new BlockHeader
@@ -95,20 +96,18 @@ namespace BitSharp.Blockchain
                     )
                 );
 
-            this._genesisChainedBlock = ChainedBlock.CreateForGenesisBlock(this._genesisBlock.Header);
+            this.genesisChainedBlock = ChainedBlock.CreateForGenesisBlock(this.genesisBlock.Header);
         }
 
-        public ICacheContext CacheContext { get { return this._cacheContext; } }
+        public virtual UInt256 HighestTarget { get { return this.highestTarget; } }
 
-        public virtual UInt256 HighestTarget { get { return this._highestTarget; } }
+        public virtual Block GenesisBlock { get { return this.genesisBlock; } }
 
-        public virtual Block GenesisBlock { get { return this._genesisBlock; } }
+        public virtual ChainedBlock GenesisChainedBlock { get { return this.genesisChainedBlock; } }
 
-        public virtual ChainedBlock GenesisChainedBlock { get { return this._genesisChainedBlock; } }
+        public virtual int DifficultyInternal { get { return this.difficultyInternal; } }
 
-        public virtual int DifficultyInternal { get { return this._difficultyInternal; } }
-
-        public virtual long DifficultyTargetTimespan { get { return this._difficultyTargetTimespan; } }
+        public virtual long DifficultyTargetTimespan { get { return this.difficultyTargetTimespan; } }
 
         public virtual double TargetToDifficulty(UInt256 target)
         {
@@ -145,7 +144,7 @@ namespace BitSharp.Blockchain
                 if (chain.Height == 0)
                 {
                     // lookup genesis block header
-                    var genesisBlockHeader = this.CacheContext.BlockHeaderCache[chain.Blocks[0].BlockHash];
+                    var genesisBlockHeader = this.blockHeaderCache[chain.Blocks[0].BlockHash];
 
                     return genesisBlockHeader.CalculateTarget();
                 }
@@ -153,7 +152,7 @@ namespace BitSharp.Blockchain
                 else if (chain.Height % DifficultyInternal != 0)
                 {
                     // lookup the previous block on the current blockchain
-                    var prevBlockHeader = this.CacheContext.BlockHeaderCache[chain.LastBlock.PreviousBlockHash];
+                    var prevBlockHeader = this.blockHeaderCache[chain.LastBlock.PreviousBlockHash];
 
                     return prevBlockHeader.CalculateTarget();
                 }
@@ -161,11 +160,11 @@ namespace BitSharp.Blockchain
                 else
                 {
                     // lookup the previous block on the current blockchain
-                    var prevBlockHeader = this.CacheContext.BlockHeaderCache[chain.LastBlock.PreviousBlockHash];
+                    var prevBlockHeader = this.blockHeaderCache[chain.LastBlock.PreviousBlockHash];
 
                     // get the block difficultyInterval blocks ago
                     var startChainedBlock = chain.Blocks.Reverse().Skip(DifficultyInternal).First();
-                    var startBlockHeader = this.CacheContext.BlockHeaderCache[startChainedBlock.BlockHash];
+                    var startBlockHeader = this.blockHeaderCache[startChainedBlock.BlockHash];
                     //Debug.Assert(startChainedBlock.Height == blockchain.Height - DifficultyInternal);
 
                     var actualTimespan = (long)prevBlockHeader.Time - (long)startBlockHeader.Time;

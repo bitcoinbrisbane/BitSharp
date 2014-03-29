@@ -1,6 +1,7 @@
 ﻿//#define TEST_TOOL
 //#define MEMORY
 //#define MONGODB
+#define MIXED
 
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Blockchain;
@@ -27,6 +28,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using BitSharp.Network;
 using BitSharp.Storage.MongoDB;
+using Ninject;
+using Ninject.Modules;
 
 namespace BitSharp.Client
 {
@@ -35,11 +38,7 @@ namespace BitSharp.Client
     /// </summary>
     public partial class MainWindow : Window
     {
-        private IStorageContext storageContext;
-        private ICacheContext cacheContext;
-        private IBlockchainRules rules;
-        private BlockchainDaemon blockchainDaemon;
-        private LocalClient localClient;
+        private IKernel kernel;
         private MainWindowViewModel viewModel;
 
         public MainWindow()
@@ -52,52 +51,46 @@ namespace BitSharp.Client
 
                 Debug.WriteLine(DateTime.Now);
 
+                var modules = new List<INinjectModule>();
+
 #if TEST_TOOL
-                //if (Directory.Exists(Path.Combine(Config.LocalStoragePath, "data-test")))
-                //    Directory.Delete(Path.Combine(Config.LocalStoragePath, "data-test"), recursive: true);
-                //var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data-test"));
-                var storageContext = new MemoryStorageContext();
-                var knownAddressStorage = storageContext.KnownAddressStorage;
+                modules.Add(new MemoryStorageModule());
 #elif MEMORY
-                var storageContext = new MemoryStorageContext();
-                var knownAddressStorage = storageContext.KnownAddressStorage;
+                modules.Add(new MemoryStorageModule());
 #elif MONGODB
-                var storageContext = new MongoDBStorageContext(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION());
-                var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
+                modules.Add(new MongoStorageModule());
+#elif MIXED
+                modules.Add(new MixedStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION()));
 #else
-                var storageContext = new EsentStorageContext(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION());
-                var knownAddressStorage = new BitSharp.Storage.Esent.KnownAddressStorage(storageContext);
+                modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION()));
 #endif
 
-                this.storageContext = storageContext;
-                this.cacheContext = new CacheContext(this.storageContext);
-
 #if TEST_TOOL
+                modules.Add(new RulesModule(RulesEnum.ComparisonToolTestNet));
                 this.rules = new Testnet2Rules(this.cacheContext);
 #else
-                this.rules = new MainnetRules(this.cacheContext);
+                modules.Add(new RulesModule(RulesEnum.MainNet));
 #endif
 
-                this.blockchainDaemon = new BlockchainDaemon(this.rules, this.cacheContext);
-
-#if TEST_TOOL
-                this.localClient = new LocalClient(LocalClientType.ComparisonToolTestNet, this.blockchainDaemon, knownAddressStorage);
-#else
-                this.localClient = new LocalClient(LocalClientType.MainNet, this.blockchainDaemon, knownAddressStorage);
-#endif
+                kernel.Bind<BlockchainDaemon>().ToSelf().InSingletonScope();
+                kernel.Bind<LocalClient>().ToSelf().InSingletonScope();
 
                 // setup view model
-                this.viewModel = new MainWindowViewModel(this.blockchainDaemon);
+                this.viewModel = new MainWindowViewModel(kernel);
 
                 InitializeComponent();
 
                 // start the blockchain daemon
-                this.blockchainDaemon.Start();
+                var blockchainDaemon = kernel.Get<BlockchainDaemon>();
+                blockchainDaemon.Start();
 
                 this.viewModel.ViewBlockchainLast();
 
                 // start p2p client
-                this.localClient.Start();
+                var localClient = kernel.Get<LocalClient>();
+                var startThread = new Thread(() => localClient.Start());
+                startThread.Name = "LocalClient.Start";
+                startThread.Start();
 
                 this.DataContext = this.viewModel;
 
@@ -135,15 +128,10 @@ namespace BitSharp.Client
 
         protected override void OnClosed(EventArgs e)
         {
-            base.OnClosed(e);
-
             // shutdown
-            new IDisposable[]
-            {
-                this.localClient,
-                this.blockchainDaemon,
-                this.storageContext
-            }.DisposeList();
+            this.kernel.Dispose();
+
+            base.OnClosed(e);
         }
 
         private void ViewFirst_Click(object sender, RoutedEventArgs e)

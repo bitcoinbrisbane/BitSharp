@@ -91,7 +91,6 @@
     <Compile Include="UtxoStorage.cs" />
     <Compile Include="UtxoBuilderStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="EsentStorageContext.cs" />
     <Compile Include="EsentDataStorage.cs" />
     <Compile Include="InvalidBlockStorage.cs" />
     <Compile Include="TransactionStorage.cs" />

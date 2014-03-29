@@ -3,6 +3,7 @@ using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Storage;
+using Ninject;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -21,40 +22,40 @@ namespace BitSharp.Daemon
         public event Action OnTargetChainChanged;
 
         private readonly IBlockchainRules rules;
-        private readonly ICacheContext cacheContext;
+        private readonly ChainedBlockCache chainedBlockCache;
+        private readonly InvalidBlockCache invalidBlockCache;
 
         private readonly TargetBlockWorker targetBlockWorker;
         private Chain targetChain;
 
         private readonly AutoResetEvent rescanEvent;
-
-        public TargetChainWorker(IBlockchainRules rules, ICacheContext cacheContext, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
-            : base("TargetChainWorker", initialNotify, minIdleTime, maxIdleTime)
+        
+        public TargetChainWorker(IKernel kernel, IBlockchainRules rules, ChainedBlockCache chainedBlockCache, InvalidBlockCache invalidBlockCache)
+            : base("TargetChainWorker", initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))
         {
             this.rules = rules;
-            this.cacheContext = cacheContext;
+            this.chainedBlockCache = chainedBlockCache;
+            this.invalidBlockCache = invalidBlockCache;
 
             this.rescanEvent = new AutoResetEvent(false);
 
-            this.targetBlockWorker = new TargetBlockWorker(cacheContext, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
+            this.targetBlockWorker = kernel.Get<TargetBlockWorker>();
 
             this.targetBlockWorker.OnTargetBlockChanged += HandleTargetBlockChanged;
-            this.cacheContext.ChainedBlockCache.OnAddition += HandleChainedBlock;
-            this.cacheContext.InvalidBlockCache.OnAddition += HandleInvalidBlock;
+            this.chainedBlockCache.OnAddition += HandleChainedBlock;
+            this.invalidBlockCache.OnAddition += HandleInvalidBlock;
         }
 
         protected override void SubDispose()
         {
             // cleanup events
             this.targetBlockWorker.OnTargetBlockChanged -= HandleTargetBlockChanged;
-            this.cacheContext.ChainedBlockCache.OnAddition -= HandleChainedBlock;
-            this.cacheContext.InvalidBlockCache.OnAddition -= HandleInvalidBlock;
+            this.chainedBlockCache.OnAddition -= HandleChainedBlock;
+            this.invalidBlockCache.OnAddition -= HandleInvalidBlock;
 
             // cleanup workers
             this.targetBlockWorker.Dispose();
         }
-
-        public ICacheContext CacheContext { get { return this.cacheContext; } }
 
         public Chain TargetChain { get { return this.targetChain; } }
 
@@ -93,11 +94,11 @@ namespace BitSharp.Daemon
                         : new ChainBuilder(Chain.CreateForGenesisBlock(this.rules.GenesisChainedBlock));
 
                     var deltaBlockPath = new MethodTimer(false).Time("deltaBlockPath", () =>
-                        new BlockchainWalker().GetBlockchainPath(newTargetChain.LastBlock, targetBlockLocal, blockHash => this.CacheContext.ChainedBlockCache[blockHash]));
+                        new BlockchainWalker().GetBlockchainPath(newTargetChain.LastBlock, targetBlockLocal, blockHash => this.chainedBlockCache[blockHash]));
 
                     foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
                     {
-                        if (this.cacheContext.InvalidBlockCache.ContainsKey(rewindBlock.BlockHash))
+                        if (this.invalidBlockCache.ContainsKey(rewindBlock.BlockHash))
                         {
                             this.rescanEvent.Set();
                             return;
@@ -109,13 +110,13 @@ namespace BitSharp.Daemon
                     var invalid = false;
                     foreach (var advanceBlock in deltaBlockPath.AdvanceBlocks)
                     {
-                        if (this.cacheContext.InvalidBlockCache.ContainsKey(advanceBlock.BlockHash))
+                        if (this.invalidBlockCache.ContainsKey(advanceBlock.BlockHash))
                             invalid = true;
 
                         if (!invalid)
                             newTargetChain.AddBlock(advanceBlock);
                         else
-                            this.cacheContext.InvalidBlockCache.TryAdd(advanceBlock.BlockHash, "");
+                            this.invalidBlockCache.TryAdd(advanceBlock.BlockHash, "");
                     }
 
                     //Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetBlock.BlockHash.ToHexNumberString(), targetBlock.Height, targetBlock.TotalWork.ToString("X")));

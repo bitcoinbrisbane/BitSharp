@@ -17,14 +17,12 @@ namespace BitSharp.Storage.Esent
 {
     public class KnownAddressStorage : IBoundedStorage<NetworkAddressKey, NetworkAddressWithTime>
     {
-        private readonly IStorageContext storageContext;
         private readonly string name;
         private readonly string directory;
         private readonly PersistentByteDictionary dict;
 
-        public KnownAddressStorage(IStorageContext storageContext)
+        public KnownAddressStorage()
         {
-            this.storageContext = storageContext;
             this.name = "knownAddresses";
             this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "peers", this.name);
             this.dict = new PersistentByteDictionary(this.directory);
@@ -34,8 +32,6 @@ namespace BitSharp.Storage.Esent
         {
             this.dict.Dispose();
         }
-
-        public IStorageContext StorageContext { get { return this.storageContext; } }
 
         public int Count
         {

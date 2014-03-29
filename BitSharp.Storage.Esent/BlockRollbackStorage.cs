@@ -18,8 +18,8 @@ namespace BitSharp.Storage.Esent
 {
     public class BlockRollbackStorage : EsentDataStorage<IImmutableList<KeyValuePair<UInt256, UInt256>>>, IBlockRollbackStorage
     {
-        public BlockRollbackStorage(EsentStorageContext storageContext)
-            : base(storageContext, "blockRollback",
+        public BlockRollbackStorage(string baseDirectory)
+            : base(baseDirectory, "blockRollback",
                 keyPairs =>
                 {
                     var bytes = new byte[keyPairs.Count * 32 * 2];

@@ -78,6 +78,7 @@
     <Compile Include="BlockchainWalker.cs" />
     <Compile Include="ChainState.cs" />
     <Compile Include="ChainStateBuilder.cs" />
+    <Compile Include="RulesModule.cs" />
     <Compile Include="Testnet2Rules.cs" />
     <Compile Include="IBlockchainRules.cs" />
     <Compile Include="MainnetRules.cs" />

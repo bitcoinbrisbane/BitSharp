@@ -19,15 +19,20 @@ namespace BitSharp.Daemon
     public class PruningWorker : Worker
     {
         private readonly IBlockchainRules rules;
-        private readonly ICacheContext cacheContext;
         private readonly Func<ChainState> getChainState;
+        private readonly BlockTxHashesCache blockTxHashesCache;
+        private readonly TransactionCache transactionCache;
+        private readonly BlockRollbackCache blockRollbackCache;
 
-        public PruningWorker(IBlockchainRules rules, ICacheContext cacheContext, Func<ChainState> getChainState, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
-            : base("PruningWorker", initialNotify, minIdleTime, maxIdleTime)
+        public PruningWorker(Func<ChainState> getChainState, IBlockchainRules rules, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache)
+            : base("PruningWorker", initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5))
         {
-            this.rules = rules;
-            this.cacheContext = cacheContext;
             this.getChainState = getChainState;
+            this.rules = rules;
+            this.blockTxHashesCache = blockTxHashesCache;
+            this.transactionCache = transactionCache;
+            this.blockRollbackCache = blockRollbackCache;
+
             this.Mode = PruningMode.Full;
         }
 
@@ -50,10 +55,10 @@ namespace BitSharp.Daemon
                         var block = chainState.Chain.Blocks[i];
 
                         IImmutableList<KeyValuePair<UInt256, UInt256>> blockRollbackInformation;
-                        if (this.cacheContext.BlockRollbackCache.TryGetValue(block.BlockHash, out blockRollbackInformation))
+                        if (this.blockRollbackCache.TryGetValue(block.BlockHash, out blockRollbackInformation))
                         {
                             foreach (var keyPair in blockRollbackInformation)
-                                this.cacheContext.TransactionCache.TryRemove(keyPair.Key);
+                                this.transactionCache.TryRemove(keyPair.Key);
                         }
                     }
                     break;
@@ -64,27 +69,27 @@ namespace BitSharp.Daemon
                         var block = chainState.Chain.Blocks[i];
 
                         IImmutableList<UInt256> blockTxHashes;
-                        if (this.cacheContext.BlockTxHashesCache.TryGetValue(block.BlockHash, out blockTxHashes))
+                        if (this.blockTxHashesCache.TryGetValue(block.BlockHash, out blockTxHashes))
                         {
                             foreach (var txHash in blockTxHashes)
-                                this.cacheContext.TransactionCache.TryRemove(txHash);
+                                this.transactionCache.TryRemove(txHash);
                         }
                     }
                     break;
             }
 
-            this.cacheContext.TransactionCache.Flush();
+            this.transactionCache.Flush();
 
             for (var i = 0; i < chainState.Chain.Blocks.Count - pruneBuffer; i++)
             {
                 var block = chainState.Chain.Blocks[i];
 
-                this.cacheContext.BlockTxHashesCache.TryRemove(block.BlockHash);
-                this.cacheContext.BlockRollbackCache.TryRemove(block.BlockHash);
+                this.blockTxHashesCache.TryRemove(block.BlockHash);
+                this.blockRollbackCache.TryRemove(block.BlockHash);
             }
 
-            this.cacheContext.BlockTxHashesCache.Flush();
-            this.cacheContext.BlockRollbackCache.Flush();
+            this.blockTxHashesCache.Flush();
+            this.blockRollbackCache.Flush();
         }
     }
 

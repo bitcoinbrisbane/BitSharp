@@ -2,6 +2,7 @@
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Ninject;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,12 +16,14 @@ namespace BitSharp.Blockchain.Test
     [TestClass]
     public class MainnetRulesTest
     {
+        private IKernel kernel;
         private MainnetRules rules;
 
         [TestInitialize]
         public void TestInitialize()
         {
-            this.rules = new MainnetRules(cacheContext: null);
+            this.kernel = new StandardKernel();
+            this.rules = kernel.Get<MainnetRules>();
         }
 
         [TestMethod]

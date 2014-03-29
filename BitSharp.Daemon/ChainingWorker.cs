@@ -19,26 +19,30 @@ namespace BitSharp.Daemon
     public class ChainingWorker : Worker
     {
         private readonly IBlockchainRules rules;
-        private readonly ICacheContext cacheContext;
+        private readonly BlockHeaderCache blockHeaderCache;
+        private readonly ChainedBlockCache chainedBlockCache;
+
         private readonly ConcurrentQueue<BlockHeader> blockHeaders;
         private readonly Dictionary<UInt256, Dictionary<UInt256, BlockHeader>> unchainByPrevious;
 
-        public ChainingWorker(IBlockchainRules rules, ICacheContext cacheContext, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
-            : base("ChainingWorker", initialNotify, minIdleTime, maxIdleTime)
+        public ChainingWorker(IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache)
+            : base("ChainingWorker", initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))
         {
             this.rules = rules;
-            this.cacheContext = cacheContext;
+            this.blockHeaderCache = blockHeaderCache;
+            this.chainedBlockCache = chainedBlockCache;
+
             this.blockHeaders = new ConcurrentQueue<BlockHeader>();
             this.unchainByPrevious = new Dictionary<UInt256, Dictionary<UInt256, BlockHeader>>();
 
-            this.cacheContext.BlockHeaderCache.OnAddition += ChainBlockHeader;
+            this.blockHeaderCache.OnAddition += ChainBlockHeader;
             this.QueueAllBlockHeaders();
         }
 
         protected override void SubDispose()
         {
             // unwire events
-            this.cacheContext.BlockHeaderCache.OnAddition -= ChainBlockHeader;
+            this.blockHeaderCache.OnAddition -= ChainBlockHeader;
         }
 
         public IReadOnlyDictionary<UInt256, IReadOnlyDictionary<UInt256, BlockHeader>> UnchainByPrevious
@@ -55,7 +59,7 @@ namespace BitSharp.Daemon
                 () =>
                 {
                     new MethodTimer().Time(() =>
-                        this.blockHeaders.EnqueueRange(this.cacheContext.BlockHeaderCache.Values));
+                        this.blockHeaders.EnqueueRange(this.blockHeaderCache.Values));
                     
                     this.NotifyWork();
                 });
@@ -72,12 +76,12 @@ namespace BitSharp.Daemon
                 // cooperative loop
                 this.ShutdownToken.Token.ThrowIfCancellationRequested();
 
-                if (!this.cacheContext.ChainedBlockCache.ContainsKey(blockHeader.Hash))
+                if (!this.chainedBlockCache.ContainsKey(blockHeader.Hash))
                 {
                     ChainedBlock prevChainedBlock;
-                    if (this.cacheContext.ChainedBlockCache.TryGetValue(blockHeader.PreviousBlock, out prevChainedBlock))
+                    if (this.chainedBlockCache.TryGetValue(blockHeader.PreviousBlock, out prevChainedBlock))
                     {
-                        this.cacheContext.ChainedBlockCache[blockHeader.Hash] =
+                        this.chainedBlockCache[blockHeader.Hash] =
                             new ChainedBlock
                             (
                                 blockHash: blockHeader.Hash,
@@ -117,12 +121,12 @@ namespace BitSharp.Daemon
 
         private void ChainBlockHeader(UInt256 blockHash, BlockHeader blockHeader)
         {
-            if (!this.cacheContext.ChainedBlockCache.ContainsKey(blockHeader.Hash))
+            if (!this.chainedBlockCache.ContainsKey(blockHeader.Hash))
             {
                 try
                 {
                     if (blockHeader == null)
-                        blockHeader = this.cacheContext.BlockHeaderCache[blockHash];
+                        blockHeader = this.blockHeaderCache[blockHash];
                 }
                 catch (MissingDataException) { return; }
 

@@ -3,6 +3,8 @@ using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Storage;
+using Ninject;
+using Ninject.Parameters;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,11 +22,14 @@ namespace BitSharp.Daemon
 
         private static readonly TimeSpan MAX_BUILDER_LIFETIME = TimeSpan.FromMinutes(10);
 
+        private Func<Chain> getTargetChain;
+        private readonly IKernel kernel;
         private readonly BlockchainDaemon blockchainDaemon;
         private readonly IBlockchainRules rules;
-        private readonly ICacheContext cacheContext;
         private readonly BlockchainCalculator calculator;
-        private Func<Chain> getTargetChain;
+        private readonly TransactionCache transactionCache;
+        private readonly BlockRollbackCache blockRollbackCache;
+        private readonly InvalidBlockCache invalidBlockCache;
 
         private ChainState chainState;
         private readonly ReaderWriterLockSlim chainStateLock;
@@ -38,14 +43,18 @@ namespace BitSharp.Daemon
 
         //TODO move pruning worker here
 
-        public ChainStateWorker(BlockchainDaemon blockchainDaemon, IBlockchainRules rules, ICacheContext cacheContext, Func<Chain> getTargetChain, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
-            : base("ChainStateWorker", initialNotify, minIdleTime, maxIdleTime)
+        public ChainStateWorker(Func<Chain> getTargetChain, IKernel kernel, BlockchainDaemon blockchainDaemon, IBlockchainRules rules, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache, InvalidBlockCache invalidBlockCache)
+            : base("ChainStateWorker", initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5))
         {
+            this.getTargetChain = getTargetChain;
+            this.kernel = kernel;
             this.blockchainDaemon = blockchainDaemon;
             this.rules = rules;
-            this.cacheContext = cacheContext;
-            this.calculator = new BlockchainCalculator(this.rules, this.cacheContext, this.ShutdownToken.Token);
-            this.getTargetChain = getTargetChain;
+            this.transactionCache = transactionCache;
+            this.blockRollbackCache = blockRollbackCache;
+            this.invalidBlockCache = invalidBlockCache;
+
+            this.calculator = kernel.Get<BlockchainCalculator>(new ConstructorArgument("shutdownToken", this.ShutdownToken.Token));
 
             this.chainState = ChainState.CreateForGenesisBlock(this.rules.GenesisChainedBlock);
             this.chainStateLock = new ReaderWriterLockSlim();
@@ -87,10 +96,10 @@ namespace BitSharp.Daemon
                     var pruneBuffer = blocksPerDay * 7;
                     foreach (var block in this.chainStateBuilder.Chain.Blocks.Reverse().Take(pruneBuffer))
                     {
-                        if (block.Height > 0 && !this.cacheContext.BlockRollbackCache.ContainsKey(block.BlockHash))
+                        if (block.Height > 0 && !this.blockRollbackCache.ContainsKey(block.BlockHash))
                             throw new InvalidOperationException();
                     }
-                    this.cacheContext.BlockRollbackCache.Flush();
+                    this.blockRollbackCache.Flush();
 
                     var newChain = this.chainStateBuilder.Chain.ToImmutable();
                     var newUtxo = this.chainStateBuilder.Utxo.Close(newChain.LastBlock.BlockHash);
@@ -111,7 +120,7 @@ namespace BitSharp.Daemon
                         new ChainStateBuilder
                         (
                             chainStateLocal.Chain.ToBuilder(),
-                            new UtxoBuilder(this.cacheContext, chainStateLocal.Utxo)
+                            new UtxoBuilder(chainStateLocal.Utxo, this.kernel, this.transactionCache)
                         );
                 }
 
@@ -164,7 +173,7 @@ namespace BitSharp.Daemon
                 if (e is ValidationException)
                 {
                     var validationException = (ValidationException)e;
-                    this.cacheContext.InvalidBlockCache[validationException.BlockHash] = validationException.Message;
+                    this.invalidBlockCache[validationException.BlockHash] = validationException.Message;
                 }
 
                 // try again on failure

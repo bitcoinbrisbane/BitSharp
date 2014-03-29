@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Ninject;
 
 namespace BitSharp.Client
 {
@@ -23,11 +24,14 @@ namespace BitSharp.Client
     {
         public event PropertyChangedEventHandler PropertyChanged;
 
+        private readonly IKernel kernel;
+        private readonly BlockchainDaemon blockchainDaemon;
+        private readonly BlockTxHashesCache blockTxHashesCache;
+        private readonly BlockView blockView;
+
         private readonly DateTime startTime;
         private string runningTime;
         private readonly DispatcherTimer runningTimeTimer;
-
-        private readonly BlockchainDaemon blockchainDaemon;
 
         private ChainState viewChainState;
 
@@ -35,8 +39,13 @@ namespace BitSharp.Client
         private long _currentBlockchainHeight;
         private long _downloadedBlockCount;
 
-        public MainWindowViewModel(BlockchainDaemon blockchainDaemon)
+        public MainWindowViewModel(IKernel kernel)
         {
+            this.kernel = kernel;
+            this.blockchainDaemon = kernel.Get<BlockchainDaemon>();
+            this.blockTxHashesCache = kernel.Get<BlockTxHashesCache>();
+            this.blockView = kernel.Get<BlockView>();
+
             this.startTime = DateTime.UtcNow;
             this.runningTimeTimer = new DispatcherTimer();
             runningTimeTimer.Tick += (sender, e) =>
@@ -47,21 +56,19 @@ namespace BitSharp.Client
             runningTimeTimer.Interval = TimeSpan.FromMilliseconds(100);
             runningTimeTimer.Start();
 
-            this.blockchainDaemon = blockchainDaemon;
-
             this.viewChainState = this.blockchainDaemon.ChainState;
 
             this.WinningBlockchainHeight = this.blockchainDaemon.TargetBlockHeight;
             this.CurrentBlockchainHeight = this.blockchainDaemon.CurrentBuilderHeight;
-            this.DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockTxHashesCache.Count;
+            this.DownloadedBlockCount = this.blockTxHashesCache.Count;
 
-            this.blockchainDaemon.CacheContext.BlockTxHashesCache.OnAddition +=
+            this.blockTxHashesCache.OnAddition +=
                 (blockHash, block) =>
-                    DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockTxHashesCache.Count;
+                    DownloadedBlockCount = this.blockTxHashesCache.Count;
 
-            this.blockchainDaemon.CacheContext.BlockTxHashesCache.OnRemoved +=
+            this.blockTxHashesCache.OnRemoved +=
                 (blockHash) =>
-                    DownloadedBlockCount = this.blockchainDaemon.CacheContext.BlockTxHashesCache.Count;
+                    DownloadedBlockCount = this.blockTxHashesCache.Count;
 
             this.blockchainDaemon.OnTargetBlockChanged +=
                 (sender, block) =>
@@ -197,7 +204,7 @@ namespace BitSharp.Client
             {
                 if (chainState.Height > 0)
                 {
-                    var block = this.blockchainDaemon.CacheContext.BlockView[this.viewChainState.LastBlockHash];
+                    var block = this.blockView[this.viewChainState.LastBlockHash];
                     // TODO this is abusing rollback a bit just to get the transactions that exist in a target block that's already known
                     // TODO make a better api for get the net output of a block
                     //List<TxOutputKey> spendOutputs, receiveOutputs;

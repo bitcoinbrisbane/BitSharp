@@ -13,12 +13,18 @@ namespace BitSharp.Storage
 {
     public class BlockView : IUnboundedCache<UInt256, Block>
     {
-        private readonly ICacheContext cacheContext;
+        private readonly BlockHeaderCache blockHeaderCache;
+        private readonly BlockTxHashesCache blockTxHashesCache;
+        private readonly TransactionCache transactionCache;
+
         private readonly ConcurrentSetBuilder<UInt256> missingData;
 
-        public BlockView(ICacheContext cacheContext)
+        public BlockView(BlockHeaderCache blockHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache)
         {
-            this.cacheContext = cacheContext;
+            this.blockHeaderCache = blockHeaderCache;
+            this.blockTxHashesCache = blockTxHashesCache;
+            this.transactionCache = transactionCache;
+            
             this.missingData = new ConcurrentSetBuilder<UInt256>();
         }
 
@@ -36,17 +42,17 @@ namespace BitSharp.Storage
         public bool ContainsKey(UInt256 blockHash)
         {
             return !this.missingData.Contains(blockHash)
-                && this.cacheContext.BlockHeaderCache.ContainsKey(blockHash)
-                && this.cacheContext.BlockTxHashesCache.ContainsKey(blockHash);
+                && this.blockHeaderCache.ContainsKey(blockHash)
+                && this.blockTxHashesCache.ContainsKey(blockHash);
         }
 
         public bool TryGetValue(UInt256 blockHash, out Block block)
         {
             BlockHeader blockHeader;
-            if (this.cacheContext.BlockHeaderCache.TryGetValue(blockHash, out blockHeader))
+            if (this.blockHeaderCache.TryGetValue(blockHash, out blockHeader))
             {
                 IImmutableList<UInt256> blockTxHashes;
-                if (this.cacheContext.BlockTxHashesCache.TryGetValue(blockHeader.Hash, out blockTxHashes))
+                if (this.blockTxHashesCache.TryGetValue(blockHeader.Hash, out blockTxHashes))
                 {
                     if (blockHeader.MerkleRoot == DataCalculator.CalculateMerkleRoot(blockTxHashes))
                     {
@@ -57,7 +63,7 @@ namespace BitSharp.Storage
                         foreach (var txHash in blockTxHashes)
                         {
                             Transaction transaction;
-                            if (this.cacheContext.TransactionCache.TryGetValue(txHash, out transaction))
+                            if (this.transactionCache.TryGetValue(txHash, out transaction))
                             {
                                 blockTransactions[i] = transaction;
                                 i++;
@@ -94,18 +100,18 @@ namespace BitSharp.Storage
             var result = false;
 
             // write the block header
-            result |= this.cacheContext.BlockHeaderCache.TryAdd(blockHash, block.Header);
+            result |= this.blockHeaderCache.TryAdd(blockHash, block.Header);
 
             // write the block's transactions
             var txHashesList = ImmutableList.CreateBuilder<UInt256>();
             foreach (var tx in block.Transactions)
             {
-                result |= this.cacheContext.TransactionCache.TryAdd(tx.Hash, tx);
+                result |= this.transactionCache.TryAdd(tx.Hash, tx);
                 txHashesList.Add(tx.Hash);
             }
 
             // write the transaction hash list
-            result |= this.cacheContext.BlockTxHashesCache.TryAdd(blockHash, txHashesList.ToImmutable());
+            result |= this.blockTxHashesCache.TryAdd(blockHash, txHashesList.ToImmutable());
 
             this.missingData.Remove(blockHash);
 
@@ -135,18 +141,18 @@ namespace BitSharp.Storage
             set
             {
                 // write the block header
-                this.cacheContext.BlockHeaderCache[value.Hash] = value.Header;
+                this.blockHeaderCache[value.Hash] = value.Header;
 
                 // write the block's transactions
                 var txHashesList = ImmutableList.CreateBuilder<UInt256>();
                 foreach (var tx in value.Transactions)
                 {
-                    this.cacheContext.TransactionCache[tx.Hash] = tx;
+                    this.transactionCache[tx.Hash] = tx;
                     txHashesList.Add(tx.Hash);
                 }
 
                 // write the transaction hash list
-                this.cacheContext.BlockTxHashesCache[value.Hash] = txHashesList.ToImmutableList();
+                this.blockTxHashesCache[value.Hash] = txHashesList.ToImmutableList();
 
                 this.missingData.Remove(blockHash);
             }

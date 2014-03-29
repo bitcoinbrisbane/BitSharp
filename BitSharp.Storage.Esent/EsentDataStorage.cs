@@ -19,7 +19,6 @@ namespace BitSharp.Storage.Esent
 {
     public abstract class EsentDataStorage<TValue> : IBoundedStorage<UInt256, TValue>
     {
-        private readonly EsentStorageContext storageContext;
         private readonly string name;
         private readonly string directory;
         private readonly PersistentByteDictionary dict;
@@ -27,18 +26,15 @@ namespace BitSharp.Storage.Esent
         private readonly Func<TValue, byte[]> encoder;
         private readonly Func<UInt256, byte[], TValue> decoder;
 
-        public EsentDataStorage(EsentStorageContext storageContext, string name, Func<TValue, byte[]> encoder, Func<UInt256, byte[], TValue> decoder)
+        public EsentDataStorage(string baseDirectory, string name, Func<TValue, byte[]> encoder, Func<UInt256, byte[], TValue> decoder)
         {
-            this.storageContext = storageContext;
             this.name = name;
-            this.directory = Path.Combine(storageContext.BaseDirectory, name);
+            this.directory = Path.Combine(baseDirectory, name);
             this.dict = new PersistentByteDictionary(this.directory);
 
             this.encoder = encoder;
             this.decoder = decoder;
         }
-
-        public EsentStorageContext StorageContext { get { return this.storageContext; } }
 
         public void Dispose()
         {

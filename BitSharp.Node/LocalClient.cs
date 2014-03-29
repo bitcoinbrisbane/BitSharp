@@ -20,16 +20,10 @@ using System.Threading.Tasks;
 using BitSharp.Data;
 using System.IO;
 using System.Globalization;
+using Ninject;
 
 namespace BitSharp.Node
 {
-    public enum LocalClientType
-    {
-        MainNet,
-        TestNet3,
-        ComparisonToolTestNet
-    }
-
     public class LocalClient : IDisposable
     {
         public event Action<RemoteNode, Block> OnBlock;
@@ -46,18 +40,21 @@ namespace BitSharp.Node
 
         private readonly CancellationTokenSource shutdownToken;
 
-        private readonly LocalClientType _type;
+        private readonly RulesEnum type;
+        private readonly IKernel kernel;
+        private readonly IBlockchainRules rules;
+        private readonly BlockchainDaemon blockchainDaemon;
+        private readonly BlockHeaderCache blockHeaderCache;
+        private readonly ChainedBlockCache chainedBlockCache;
+        private readonly TransactionCache transactionCache;
+        private readonly BlockView blockView;
+        private readonly NetworkPeerCache networkPeerCache;
 
         private readonly WorkerMethod connectWorker;
         private readonly BlockRequestWorker blockRequestWorker;
         private readonly WorkerMethod requestHeadersWorker;
         private readonly WorkerMethod requestTransactionsWorker;
         private readonly WorkerMethod statsWorker;
-
-        private readonly BlockchainDaemon blockchainDaemon;
-
-        private IBoundedStorage<NetworkAddressKey, NetworkAddressWithTime> knownAddressStorage;
-        private readonly BoundedCache<NetworkAddressKey, NetworkAddressWithTime> knownAddressCache;
 
         private Stopwatch messageStopwatch = new Stopwatch();
         private int messageCount;
@@ -73,18 +70,22 @@ namespace BitSharp.Node
 
         private Socket listenSocket;
 
-        public LocalClient(LocalClientType type, BlockchainDaemon blockchainDaemon, IBoundedStorage<NetworkAddressKey, NetworkAddressWithTime> knownAddressStorage)
+        public LocalClient(RulesEnum type, IKernel kernel, IBlockchainRules rules, BlockchainDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, TransactionCache transactionCache, BlockView blockView, NetworkPeerCache networkPeerCache)
         {
-            this._type = type;
-
-            this.blockchainDaemon = blockchainDaemon;
             this.shutdownToken = new CancellationTokenSource();
 
-            this.knownAddressStorage = knownAddressStorage;
-            this.knownAddressCache = new BoundedCache<NetworkAddressKey, NetworkAddressWithTime>("KnownAddressCache", knownAddressStorage);
+            this.type = type;
+            this.kernel = kernel;
+            this.rules = rules;
+            this.blockchainDaemon = blockchainDaemon;
+            this.blockHeaderCache = blockHeaderCache;
+            this.chainedBlockCache = chainedBlockCache;
+            this.transactionCache = transactionCache;
+            this.blockView = blockView;
+            this.networkPeerCache = networkPeerCache;
 
             this.connectWorker = new WorkerMethod("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
-            this.blockRequestWorker = new BlockRequestWorker(this, initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30));
+            this.blockRequestWorker = kernel.Get<BlockRequestWorker>();
             this.requestHeadersWorker = new WorkerMethod("LocalClient.RequestHeadersWorker", RequestHeadersWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
             this.requestTransactionsWorker = new WorkerMethod("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
             this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30));
@@ -93,28 +94,24 @@ namespace BitSharp.Node
 
             switch (this.Type)
             {
-                case LocalClientType.MainNet:
+                case RulesEnum.MainNet:
                     Messaging.Port = 8333;
                     Messaging.Magic = Messaging.MAGIC_MAIN;
                     break;
 
-                case LocalClientType.TestNet3:
+                case RulesEnum.TestNet3:
                     Messaging.Port = 18333;
                     Messaging.Magic = Messaging.MAGIC_TESTNET3;
                     break;
 
-                case LocalClientType.ComparisonToolTestNet:
+                case RulesEnum.ComparisonToolTestNet:
                     Messaging.Port = 18444;
                     Messaging.Magic = Messaging.MAGIC_COMPARISON_TOOL;
                     break;
             }
         }
 
-        public LocalClientType Type { get { return this._type; } }
-
-        public BlockchainDaemon BlockchainDaemon { get { return this.blockchainDaemon; } }
-
-        public ICacheContext CacheContext { get { return this.blockchainDaemon.CacheContext; } }
+        public RulesEnum Type { get { return this.type; } }
 
         internal ConcurrentDictionary<IPEndPoint, RemoteNode> ConnectedPeers { get { return this.connectedPeers; } }
 
@@ -148,7 +145,6 @@ namespace BitSharp.Node
                 this.requestTransactionsWorker,
                 this.connectWorker,
                 this.statsWorker,
-                this.knownAddressStorage,
                 this.shutdownToken
             }.DisposeList();
         }
@@ -160,7 +156,7 @@ namespace BitSharp.Node
 
         private void ConnectWorker()
         {
-            if (this.Type == LocalClientType.ComparisonToolTestNet)
+            if (this.Type == RulesEnum.ComparisonToolTestNet)
                 return;
 
             // get peer counts
@@ -220,7 +216,7 @@ namespace BitSharp.Node
                 return;
 
             // send out request for unknown block headers
-            if (this.Type != LocalClientType.ComparisonToolTestNet)
+            if (this.Type != RulesEnum.ComparisonToolTestNet)
                 SendGetHeaders(connectedPeersLocal.RandomOrDefault()).Forget();
         }
 
@@ -244,7 +240,7 @@ namespace BitSharp.Node
             var requestTasks = new List<Task>();
 
             // send out requests for any missing transactions
-            foreach (var transaction in this.blockchainDaemon.CacheContext.TransactionCache.MissingData)
+            foreach (var transaction in this.transactionCache.MissingData)
             {
                 //if (requestTasks.Count > requestAmount)
                 if (this.requestedTransactions.Count > MAX_TRANSACTION_REQUESTS)
@@ -312,8 +308,8 @@ namespace BitSharp.Node
             {
                 switch (this.Type)
                 {
-                    case LocalClientType.MainNet:
-                    case LocalClientType.TestNet3:
+                    case RulesEnum.MainNet:
+                    case RulesEnum.TestNet3:
                         var externalIPAddress = Messaging.GetExternalIPAddress();
                         var localhost = Dns.GetHostEntry(Dns.GetHostName());
 
@@ -321,7 +317,7 @@ namespace BitSharp.Node
                         this.listenSocket.Bind(new IPEndPoint(localhost.AddressList.Where(x => x.AddressFamily == externalIPAddress.AddressFamily).First(), Messaging.Port));
                         break;
 
-                    case LocalClientType.ComparisonToolTestNet:
+                    case RulesEnum.ComparisonToolTestNet:
                         this.listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                         this.listenSocket.Bind(new IPEndPoint(IPAddress.Parse("127.0.0.1"), Messaging.Port));
                         break;
@@ -431,7 +427,7 @@ namespace BitSharp.Node
 
             switch (this.Type)
             {
-                case LocalClientType.MainNet:
+                case RulesEnum.MainNet:
                     addSeed("archivum.info");
                     addSeed("62.75.216.13");
                     addSeed("69.64.34.118");
@@ -455,7 +451,7 @@ namespace BitSharp.Node
                     addSeed("messier.bzfx.net");
                     break;
 
-                case LocalClientType.TestNet3:
+                case RulesEnum.TestNet3:
                     addSeed("testnet-seed.bitcoin.petertodd.org");
                     addSeed("testnet-seed.bluematt.me");
                     break;
@@ -465,7 +461,7 @@ namespace BitSharp.Node
         private void AddKnownPeers()
         {
             var count = 0;
-            foreach (var knownAddress in this.knownAddressCache.Values)
+            foreach (var knownAddress in this.networkPeerCache.Values)
             {
                 this.unconnectedPeers.TryAdd(
                     new CandidatePeer
@@ -554,14 +550,14 @@ namespace BitSharp.Node
             if (connectedPeersLocal.Count == 0)
                 return;
 
-            if (this.Type == LocalClientType.ComparisonToolTestNet)
+            if (this.Type == RulesEnum.ComparisonToolTestNet)
             {
                 var responseInvVectors = new List<InventoryVector>();
 
                 foreach (var invVector in invVectors)
                 {
                     if (invVector.Type == InventoryVector.TYPE_MESSAGE_BLOCK
-                        && !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(invVector.Hash))
+                        && !this.blockView.ContainsKey(invVector.Hash))
                     {
                         responseInvVectors.Add(invVector);
                     }
@@ -574,7 +570,7 @@ namespace BitSharp.Node
         private Task RequestTransaction(RemoteNode remoteNode, UInt256 txHash)
         {
             //TODO
-            //if (this.blockchainDaemon.CacheContext.TransactionCache.ContainsKey(txHash))
+            //if (this.TransactionCache.ContainsKey(txHash))
             //    return null;
 
             var now = DateTime.UtcNow;
@@ -600,7 +596,7 @@ namespace BitSharp.Node
         private void OnBlockHeader(BlockHeader blockHeader)
         {
             //Debug.WriteLine("Received block header {0}".Format2(blockHeader.Hash);
-            this.blockchainDaemon.CacheContext.BlockHeaderCache.TryAdd(blockHeader.Hash, blockHeader);
+            this.blockHeaderCache.TryAdd(blockHeader.Hash, blockHeader);
         }
 
         private void OnTransaction(Transaction transaction)
@@ -609,7 +605,7 @@ namespace BitSharp.Node
 
             DateTime ignore;
             this.requestedTransactions.TryRemove(transaction.Hash, out ignore);
-            this.blockchainDaemon.CacheContext.TransactionCache.TryAdd(transaction.Hash, transaction);
+            this.transactionCache.TryAdd(transaction.Hash, transaction);
 
             this.requestTransactionsWorker.NotifyWork();
         }
@@ -645,7 +641,7 @@ namespace BitSharp.Node
             foreach (var blockHash in payload.BlockLocatorHashes)
             {
                 ChainedBlock chainedBlock;
-                if (this.blockchainDaemon.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
+                if (this.chainedBlockCache.TryGetValue(blockHash, out chainedBlock))
                 {
                     if (chainedBlock.Height < targetChainLocal.Blocks.Count
                         && chainedBlock.BlockHash == targetChainLocal.Blocks[chainedBlock.Height].BlockHash)
@@ -658,7 +654,7 @@ namespace BitSharp.Node
 
             if (matchingChainedBlock == null)
             {
-                matchingChainedBlock = this.blockchainDaemon.Rules.GenesisChainedBlock;
+                matchingChainedBlock = this.rules.GenesisChainedBlock;
             }
 
             var count = 0;
@@ -679,7 +675,7 @@ namespace BitSharp.Node
 
         private void OnGetHeaders(RemoteNode remoteNode, GetBlocksPayload payload)
         {
-            if (this.Type == LocalClientType.ComparisonToolTestNet)
+            if (this.Type == RulesEnum.ComparisonToolTestNet)
             {
                 this.blockchainDaemon.ForceWorkAndWait();
             }
@@ -692,7 +688,7 @@ namespace BitSharp.Node
             foreach (var blockHash in payload.BlockLocatorHashes)
             {
                 ChainedBlock chainedBlock;
-                if (this.blockchainDaemon.CacheContext.ChainedBlockCache.TryGetValue(blockHash, out chainedBlock))
+                if (this.chainedBlockCache.TryGetValue(blockHash, out chainedBlock))
                 {
                     if (chainedBlock.Height < targetChainLocal.Blocks.Count
                         && chainedBlock.BlockHash == targetChainLocal.Blocks[chainedBlock.Height].BlockHash)
@@ -705,7 +701,7 @@ namespace BitSharp.Node
 
             if (matchingChainedBlock == null)
             {
-                matchingChainedBlock = this.blockchainDaemon.Rules.GenesisChainedBlock;
+                matchingChainedBlock = this.rules.GenesisChainedBlock;
             }
 
             var count = 0;
@@ -716,7 +712,7 @@ namespace BitSharp.Node
                 var chainedBlock = targetChainLocal.Blocks[i];
 
                 BlockHeader blockHeader;
-                if (this.blockchainDaemon.CacheContext.BlockHeaderCache.TryGetValue(targetChainLocal.Blocks[i].BlockHash, out blockHeader))
+                if (this.blockHeaderCache.TryGetValue(targetChainLocal.Blocks[i].BlockHash, out blockHeader))
                 {
                     blockHeaders[count] = blockHeader;
                 }
@@ -741,7 +737,7 @@ namespace BitSharp.Node
                 {
                     case InventoryVector.TYPE_MESSAGE_BLOCK:
                         Block block;
-                        if (this.blockchainDaemon.CacheContext.BlockView.TryGetValue(invVector.Hash, out block))
+                        if (this.blockView.TryGetValue(invVector.Hash, out block))
                         {
                             //remoteNode.Sender.SendBlock(block).Forget();
                         }
@@ -749,7 +745,7 @@ namespace BitSharp.Node
 
                     case InventoryVector.TYPE_MESSAGE_TRANSACTION:
                         Transaction transaction;
-                        if (this.blockchainDaemon.CacheContext.TransactionCache.TryGetValue(invVector.Hash, out transaction))
+                        if (this.transactionCache.TryGetValue(invVector.Hash, out transaction))
                         {
                             remoteNode.Sender.SendTransaction(transaction).Forget();
                         }
@@ -818,7 +814,7 @@ namespace BitSharp.Node
                 );
 
                 if (!isIncoming)
-                    this.knownAddressCache[remoteAddressWithTime.GetKey()] = remoteAddressWithTime;
+                    this.networkPeerCache[remoteAddressWithTime.GetKey()] = remoteAddressWithTime;
 
                 // acknowledge their version
                 await remoteNode.Sender.SendVersionAcknowledge();

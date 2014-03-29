@@ -93,7 +93,6 @@
     <Compile Include="BlockchainTest.cs" />
     <Compile Include="BlockchainWalkerTest.cs" />
     <Compile Include="MainnetRulesTest.cs" />
-    <Compile Include="MemoryBlockchain.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UnitTestRules.cs" />
     <Compile Include="UtxoBuilderTest.cs" />

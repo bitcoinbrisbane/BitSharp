@@ -16,8 +16,8 @@ namespace BitSharp.Storage.Esent
 {
     public class ChainedBlockStorage : EsentDataStorage<ChainedBlock>, IChainedBlockStorage
     {
-        public ChainedBlockStorage(EsentStorageContext storageContext)
-            : base(storageContext, "chainedBlocks",
+        public ChainedBlockStorage(string baseDirectory)
+            : base(baseDirectory, "chainedBlocks",
                 chainedBlock => StorageEncoder.EncodeChainedBlock(chainedBlock),
                 (blockHash, bytes) => StorageEncoder.DecodeChainedBlock(bytes))
         { }

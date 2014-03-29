@@ -16,6 +16,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using BitSharp.Data;
 using System.IO;
+using Ninject;
+using Ninject.Parameters;
 
 namespace BitSharp.Daemon
 {
@@ -38,9 +40,13 @@ namespace BitSharp.Daemon
         public event EventHandler OnChainStateChanged;
         public event EventHandler OnChainStateBuilderChanged;
 
-        private readonly ICacheContext cacheContext;
-
+        private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
+        private readonly BlockHeaderCache blockHeaderCache;
+        private readonly ChainedBlockCache chainedBlockCache;
+        private readonly BlockTxHashesCache blockTxHashesCache;
+        private readonly TransactionCache transactionCache;
+        private readonly BlockView blockView;
 
         private readonly CancellationTokenSource shutdownToken;
 
@@ -51,30 +57,35 @@ namespace BitSharp.Daemon
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
 
-        public BlockchainDaemon(IBlockchainRules rules, ICacheContext cacheContext)
+        public BlockchainDaemon(IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockView blockView)
         {
             this.shutdownToken = new CancellationTokenSource();
 
+            this.kernel = kernel;
             this.rules = rules;
-            this.cacheContext = cacheContext;
+            this.blockHeaderCache = blockHeaderCache;
+            this.chainedBlockCache = chainedBlockCache;
+            this.blockTxHashesCache = blockTxHashesCache;
+            this.transactionCache = transactionCache;
+            this.blockView = blockView;
 
             // write genesis block out to storage
-            this.cacheContext.BlockView[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
-            this.cacheContext.ChainedBlockCache[this.rules.GenesisChainedBlock.BlockHash] = this.rules.GenesisChainedBlock;
+            this.blockView[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
+            this.chainedBlockCache[this.rules.GenesisChainedBlock.BlockHash] = this.rules.GenesisChainedBlock;
 
             // wire up cache events
-            this.cacheContext.BlockHeaderCache.OnAddition += OnBlockHeaderAddition;
-            this.cacheContext.BlockHeaderCache.OnModification += OnBlockHeaderModification;
-            this.cacheContext.BlockTxHashesCache.OnAddition += OnBlockTxHashesAddition;
-            this.cacheContext.BlockTxHashesCache.OnModification += OnBlockTxHashesModification;
-            this.cacheContext.ChainedBlockCache.OnAddition += OnChainedBlockAddition;
-            this.cacheContext.ChainedBlockCache.OnModification += OnChainedBlockModification;
+            this.blockHeaderCache.OnAddition += OnBlockHeaderAddition;
+            this.blockHeaderCache.OnModification += OnBlockHeaderModification;
+            this.blockTxHashesCache.OnAddition += OnBlockTxHashesAddition;
+            this.blockTxHashesCache.OnModification += OnBlockTxHashesModification;
+            this.chainedBlockCache.OnAddition += OnChainedBlockAddition;
+            this.chainedBlockCache.OnModification += OnChainedBlockModification;
 
             // create workers
-            this.chainingWorker = new ChainingWorker(rules, cacheContext, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
-            this.targetChainWorker = new TargetChainWorker(rules, cacheContext, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
-            this.chainStateWorker = new ChainStateWorker(this, rules, cacheContext, () => this.targetChainWorker.TargetChain, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
-            this.pruningWorker = new PruningWorker(rules, cacheContext, () => this.ChainState, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5));
+            this.chainingWorker = kernel.Get<ChainingWorker>();
+            this.targetChainWorker = kernel.Get<TargetChainWorker>();
+            this.chainStateWorker = kernel.Get<ChainStateWorker>(new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)));
+            this.pruningWorker = kernel.Get<PruningWorker>(new ConstructorArgument("getChainState", (Func<ChainState>)(() => this.ChainState)));
 
             this.targetChainWorker.OnTargetBlockChanged +=
                 () =>
@@ -148,10 +159,6 @@ namespace BitSharp.Daemon
                     });
                 }, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
         }
-
-        public IBlockchainRules Rules { get { return this.rules; } }
-
-        public ICacheContext CacheContext { get { return this.cacheContext; } }
 
         public ChainedBlock TargetBlock { get { return this.targetChainWorker.TargetBlock; } }
 
@@ -234,12 +241,12 @@ namespace BitSharp.Daemon
         public void Dispose()
         {
             // cleanup events
-            this.CacheContext.BlockHeaderCache.OnAddition -= OnBlockHeaderAddition;
-            this.CacheContext.BlockHeaderCache.OnModification -= OnBlockHeaderModification;
-            this.CacheContext.BlockTxHashesCache.OnAddition -= OnBlockTxHashesAddition;
-            this.CacheContext.BlockTxHashesCache.OnModification -= OnBlockTxHashesModification;
-            this.CacheContext.ChainedBlockCache.OnAddition -= OnChainedBlockAddition;
-            this.CacheContext.ChainedBlockCache.OnModification -= OnChainedBlockModification;
+            this.blockHeaderCache.OnAddition -= OnBlockHeaderAddition;
+            this.blockHeaderCache.OnModification -= OnBlockHeaderModification;
+            this.blockTxHashesCache.OnAddition -= OnBlockTxHashesAddition;
+            this.blockTxHashesCache.OnModification -= OnBlockTxHashesModification;
+            this.chainedBlockCache.OnAddition -= OnChainedBlockAddition;
+            this.chainedBlockCache.OnModification -= OnChainedBlockModification;
 
             // notify threads to begin shutting down
             this.shutdownToken.Cancel();

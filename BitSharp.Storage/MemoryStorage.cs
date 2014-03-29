@@ -1,7 +1,11 @@
-﻿using BitSharp.Storage;
+﻿using BitSharp.Common;
+using BitSharp.Data;
+using BitSharp.Network;
+using BitSharp.Storage;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,21 +14,13 @@ namespace BitSharp.Storage
 {
     public class MemoryStorage<TKey, TValue> : IBoundedStorage<TKey, TValue>
     {
-        private readonly MemoryStorageContext storageContext;
         private readonly ConcurrentDictionary<TKey, TValue> storage = new ConcurrentDictionary<TKey, TValue>();
-
-        public MemoryStorage(MemoryStorageContext storageContext)
-        {
-            this.storageContext = storageContext;
-        }
-
-        public MemoryStorageContext StorageContext { get { return this.storageContext; } }
-
-        internal ConcurrentDictionary<TKey, TValue> Storage { get { return this.storage; } }
 
         public void Dispose()
         {
         }
+
+        internal ConcurrentDictionary<TKey, TValue> Storage { get { return this.storage; } }
 
         public int Count
         {
@@ -87,5 +83,47 @@ namespace BitSharp.Storage
         {
             return this.GetEnumerator();
         }
+    }
+
+    public sealed class MemoryBlockHeaderStorage : PassthroughBoundedStorage<UInt256, BlockHeader>, IBlockHeaderStorage
+    {
+        public MemoryBlockHeaderStorage(IBoundedStorage<UInt256, BlockHeader> storage)
+            : base(storage) { }
+    }
+
+    public sealed class MemoryChainedBlockStorage : PassthroughBoundedStorage<UInt256, ChainedBlock>, IChainedBlockStorage
+    {
+        public MemoryChainedBlockStorage(IBoundedStorage<UInt256, ChainedBlock> storage)
+            : base(storage) { }
+    }
+
+    public sealed class MemoryBlockTxHashesStorage : PassthroughBoundedStorage<UInt256, IImmutableList<UInt256>>, IBlockTxHashesStorage
+    {
+        public MemoryBlockTxHashesStorage(IBoundedStorage<UInt256, IImmutableList<UInt256>> storage)
+            : base(storage) { }
+    }
+
+    public sealed class MemoryTransactionStorage : PassthroughBoundedStorage<UInt256, Transaction>, ITransactionStorage
+    {
+        public MemoryTransactionStorage(IBoundedStorage<UInt256, Transaction> storage)
+            : base(storage) { }
+    }
+
+    public sealed class MemoryBlockRollbackStorage : PassthroughBoundedStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>>, IBlockRollbackStorage
+    {
+        public MemoryBlockRollbackStorage(IBoundedStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> storage)
+            : base(storage) { }
+    }
+
+    public sealed class MemoryInvalidBlockStorage : PassthroughBoundedStorage<UInt256, string>, IInvalidBlockStorage
+    {
+        public MemoryInvalidBlockStorage(IBoundedStorage<UInt256, string> storage)
+            : base(storage) { }
+    }
+
+    public sealed class MemoryNetworkPeerStorage : PassthroughBoundedStorage<NetworkAddressKey, NetworkAddressWithTime>, INetworkPeerStorage
+    {
+        public MemoryNetworkPeerStorage(IBoundedStorage<NetworkAddressKey, NetworkAddressWithTime> storage)
+            : base(storage) { }
     }
 }

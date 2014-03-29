@@ -1,5 +1,6 @@
 ﻿using BitSharp.Common;
 using BitSharp.Data;
+using BitSharp.Network;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -27,6 +28,9 @@ namespace BitSharp.Storage
     public interface IInvalidBlockStorage :
         IBoundedStorage<UInt256, string> { }
 
+    public interface INetworkPeerStorage :
+        IBoundedStorage<NetworkAddressKey, NetworkAddressWithTime> { }
+
     public sealed class BlockHeaderCache : PassthroughBoundedCache<UInt256, BlockHeader>
     {
         public BlockHeaderCache(IBoundedCache<UInt256, BlockHeader> cache)
@@ -51,15 +55,21 @@ namespace BitSharp.Storage
             : base(cache) { }
     }
 
-    public sealed class BlockRollbackCache : PassthroughBoundedCache<UInt256, Transaction>
+    public sealed class BlockRollbackCache : PassthroughBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>>
     {
-        public BlockRollbackCache(IBoundedCache<UInt256, Transaction> cache)
+        public BlockRollbackCache(IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> cache)
             : base(cache) { }
     }
 
-    public sealed class InvalidBlockCache : PassthroughBoundedCache<UInt256, Transaction>
+    public sealed class InvalidBlockCache : PassthroughBoundedCache<UInt256, string>
     {
-        public InvalidBlockCache(IBoundedCache<UInt256, Transaction> cache)
+        public InvalidBlockCache(IBoundedCache<UInt256, string> cache)
+            : base(cache) { }
+    }
+
+    public sealed class NetworkPeerCache : PassthroughBoundedCache<NetworkAddressKey, NetworkAddressWithTime>
+    {
+        public NetworkPeerCache(IBoundedCache<NetworkAddressKey, NetworkAddressWithTime> cache)
             : base(cache) { }
     }
 

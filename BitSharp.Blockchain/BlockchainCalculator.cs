@@ -19,20 +19,24 @@ namespace BitSharp.Blockchain
 {
     public class BlockchainCalculator
     {
-        private readonly IBlockchainRules _rules;
-        private readonly ICacheContext _cacheContext;
         private readonly CancellationToken shutdownToken;
+        private readonly IBlockchainRules rules;
+        private readonly BlockHeaderCache blockHeaderCache;
+        private readonly BlockTxHashesCache blockTxHashesCache;
+        private readonly TransactionCache transactionCache;
+        private readonly BlockView blockView;
+        private readonly BlockRollbackCache blockRollbackCache;
 
-        public BlockchainCalculator(IBlockchainRules rules, ICacheContext cacheContext, CancellationToken shutdownToken)
+        public BlockchainCalculator(CancellationToken shutdownToken, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockView blockView, BlockRollbackCache blockRollbackCache)
         {
-            this._rules = rules;
-            this._cacheContext = cacheContext;
             this.shutdownToken = shutdownToken;
+            this.rules = rules;
+            this.blockHeaderCache = blockHeaderCache;
+            this.blockTxHashesCache = blockTxHashesCache;
+            this.transactionCache = transactionCache;
+            this.blockView = blockView;
+            this.blockRollbackCache = blockRollbackCache;
         }
-
-        public IBlockchainRules Rules { get { return this._rules; } }
-
-        public ICacheContext CacheContext { get { return this._cacheContext; } }
 
         public void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
         {
@@ -72,7 +76,7 @@ namespace BitSharp.Blockchain
                     // validate the block
                     chainStateBuilder.Stats.validateStopwatch.Start();
                     new MethodTimer(false).Time("ValidateBlock", () =>
-                        this.Rules.ValidateBlock(block, chainStateBuilder/*, prevInputTxes*/));
+                        this.rules.ValidateBlock(block, chainStateBuilder/*, prevInputTxes*/));
                     chainStateBuilder.Stats.validateStopwatch.Stop();
 
                     // calculate the new block utxo, double spends will be checked for
@@ -82,14 +86,14 @@ namespace BitSharp.Blockchain
 
                     // collect rollback informatino and store it
                     var blockRollbackInformation = chainStateBuilder.Utxo.CollectBlockRollbackInformation();
-                    this.CacheContext.BlockRollbackCache[block.Hash] = blockRollbackInformation;
+                    this.blockRollbackCache[block.Hash] = blockRollbackInformation;
 
                     //TODO for memory mode
                     if (false)
                     {
                         foreach (var tx in block.Transactions)
-                            this._cacheContext.TransactionCache.TryRemove(tx.Hash);
-                        this._cacheContext.BlockTxHashesCache.TryRemove(block.Hash);
+                            this.transactionCache.TryRemove(tx.Hash);
+                        this.blockTxHashesCache.TryRemove(block.Hash);
                     }
 
                     // flush utxo progress
@@ -193,7 +197,7 @@ namespace BitSharp.Blockchain
             var blockHeight = chainStateBuilder.Height;
             var utxoBuilder = chainStateBuilder.Utxo;
 
-            var blockRollbackInformation = this.CacheContext.BlockRollbackCache[block.Hash];
+            var blockRollbackInformation = this.blockRollbackCache[block.Hash];
             var blockRollbackDictionary = new Dictionary<UInt256, UInt256>();
             blockRollbackDictionary.AddRange(blockRollbackInformation);
 
@@ -234,7 +238,7 @@ namespace BitSharp.Blockchain
                     throw new ValidationException(blockchain.Blocks[0].BlockHash);
 
                 // get genesis block header
-                var chainGenesisBlockHeader = this.CacheContext.BlockHeaderCache[blockchain.Blocks[0].BlockHash];
+                var chainGenesisBlockHeader = this.blockHeaderCache[blockchain.Blocks[0].BlockHash];
 
                 // verify genesis block header
                 if (
@@ -269,7 +273,7 @@ namespace BitSharp.Blockchain
                         throw new ValidationException(chainedBlock.BlockHash);
 
                     // verify block exists
-                    var blockHeader = this.CacheContext.BlockHeaderCache[chainedBlock.BlockHash];
+                    var blockHeader = this.blockHeaderCache[chainedBlock.BlockHash];
 
                     // verify block metadata matches header values
                     if (blockHeader.PreviousBlock != chainedBlock.PreviousBlockHash)
@@ -302,7 +306,7 @@ namespace BitSharp.Blockchain
                         var chainedBlock = chainedBlockTuple.Item2;
 
                         var block = new MethodTimer(false).Time("GetBlock", () =>
-                            this.CacheContext.BlockView[chainedBlock.BlockHash]);
+                            this.blockView[chainedBlock.BlockHash]);
 
                         //var prevInputTxes = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
                         //new MethodTimer(false).Time("GetPrevInputTxes", () =>

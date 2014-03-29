@@ -2,6 +2,8 @@
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Storage;
+using Ninject;
+using Ninject.Parameters;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -15,14 +17,16 @@ namespace BitSharp.Blockchain
 {
     public class UtxoBuilder : IDisposable
     {
-        private readonly ICacheContext cacheContext;
         private readonly IUtxoBuilderStorage utxoBuilderStorage;
+        private readonly TransactionCache transactionCache;
+        
         private ImmutableList<KeyValuePair<UInt256, UInt256>>.Builder blockRollbackInformation;
 
-        public UtxoBuilder(ICacheContext cacheContext, Utxo parentUtxo)
+        public UtxoBuilder(Utxo parentUtxo, IKernel kernel, TransactionCache transactionCache)
         {
-            this.cacheContext = cacheContext;
-            this.utxoBuilderStorage = cacheContext.ToUtxoBuilder(parentUtxo.Storage);
+            this.utxoBuilderStorage = kernel.Get<IUtxoBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo));
+            this.transactionCache = transactionCache;
+            
             this.blockRollbackInformation = ImmutableList.CreateBuilder<KeyValuePair<UInt256, UInt256>>();
         }
 
@@ -178,7 +182,7 @@ namespace BitSharp.Blockchain
             
             // retrieve previous transaction
             Transaction prevTx;
-            if (!this.cacheContext.TransactionCache.TryGetValue(input.PreviousTxOutputKey.TxHash, out prevTx))
+            if (!this.transactionCache.TryGetValue(input.PreviousTxOutputKey.TxHash, out prevTx))
             {
                 // if transaction is missing, use rollback information to determine which block contains it
                 throw new MissingDataException(prevTxBlockHash);
