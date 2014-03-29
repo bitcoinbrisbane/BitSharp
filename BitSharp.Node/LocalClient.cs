@@ -87,7 +87,7 @@ namespace BitSharp.Node
             this.blockRequestWorker = new BlockRequestWorker(this, initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30));
             this.requestHeadersWorker = new WorkerMethod("LocalClient.RequestHeadersWorker", RequestHeadersWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
             this.requestTransactionsWorker = new WorkerMethod("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
-            this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+            this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30));
 
             this.blockchainDaemon.OnTargetChainChanged += OnTargetChainChanged;
 
@@ -497,8 +497,8 @@ namespace BitSharp.Node
                 }
                 else
                 {
-                    this.knownAddressCache[remoteEndPoint.ToNetworkAddressKey()] =
-                        new NetworkAddressWithTime(0, remoteEndPoint.ToNetworkAddress(0));
+                    //this.knownAddressCache[remoteEndPoint.ToNetworkAddressKey()] =
+                    //    new NetworkAddressWithTime(0, remoteEndPoint.ToNetworkAddress(0));
                     DisconnectPeer(remoteEndPoint, null);
                     return null;
                 }
@@ -506,8 +506,8 @@ namespace BitSharp.Node
             catch (Exception e)
             {
                 //Debug.WriteLine(string.Format("Could not connect to {0}: {1}", remoteEndpoint, e.Message));
-                this.knownAddressCache[remoteEndPoint.ToNetworkAddressKey()] =
-                    new NetworkAddressWithTime(0, remoteEndPoint.ToNetworkAddress(0));
+                //this.knownAddressCache[remoteEndPoint.ToNetworkAddressKey()] =
+                //    new NetworkAddressWithTime(0, remoteEndPoint.ToNetworkAddress(0));
                 DisconnectPeer(remoteEndPoint, e);
                 return null;
             }
@@ -631,7 +631,7 @@ namespace BitSharp.Node
             // queue up addresses to be flushed to the database
             foreach (var address in addresses)
             {
-                this.knownAddressCache.TryAdd(address.GetKey(), address);
+                //this.knownAddressCache.TryAdd(address.GetKey(), address);
             }
         }
 
@@ -824,6 +824,7 @@ namespace BitSharp.Node
                 await remoteNode.Sender.SendVersionAcknowledge();
 
                 this.blockRequestWorker.NotifyWork();
+                this.statsWorker.NotifyWork();
 
                 return true;
             }
