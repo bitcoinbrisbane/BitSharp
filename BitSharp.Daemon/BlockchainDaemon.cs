@@ -73,7 +73,7 @@ namespace BitSharp.Daemon
             // create workers
             this.chainingWorker = new ChainingWorker(rules, cacheContext, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
             this.targetChainWorker = new TargetChainWorker(rules, cacheContext, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30));
-            this.chainStateWorker = new ChainStateWorker(rules, cacheContext, () => this.targetChainWorker.TargetChain, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
+            this.chainStateWorker = new ChainStateWorker(this, rules, cacheContext, () => this.targetChainWorker.TargetChain, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5));
             this.pruningWorker = new PruningWorker(rules, cacheContext, () => this.ChainState, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5));
 
             this.targetChainWorker.OnTargetBlockChanged +=
@@ -97,7 +97,7 @@ namespace BitSharp.Daemon
             this.chainStateWorker.OnChainStateChanged +=
                 () =>
                 {
-                    this.pruningWorker.NotifyWork();
+                    //this.pruningWorker.NotifyWork();
                     this.utxoScanWorker.NotifyWork();
 
                     var handler = this.OnChainStateChanged;
@@ -202,6 +202,11 @@ namespace BitSharp.Daemon
         public TimeSpan ChainStateBlockProcessingTime
         {
             get { return this.chainStateWorker.BlockProcessingTime; }
+        }
+
+        internal PruningWorker PruningWorker
+        {
+            get { return this.pruningWorker; }
         }
 
         public void Start()
