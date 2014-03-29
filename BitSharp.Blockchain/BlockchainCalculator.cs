@@ -84,7 +84,8 @@ namespace BitSharp.Blockchain
                     var blockRollbackInformation = chainStateBuilder.Utxo.CollectBlockRollbackInformation();
                     this.CacheContext.BlockRollbackCache[block.Hash] = blockRollbackInformation;
 
-                    if (true)
+                    //TODO for memory mode
+                    if (false)
                     {
                         foreach (var tx in block.Transactions)
                             this._cacheContext.TransactionCache.TryRemove(tx.Hash);
