@@ -31,13 +31,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Blockchain", "BitS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Blockchain.Test", "BitSharp.Blockchain.Test\BitSharp.Blockchain.Test.csproj", "{8E888DF3-C2F2-440C-BA5D-FB8AC33FB891}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{E583E23D-50AA-4018-AD1E-E883602D87B6}"
-	ProjectSection(SolutionItems) = preProject
-		.nuget\NuGet.Config = .nuget\NuGet.Config
-		.nuget\NuGet.exe = .nuget\NuGet.exe
-		.nuget\NuGet.targets = .nuget\NuGet.targets
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Daemon", "BitSharp.Daemon\BitSharp.Daemon.csproj", "{BCBA029F-F866-45EA-89DD-FB5BEC60A3B6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Daemon.Test", "BitSharp.Daemon.Test\BitSharp.Daemon.Test.csproj", "{14E5C225-4290-428F-9881-D3AC7D4B7BC8}"
