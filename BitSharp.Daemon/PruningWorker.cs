@@ -28,7 +28,10 @@ namespace BitSharp.Daemon
             this.rules = rules;
             this.cacheContext = cacheContext;
             this.getChainState = getChainState;
+            this.Mode = PruningMode.Full;
         }
+
+        public PruningMode Mode { get; set; }
 
         protected override void WorkAction()
         {
@@ -39,21 +42,55 @@ namespace BitSharp.Daemon
             var blocksPerDay = 144;
             var pruneBuffer = blocksPerDay * 7;
 
+            switch (this.Mode)
+            {
+                case PruningMode.PreserveUnspentTranscations:
+                    for (var i = 0; i < chainState.Chain.Blocks.Count - pruneBuffer; i++)
+                    {
+                        var block = chainState.Chain.Blocks[i];
+
+                        IImmutableList<KeyValuePair<UInt256, UInt256>> blockRollbackInformation;
+                        if (this.cacheContext.BlockRollbackCache.TryGetValue(block.BlockHash, out blockRollbackInformation))
+                        {
+                            foreach (var keyPair in blockRollbackInformation)
+                                this.cacheContext.TransactionCache.TryRemove(keyPair.Key);
+                        }
+                    }
+                    break;
+
+                case PruningMode.Full:
+                    for (var i = 0; i < chainState.Chain.Blocks.Count /*- pruneBuffer*/; i++)
+                    {
+                        var block = chainState.Chain.Blocks[i];
+
+                        IImmutableList<UInt256> blockTxHashes;
+                        if (this.cacheContext.BlockTxHashesCache.TryGetValue(block.BlockHash, out blockTxHashes))
+                        {
+                            foreach (var txHash in blockTxHashes)
+                                this.cacheContext.TransactionCache.TryRemove(txHash);
+                        }
+                    }
+                    break;
+            }
+
+            this.cacheContext.TransactionCache.Flush();
+
             for (var i = 0; i < chainState.Chain.Blocks.Count - pruneBuffer; i++)
             {
                 var block = chainState.Chain.Blocks[i];
 
                 this.cacheContext.BlockTxHashesCache.TryRemove(block.BlockHash);
-
-                IImmutableList<KeyValuePair<UInt256, UInt256>> blockRollbackInformation;
-                if (this.cacheContext.BlockRollbackCache.TryGetValue(block.BlockHash, out blockRollbackInformation))
-                {
-                    foreach (var keyPair in blockRollbackInformation)
-                        this.cacheContext.TransactionCache.TryRemove(keyPair.Key);
-
-                    this.cacheContext.BlockRollbackCache.TryRemove(block.BlockHash);
-                }
+                this.cacheContext.BlockRollbackCache.TryRemove(block.BlockHash);
             }
+
+            this.cacheContext.BlockTxHashesCache.Flush();
+            this.cacheContext.BlockRollbackCache.Flush();
         }
+    }
+
+    public enum PruningMode
+    {
+        PreserveUnspentTranscations,
+        Full
     }
 }
