@@ -214,10 +214,13 @@ namespace BitSharp.Common
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(new string('*', 80));
-                        Console.WriteLine("Unhandled worker exception: " + e.Message);
-                        Console.WriteLine(e);
-                        Console.WriteLine(new string('*', 80));
+                        if (!(e is OperationCanceledException))
+                        {
+                            Console.WriteLine(new string('*', 80));
+                            Console.WriteLine("Unhandled worker exception: " + e.Message);
+                            Console.WriteLine(e);
+                            Console.WriteLine(new string('*', 80));
+                        }
                         throw;
                     }
                     finally
