@@ -34,18 +34,17 @@ namespace BitSharp.Blockchain
 
         public ICacheContext CacheContext { get { return this._cacheContext; } }
 
-        public void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, CancellationToken cancelToken, Action onProgress = null)
+        public void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
         {
             chainStateBuilder.Stats.totalStopwatch.Start();
             chainStateBuilder.Stats.currentRateStopwatch.Start();
-            var didWork = false;
 
             // calculate the new blockchain along the target path
             chainStateBuilder.IsConsistent = true;
             foreach (var pathElement in BlockAndInputsLookAhead(chainStateBuilder.Chain.NavigateTowards(getTargetChain), lookAhead: 1))
             {
                 chainStateBuilder.IsConsistent = false;
-                didWork = true;
+                var startTime = DateTime.UtcNow;
 
                 // cooperative loop
                 if (this.shutdownToken.IsCancellationRequested)
@@ -85,12 +84,19 @@ namespace BitSharp.Blockchain
                     var blockRollbackInformation = chainStateBuilder.Utxo.CollectBlockRollbackInformation();
                     this.CacheContext.BlockRollbackCache[block.Hash] = blockRollbackInformation;
 
+                    if (true)
+                    {
+                        foreach (var tx in block.Transactions)
+                            this._cacheContext.TransactionCache.TryRemove(tx.Hash);
+                        this._cacheContext.BlockTxHashesCache.TryRemove(block.Hash);
+                    }
+
                     // flush utxo progress
                     //chainStateBuilder.Utxo.Flush();
 
                     // create the next link in the new blockchain
                     if (onProgress != null)
-                        onProgress();
+                        onProgress(DateTime.UtcNow - startTime);
 
                     // blockchain processing statistics
                     chainStateBuilder.Stats.currentBlockCount++;
@@ -118,17 +124,11 @@ namespace BitSharp.Blockchain
                 chainStateBuilder.IsConsistent = true;
             }
 
-            if (onProgress != null)
-                onProgress();
-
-            if (didWork)
-                LogBlockchainProgress(chainStateBuilder);
-            
             chainStateBuilder.Stats.totalStopwatch.Stop();
             chainStateBuilder.Stats.currentRateStopwatch.Stop();
         }
 
-        private void LogBlockchainProgress(ChainStateBuilder chainStateBuilder)
+        public void LogBlockchainProgress(ChainStateBuilder chainStateBuilder)
         {
             var currentBlockRate = (float)chainStateBuilder.Stats.currentBlockCount / chainStateBuilder.Stats.currentRateStopwatch.ElapsedSecondsFloat();
             var currentTxRate = (float)chainStateBuilder.Stats.currentTxCount / chainStateBuilder.Stats.currentRateStopwatch.ElapsedSecondsFloat();
