@@ -87,6 +87,7 @@
     <Compile Include="KnownAddressStorage.cs" />
     <Compile Include="MixedStorageContext.cs" />
     <Compile Include="PersistentByteDictionary.cs" />
+    <Compile Include="EsentStorageModule.cs" />
     <Compile Include="UtxoStorage.cs" />
     <Compile Include="UtxoBuilderStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
