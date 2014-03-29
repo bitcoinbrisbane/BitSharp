@@ -63,6 +63,8 @@ namespace BitSharp.Node
             this.localClient.OnBlock += HandleBlock;
             this.blockchainDaemon.OnChainStateChanged += HandleChainStateChanged;
             this.blockchainDaemon.OnChainStateBuilderChanged += HandleChainStateChanged;
+            this.blockchainDaemon.OnTargetChainChanged += HandleTargetChainChanged;
+            this.blockView.OnMissing += HandleBlockMissing;
 
             this.blockTimes = new TimeSpan[10000];
             this.blockTimesIndex = -1;
@@ -80,6 +82,8 @@ namespace BitSharp.Node
             this.localClient.OnBlock -= HandleBlock;
             this.blockchainDaemon.OnChainStateChanged -= HandleChainStateChanged;
             this.blockchainDaemon.OnChainStateBuilderChanged -= HandleChainStateChanged;
+            this.blockchainDaemon.OnTargetChainChanged -= HandleTargetChainChanged;
+            this.blockView.OnMissing -= HandleBlockMissing;
 
             this.flushWorker.Dispose();
         }
@@ -139,11 +143,15 @@ namespace BitSharp.Node
             var criticalLookAheadTime = avgBlockRequestTime + TimeSpan.FromMilliseconds(500);
             this.criticalTargetChainLookAhead = (int)Math.Max(1, criticalLookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
 
+            Debug.WriteLine(new string('-', 80));
             Debug.WriteLine("Block Processing Time: {0}".Format2(chainStateBlockProcessingTimeLocal));
-            Debug.WriteLine("Block Processing Rate/s: {0:#,##0.000}".Format2(1 / chainStateBlockProcessingTimeLocal.TotalSeconds));
+            Debug.WriteLine("Block Processing Rate: {0:#,##0.000}/s".Format2(1 / chainStateBlockProcessingTimeLocal.TotalSeconds));
+            Debug.WriteLine("Block Request Time: {0}".Format2(avgBlockRequestTime));
             Debug.WriteLine("Look Ahead: {0:#,##0}".Format2(this.targetChainLookAhead));
             Debug.WriteLine("Critical Look Ahead: {0:#,##0}".Format2(this.criticalTargetChainLookAhead));
             Debug.WriteLine("Missing Block Queue Count: {0:#,##0}".Format2(this.missingBlockQueue.Count));
+            Debug.WriteLine("Block Request Count: {0:#,##0}".Format2(this.allBlockRequests.Count));
+            Debug.WriteLine(new string('-', 80));
         }
 
         private void UpdateMissingBlockQueue()
@@ -223,7 +231,7 @@ namespace BitSharp.Node
             if (peerCount == 0)
                 return;
 
-            var requestsPerPeer = this.missingBlockQueue.Count + (this.targetChainLookAhead / peerCount);
+            var requestsPerPeer = Math.Max(1, this.missingBlockQueue.Count + (this.targetChainLookAhead / peerCount * 5));
 
             // loop through each connected peer
             foreach (var peer in this.localClient.ConnectedPeers)
@@ -355,6 +363,16 @@ namespace BitSharp.Node
         }
 
         private void HandleChainStateChanged(object sender, EventArgs e)
+        {
+            this.NotifyWork();
+        }
+
+        private void HandleTargetChainChanged(object sender, EventArgs e)
+        {
+            this.NotifyWork();
+        }
+
+        private void HandleBlockMissing(UInt256 blockHash)
         {
             this.NotifyWork();
         }

@@ -29,6 +29,8 @@ namespace BitSharp.Storage
             this.dataStorage.Dispose();
         }
 
+        public event Action<TKey> OnMissing;
+
         public string Name { get { return this.name; } }
 
         public ImmutableHashSet<TKey> MissingData { get { return this.missingData.ToImmutable(); } }
@@ -76,6 +78,11 @@ namespace BitSharp.Storage
                 else
                 {
                     this.missingData.Add(key);
+
+                    var handler = this.OnMissing;
+                    if (handler != null)
+                        handler(key);
+
                     throw new MissingDataException(key);
                 }
             }

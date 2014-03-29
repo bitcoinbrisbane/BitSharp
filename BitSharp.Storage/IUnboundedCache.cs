@@ -16,6 +16,8 @@ namespace BitSharp.Storage
 {
     public interface IUnboundedCache<TKey, TValue> : IDisposable
     {
+        event Action<TKey> OnMissing;
+
         string Name { get; }
 
         ImmutableHashSet<TKey> MissingData { get; }

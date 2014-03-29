@@ -19,7 +19,6 @@ namespace BitSharp.Storage
         event Action<TKey, TValue> OnAddition;
         event Action<TKey, TValue> OnModification;
         event Action<TKey> OnRemoved;
-        event Action<TKey> OnMissing;
 
         int Count { get; }
 

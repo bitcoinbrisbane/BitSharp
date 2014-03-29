@@ -13,7 +13,6 @@ namespace BitSharp.Storage
         private readonly Action<TKey, TValue> onAddition;
         private readonly Action<TKey, TValue> onModification;
         private readonly Action<TKey> onRemoved;
-        private readonly Action<TKey> onMissing;
 
         public PassthroughBoundedCache(IBoundedCache<TKey, TValue> cache)
             : base(cache)
@@ -23,12 +22,10 @@ namespace BitSharp.Storage
             this.onAddition = (blockHash, TValue) => { var handler = this.OnAddition; if (handler != null) { handler(blockHash, TValue); } };
             this.onModification = (blockHash, TValue) => { var handler = this.OnModification; if (handler != null) { handler(blockHash, TValue); } };
             this.onRemoved = (blockHash) => { var handler = this.OnRemoved; if (handler != null) { handler(blockHash); } };
-            this.onMissing = (blockHash) => { var handler = this.OnMissing; if (handler != null) { handler(blockHash); } };
 
             this.cache.OnAddition += this.onAddition;
             this.cache.OnModification += this.OnModification;
             this.cache.OnRemoved += this.OnRemoved;
-            this.cache.OnMissing += this.OnMissing;
         }
 
         public override void Dispose()
@@ -36,7 +33,6 @@ namespace BitSharp.Storage
             this.cache.OnAddition -= this.onAddition;
             this.cache.OnModification -= this.OnModification;
             this.cache.OnRemoved -= this.OnRemoved;
-            this.cache.OnMissing -= this.OnMissing;
 
             base.Dispose();
         }
@@ -44,7 +40,6 @@ namespace BitSharp.Storage
         public event Action<TKey, TValue> OnAddition;
         public event Action<TKey, TValue> OnModification;
         public event Action<TKey> OnRemoved;
-        public event Action<TKey> OnMissing;
 
         public int Count { get { return this.cache.Count; } }
         public IEnumerable<TKey> Keys { get { return this.cache.Keys; } }

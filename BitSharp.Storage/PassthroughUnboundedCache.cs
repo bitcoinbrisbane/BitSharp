@@ -11,15 +11,31 @@ namespace BitSharp.Storage
     {
         private readonly IUnboundedCache<TKey, TValue> cache;
 
+        private readonly Action<TKey> onMissing;
+
         public PassthroughUnboundedCache(IUnboundedCache<TKey, TValue> cache)
         {
             this.cache = cache;
+            
+            this.onMissing = (blockHash) => { var handler = this.OnMissing; if (handler != null) { handler(blockHash); } };
+            this.cache.OnMissing += this.OnMissing;
         }
 
         public virtual void Dispose()
         {
+            this.cache.OnMissing -= this.onMissing;
+            
             this.cache.Dispose();
         }
+
+        private void HandleOnMossing(TKey key)
+        {
+            var handler = this.OnMissing;
+            if (handler != null)
+                handler(key);
+        }
+
+        public event Action<TKey> OnMissing;
 
         public string Name { get { return this.cache.Name; } }
         public ImmutableHashSet<TKey> MissingData { get { return this.cache.MissingData; } }

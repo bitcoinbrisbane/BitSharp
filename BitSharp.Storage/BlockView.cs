@@ -32,6 +32,8 @@ namespace BitSharp.Storage
         {
         }
 
+        public event Action<UInt256> OnMissing;
+
         public string Name
         {
             get { return "Block View"; }
@@ -89,7 +91,6 @@ namespace BitSharp.Storage
                 }
             }
 
-            this.missingData.Add(blockHash);
             block = default(Block);
             return false;
         }
@@ -135,6 +136,11 @@ namespace BitSharp.Storage
                 else
                 {
                     this.missingData.Add(blockHash);
+
+                    var handler = this.OnMissing;
+                    if (handler != null)
+                        handler(blockHash);
+                    
                     throw new MissingDataException(blockHash);
                 }
             }
