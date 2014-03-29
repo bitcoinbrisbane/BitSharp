@@ -155,19 +155,13 @@ namespace BitSharp.Storage.Esent
 
             //TODO obviously a stop gap here...
             var destPath = UtxoStorage.GetDirectory(blockHash);
-            if (Directory.Exists(destPath + "_tx"))
-                Directory.Delete(destPath + "_tx", recursive: true);
-            Directory.CreateDirectory(destPath + "_tx");
-            if (Directory.Exists(destPath + "_output"))
-                Directory.Delete(destPath + "_output", recursive: true);
-            Directory.CreateDirectory(destPath + "_output");
+            UtxoStorage.DeleteUtxoDirectory(destPath);
 
             foreach (var srcFile in Directory.GetFiles(this.directory + "_tx", "*.edb"))
                 File.Move(srcFile, Path.Combine(destPath + "_tx", Path.GetFileName(srcFile)));
-            Directory.Delete(this.directory + "_tx", recursive: true);
             foreach (var srcFile in Directory.GetFiles(this.directory + "_output", "*.edb"))
                 File.Move(srcFile, Path.Combine(destPath + "_output", Path.GetFileName(srcFile)));
-            Directory.Delete(this.directory + "_output", recursive: true);
+            UtxoStorage.DeleteUtxoDirectory(this.directory);
 
             return new UtxoStorage(blockHash);
         }
@@ -179,10 +173,7 @@ namespace BitSharp.Storage.Esent
                 this.unspentTransactions.Dispose();
                 this.unspentOutputs.Dispose();
 
-                try { Directory.Delete(this.directory + "_tx", recursive: true); }
-                catch (IOException) { }
-                try { Directory.Delete(this.directory + "_output", recursive: true); }
-                catch (IOException) { }
+                UtxoStorage.DeleteUtxoDirectory(this.directory);
             }
             else
             {

@@ -21,11 +21,6 @@ namespace BitSharp.Storage.Esent
         private PersistentByteDictionary unspentOutputs;
         private readonly ReaderWriterLockSlim utxoLock;
 
-        static internal string GetDirectory(UInt256 blockHash)
-        {
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", blockHash.ToString());
-        }
-
         internal UtxoStorage(UInt256 blockHash)
         {
             this.blockHash = blockHash;
@@ -164,10 +159,31 @@ namespace BitSharp.Storage.Esent
         {
             this.Dispose();
 
-            try { Directory.Delete(this.directory + "_tx", recursive: true); }
-            catch (IOException) { }
-            try { Directory.Delete(this.directory + "_output", recursive: true); }
-            catch (IOException) { }
+            DeleteUtxoDirectory(this.directory);
+        }
+
+        static internal string GetDirectory(UInt256 blockHash)
+        {
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", blockHash.ToString());
+        }
+
+        static internal void DeleteUtxoDirectory(string directory)
+        {
+            var deleteFiles =
+                Directory.EnumerateFiles(directory + "_tx", "*.*", SearchOption.AllDirectories)
+                .Union(Directory.EnumerateFiles(directory + "_output", "*.*", SearchOption.AllDirectories));
+
+            foreach (var file in deleteFiles)
+            {
+                try { File.Delete(file); }
+                catch (Exception) { }
+            }
+
+            try { Directory.Delete(directory + "_tx", recursive: true); }
+            catch (Exception) { }
+
+            try { Directory.Delete(directory + "_output", recursive: true); }
+            catch (Exception) { }
         }
     }
 }
