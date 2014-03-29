@@ -11,6 +11,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BitSharp.Common;
 
 namespace BitSharp.Common.ExtensionMethods
 {
@@ -454,6 +455,19 @@ namespace BitSharp.Common.ExtensionMethods
         {
             foreach (var keyPair in keyPairs)
                 dictionary.Add(keyPair);
+        }
+
+        public static double? AverageOrDefault<TSource>(this IEnumerable<TSource> source, Func<TSource, long> selector)
+        {
+            try
+            {
+                return source.Average(selector);
+            }
+            catch (InvalidOperationException)
+            {
+                //TODO something better than catching exception?
+                return null;
+            }
         }
     }
 }
