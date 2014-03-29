@@ -25,10 +25,17 @@ namespace BitSharp.Blockchain.Test
             var txHash = new UInt256(100);
             var unspentTx = new UnspentTx(chainedBlock.BlockHash, 3, OutputState.Unspent);
 
-            // mock a parent utxo containing the unspent transaction
+            // prepare unspent output
             var unspentTransactions = ImmutableDictionary.Create<UInt256, UnspentTx>().Add(txHash, unspentTx);
+            var unspentOutputs = ImmutableDictionary.Create<TxOutputKey, TxOutput>()
+                .Add(new TxOutputKey(txHash, 0), new TxOutput(0, ImmutableArray.Create<byte>()))
+                .Add(new TxOutputKey(txHash, 1), new TxOutput(0, ImmutableArray.Create<byte>()))
+                .Add(new TxOutputKey(txHash, 2), new TxOutput(0, ImmutableArray.Create<byte>()));
+
+            // mock a parent utxo containing the unspent transaction
             var mockParentUtxoStorage = new Mock<IUtxoStorage>();
             mockParentUtxoStorage.Setup(utxo => utxo.UnspentTransactions()).Returns(unspentTransactions);
+            mockParentUtxoStorage.Setup(utxo => utxo.UnspentOutputs()).Returns(unspentOutputs);
             var parentUtxo = new Utxo(mockParentUtxoStorage.Object);
 
             // initialize memory utxo builder storage

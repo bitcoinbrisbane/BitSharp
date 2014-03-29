@@ -48,7 +48,20 @@ namespace BitSharp.Blockchain
             if (txOutputKey == null)
                 throw new ArgumentNullException("prevTxOutput");
 
-            return this.utxoStorage.ContainsOutput(txOutputKey);
+            UnspentTx unspentTx;
+            if (this.utxoStorage.TryGetTransaction(txOutputKey.TxHash, out unspentTx))
+            {
+                var outputIndex = unchecked((int)txOutputKey.TxOutputIndex);
+                
+                if (outputIndex < 0 || outputIndex >= unspentTx.OutputStates.Length)
+                    return false;
+
+                return unspentTx.OutputStates[outputIndex] == OutputState.Unspent;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> GetUnspentOutputs()
