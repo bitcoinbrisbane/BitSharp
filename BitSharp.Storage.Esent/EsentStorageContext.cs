@@ -51,7 +51,7 @@ namespace BitSharp.Storage.Esent
 
         public BlockRollbackStorage BlockRollbackStorage { get { return this._blockRollbackStorage; } }
 
-        public IBoundedStorage<UInt256, string> InvalidBlockStorage { get { return this._invalidBlockStorage; } }
+        public InvalidBlockStorage InvalidBlockStorage { get { return this._invalidBlockStorage; } }
 
         internal string BaseDirectory { get { return this.baseDirectory; } }
 
@@ -74,7 +74,7 @@ namespace BitSharp.Storage.Esent
 
         public IUtxoBuilderStorage ToUtxoBuilder(IUtxoStorage utxo)
         {
-            return new MemoryUtxoBuilderStorage(utxo);
+            //return new MemoryUtxoBuilderStorage(utxo);
             return new UtxoBuilderStorage(utxo);
         }
 
