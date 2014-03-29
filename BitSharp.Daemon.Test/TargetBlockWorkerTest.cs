@@ -1,7 +1,9 @@
-﻿using BitSharp.Data;
+﻿using BitSharp.Common;
+using BitSharp.Data;
 using BitSharp.Storage;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Ninject;
+using Ninject.Parameters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,15 +20,15 @@ namespace BitSharp.Daemon.Test
         public void TestSimpleTargetBlock()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new MemoryStorageModule());
+            var kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule());
             var chainedBlockCache = kernel.Get<ChainedBlockCache>();
-            
-                // initialize data
+
+            // initialize data
             var chainedBlock0 = new ChainedBlock(blockHash: 0, previousBlockHash: 9999, height: 0, totalWork: 0);
             var chainedBlock1 = new ChainedBlock(blockHash: 1, previousBlockHash: chainedBlock0.BlockHash, height: 1, totalWork: 1);
 
             // initialize the target block watcher
-            var targetBlockWorker = kernel.Get<TargetBlockWorker>();
+            var targetBlockWorker = kernel.Get<TargetBlockWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue)));
 
             // monitor event firing
             var workNotifyEvent = new AutoResetEvent(false);

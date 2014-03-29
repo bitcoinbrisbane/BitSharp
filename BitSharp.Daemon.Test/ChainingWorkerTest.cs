@@ -6,6 +6,7 @@ using BitSharp.Storage;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Ninject;
+using Ninject.Parameters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,7 +40,7 @@ namespace BitSharp.Daemon.Test
             chainedBlockCache[blockHeader0.Hash] = ChainedBlock.CreateForGenesisBlock(blockHeader0);
 
             // initialize the chaining worker
-            var chainingWorker = kernel.Get<ChainingWorker>();
+            var chainingWorker = kernel.Get<ChainingWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue)));
 
             // monitor event firing
             var workStoppedEvent = new AutoResetEvent(false);
@@ -114,7 +115,7 @@ namespace BitSharp.Daemon.Test
             chainedBlockCache[blockHeader0.Hash] = ChainedBlock.CreateForGenesisBlock(blockHeader0);
 
             // initialize the chaining worker
-            var chainingWorker = kernel.Get<ChainingWorker>();
+            var chainingWorker = kernel.Get<ChainingWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue)));
 
             // monitor event firing
             var workStoppedEvent = new AutoResetEvent(false);

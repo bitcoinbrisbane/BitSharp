@@ -43,8 +43,8 @@ namespace BitSharp.Daemon
 
         //TODO move pruning worker here
 
-        public ChainStateWorker(Func<Chain> getTargetChain, IKernel kernel, BlockchainDaemon blockchainDaemon, IBlockchainRules rules, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache, InvalidBlockCache invalidBlockCache)
-            : base("ChainStateWorker", initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5))
+        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, IKernel kernel, BlockchainDaemon blockchainDaemon, IBlockchainRules rules, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache, InvalidBlockCache invalidBlockCache)
+            : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime)
         {
             this.getTargetChain = getTargetChain;
             this.kernel = kernel;

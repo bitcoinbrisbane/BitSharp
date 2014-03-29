@@ -24,8 +24,8 @@ namespace BitSharp.Daemon
         private readonly TransactionCache transactionCache;
         private readonly BlockRollbackCache blockRollbackCache;
 
-        public PruningWorker(Func<ChainState> getChainState, IBlockchainRules rules, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache)
-            : base("PruningWorker", initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5))
+        public PruningWorker(WorkerConfig workerConfig, Func<ChainState> getChainState, IBlockchainRules rules, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache)
+            : base("PruningWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime)
         {
             this.getChainState = getChainState;
             this.rules = rules;

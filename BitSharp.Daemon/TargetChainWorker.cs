@@ -4,6 +4,7 @@ using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Storage;
 using Ninject;
+using Ninject.Parameters;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -29,9 +30,9 @@ namespace BitSharp.Daemon
         private Chain targetChain;
 
         private readonly AutoResetEvent rescanEvent;
-        
-        public TargetChainWorker(IKernel kernel, IBlockchainRules rules, ChainedBlockCache chainedBlockCache, InvalidBlockCache invalidBlockCache)
-            : base("TargetChainWorker", initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))
+
+        public TargetChainWorker(WorkerConfig workerConfig, IKernel kernel, IBlockchainRules rules, ChainedBlockCache chainedBlockCache, InvalidBlockCache invalidBlockCache)
+            : base("TargetChainWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime)
         {
             this.rules = rules;
             this.chainedBlockCache = chainedBlockCache;
@@ -39,7 +40,8 @@ namespace BitSharp.Daemon
 
             this.rescanEvent = new AutoResetEvent(false);
 
-            this.targetBlockWorker = kernel.Get<TargetBlockWorker>();
+            this.targetBlockWorker = kernel.Get<TargetBlockWorker>(
+                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue)));
 
             this.targetBlockWorker.OnTargetBlockChanged += HandleTargetBlockChanged;
             this.chainedBlockCache.OnAddition += HandleChainedBlock;
@@ -133,7 +135,7 @@ namespace BitSharp.Daemon
         private void HandleTargetBlockChanged()
         {
             this.NotifyWork();
-            
+
             var handler = this.OnTargetBlockChanged;
             if (handler != null)
                 handler();

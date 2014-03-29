@@ -6,6 +6,7 @@ using BitSharp.Storage;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Ninject;
+using Ninject.Parameters;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -29,23 +30,24 @@ namespace BitSharp.Daemon.Test
         public void TestSimpleChain()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule(), new RulesModule(RulesEnum.MainNet));
-            var chainedBlockCache = kernel.Get<ChainedBlockCache>();
+            var kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule());
 
             // initialize data
             var chainedBlock0 = new ChainedBlock(blockHash: 0, previousBlockHash: 9999, height: 0, totalWork: 0);
             var chainedBlock1 = new ChainedBlock(blockHash: 1, previousBlockHash: chainedBlock0.BlockHash, height: 1, totalWork: 1);
             var chainedBlock2 = new ChainedBlock(blockHash: 2, previousBlockHash: chainedBlock1.BlockHash, height: 2, totalWork: 2);
 
-            // store genesis block
-            chainedBlockCache[chainedBlock0.BlockHash] = chainedBlock0;
-
             // mock rules
             var mockRules = new Mock<IBlockchainRules>();
             mockRules.Setup(rules => rules.GenesisChainedBlock).Returns(chainedBlock0);
+            kernel.Bind<IBlockchainRules>().ToConstant(mockRules.Object);
+
+            // store genesis block
+            var chainedBlockCache = kernel.Get<ChainedBlockCache>();
+            chainedBlockCache[chainedBlock0.BlockHash] = chainedBlock0;
 
             // initialize the target chain worker
-            var targetChainWorker = kernel.Get<TargetChainWorker>();
+            var targetChainWorker = kernel.Get<TargetChainWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue)));
 
             // verify initial state
             Assert.AreEqual(null, targetChainWorker.TargetBlock);
@@ -109,8 +111,7 @@ namespace BitSharp.Daemon.Test
         public void TestSimpleChainReverse()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule(), new RulesModule(RulesEnum.MainNet));
-            var chainedBlockCache = kernel.Get<ChainedBlockCache>();
+            var kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule());
 
             // initialize data
             var chainedBlock0 = new ChainedBlock(blockHash: 0, previousBlockHash: 9999, height: 0, totalWork: 0);
@@ -119,15 +120,17 @@ namespace BitSharp.Daemon.Test
             var chainedBlock3 = new ChainedBlock(blockHash: 3, previousBlockHash: chainedBlock2.BlockHash, height: 3, totalWork: 3);
             var chainedBlock4 = new ChainedBlock(blockHash: 4, previousBlockHash: chainedBlock3.BlockHash, height: 4, totalWork: 4);
 
-            // store genesis block
-            chainedBlockCache[chainedBlock0.BlockHash] = chainedBlock0;
-
             // mock rules
             var mockRules = new Mock<IBlockchainRules>();
             mockRules.Setup(rules => rules.GenesisChainedBlock).Returns(chainedBlock0);
+            kernel.Bind<IBlockchainRules>().ToConstant(mockRules.Object);
+
+            // store genesis block
+            var chainedBlockCache = kernel.Get<ChainedBlockCache>();
+            chainedBlockCache[chainedBlock0.BlockHash] = chainedBlock0;
 
             // initialize the target chain worker
-            var targetChainWorker = kernel.Get<TargetChainWorker>();
+            var targetChainWorker = kernel.Get<TargetChainWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue)));
 
             // verify initial state
             Assert.AreEqual(null, targetChainWorker.TargetBlock);
@@ -212,8 +215,7 @@ namespace BitSharp.Daemon.Test
         public void TestTargetChainReorganize()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new MemoryStorageModule());
-            var chainedBlockCache = kernel.Get<ChainedBlockCache>();
+            var kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule());
 
             // initialize data
             var chainedBlock0 = new ChainedBlock(blockHash: 0, previousBlockHash: 9999, height: 0, totalWork: 0);
@@ -227,15 +229,17 @@ namespace BitSharp.Daemon.Test
             var chainedBlock3B = new ChainedBlock(blockHash: 103, previousBlockHash: chainedBlock2.BlockHash, height: 3, totalWork: 3);
             var chainedBlock4B = new ChainedBlock(blockHash: 104, previousBlockHash: chainedBlock3B.BlockHash, height: 4, totalWork: 10);
 
-            // store genesis block
-            chainedBlockCache[chainedBlock0.BlockHash] = chainedBlock0;
-
             // mock rules
             var mockRules = new Mock<IBlockchainRules>();
             mockRules.Setup(rules => rules.GenesisChainedBlock).Returns(chainedBlock0);
+            kernel.Bind<IBlockchainRules>().ToConstant(mockRules.Object);
+
+            // store genesis block
+            var chainedBlockCache = kernel.Get<ChainedBlockCache>();
+            chainedBlockCache[chainedBlock0.BlockHash] = chainedBlock0;
 
             // initialize the target chain worker
-            var targetChainWorker = kernel.Get<TargetChainWorker>();
+            var targetChainWorker = kernel.Get<TargetChainWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue)));
 
             // verify initial state
             Assert.AreEqual(null, targetChainWorker.TargetBlock);

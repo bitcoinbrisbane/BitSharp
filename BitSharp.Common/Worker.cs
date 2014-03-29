@@ -262,4 +262,18 @@ namespace BitSharp.Common
 
         protected virtual void SubStop() { }
     }
+
+    public sealed class WorkerConfig
+    {
+        public readonly bool initialNotify;
+        public readonly TimeSpan minIdleTime;
+        public readonly TimeSpan maxIdleTime;
+
+        public WorkerConfig(bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
+        {
+            this.initialNotify = initialNotify;
+            this.minIdleTime = minIdleTime;
+            this.maxIdleTime = maxIdleTime;
+        }
+    }
 }

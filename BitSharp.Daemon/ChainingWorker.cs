@@ -25,8 +25,8 @@ namespace BitSharp.Daemon
         private readonly ConcurrentQueue<BlockHeader> blockHeaders;
         private readonly Dictionary<UInt256, Dictionary<UInt256, BlockHeader>> unchainByPrevious;
 
-        public ChainingWorker(IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache)
-            : base("ChainingWorker", initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))
+        public ChainingWorker(WorkerConfig workerConfig, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache)
+            : base("ChainingWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime)
         {
             this.rules = rules;
             this.blockHeaderCache = blockHeaderCache;

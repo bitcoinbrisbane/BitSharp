@@ -46,8 +46,8 @@ namespace BitSharp.Node
         private readonly WorkerMethod flushWorker;
         private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
 
-        public BlockRequestWorker(LocalClient localClient, BlockchainDaemon blockchainDaemon, ChainedBlockCache chainedBlockCache, BlockView blockView)
-            : base("BlockRequestWorker", initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30))
+        public BlockRequestWorker(WorkerConfig workerConfig, LocalClient localClient, BlockchainDaemon blockchainDaemon, ChainedBlockCache chainedBlockCache, BlockView blockView)
+            : base("BlockRequestWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime)
         {
             this.localClient = localClient;
             this.blockchainDaemon = blockchainDaemon;

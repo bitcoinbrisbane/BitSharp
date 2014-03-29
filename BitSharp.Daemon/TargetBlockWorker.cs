@@ -27,8 +27,8 @@ namespace BitSharp.Daemon
 
         private readonly AutoResetEvent rescanEvent;
 
-        public TargetBlockWorker(ChainedBlockCache chainedBlockCache, InvalidBlockCache invalidBlockCache)
-            : base("TargetBlockWorker", initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue)
+        public TargetBlockWorker(WorkerConfig workerConfig, ChainedBlockCache chainedBlockCache, InvalidBlockCache invalidBlockCache)
+            : base("TargetBlockWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime)
         {
             this.chainedBlockCache = chainedBlockCache;
             this.invalidBlockCache = invalidBlockCache;

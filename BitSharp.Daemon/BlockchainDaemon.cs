@@ -82,10 +82,19 @@ namespace BitSharp.Daemon
             this.chainedBlockCache.OnModification += OnChainedBlockModification;
 
             // create workers
-            this.chainingWorker = kernel.Get<ChainingWorker>();
-            this.targetChainWorker = kernel.Get<TargetChainWorker>();
-            this.chainStateWorker = kernel.Get<ChainStateWorker>(new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)));
-            this.pruningWorker = kernel.Get<PruningWorker>(new ConstructorArgument("getChainState", (Func<ChainState>)(() => this.ChainState)));
+            this.chainingWorker = kernel.Get<ChainingWorker>(
+                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))));
+
+            this.targetChainWorker = kernel.Get<TargetChainWorker>(
+              new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))));
+
+            this.chainStateWorker = kernel.Get<ChainStateWorker>(
+                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5))),
+                new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)));
+
+            this.pruningWorker = kernel.Get<PruningWorker>(
+                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5))),
+                new ConstructorArgument("getChainState", (Func<ChainState>)(() => this.ChainState)));
 
             this.targetChainWorker.OnTargetBlockChanged +=
                 () =>
