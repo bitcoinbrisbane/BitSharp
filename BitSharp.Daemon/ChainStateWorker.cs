@@ -18,8 +18,9 @@ namespace BitSharp.Daemon
         public event Action OnChainStateChanged;
         public event Action OnChainStateBuilderChanged;
 
-        private static readonly int MAX_BUILDER_LIFETIME_SECONDS = 60;
+        private static readonly TimeSpan MAX_BUILDER_LIFETIME = TimeSpan.FromMinutes(10);
 
+        private readonly BlockchainDaemon blockchainDaemon;
         private readonly IBlockchainRules rules;
         private readonly ICacheContext cacheContext;
         private readonly BlockchainCalculator calculator;
@@ -35,9 +36,12 @@ namespace BitSharp.Daemon
         private int blockTimesIndex;
         private TimeSpan blockProcessingTime;
 
-        public ChainStateWorker(IBlockchainRules rules, ICacheContext cacheContext, Func<Chain> getTargetChain, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
+        //TODO move pruning worker here
+
+        public ChainStateWorker(BlockchainDaemon blockchainDaemon, IBlockchainRules rules, ICacheContext cacheContext, Func<Chain> getTargetChain, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
             : base("ChainStateWorker", initialNotify, minIdleTime, maxIdleTime)
         {
+            this.blockchainDaemon = blockchainDaemon;
             this.rules = rules;
             this.cacheContext = cacheContext;
             this.calculator = new BlockchainCalculator(this.rules, this.cacheContext, this.ShutdownToken.Token);
@@ -74,8 +78,10 @@ namespace BitSharp.Daemon
 
                 if (this.chainStateBuilder != null
                     && this.chainStateBuilder.LastBlockHash != chainStateLocal.LastBlockHash
-                    && DateTime.UtcNow - this.chainStateBuilderTime > TimeSpan.FromSeconds(MAX_BUILDER_LIFETIME_SECONDS))
+                    && DateTime.UtcNow - this.chainStateBuilderTime > MAX_BUILDER_LIFETIME)
                 {
+                    this.calculator.LogBlockchainProgress(this.chainStateBuilder);
+
                     // ensure rollback information is fully saved, back to pruning limit, before considering new chain state committed
                     var blocksPerDay = 144;
                     var pruneBuffer = blocksPerDay * 7;
@@ -94,6 +100,8 @@ namespace BitSharp.Daemon
 
                     UpdateCurrentBlockchain(new ChainState(newChain, newUtxo));
                     chainStateLocal = this.chainState;
+
+                    this.blockchainDaemon.PruningWorker.ForceWorkAndWait();
                 }
 
                 if (this.chainStateBuilder == null)
@@ -110,23 +118,18 @@ namespace BitSharp.Daemon
                 // try to advance the blockchain with the new winning block
                 using (var cancelToken = new CancellationTokenSource())
                 {
-                    var startTime = new Stopwatch();
-                    startTime.Start();
-
-                    var blockStartTime = DateTime.UtcNow;
                     this.calculator.CalculateBlockchainFromExisting(this.chainStateBuilder, getTargetChain, cancelToken.Token,
-                        () =>
+                        (blockTime) =>
                         {
                             this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;
-                            this.blockTimes[this.blockTimesIndex] = DateTime.UtcNow - blockStartTime;
-                            this.blockProcessingTime = TimeSpan.FromTicks((long)this.blockTimes.Average(x => x.Ticks));
-                            blockStartTime = DateTime.UtcNow;
+                            this.blockTimes[this.blockTimesIndex] = blockTime;
+                            this.blockProcessingTime = TimeSpan.FromTicks((long)this.blockTimes.Where(x => x.Ticks > 0).Average(x => x.Ticks));
 
                             var handler = this.OnChainStateBuilderChanged;
                             if (handler != null)
                                 handler();
 
-                            if (startTime.Elapsed > TimeSpan.FromSeconds(MAX_BUILDER_LIFETIME_SECONDS))
+                            if (DateTime.UtcNow - this.chainStateBuilderTime > MAX_BUILDER_LIFETIME)
                             {
                                 this.NotifyWork();
                                 cancelToken.Cancel();
