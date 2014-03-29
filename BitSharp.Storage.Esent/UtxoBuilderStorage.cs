@@ -156,7 +156,9 @@ namespace BitSharp.Storage.Esent
             //TODO obviously a stop gap here...
             var destPath = UtxoStorage.GetDirectory(blockHash);
             UtxoStorage.DeleteUtxoDirectory(destPath);
-
+            Directory.CreateDirectory(destPath + "_tx");
+            Directory.CreateDirectory(destPath + "_output");
+            
             foreach (var srcFile in Directory.GetFiles(this.directory + "_tx", "*.edb"))
                 File.Move(srcFile, Path.Combine(destPath + "_tx", Path.GetFileName(srcFile)));
             foreach (var srcFile in Directory.GetFiles(this.directory + "_output", "*.edb"))

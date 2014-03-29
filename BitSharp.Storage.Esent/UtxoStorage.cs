@@ -169,9 +169,11 @@ namespace BitSharp.Storage.Esent
 
         static internal void DeleteUtxoDirectory(string directory)
         {
-            var deleteFiles =
-                Directory.EnumerateFiles(directory + "_tx", "*.*", SearchOption.AllDirectories)
-                .Union(Directory.EnumerateFiles(directory + "_output", "*.*", SearchOption.AllDirectories));
+            var deleteFiles = new List<string>();
+            try { deleteFiles.AddRange(Directory.EnumerateFiles(directory + "_tx", "*.*", SearchOption.AllDirectories)); }
+            catch (Exception) { }
+            try { deleteFiles.AddRange(Directory.EnumerateFiles(directory + "_output", "*.*", SearchOption.AllDirectories)); }
+            catch (Exception) { }
 
             foreach (var file in deleteFiles)
             {
