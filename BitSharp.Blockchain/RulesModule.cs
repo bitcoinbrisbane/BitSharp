@@ -10,6 +10,7 @@ namespace BitSharp.Blockchain
     public enum RulesEnum
     {
         MainNet,
+        TestNet2,
         TestNet3,
         ComparisonToolTestNet
     }
@@ -33,9 +34,13 @@ namespace BitSharp.Blockchain
                     this.Bind<IBlockchainRules>().To<MainnetRules>().InSingletonScope();
                     break;
 
-                case RulesEnum.TestNet3:
+                case RulesEnum.TestNet2:
                 case RulesEnum.ComparisonToolTestNet:
-                    this.Bind<IBlockchainRules>().To<MainnetRules>().InSingletonScope();
+                    this.Bind<IBlockchainRules>().To<Testnet2Rules>().InSingletonScope();
+                    break;
+                
+                case RulesEnum.TestNet3:
+                    this.Bind<IBlockchainRules>().To<Testnet3Rules>().InSingletonScope();
                     break;
             }
         }

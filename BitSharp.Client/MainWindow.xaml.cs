@@ -1,4 +1,5 @@
 ﻿//#define TEST_TOOL
+#define TESTNET3
 //#define MEMORY
 //#define MONGODB
 #define MIXED
@@ -60,7 +61,7 @@ namespace BitSharp.Client
 #elif MONGODB
                 modules.Add(new MongoStorageModule());
 #elif MIXED
-                modules.Add(new MixedStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION()));
+                modules.Add(new MixedStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: int.MaxValue)); // 500.MILLION()));
 #else
                 modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION()));
 #endif
@@ -71,6 +72,8 @@ namespace BitSharp.Client
                 // add rules module
 #if TEST_TOOL
                 modules.Add(new RulesModule(RulesEnum.ComparisonToolTestNet));
+#elif TESTNET3
+                modules.Add(new RulesModule(RulesEnum.TestNet3));
 #else
                 modules.Add(new RulesModule(RulesEnum.MainNet));
 #endif
