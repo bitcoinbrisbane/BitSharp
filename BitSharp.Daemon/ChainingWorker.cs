@@ -51,15 +51,17 @@ namespace BitSharp.Daemon
 
         public void QueueAllBlockHeaders()
         {
-            new Thread(
+            var thread = new Thread(
                 () =>
                 {
                     new MethodTimer().Time(() =>
                         this.blockHeaders.EnqueueRange(this.cacheContext.BlockHeaderCache.Values));
                     
                     this.NotifyWork();
-                })
-                .Start();
+                });
+
+            thread.Name = "{0}.QueueAllBlockHeaders".Format2(this.Name);
+            thread.Start();
         }
 
         protected override void WorkAction()

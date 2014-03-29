@@ -63,6 +63,7 @@ namespace BitSharp.Common
                 }
             });
 
+            thread.Name = "LookAhead<{0}>".Format2(typeof(T).Name);
             thread.Start();
             try
             {
