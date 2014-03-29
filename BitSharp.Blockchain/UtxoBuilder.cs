@@ -24,7 +24,7 @@ namespace BitSharp.Blockchain
 
         public UtxoBuilder(Utxo parentUtxo, IKernel kernel, TransactionCache transactionCache)
         {
-            this.utxoBuilderStorage = kernel.Get<IUtxoBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo));
+            this.utxoBuilderStorage = kernel.Get<IUtxoBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo.Storage));
             this.transactionCache = transactionCache;
             
             this.blockRollbackInformation = ImmutableList.CreateBuilder<KeyValuePair<UInt256, UInt256>>();

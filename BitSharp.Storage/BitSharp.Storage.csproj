@@ -73,6 +73,7 @@
   <ItemGroup>
     <Compile Include="BlockView.cs" />
     <Compile Include="BoundedFullCache.cs" />
+    <Compile Include="CacheModule.cs" />
     <Compile Include="GenesisUtxoStorage.cs" />
     <Compile Include="IUnboundedCache.cs" />
     <Compile Include="IBoundedCache.cs" />
@@ -84,7 +85,6 @@
     <Compile Include="MemoryUtxoBuilderStorage.cs" />
     <Compile Include="MissingDataException.cs" />
     <Compile Include="IUtxoBuilderStorage.cs" />
-    <Compile Include="PassthroughBoundedStorage.cs" />
     <Compile Include="PassthroughUnboundedCache.cs" />
     <Compile Include="PassthroughBoundedCache.cs" />
     <Compile Include="StorageInterfaces.cs" />

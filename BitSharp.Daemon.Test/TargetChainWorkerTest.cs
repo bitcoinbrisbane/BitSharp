@@ -29,7 +29,7 @@ namespace BitSharp.Daemon.Test
         public void TestSimpleChain()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new MemoryStorageModule());
+            var kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule(), new RulesModule(RulesEnum.MainNet));
             var chainedBlockCache = kernel.Get<ChainedBlockCache>();
 
             // initialize data
@@ -109,7 +109,7 @@ namespace BitSharp.Daemon.Test
         public void TestSimpleChainReverse()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new MemoryStorageModule());
+            var kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule(), new RulesModule(RulesEnum.MainNet));
             var chainedBlockCache = kernel.Get<ChainedBlockCache>();
 
             // initialize data

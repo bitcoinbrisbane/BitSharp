@@ -32,6 +32,7 @@ namespace BitSharp.Storage
             this.Bind<ITransactionStorage>().To<MemoryTransactionStorage>().InSingletonScope();
             this.Bind<IInvalidBlockStorage>().To<MemoryInvalidBlockStorage>().InSingletonScope();
             this.Bind<IBlockRollbackStorage>().To<MemoryBlockRollbackStorage>().InSingletonScope();
+            this.Bind<IUtxoBuilderStorage>().To<MemoryUtxoBuilderStorage>().InSingletonScope();
             this.Bind<INetworkPeerStorage>().To<MemoryNetworkPeerStorage>().InSingletonScope();
         }
     }

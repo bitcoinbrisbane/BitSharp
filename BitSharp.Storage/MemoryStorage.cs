@@ -85,45 +85,17 @@ namespace BitSharp.Storage
         }
     }
 
-    public sealed class MemoryBlockHeaderStorage : PassthroughBoundedStorage<UInt256, BlockHeader>, IBlockHeaderStorage
-    {
-        public MemoryBlockHeaderStorage(IBoundedStorage<UInt256, BlockHeader> storage)
-            : base(storage) { }
-    }
+    public sealed class MemoryBlockHeaderStorage : MemoryStorage<UInt256, BlockHeader>, IBlockHeaderStorage { }
 
-    public sealed class MemoryChainedBlockStorage : PassthroughBoundedStorage<UInt256, ChainedBlock>, IChainedBlockStorage
-    {
-        public MemoryChainedBlockStorage(IBoundedStorage<UInt256, ChainedBlock> storage)
-            : base(storage) { }
-    }
+    public sealed class MemoryChainedBlockStorage : MemoryStorage<UInt256, ChainedBlock>, IChainedBlockStorage { }
 
-    public sealed class MemoryBlockTxHashesStorage : PassthroughBoundedStorage<UInt256, IImmutableList<UInt256>>, IBlockTxHashesStorage
-    {
-        public MemoryBlockTxHashesStorage(IBoundedStorage<UInt256, IImmutableList<UInt256>> storage)
-            : base(storage) { }
-    }
+    public sealed class MemoryBlockTxHashesStorage : MemoryStorage<UInt256, IImmutableList<UInt256>>, IBlockTxHashesStorage { }
 
-    public sealed class MemoryTransactionStorage : PassthroughBoundedStorage<UInt256, Transaction>, ITransactionStorage
-    {
-        public MemoryTransactionStorage(IBoundedStorage<UInt256, Transaction> storage)
-            : base(storage) { }
-    }
+    public sealed class MemoryTransactionStorage : MemoryStorage<UInt256, Transaction>, ITransactionStorage { }
 
-    public sealed class MemoryBlockRollbackStorage : PassthroughBoundedStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>>, IBlockRollbackStorage
-    {
-        public MemoryBlockRollbackStorage(IBoundedStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> storage)
-            : base(storage) { }
-    }
+    public sealed class MemoryBlockRollbackStorage : MemoryStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>>, IBlockRollbackStorage { }
 
-    public sealed class MemoryInvalidBlockStorage : PassthroughBoundedStorage<UInt256, string>, IInvalidBlockStorage
-    {
-        public MemoryInvalidBlockStorage(IBoundedStorage<UInt256, string> storage)
-            : base(storage) { }
-    }
+    public sealed class MemoryInvalidBlockStorage : MemoryStorage<UInt256, string>, IInvalidBlockStorage { }
 
-    public sealed class MemoryNetworkPeerStorage : PassthroughBoundedStorage<NetworkAddressKey, NetworkAddressWithTime>, INetworkPeerStorage
-    {
-        public MemoryNetworkPeerStorage(IBoundedStorage<NetworkAddressKey, NetworkAddressWithTime> storage)
-            : base(storage) { }
-    }
+    public sealed class MemoryNetworkPeerStorage : MemoryStorage<NetworkAddressKey, NetworkAddressWithTime>, INetworkPeerStorage { }
 }

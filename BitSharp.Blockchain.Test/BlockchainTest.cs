@@ -14,6 +14,7 @@ using System.Linq;
 
 namespace BitSharp.Blockchain.Test
 {
+    [Ignore]
     [TestClass]
     public class BlockchainTest
     {

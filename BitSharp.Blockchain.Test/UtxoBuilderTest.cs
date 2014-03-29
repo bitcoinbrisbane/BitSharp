@@ -44,9 +44,7 @@ namespace BitSharp.Blockchain.Test
 
             // initialize memory utxo builder storage
             var memoryUtxoBuilderStorage = new MemoryUtxoBuilderStorage(mockParentUtxoStorage.Object);
-
-            // mock a cache context
-            kernel.Bind<IUtxoBuilderStorage>().To<MemoryUtxoBuilderStorage>();
+            kernel.Rebind<IUtxoBuilderStorage>().ToConstant(memoryUtxoBuilderStorage);
 
             // initialize utxo builder
             var utxoBuilder = new UtxoBuilder(parentUtxo, kernel, transactionCache: null);
@@ -109,6 +107,7 @@ namespace BitSharp.Blockchain.Test
 
             // initialize memory utxo builder storage
             var memoryUtxoBuilderStorage = new MemoryUtxoBuilderStorage(mockParentUtxoStorage.Object);
+            kernel.Rebind<IUtxoBuilderStorage>().ToConstant(memoryUtxoBuilderStorage);
 
             // initialize utxo builder
             var utxoBuilder = new UtxoBuilder(parentUtxo, kernel, transactionCache: null);

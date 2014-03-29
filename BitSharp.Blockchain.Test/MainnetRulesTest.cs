@@ -1,6 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
+using BitSharp.Storage;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Ninject;
 using System;
@@ -22,7 +23,7 @@ namespace BitSharp.Blockchain.Test
         [TestInitialize]
         public void TestInitialize()
         {
-            this.kernel = new StandardKernel();
+            this.kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule(), new RulesModule(RulesEnum.MainNet));
             this.rules = kernel.Get<MainnetRules>();
         }
 
