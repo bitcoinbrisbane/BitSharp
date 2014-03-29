@@ -1,5 +1,5 @@
 ﻿//#define TEST_TOOL
-#define TESTNET3
+//#define TESTNET3
 //#define MEMORY
 //#define MONGODB
 #define MIXED
