@@ -13,14 +13,49 @@ namespace BitSharp.Common.Test
         [TestMethod]
         public void TestSubDispose()
         {
-            var wasCalled = false;
-            Action subDispose = () => wasCalled = true;
+            var callCount = 0;
+            Action subDispose = () => callCount++;
 
             using (var worker = new MockWorker(workAction: () => { }, subDispose: subDispose))
             {
-                Assert.IsFalse(wasCalled);
+                Assert.AreEqual(0, callCount);
             }
-            Assert.IsTrue(wasCalled);
+            Assert.AreEqual(1, callCount);
+        }
+
+        [TestMethod]
+        public void TestSubStart()
+        {
+            var callCount = 0;
+            Action subStart = () => callCount++;
+
+            using (var worker = new MockWorker(workAction: () => { }, subStart: subStart))
+            {
+                Assert.AreEqual(0, callCount);
+                worker.Start();
+                Assert.AreEqual(1, callCount);
+            }
+        }
+
+
+        [TestMethod]
+        public void TestSubStop()
+        {
+            var callCount = 0;
+            Action subStop = () => callCount++;
+
+            using (var worker = new MockWorker(workAction: () => { }, subStop: subStop))
+            {
+                Assert.AreEqual(0, callCount);
+                worker.Stop();
+                Assert.AreEqual(0, callCount);
+
+                worker.Start();
+                Assert.AreEqual(0, callCount);
+
+                worker.Stop();
+                Assert.AreEqual(1, callCount);
+            }
         }
     }
 }

@@ -21,10 +21,9 @@ namespace BitSharp.Common
         private readonly AutoResetEvent notifyEvent;
         private readonly AutoResetEvent forceNotifyEvent;
         private readonly ManualResetEventSlim idleEvent;
-        private readonly ManualResetEventSlim stopEvent;
 
-        private readonly SemaphoreSlim semaphore;
-        private bool isStarted;
+        private SemaphoreSlim semaphore;
+        private readonly ManualResetEventSlim startedEvent;
         private bool isDisposed;
 
         public Worker(string name, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
@@ -41,10 +40,9 @@ namespace BitSharp.Common
             this.notifyEvent = new AutoResetEvent(initialNotify);
             this.forceNotifyEvent = new AutoResetEvent(initialNotify);
             this.idleEvent = new ManualResetEventSlim(false);
-            this.stopEvent = new ManualResetEventSlim(true);
 
             this.semaphore = new SemaphoreSlim(1);
-            this.isStarted = false;
+            this.startedEvent = new ManualResetEventSlim(false);
             this.isDisposed = false;
         }
 
@@ -58,69 +56,64 @@ namespace BitSharp.Common
 
         public void Start()
         {
-            if (!this.isStarted)
+            this.semaphore.Do(() =>
             {
-                this.semaphore.Do(() =>
+                if (!this.startedEvent.IsSet)
                 {
-                    if (!this.isStarted)
-                    {
-                        this.workerThread.Start();
-                        this.isStarted = true;
+                    this.SubStart();
 
-                        this.SubStart();
-                    }
-                });
-            }
-
-            this.stopEvent.Set();
+                    this.workerThread.Start();
+                    this.startedEvent.Set();
+                }
+            });
         }
 
         public void Stop()
         {
             this.semaphore.Do(() =>
             {
-                this.stopEvent.Reset();
+                if (this.startedEvent.IsSet)
+                {
+                    this.SubStop();
 
-                this.SubStop();
+                    this.startedEvent.Reset();
+                }
             });
         }
 
         public void Dispose()
         {
-            if (!this.isDisposed)
+            var semaphoreLocal = this.semaphore;
+            if (semaphoreLocal != null)
             {
-                try
+                var wasDisposed = false;
+                semaphoreLocal.Do(() =>
                 {
-                    this.semaphore.Do(() =>
+                    if (!this.isDisposed)
                     {
-                        if (!this.isDisposed)
-                        {
-                            try
-                            {
-                                this.SubDispose();
-                            }
-                            catch (Exception) { }
+                        this.SubDispose();
 
-                            this.shutdownToken.Cancel();
-                            this.notifyEvent.Set();
-                            this.forceNotifyEvent.Set();
+                        this.shutdownToken.Cancel();
+                        this.notifyEvent.Set();
+                        this.forceNotifyEvent.Set();
 
-                            if (this.workerThread.IsAlive)
-                                this.workerThread.Join(5000);
+                        if (this.workerThread.IsAlive)
+                            this.workerThread.Join(5000);
 
-                            this.shutdownToken.Dispose();
-                            this.notifyEvent.Dispose();
-                            this.forceNotifyEvent.Dispose();
-                            this.idleEvent.Dispose();
-                            this.stopEvent.Dispose();
+                        this.shutdownToken.Dispose();
+                        this.notifyEvent.Dispose();
+                        this.forceNotifyEvent.Dispose();
+                        this.idleEvent.Dispose();
+                        this.startedEvent.Dispose();
 
-                            this.isStarted = false;
-                            this.isDisposed = true;
-                        }
-                    });
-                    this.semaphore.Dispose();
-                }
-                catch (Exception) { }
+                        this.semaphore = null;
+                        this.isDisposed = true;
+                        wasDisposed = true;
+                    }
+                });
+
+                if (wasDisposed)
+                    semaphoreLocal.Dispose();
             }
         }
 
@@ -186,8 +179,8 @@ namespace BitSharp.Common
                     // notify worker is idle
                     this.idleEvent.Set();
 
-                    // stop execution if requested
-                    this.stopEvent.Wait();
+                    // wait for execution to start
+                    this.startedEvent.Wait();
 
                     // delay for the requested wait time, unless forced
                     this.forceNotifyEvent.WaitOne(this.MinIdleTime);
