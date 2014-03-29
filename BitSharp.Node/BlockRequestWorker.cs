@@ -19,11 +19,7 @@ namespace BitSharp.Node
 {
     public class BlockRequestWorker : Worker
     {
-        private const int REQUESTS_PER_PEER = 100;
-        private const int STALE_REQUEST_SECONDS = 60;
-
-        private const int TARGET_CHAIN_CHUNK_COUNT = 1000;
-        private const int UPCOMING_AS_MISSING_CHUNK_COUNT = 100;
+        private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromSeconds(60);
 
         private readonly LocalClient localClient;
         private readonly BlockchainDaemon blockchainDaemon;
@@ -32,7 +28,8 @@ namespace BitSharp.Node
         private readonly ConcurrentDictionary<UInt256, DateTime> allBlockRequests;
         private readonly ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>> blockRequestsByPeer;
 
-        private SortedSet<ChainedBlock> missingBlockQueue;
+        private SortedList<int, ChainedBlock> missingBlockQueue;
+        private int missingBlockQueueIndex;
 
         private List<ChainedBlock> targetChainQueue;
         private int targetChainQueueIndex;
@@ -43,6 +40,7 @@ namespace BitSharp.Node
         private readonly ReaderWriterLockSlim blockTimesIndexLock;
 
         private int targetChainLookAhead;
+        private int criticalTargetChainLookAhead;
 
         private readonly WorkerMethod flushWorker;
         private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
@@ -56,7 +54,8 @@ namespace BitSharp.Node
 
             this.allBlockRequests = new ConcurrentDictionary<UInt256, DateTime>();
             this.blockRequestsByPeer = new ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>>();
-            this.missingBlockQueue = new SortedSet<ChainedBlock>(new HeightComparer());
+            this.missingBlockQueue = new SortedList<int, ChainedBlock>();
+            this.missingBlockQueueIndex = 0;
 
             this.localClient.OnBlock += HandleBlock;
             this.blockchainDaemon.OnChainStateChanged += HandleChainStateChanged;
@@ -67,6 +66,7 @@ namespace BitSharp.Node
             this.blockTimesIndexLock = new ReaderWriterLockSlim();
 
             this.targetChainLookAhead = 1;
+            this.criticalTargetChainLookAhead = 1;
 
             this.flushWorker = new WorkerMethod("BlockRequestWorker.FlushWorker", FlushWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
             this.flushQueue = new ConcurrentQueue<Tuple<RemoteNode, Block>>();
@@ -114,7 +114,10 @@ namespace BitSharp.Node
             var targetChainLocal = this.blockchainDaemon.TargetChain;
 
             // remove any blocks that are no longer missing
-            this.missingBlockQueue.RemoveWhere(x => this.cacheContext.BlockView.ContainsKey(x.BlockHash));
+            this.missingBlockQueue.RemoveWhere(x => this.cacheContext.BlockView.ContainsKey(x.Value.BlockHash));
+
+            // remove old missing blocks
+            this.missingBlockQueue.RemoveWhere(x => x.Value.Height < currentChainLocal.Height);
 
             // add any blocks that are currently missing
             foreach (var missingBlock in this.cacheContext.BlockView.MissingData)
@@ -122,8 +125,7 @@ namespace BitSharp.Node
                 ChainedBlock missingBlockChained;
                 if (this.cacheContext.ChainedBlockCache.TryGetValue(missingBlock, out missingBlockChained))
                 {
-                    if (!this.missingBlockQueue.Contains(missingBlockChained))
-                        this.missingBlockQueue.Add(missingBlockChained);
+                    this.missingBlockQueue[missingBlockChained.Height] = missingBlockChained;
                 }
             }
 
@@ -133,12 +135,12 @@ namespace BitSharp.Node
                 foreach (var upcomingBlock in
                     currentChainLocal.NavigateTowards(targetChainLocal)
                     .Select(x => x.Item2)
-                    .Take(Math.Min(UPCOMING_AS_MISSING_CHUNK_COUNT, this.targetChainLookAhead))
+                    .Take(this.criticalTargetChainLookAhead)
                     .Where(x =>
-                        !this.missingBlockQueue.Contains(x)
+                        !this.missingBlockQueue.ContainsKey(x.Height)
                         && !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash)))
                 {
-                    this.missingBlockQueue.Add(upcomingBlock);
+                    this.missingBlockQueue[upcomingBlock.Height] = upcomingBlock;
                 }
             }
         }
@@ -162,7 +164,6 @@ namespace BitSharp.Node
                     .Select(x => x.Item2)
                     .Take(this.targetChainLookAhead)
                     .Where(x => !this.blockchainDaemon.CacheContext.BlockView.ContainsKey(x.BlockHash))
-                    .Take(TARGET_CHAIN_CHUNK_COUNT)
                     .ToList();
                 this.targetChainQueueIndex = 0;
             }
@@ -175,9 +176,16 @@ namespace BitSharp.Node
 
             var now = DateTime.UtcNow;
             var requestTasks = new List<Task>();
+            this.missingBlockQueueIndex = 0;
 
             // remove any stale requests from the global list of requests
-            this.allBlockRequests.RemoveWhere(x => (now - x.Value) > TimeSpan.FromSeconds(STALE_REQUEST_SECONDS));
+            this.allBlockRequests.RemoveWhere(x => (now - x.Value) > STALE_REQUEST_TIME);
+
+            var peerCount = this.localClient.ConnectedPeers.Count;
+            if (peerCount == 0)
+                return;
+
+            var requestsPerPeer = this.missingBlockQueue.Count + (this.targetChainLookAhead / peerCount);
 
             // loop through each connected peer
             foreach (var peer in this.localClient.ConnectedPeers)
@@ -189,10 +197,10 @@ namespace BitSharp.Node
                     (existingKey, existingValue) => existingValue);
 
                 // remove any stale requests from the peer's list of requests
-                peerBlockRequests.RemoveWhere(x => (now - x.Value) > TimeSpan.FromSeconds(STALE_REQUEST_SECONDS));
+                peerBlockRequests.RemoveWhere(x => (now - x.Value) > STALE_REQUEST_TIME);
 
                 // determine the number of requests that can be sent to the peer
-                var requestCount = REQUESTS_PER_PEER - peerBlockRequests.Count;
+                var requestCount = requestsPerPeer - peerBlockRequests.Count;
                 if (requestCount > 0)
                 {
                     // iterate through the blocks that should be requested for this peer
@@ -201,7 +209,7 @@ namespace BitSharp.Node
                     {
                         // track block requests
                         peerBlockRequests[requestBlock] = now;
-                        this.allBlockRequests[requestBlock] = now;
+                        this.allBlockRequests.TryAdd(requestBlock, now);
 
                         // add block to inv request
                         invVectors.Add(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, requestBlock));
@@ -214,7 +222,7 @@ namespace BitSharp.Node
 
             // notify for another loop of work when out of target chain queue to use, unless there is nothing left missing
             if (this.targetChainQueueIndex >= this.targetChainQueue.Count && this.missingBlockQueue.Count > 0)
-                this.NotifyWork();
+                this.ForceWork();
         }
 
         private IEnumerable<UInt256> GetRequestBlocksForPeer(int count, ConcurrentDictionary<UInt256, DateTime> peerBlockRequests)
@@ -224,17 +232,34 @@ namespace BitSharp.Node
             else if (count == 0)
                 yield break;
 
-            // iterate through any missing blocks, all peers will request the same missing blocks
+            // keep track of blocks iterated blocks for peer
             var currentCount = 0;
-            foreach (var missingBlock in this.missingBlockQueue)
-            {
-                if (!peerBlockRequests.ContainsKey(missingBlock.BlockHash))
-                {
-                    yield return missingBlock.BlockHash;
 
-                    currentCount++;
-                    if (currentCount >= count)
-                        yield break;
+            // iterate through any missing blocks, all peers will request the same missing blocks
+            if (this.missingBlockQueue.Count > 0)
+            {
+                if (this.missingBlockQueueIndex >= this.missingBlockQueue.Count)
+                    this.missingBlockQueueIndex = 0;
+
+                var startIndex = this.missingBlockQueueIndex;
+                while (true)
+                {
+                    var missingBlock = this.missingBlockQueue.Values[this.missingBlockQueueIndex];
+                    if (!peerBlockRequests.ContainsKey(missingBlock.BlockHash))
+                    {
+                        yield return missingBlock.BlockHash;
+
+                        currentCount++;
+                        if (currentCount >= count)
+                            yield break;
+                    }
+
+                    this.missingBlockQueueIndex++;
+                    if (this.missingBlockQueueIndex >= this.missingBlockQueue.Count)
+                        this.missingBlockQueueIndex = 0;
+
+                    if (this.missingBlockQueueIndex == startIndex)
+                        break;
                 }
             }
 
@@ -273,10 +298,19 @@ namespace BitSharp.Node
                     });
                     this.blockTimes[blockTimesIndexLocal] = DateTime.UtcNow - requestTime;
 
-                    var lookAheadTime = TimeSpan.FromTicks((long)this.blockTimes.Average(x => x.Ticks))
-                        + TimeSpan.FromSeconds(5);
+                    var chainStateBlockProcessingTimeLocal = this.blockchainDaemon.ChainStateBlockProcessingTime;
+                    if (chainStateBlockProcessingTimeLocal.Ticks > 0)
+                    {
+                        var avgBlockTime = TimeSpan.FromTicks((long)this.blockTimes.Where(x => x.Ticks > 0).Average(x => x.Ticks));
+                        var lookAheadTime = avgBlockTime + TimeSpan.FromSeconds(30);
+                        this.targetChainLookAhead = (int)Math.Max(1, lookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
 
-                    this.targetChainLookAhead = (int)Math.Max(1, lookAheadTime.Ticks / this.blockchainDaemon.ChainStateBlockProcessingTime.Ticks);
+                        var criticalLookAheadTime = avgBlockTime + TimeSpan.FromMilliseconds(500);
+                        this.criticalTargetChainLookAhead = (int)Math.Max(1, criticalLookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
+
+                        //Debug.WriteLine(chainStateBlockProcessingTimeLocal);
+                        //Debug.WriteLine("{0}, {1}".Format2(this.targetChainLookAhead, this.criticalTargetChainLookAhead));
+                    }
                 }
 
                 ConcurrentDictionary<UInt256, DateTime> peerBlockRequests;
@@ -287,7 +321,7 @@ namespace BitSharp.Node
 
                 this.NotifyWork();
             }
-            
+
             //Debug.WriteLine("Look-ahead: {0}".Format2(this.lookAhead));
         }
 
