@@ -21,7 +21,7 @@ namespace BitSharp.Daemon
         public event Action OnChainStateChanged;
         public event Action OnChainStateBuilderChanged;
 
-        private static readonly TimeSpan MAX_BUILDER_LIFETIME = TimeSpan.FromMinutes(30);
+        private static readonly TimeSpan MAX_BUILDER_LIFETIME = TimeSpan.FromMinutes(10);
 
         private readonly Logger logger;
         private Func<Chain> getTargetChain;
