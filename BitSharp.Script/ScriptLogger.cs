@@ -10,6 +10,7 @@ using BitSharp.Script;
 using BitSharp.Common;
 using System.Numerics;
 using System.Collections.Immutable;
+using NLog;
 
 namespace BitSharp.Script
 {
@@ -20,10 +21,12 @@ namespace BitSharp.Script
         private static readonly bool INFO_FILE = true;
         private static readonly bool INFO_CONSOLE = true;
 
+        private readonly Logger logger;
         private StreamWriter writer;
 
-        public ScriptLogger()
+        public ScriptLogger(Logger logger)
         {
+            this.logger = logger;
             var file = new FileInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp/log/script.log"));
             if (!file.Directory.Exists)
                 file.Directory.Create();

@@ -3,6 +3,7 @@ using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Script;
 using BitSharp.Storage;
+using NLog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -25,6 +26,7 @@ namespace BitSharp.Blockchain
 
         private const UInt64 SATOSHI_PER_BTC = 100 * 1000 * 1000;
 
+        private readonly Logger logger;
         private readonly BlockHeaderCache blockHeaderCache;
 
         private readonly UInt256 highestTarget;
@@ -33,8 +35,9 @@ namespace BitSharp.Blockchain
         private readonly int difficultyInternal = 2016;
         private readonly long difficultyTargetTimespan = 14 * 24 * 60 * 60;
 
-        public MainnetRules(BlockHeaderCache blockHeaderCache)
+        public MainnetRules(Logger logger, BlockHeaderCache blockHeaderCache)
         {
+            this.logger = logger;
             this.blockHeaderCache = blockHeaderCache;
 
             this.highestTarget = UInt256.Parse("00000000FFFF0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
@@ -321,7 +324,7 @@ namespace BitSharp.Blockchain
         {
             var exceptions = new ConcurrentBag<Exception>();
 
-            var scriptEngine = new ScriptEngine();
+            var scriptEngine = new ScriptEngine(this.logger);
 
             Parallel.ForEach(GetAllBlockScripts(block, blockTxIndices, utxoBuilder), (tuple, loopState) =>
             {

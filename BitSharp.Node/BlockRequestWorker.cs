@@ -4,6 +4,7 @@ using BitSharp.Daemon;
 using BitSharp.Data;
 using BitSharp.Network;
 using BitSharp.Storage;
+using NLog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -21,6 +22,7 @@ namespace BitSharp.Node
     {
         private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromSeconds(60);
 
+        private readonly Logger logger;
         private readonly LocalClient localClient;
         private readonly BlockchainDaemon blockchainDaemon;
         private readonly ChainedBlockCache chainedBlockCache;
@@ -47,9 +49,10 @@ namespace BitSharp.Node
         private readonly WorkerMethod flushWorker;
         private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
 
-        public BlockRequestWorker(WorkerConfig workerConfig, LocalClient localClient, BlockchainDaemon blockchainDaemon, ChainedBlockCache chainedBlockCache, BlockView blockView)
-            : base("BlockRequestWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime)
+        public BlockRequestWorker(Logger logger, WorkerConfig workerConfig, LocalClient localClient, BlockchainDaemon blockchainDaemon, ChainedBlockCache chainedBlockCache, BlockView blockView)
+            : base("BlockRequestWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
+            this.logger = logger;
             this.localClient = localClient;
             this.blockchainDaemon = blockchainDaemon;
             this.chainedBlockCache = chainedBlockCache;
@@ -73,7 +76,7 @@ namespace BitSharp.Node
             this.targetChainLookAhead = 1;
             this.criticalTargetChainLookAhead = 1;
 
-            this.flushWorker = new WorkerMethod("BlockRequestWorker.FlushWorker", FlushWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
+            this.flushWorker = new WorkerMethod("BlockRequestWorker.FlushWorker", FlushWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
             this.flushQueue = new ConcurrentQueue<Tuple<RemoteNode, Block>>();
         }
 

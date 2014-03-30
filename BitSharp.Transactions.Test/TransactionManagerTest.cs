@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BitSharp.Transactions;
+using NLog;
 
 namespace BitSharp.Transactions.Test
 {
@@ -16,18 +17,19 @@ namespace BitSharp.Transactions.Test
         [TestMethod]
         public void TestCreateCoinbaseAndSpend()
         {
-            var keyPair = TransactionManager.CreateKeyPair();
+            var txManager = new TransactionManager(LogManager.CreateNullLogger());
+            var keyPair = txManager.CreateKeyPair();
             var privateKey = keyPair.Item1;
             var publicKey = keyPair.Item2;
 
-            var coinbaseTx = TransactionManager.CreateCoinbaseTransaction(publicKey, Encoding.ASCII.GetBytes("coinbase text!"));
+            var coinbaseTx = txManager.CreateCoinbaseTransaction(publicKey, Encoding.ASCII.GetBytes("coinbase text!"));
 
-            var publicKeyScript = TransactionManager.CreatePublicKeyScript(publicKey);
-            var privateKeyScript = TransactionManager.CreatePrivateKeyScript(coinbaseTx, 0, (byte)ScriptHashType.SIGHASH_ALL, privateKey, publicKey);
+            var publicKeyScript = txManager.CreatePublicKeyScript(publicKey);
+            var privateKeyScript = txManager.CreatePrivateKeyScript(coinbaseTx, 0, (byte)ScriptHashType.SIGHASH_ALL, privateKey, publicKey);
 
             var script = privateKeyScript.Concat(publicKeyScript);
 
-            var scriptEngine = new ScriptEngine();
+            var scriptEngine = new ScriptEngine(LogManager.CreateNullLogger());
             Assert.IsTrue(scriptEngine.VerifyScript(0, 0, publicKeyScript.ToArray(), coinbaseTx, 0, script));
         }
     }

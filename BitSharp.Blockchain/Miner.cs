@@ -10,11 +10,19 @@ using BitSharp.Common.ExtensionMethods;
 using BitSharp.Common;
 using BitSharp.Data;
 using System.IO;
+using NLog;
 
 namespace BitSharp.Blockchain
 {
-    public static class Miner
+    public class Miner
     {
+        private readonly Logger logger;
+
+        public Miner(Logger logger)
+        {
+            this.logger = logger;
+        }
+
         private class LocalMinerState
         {
             public readonly byte[] headerBytes;
@@ -29,7 +37,7 @@ namespace BitSharp.Blockchain
             }
         }
 
-        public static BlockHeader MineBlockHeader(BlockHeader blockHeader, UInt256 hashTarget)
+        public BlockHeader MineBlockHeader(BlockHeader blockHeader, UInt256 hashTarget)
         {
             var blockHeaderBytes = DataCalculator.EncodeBlockHeader(blockHeader);
             

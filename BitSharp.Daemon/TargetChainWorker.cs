@@ -5,6 +5,7 @@ using BitSharp.Data;
 using BitSharp.Storage;
 using Ninject;
 using Ninject.Parameters;
+using NLog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -22,6 +23,7 @@ namespace BitSharp.Daemon
         public event Action OnTargetBlockChanged;
         public event Action OnTargetChainChanged;
 
+        private readonly Logger logger;
         private readonly IBlockchainRules rules;
         private readonly ChainedBlockCache chainedBlockCache;
         private readonly InvalidBlockCache invalidBlockCache;
@@ -31,9 +33,10 @@ namespace BitSharp.Daemon
 
         private readonly AutoResetEvent rescanEvent;
 
-        public TargetChainWorker(WorkerConfig workerConfig, IKernel kernel, IBlockchainRules rules, ChainedBlockCache chainedBlockCache, InvalidBlockCache invalidBlockCache)
-            : base("TargetChainWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime)
+        public TargetChainWorker(WorkerConfig workerConfig, Logger logger, IKernel kernel, IBlockchainRules rules, ChainedBlockCache chainedBlockCache, InvalidBlockCache invalidBlockCache)
+            : base("TargetChainWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
+            this.logger = logger;
             this.rules = rules;
             this.chainedBlockCache = chainedBlockCache;
             this.invalidBlockCache = invalidBlockCache;

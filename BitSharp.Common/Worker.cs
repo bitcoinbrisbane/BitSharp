@@ -1,4 +1,5 @@
 ﻿using BitSharp.Common.ExtensionMethods;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,6 +16,7 @@ namespace BitSharp.Common
         public event Action OnWorkStarted;
         public event Action OnWorkStopped;
 
+        private readonly Logger logger;
         private readonly CancellationTokenSource shutdownToken;
 
         private readonly Thread workerThread;
@@ -26,8 +28,9 @@ namespace BitSharp.Common
         private readonly ManualResetEventSlim startedEvent;
         private bool isDisposed;
 
-        public Worker(string name, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime)
+        public Worker(string name, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime, Logger logger)
         {
+            this.logger = logger;
             this.Name = name;
             this.MinIdleTime = minIdleTime;
             this.MaxIdleTime = maxIdleTime;

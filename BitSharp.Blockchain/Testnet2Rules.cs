@@ -3,6 +3,7 @@ using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Script;
 using BitSharp.Storage;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -21,8 +22,8 @@ namespace BitSharp.Blockchain
         private readonly Block _genesisBlock;
         private readonly ChainedBlock _genesisChainedBlock;
 
-        public Testnet2Rules(BlockHeaderCache blockHeaderCache)
-            : base(blockHeaderCache)
+        public Testnet2Rules(Logger logger, BlockHeaderCache blockHeaderCache)
+            : base(logger, blockHeaderCache)
         {
             this._genesisBlock =
                 new Block

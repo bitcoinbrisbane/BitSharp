@@ -18,6 +18,7 @@ using BitSharp.Data;
 using System.IO;
 using Ninject;
 using Ninject.Parameters;
+using NLog;
 
 namespace BitSharp.Daemon
 {
@@ -40,6 +41,7 @@ namespace BitSharp.Daemon
         public event EventHandler OnChainStateChanged;
         public event EventHandler OnChainStateBuilderChanged;
 
+        private readonly Logger logger;
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
         private readonly BlockHeaderCache blockHeaderCache;
@@ -56,8 +58,9 @@ namespace BitSharp.Daemon
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
 
-        public BlockchainDaemon(IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockView blockView)
+        public BlockchainDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockView blockView)
         {
+            this.logger = logger;
             this.shutdownToken = new CancellationTokenSource();
 
             this.kernel = kernel;
@@ -143,7 +146,7 @@ namespace BitSharp.Daemon
                         /*0*/ (float)GC.GetTotalMemory(false) / 1.MILLION(),
                         /*1*/ (float)Process.GetCurrentProcess().PrivateMemorySize64 / 1.MILLION()
                         ));
-                }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromSeconds(30));
+                }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromSeconds(30), logger: this.logger);
 
             this.utxoScanWorker = new WorkerMethod("UTXO Scan Worker",
                 () =>
@@ -161,7 +164,7 @@ namespace BitSharp.Daemon
                             }
                         }
                     });
-                }, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue);
+                }, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
         }
 
         public ChainedBlock TargetBlock { get { return this.targetChainWorker.TargetBlock; } }

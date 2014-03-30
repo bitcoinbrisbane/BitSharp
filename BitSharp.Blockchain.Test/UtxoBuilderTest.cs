@@ -4,6 +4,7 @@ using BitSharp.Storage;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Ninject;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -47,7 +48,7 @@ namespace BitSharp.Blockchain.Test
             kernel.Rebind<IUtxoBuilderStorage>().ToConstant(memoryUtxoBuilderStorage);
 
             // initialize utxo builder
-            var utxoBuilder = new UtxoBuilder(parentUtxo, kernel, transactionCache: null);
+            var utxoBuilder = new UtxoBuilder(parentUtxo, LogManager.CreateNullLogger(), kernel, transactionCache: null);
 
             // create an input to spend the unspent transaction's first output
             var input1 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
@@ -110,7 +111,7 @@ namespace BitSharp.Blockchain.Test
             kernel.Rebind<IUtxoBuilderStorage>().ToConstant(memoryUtxoBuilderStorage);
 
             // initialize utxo builder
-            var utxoBuilder = new UtxoBuilder(parentUtxo, kernel, transactionCache: null);
+            var utxoBuilder = new UtxoBuilder(parentUtxo, LogManager.CreateNullLogger(), kernel, transactionCache: null);
 
             // create an input to spend the unspent transaction
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);

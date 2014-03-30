@@ -14,15 +14,24 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Collections.Immutable;
 using BitSharp.Data;
+using NLog;
 
 #if SIPA
 using Secp256k1;
+using NLog;
 #endif
 
 namespace BitSharp.Script
 {
     public class ScriptEngine
     {
+        private readonly Logger logger;
+
+        public ScriptEngine(Logger logger)
+        {
+            this.logger = logger;
+        }
+
         public bool VerifyScript(UInt256 blockHash, int txIndex, byte[] scriptPubKey, Transaction tx, int inputIndex, byte[] script)
         {
             //            logger.LogTrace(

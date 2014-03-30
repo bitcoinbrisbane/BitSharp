@@ -5,6 +5,7 @@ using BitSharp.Data;
 using BitSharp.Storage;
 using Ninject;
 using Ninject.Parameters;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -22,6 +23,7 @@ namespace BitSharp.Daemon
 
         private static readonly TimeSpan MAX_BUILDER_LIFETIME = TimeSpan.FromMinutes(30);
 
+        private readonly Logger logger;
         private Func<Chain> getTargetChain;
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
@@ -41,9 +43,10 @@ namespace BitSharp.Daemon
 
         private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, IKernel kernel, IBlockchainRules rules, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache, InvalidBlockCache invalidBlockCache)
-            : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime)
+        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, Logger logger, IKernel kernel, IBlockchainRules rules, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache, InvalidBlockCache invalidBlockCache)
+            : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
+            this.logger = logger;
             this.getTargetChain = getTargetChain;
             this.kernel = kernel;
             this.rules = rules;
@@ -133,7 +136,7 @@ namespace BitSharp.Daemon
                         new ChainStateBuilder
                         (
                             chainStateLocal.Chain.ToBuilder(),
-                            new UtxoBuilder(chainStateLocal.Utxo, this.kernel, this.transactionCache)
+                            new UtxoBuilder(chainStateLocal.Utxo, this.logger, this.kernel, this.transactionCache)
                         );
                 }
 

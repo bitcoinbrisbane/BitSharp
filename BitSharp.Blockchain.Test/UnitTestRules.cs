@@ -1,6 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Data;
 using BitSharp.Storage;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -23,8 +24,8 @@ namespace BitSharp.Blockchain.Test
         private Block _genesisBlock;
         private ChainedBlock _genesisChainedBlock;
 
-        public UnitTestRules(BlockHeaderCache blockHeaderCache)
-            : base(blockHeaderCache)
+        public UnitTestRules(Logger logger, BlockHeaderCache blockHeaderCache)
+            : base(logger, blockHeaderCache)
         {
             this._highestTarget = Target0;
         }

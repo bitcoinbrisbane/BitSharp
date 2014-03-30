@@ -53,6 +53,9 @@ namespace BitSharp.Client
 
                 var modules = new List<INinjectModule>();
 
+                // add logging module
+                modules.Add(new LoggingModule());
+
                 // add storage module
 #if TEST_TOOL
                 modules.Add(new MemoryStorageModule());

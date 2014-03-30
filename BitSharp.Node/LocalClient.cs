@@ -22,6 +22,7 @@ using System.IO;
 using System.Globalization;
 using Ninject;
 using Ninject.Parameters;
+using NLog;
 
 namespace BitSharp.Node
 {
@@ -39,6 +40,7 @@ namespace BitSharp.Node
 
         private static readonly Random random = new Random();
 
+        private readonly Logger logger;
         private readonly CancellationTokenSource shutdownToken;
 
         private readonly RulesEnum type;
@@ -71,10 +73,11 @@ namespace BitSharp.Node
 
         private Socket listenSocket;
 
-        public LocalClient(RulesEnum type, IKernel kernel, IBlockchainRules rules, BlockchainDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, TransactionCache transactionCache, BlockView blockView, NetworkPeerCache networkPeerCache)
+        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, BlockchainDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, TransactionCache transactionCache, BlockView blockView, NetworkPeerCache networkPeerCache)
         {
             this.shutdownToken = new CancellationTokenSource();
 
+            this.logger = logger;
             this.type = type;
             this.kernel = kernel;
             this.rules = rules;
@@ -85,13 +88,13 @@ namespace BitSharp.Node
             this.blockView = blockView;
             this.networkPeerCache = networkPeerCache;
 
-            this.connectWorker = new WorkerMethod("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+            this.connectWorker = new WorkerMethod("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), this.logger);
             this.blockRequestWorker = kernel.Get<BlockRequestWorker>(
                 new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30))),
                 new ConstructorArgument("localClient", this));
-            this.requestHeadersWorker = new WorkerMethod("LocalClient.RequestHeadersWorker", RequestHeadersWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
-            this.requestTransactionsWorker = new WorkerMethod("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000));
-            this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30));
+            this.requestHeadersWorker = new WorkerMethod("LocalClient.RequestHeadersWorker", RequestHeadersWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000), this.logger);
+            this.requestTransactionsWorker = new WorkerMethod("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000), this.logger);
+            this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30), this.logger);
 
             this.blockchainDaemon.OnTargetChainChanged += OnTargetChainChanged;
 
@@ -482,7 +485,7 @@ namespace BitSharp.Node
         {
             try
             {
-                var remoteNode = new RemoteNode(remoteEndPoint);
+                var remoteNode = new RemoteNode(remoteEndPoint, this.logger);
 
                 this.unconnectedPeers.TryRemove(remoteEndPoint.ToCandidatePeerKey());
                 this.pendingPeers.TryAdd(remoteNode.RemoteEndPoint, remoteNode);

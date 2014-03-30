@@ -3,6 +3,7 @@ using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Storage;
+using NLog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -27,8 +28,8 @@ namespace BitSharp.Daemon
 
         private readonly AutoResetEvent rescanEvent;
 
-        public TargetBlockWorker(WorkerConfig workerConfig, ChainedBlockCache chainedBlockCache, InvalidBlockCache invalidBlockCache)
-            : base("TargetBlockWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime)
+        public TargetBlockWorker(WorkerConfig workerConfig, Logger logger, ChainedBlockCache chainedBlockCache, InvalidBlockCache invalidBlockCache)
+            : base("TargetBlockWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.chainedBlockCache = chainedBlockCache;
             this.invalidBlockCache = invalidBlockCache;

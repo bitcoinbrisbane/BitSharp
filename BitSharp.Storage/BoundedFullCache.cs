@@ -1,6 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Storage.ExtensionMethods;
+using NLog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -22,13 +23,15 @@ namespace BitSharp.Storage
         public event Action<TKey> OnRemoved;
         public event Action<TKey> OnMissing;
 
+        private readonly Logger logger;
         private readonly string name;
         private readonly IBoundedStorage<TKey, TValue> dataStorage;
         private readonly ConcurrentDictionary<TKey, TValue> cache;
         private readonly ConcurrentSetBuilder<TKey> missingData;
 
-        public BoundedFullCache(string name, IBoundedStorage<TKey, TValue> dataStorage)
+        public BoundedFullCache(string name, IBoundedStorage<TKey, TValue> dataStorage, Logger logger)
         {
+            this.logger = logger;
             this.name = name;
             this.dataStorage = dataStorage;
             this.missingData = new ConcurrentSetBuilder<TKey>();

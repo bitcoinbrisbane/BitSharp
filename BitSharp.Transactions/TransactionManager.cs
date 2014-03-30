@@ -2,6 +2,7 @@
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Script;
+using NLog;
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.Sec;
 using Org.BouncyCastle.Crypto.Generators;
@@ -21,7 +22,14 @@ namespace BitSharp.Transactions
 {
     public class TransactionManager
     {
-        public static Tuple<ECPrivateKeyParameters, ECPublicKeyParameters> CreateKeyPair()
+        private readonly Logger logger;
+
+        public TransactionManager(Logger logger)
+        {
+            this.logger = logger;
+        }
+
+        public Tuple<ECPrivateKeyParameters, ECPublicKeyParameters> CreateKeyPair()
         {
             var curve = SecNamedCurves.GetByName("secp256k1");
             var domainParameters = new ECDomainParameters(curve.Curve, curve.G, curve.N, curve.H, curve.GetSeed());
@@ -40,7 +48,7 @@ namespace BitSharp.Transactions
             return Tuple.Create(privateKey, publicKey);
         }
 
-        public static byte[] CreatePublicAddress(ECPublicKeyParameters publicKey)
+        public byte[] CreatePublicAddress(ECPublicKeyParameters publicKey)
         {
             var publicAddress =
                 new byte[] { 0x04 }
@@ -52,12 +60,12 @@ namespace BitSharp.Transactions
             return publicAddress;
         }
 
-        public static byte[] CreatePublicKeyScript(ECPublicKeyParameters publicKey)
+        public byte[] CreatePublicKeyScript(ECPublicKeyParameters publicKey)
         {
             return CreatePublicKeyScript(CreatePublicAddress(publicKey));
         }
 
-        public static byte[] CreatePublicKeyScript(byte[] publicAddress)
+        public byte[] CreatePublicKeyScript(byte[] publicAddress)
         {
             var publicAddressHash = Crypto.SingleRIPEMD160(Crypto.SingleSHA256(publicAddress));
 
@@ -75,10 +83,10 @@ namespace BitSharp.Transactions
             }
         }
 
-        public static byte[] CreatePrivateKeyScript(Transaction tx, int inputIndex, byte hashType, ECPrivateKeyParameters privateKey, ECPublicKeyParameters publicKey)
+        public byte[] CreatePrivateKeyScript(Transaction tx, int inputIndex, byte hashType, ECPrivateKeyParameters privateKey, ECPublicKeyParameters publicKey)
         {
             //TODO
-            var scriptEngine = new ScriptEngine();
+            var scriptEngine = new ScriptEngine(this.logger);
 
             var publicAddress = CreatePublicAddress(publicKey);
             var publicKeyScript = CreatePublicKeyScript(publicAddress);
@@ -119,7 +127,7 @@ namespace BitSharp.Transactions
             }
         }
 
-        public static Transaction CreateCoinbaseTransaction(ECPublicKeyParameters publicKey, byte[] coinbase)
+        public Transaction CreateCoinbaseTransaction(ECPublicKeyParameters publicKey, byte[] coinbase)
         {
             var tx = new Transaction
             (
@@ -151,7 +159,7 @@ namespace BitSharp.Transactions
             return tx;
         }
 
-        public static Transaction CreateSpendTransaction(Transaction prevTx, int prevInputIndex, byte hashType, UInt64 value, ECPrivateKeyParameters fromPrivateKey, ECPublicKeyParameters fromPublicKey, ECPublicKeyParameters toPublicKey)
+        public Transaction CreateSpendTransaction(Transaction prevTx, int prevInputIndex, byte hashType, UInt64 value, ECPrivateKeyParameters fromPrivateKey, ECPublicKeyParameters fromPublicKey, ECPublicKeyParameters toPublicKey)
         {
             var tx = new Transaction
             (

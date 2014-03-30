@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using BitSharp.Common.ExtensionMethods;
 using System.Collections.Immutable;
 using BitSharp.Common;
+using NLog;
 
 namespace BitSharp.Network
 {
@@ -23,6 +24,7 @@ namespace BitSharp.Network
         public event Action<RemoteNode, ImmutableArray<byte>> OnPing;
         public event Action<RemoteNode> OnDisconnect;
 
+        private readonly Logger logger;
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1);
 
         private bool startedConnecting = false;
@@ -33,13 +35,14 @@ namespace BitSharp.Network
         private readonly RemoteReceiver receiver;
         private readonly RemoteSender sender;
 
-        public RemoteNode(IPEndPoint remoteEndPoint)
+        public RemoteNode(IPEndPoint remoteEndPoint, Logger logger)
         {
+            this.logger = logger;
             this.remoteEndPoint = remoteEndPoint;
 
             this.socket = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            this.receiver = new RemoteReceiver(this, this.socket, persistent: false);
-            this.sender = new RemoteSender(this.socket);
+            this.receiver = new RemoteReceiver(this, this.socket, persistent: false, logger: this.logger);
+            this.sender = new RemoteSender(this.socket, this.logger);
 
             WireNode();
         }
@@ -52,8 +55,8 @@ namespace BitSharp.Network
             this.localEndPoint = (IPEndPoint)socket.LocalEndPoint;
             this.remoteEndPoint = (IPEndPoint)socket.RemoteEndPoint;
 
-            this.receiver = new RemoteReceiver(this, this.socket, persistent: false);
-            this.sender = new RemoteSender(this.socket);
+            this.receiver = new RemoteReceiver(this, this.socket, persistent: false, logger: this.logger);
+            this.sender = new RemoteSender(this.socket, this.logger);
 
             WireNode();
         }

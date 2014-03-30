@@ -3,6 +3,7 @@ using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using BitSharp.Storage;
+using NLog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -24,8 +25,8 @@ namespace BitSharp.Daemon
         private readonly TransactionCache transactionCache;
         private readonly BlockRollbackCache blockRollbackCache;
 
-        public PruningWorker(WorkerConfig workerConfig, Func<ChainState> getChainState, IBlockchainRules rules, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache)
-            : base("PruningWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime)
+        public PruningWorker(WorkerConfig workerConfig, Func<ChainState> getChainState, Logger logger, IBlockchainRules rules, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache)
+            : base("PruningWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.getChainState = getChainState;
             this.rules = rules;

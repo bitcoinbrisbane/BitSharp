@@ -13,6 +13,7 @@ using BitSharp.Common.ExtensionMethods;
 using System.Collections.Immutable;
 using System.IO;
 using BitSharp.Data;
+using NLog;
 
 namespace BitSharp.Network
 {
@@ -20,11 +21,13 @@ namespace BitSharp.Network
     {
         public event Action<Exception> OnFailed;
 
+        private readonly Logger logger;
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1);
         private readonly Socket socket;
 
-        public RemoteSender(Socket socket)
+        public RemoteSender(Socket socket, Logger logger)
         {
+            this.logger = logger;
             this.socket = socket;
         }
 

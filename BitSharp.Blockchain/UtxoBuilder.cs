@@ -4,6 +4,7 @@ using BitSharp.Data;
 using BitSharp.Storage;
 using Ninject;
 using Ninject.Parameters;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -17,13 +18,15 @@ namespace BitSharp.Blockchain
 {
     public class UtxoBuilder : IDisposable
     {
+        private readonly Logger logger;
         private readonly IUtxoBuilderStorage utxoBuilderStorage;
         private readonly TransactionCache transactionCache;
         
         private ImmutableList<KeyValuePair<UInt256, UInt256>>.Builder blockRollbackInformation;
 
-        public UtxoBuilder(Utxo parentUtxo, IKernel kernel, TransactionCache transactionCache)
+        public UtxoBuilder(Utxo parentUtxo, Logger logger, IKernel kernel, TransactionCache transactionCache)
         {
+            this.logger = logger;
             this.utxoBuilderStorage = kernel.Get<IUtxoBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo.Storage));
             this.transactionCache = transactionCache;
             

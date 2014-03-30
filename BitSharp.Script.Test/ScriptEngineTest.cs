@@ -14,27 +14,26 @@ using BitSharp.BlockHelper;
 using BitSharp.BlockHelper.Test;
 using System.Collections.Immutable;
 using BitSharp.Data;
+using NLog;
 
 namespace BitSharp.Test
 {
     [TestClass]
     public class ScriptEngineTest : TestBase
     {
+        private readonly Logger logger;
         private BlockProvider provider;
-        private ScriptLogger logger;
 
         [TestInitialize]
         public void TestInitialize()
         {
             provider = new FileSystemBlockProvider();
             //provider = new BlockExplorerProvider();
-            logger = new ScriptLogger();
         }
 
         [TestCleanup]
         public void TestCleanup()
         {
-            logger.Dispose();
         }
 
         [TestMethod]
@@ -120,7 +119,7 @@ namespace BitSharp.Test
 
         private void TestTransactionSignature(byte[][] expectedSignatures, Transaction tx, IDictionary<UInt256, Transaction> txLookup)
         {
-            var scriptEngine = new ScriptEngine();
+            var scriptEngine = new ScriptEngine(this.logger);
             for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
             {
                 var input = tx.Inputs[inputIndex];
@@ -135,7 +134,7 @@ namespace BitSharp.Test
 
         private void TestTransactionVerifySignature(byte[] expectedHashTypes, byte[][] expectedSignatures, byte[][] expectedSignatureHashes, Transaction tx, IDictionary<UInt256, Transaction> txLookup)
         {
-            var scriptEngine = new ScriptEngine();
+            var scriptEngine = new ScriptEngine(this.logger);
 
             for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
             {
@@ -162,7 +161,7 @@ namespace BitSharp.Test
 
         private void TestTransactionVerifyScript(Transaction tx, IDictionary<UInt256, Transaction> txLookup)
         {
-            var scriptEngine = new ScriptEngine();
+            var scriptEngine = new ScriptEngine(this.logger);
 
             for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
             {

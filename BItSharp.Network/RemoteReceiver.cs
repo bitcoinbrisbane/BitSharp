@@ -14,6 +14,7 @@ using BitSharp.Common.ExtensionMethods;
 using BitSharp.Common;
 using System.Collections.Immutable;
 using BitSharp.Data;
+using NLog;
 
 namespace BitSharp.Network
 {
@@ -34,12 +35,14 @@ namespace BitSharp.Network
         public event Action<InventoryPayload> OnGetData;
         public event Action<ImmutableArray<byte>> OnPing;
 
+        private readonly Logger logger;
         private readonly RemoteNode owner;
         private readonly Socket socket;
         private readonly bool persistent;
 
-        public RemoteReceiver(RemoteNode owner, Socket socket, bool persistent)
+        public RemoteReceiver(RemoteNode owner, Socket socket, bool persistent, Logger logger)
         {
+            this.logger = logger;
             this.owner = owner;
             this.socket = socket;
             this.persistent = persistent;

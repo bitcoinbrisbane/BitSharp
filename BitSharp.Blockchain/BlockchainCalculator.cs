@@ -14,11 +14,13 @@ using System.IO;
 using BitSharp.Storage;
 using System.Globalization;
 using System.Collections;
+using NLog;
 
 namespace BitSharp.Blockchain
 {
     public class BlockchainCalculator
     {
+        private readonly Logger logger;
         private readonly CancellationToken shutdownToken;
         private readonly IBlockchainRules rules;
         private readonly BlockHeaderCache blockHeaderCache;
@@ -27,8 +29,9 @@ namespace BitSharp.Blockchain
         private readonly BlockView blockView;
         private readonly BlockRollbackCache blockRollbackCache;
 
-        public BlockchainCalculator(CancellationToken shutdownToken, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockView blockView, BlockRollbackCache blockRollbackCache)
+        public BlockchainCalculator(CancellationToken shutdownToken, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockView blockView, BlockRollbackCache blockRollbackCache)
         {
+            this.logger = logger;
             this.shutdownToken = shutdownToken;
             this.rules = rules;
             this.blockHeaderCache = blockHeaderCache;
