@@ -171,11 +171,10 @@ namespace BitSharp.Blockchain
 
         public void Unspend(TxInput input, ChainedBlock block, Dictionary<UInt256, UInt256> blockRollbackDictionary)
         {
-            //TODO i need rollback information for a fully spent transaction being resurrected
-            //TODO the fully spent transaction could have existed all the way back to the genesis block
-            //TODO i need to be able to get the output from the transaction, and the block it ocurred in so i can store confirmation information
-
             // retrieve rollback information
+            //TODO currently a MissingDataException will get thrown if the rollback information is missing
+            //TODO rollback is still possible if any resurrecting transactions can be found
+            //TODO the network does not allow arbitrary transaction lookup, but if the transactions can be retrieved then this code should allow it
             UInt256 prevTxBlockHash;
             if (!blockRollbackDictionary.TryGetValue(input.PreviousTxOutputKey.TxHash, out prevTxBlockHash))
             {

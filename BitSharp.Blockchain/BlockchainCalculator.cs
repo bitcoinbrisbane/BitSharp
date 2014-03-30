@@ -87,9 +87,6 @@ namespace BitSharp.Blockchain
                         CalculateUtxo(chainedBlock, block, chainStateBuilder.Utxo, out txCount, out inputCount));
 
                     // collect rollback informatino and store it
-                    //TODO currently a MissingDataException will get thrown if the rollback information is missing
-                    //TODO rollback is still possible if any resurrecting transactions can be found
-                    //TODO the network does not allow arbitrary transaction lookup, but if the transactions can be retrieved then this code should allow it
                     var blockRollbackInformation = chainStateBuilder.Utxo.CollectBlockRollbackInformation();
                     this.blockRollbackCache[block.Hash] = blockRollbackInformation;
 
@@ -192,6 +189,9 @@ namespace BitSharp.Blockchain
             var blockHeight = chainStateBuilder.Height;
             var utxoBuilder = chainStateBuilder.Utxo;
 
+            //TODO currently a MissingDataException will get thrown if the rollback information is missing
+            //TODO rollback is still possible if any resurrecting transactions can be found
+            //TODO the network does not allow arbitrary transaction lookup, but if the transactions can be retrieved then this code should allow it
             var blockRollbackInformation = this.blockRollbackCache[block.Hash];
             var blockRollbackDictionary = new Dictionary<UInt256, UInt256>();
             blockRollbackDictionary.AddRange(blockRollbackInformation);
