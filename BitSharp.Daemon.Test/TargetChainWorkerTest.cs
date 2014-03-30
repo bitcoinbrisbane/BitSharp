@@ -30,7 +30,7 @@ namespace BitSharp.Daemon.Test
         public void TestSimpleChain()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule());
+            var kernel = new StandardKernel(new TestLoggingModule(), new MemoryStorageModule(), new CacheModule());
 
             // initialize data
             var chainedBlock0 = new ChainedBlock(blockHash: 0, previousBlockHash: 9999, height: 0, totalWork: 0);
@@ -79,8 +79,8 @@ namespace BitSharp.Daemon.Test
             workNotifyEvent.WaitOne();
             workStoppedEvent.WaitOne();
             // wait for worker (target block changed)
-            workNotifyEvent.WaitOne();
-            workStoppedEvent.WaitOne();
+            workNotifyEvent.WaitOneOrFail(1000);
+            workStoppedEvent.WaitOneOrFail(1000);
 
             // verify chained to block 1
             Assert.AreEqual(chainedBlock1, targetChainWorker.TargetBlock);
@@ -94,8 +94,8 @@ namespace BitSharp.Daemon.Test
             workNotifyEvent.WaitOne();
             workStoppedEvent.WaitOne();
             // wait for worker (target block changed)
-            workNotifyEvent.WaitOne();
-            workStoppedEvent.WaitOne();
+            workNotifyEvent.WaitOneOrFail(1000);
+            workStoppedEvent.WaitOneOrFail(1000);
 
             // verify chained to block 2
             Assert.AreEqual(chainedBlock2, targetChainWorker.TargetBlock);
@@ -111,7 +111,7 @@ namespace BitSharp.Daemon.Test
         public void TestSimpleChainReverse()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule());
+            var kernel = new StandardKernel(new TestLoggingModule(), new MemoryStorageModule(), new CacheModule());
 
             // initialize data
             var chainedBlock0 = new ChainedBlock(blockHash: 0, previousBlockHash: 9999, height: 0, totalWork: 0);
@@ -162,8 +162,8 @@ namespace BitSharp.Daemon.Test
             workNotifyEvent.WaitOne();
             workStoppedEvent.WaitOne();
             // wait for worker (target block changed)
-            workNotifyEvent.WaitOne();
-            workStoppedEvent.WaitOne();
+            workNotifyEvent.WaitOneOrFail(1000);
+            workStoppedEvent.WaitOneOrFail(1000);
 
             // verify no work done, but the target block should still be updated
             Assert.AreEqual(chainedBlock4, targetChainWorker.TargetBlock);
@@ -215,7 +215,7 @@ namespace BitSharp.Daemon.Test
         public void TestTargetChainReorganize()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule());
+            var kernel = new StandardKernel(new TestLoggingModule(), new MemoryStorageModule(), new CacheModule());
 
             // initialize data
             var chainedBlock0 = new ChainedBlock(blockHash: 0, previousBlockHash: 9999, height: 0, totalWork: 0);
@@ -271,8 +271,8 @@ namespace BitSharp.Daemon.Test
             workNotifyEvent.WaitOne();
             workStoppedEvent.WaitOne();
             // wait for worker (target block changed)
-            workNotifyEvent.WaitOne();
-            workStoppedEvent.WaitOne();
+            workNotifyEvent.WaitOneOrFail(1000);
+            workStoppedEvent.WaitOneOrFail(1000);
 
             // verify chained to block 1
             Assert.AreEqual(chainedBlock1, targetChainWorker.TargetBlock);
@@ -286,8 +286,8 @@ namespace BitSharp.Daemon.Test
             workNotifyEvent.WaitOne();
             workStoppedEvent.WaitOne();
             // wait for worker (target block changed)
-            workNotifyEvent.WaitOne();
-            workStoppedEvent.WaitOne();
+            workNotifyEvent.WaitOneOrFail(1000);
+            workStoppedEvent.WaitOneOrFail(1000);
 
             // verify chained to block 2
             Assert.AreEqual(chainedBlock2, targetChainWorker.TargetBlock);
@@ -301,8 +301,8 @@ namespace BitSharp.Daemon.Test
             workNotifyEvent.WaitOne();
             workStoppedEvent.WaitOne();
             // wait for worker (target block changed)
-            workNotifyEvent.WaitOne();
-            workStoppedEvent.WaitOne();
+            workNotifyEvent.WaitOneOrFail(1000);
+            workStoppedEvent.WaitOneOrFail(1000);
 
             // verify chained to block 3A
             Assert.AreEqual(chainedBlock3A, targetChainWorker.TargetBlock);
@@ -316,8 +316,8 @@ namespace BitSharp.Daemon.Test
             workNotifyEvent.WaitOne();
             workStoppedEvent.WaitOne();
             // wait for worker (target block changed)
-            workNotifyEvent.WaitOne();
-            workStoppedEvent.WaitOne();
+            workNotifyEvent.WaitOneOrFail(1000);
+            workStoppedEvent.WaitOneOrFail(1000);
 
             // verify chained to block 4A
             Assert.AreEqual(chainedBlock4A, targetChainWorker.TargetBlock);
@@ -331,8 +331,8 @@ namespace BitSharp.Daemon.Test
             workNotifyEvent.WaitOne();
             workStoppedEvent.WaitOne();
             // wait for worker (target block changed)
-            workNotifyEvent.WaitOne();
-            workStoppedEvent.WaitOne();
+            workNotifyEvent.WaitOneOrFail(1000);
+            workStoppedEvent.WaitOneOrFail(1000);
 
             // verify chained to block 5A
             Assert.AreEqual(chainedBlock5A, targetChainWorker.TargetBlock);
@@ -358,8 +358,8 @@ namespace BitSharp.Daemon.Test
             workNotifyEvent.WaitOne();
             workStoppedEvent.WaitOne();
             // wait for worker (target block changed)
-            workNotifyEvent.WaitOne();
-            workStoppedEvent.WaitOne();
+            workNotifyEvent.WaitOneOrFail(1000);
+            workStoppedEvent.WaitOneOrFail(1000);
 
             // verify chained to block 4B
             Assert.AreEqual(chainedBlock4B, targetChainWorker.TargetBlock);
@@ -376,6 +376,15 @@ namespace BitSharp.Daemon.Test
             Assert.AreEqual(expected.Length, actual.Count);
             for (var i = 0; i < actual.Count; i++)
                 Assert.AreEqual(expected[i], actual[i]);
+        }
+    }
+
+    internal static class TargetChainWorkerTest_ExtensionMethods
+    {
+        public static void WaitOneOrFail(this WaitHandle handle, int millisecondsTimeout)
+        {
+            if (!handle.WaitOne(millisecondsTimeout))
+                Assert.Fail("WaitHandle hung");
         }
     }
 }

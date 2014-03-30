@@ -15,20 +15,24 @@ using BitSharp.BlockHelper.Test;
 using System.Collections.Immutable;
 using BitSharp.Data;
 using NLog;
+using Ninject;
 
 namespace BitSharp.Test
 {
     [TestClass]
     public class ScriptEngineTest
     {
-        private readonly Logger logger;
+        private IKernel kernel;
+        private Logger logger;
         private BlockProvider provider;
 
         [TestInitialize]
         public void TestInitialize()
         {
-            provider = new FileSystemBlockProvider();
-            //provider = new BlockExplorerProvider();
+            this.kernel = new StandardKernel(new TestLoggingModule());
+            this.logger = this.kernel.Get<Logger>();
+            this.provider = new FileSystemBlockProvider();
+            //this.provider = new BlockExplorerProvider();
         }
 
         [TestCleanup]

@@ -20,7 +20,7 @@ namespace BitSharp.Daemon.Test
         public void TestSimpleTargetBlock()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new MemoryStorageModule(), new CacheModule());
+            var kernel = new StandardKernel(new TestLoggingModule(), new MemoryStorageModule(), new CacheModule());
             var chainedBlockCache = kernel.Get<ChainedBlockCache>();
 
             // initialize data
