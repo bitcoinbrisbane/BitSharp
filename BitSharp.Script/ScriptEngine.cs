@@ -34,12 +34,13 @@ namespace BitSharp.Script
 
         public bool VerifyScript(UInt256 blockHash, int txIndex, byte[] scriptPubKey, Transaction tx, int inputIndex, byte[] script)
         {
-            this.logger.Trace(
-@"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            if (this.logger.IsTraceEnabled)
+                this.logger.Trace(
+    @"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Verifying script for block {0}, transaction {1}, input {2}
 {3}
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-                , blockHash, txIndex, inputIndex, script.ToArray().ToHexDataString());
+                    , blockHash, txIndex, inputIndex, script.ToArray().ToHexDataString());
 
             Stack stack, altStack;
             if (
@@ -72,7 +73,8 @@ Verifying script for block {0}, transaction {1}, input {2}
                     var opByte = opReader.ReadByte();
                     var op = (ScriptOp)Enum.ToObject(typeof(ScriptOp), opByte);
 
-                    this.logger.Trace("Executing {0} with stack count: {1}", OpName(opByte), stack.Count);
+                    if (this.logger.IsTraceEnabled)
+                        this.logger.Trace("Executing {0} with stack count: {1}", OpName(opByte), stack.Count);
 
                     switch (op)
                     {
@@ -121,7 +123,8 @@ Verifying script for block {0}, transaction {1}, input {2}
 
                                 var value = stack.PopBytes();
 
-                                this.logger.Trace("{0} dropped {1}", OpName(opByte), value);
+                                if (this.logger.IsTraceEnabled)
+                                    this.logger.Trace("{0} dropped {1}", OpName(opByte), value);
                             }
                             break;
 
@@ -133,7 +136,8 @@ Verifying script for block {0}, transaction {1}, input {2}
                                 var value = stack.PeekBytes();
                                 stack.PushBytes(value);
 
-                                this.logger.Trace("{0} duplicated {2}", OpName(opByte), value);
+                                if (this.logger.IsTraceEnabled)
+                                    this.logger.Trace("{0} duplicated {2}", OpName(opByte), value);
                             }
                             break;
 
@@ -152,7 +156,8 @@ Verifying script for block {0}, transaction {1}, input {2}
                                 var result = value1.SequenceEqual(value2);
                                 stack.PushBool(result);
 
-                                this.logger.Trace(
+                                if (this.logger.IsTraceEnabled)
+                                    this.logger.Trace(
 @"{0} compared values:
     value1: {1}
     value2: {2}
@@ -182,7 +187,8 @@ Verifying script for block {0}, transaction {1}, input {2}
                                 var hash = Crypto.SingleSHA256(value);
                                 stack.PushBytes(hash);
 
-                                this.logger.Trace(
+                                if (this.logger.IsTraceEnabled)
+                                    this.logger.Trace(
 @"{0} hashed value:
     value:  {1}
     hash:   {2}", OpName(opByte), value, hash);
@@ -199,7 +205,8 @@ Verifying script for block {0}, transaction {1}, input {2}
                                 var hash = Crypto.SingleRIPEMD160(Crypto.SingleSHA256(value));
                                 stack.PushBytes(hash);
 
-                                this.logger.Trace(
+                                if (this.logger.IsTraceEnabled)
+                                    this.logger.Trace(
 @"{0} hashed value:
     value:  {1}
     hash:   {2}", OpName(opByte), value, hash);
@@ -222,7 +229,9 @@ Verifying script for block {0}, transaction {1}, input {2}
                                 stack.PushBool(result);
 
                                 var finishTime = DateTime.UtcNow;
-                                this.logger.Trace(
+
+                                if (this.logger.IsTraceEnabled)
+                                    this.logger.Trace(
 @"{0} executed in {9} ms:
     tx:                 {1}
     inputIndex:         {2}
@@ -254,7 +263,9 @@ Verifying script for block {0}, transaction {1}, input {2}
                             if (opByte >= (int)ScriptOp.OP_PUSHBYTES1 && opByte <= (int)ScriptOp.OP_PUSHBYTES75)
                             {
                                 stack.PushBytes(opReader.ReadBytes(opByte));
-                                this.logger.Trace("{0} loaded {1} bytes onto the stack: {2}", OpName(opByte), opByte, stack.PeekBytes());
+
+                                if (this.logger.IsTraceEnabled)
+                                    this.logger.Trace("{0} loaded {1} bytes onto the stack: {2}", OpName(opByte), opByte, stack.PeekBytes());
                             }
                             // Unknown op
                             else
@@ -266,7 +277,8 @@ Verifying script for block {0}, transaction {1}, input {2}
                             break;
                     }
 
-                    this.logger.Trace(new string('-', 80));
+                    if (this.logger.IsTraceEnabled)
+                        this.logger.Trace(new string('-', 80));
                 }
             }
 

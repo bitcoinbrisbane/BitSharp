@@ -141,7 +141,9 @@ namespace BitSharp.Network
                     handler(message);
 
                 stopwatch.Stop();
-                this.logger.Trace("{2,25} Received message {0,12} in {1,6} ms".Format2(message.Command, stopwatch.ElapsedMilliseconds, this.socket.RemoteEndPoint));
+                
+                if (this.logger.IsTraceEnabled)
+                    this.logger.Trace("{2,25} Received message {0,12} in {1,6} ms".Format2(message.Command, stopwatch.ElapsedMilliseconds, this.socket.RemoteEndPoint));
             }
         }
 

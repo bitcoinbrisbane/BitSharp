@@ -601,13 +601,16 @@ namespace BitSharp.Node
 
         private void OnBlockHeader(BlockHeader blockHeader)
         {
-            this.logger.Trace("Received block header {0}".Format2(blockHeader.Hash));
+            if (this.logger.IsTraceEnabled)
+                this.logger.Trace("Received block header {0}".Format2(blockHeader.Hash));
+            
             this.blockHeaderCache.TryAdd(blockHeader.Hash, blockHeader);
         }
 
         private void OnTransaction(Transaction transaction)
         {
-            this.logger.Trace("Received block header {0}".Format2(transaction.Hash));
+            if (this.logger.IsTraceEnabled)
+                this.logger.Trace("Received block header {0}".Format2(transaction.Hash));
 
             DateTime ignore;
             this.requestedTransactions.TryRemove(transaction.Hash, out ignore);
