@@ -134,7 +134,7 @@ namespace BitSharp.Node
 
             // get average block request time
             var avgBlockRequestTime = TimeSpan.FromTicks((long)(this.blockTimes.Where(x => x.Ticks > 0).AverageOrDefault(x => x.Ticks) ?? 0));
-            
+
             // determine target chain look ahead
             var lookAheadTime = avgBlockRequestTime + TimeSpan.FromSeconds(30);
             this.targetChainLookAhead = (int)Math.Max(1, lookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
@@ -143,15 +143,15 @@ namespace BitSharp.Node
             var criticalLookAheadTime = avgBlockRequestTime + TimeSpan.FromMilliseconds(500);
             this.criticalTargetChainLookAhead = (int)Math.Max(1, criticalLookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
 
-            Debug.WriteLine(new string('-', 80));
-            Debug.WriteLine("Block Processing Time: {0}".Format2(chainStateBlockProcessingTimeLocal));
-            Debug.WriteLine("Block Processing Rate: {0:#,##0.000}/s".Format2(1 / chainStateBlockProcessingTimeLocal.TotalSeconds));
-            Debug.WriteLine("Block Request Time: {0}".Format2(avgBlockRequestTime));
-            Debug.WriteLine("Look Ahead: {0:#,##0}".Format2(this.targetChainLookAhead));
-            Debug.WriteLine("Critical Look Ahead: {0:#,##0}".Format2(this.criticalTargetChainLookAhead));
-            Debug.WriteLine("Missing Block Queue Count: {0:#,##0}".Format2(this.missingBlockQueue.Count));
-            Debug.WriteLine("Block Request Count: {0:#,##0}".Format2(this.allBlockRequests.Count));
-            Debug.WriteLine(new string('-', 80));
+            //Debug.WriteLine(new string('-', 80));
+            //Debug.WriteLine("Block Processing Time: {0}".Format2(chainStateBlockProcessingTimeLocal));
+            //Debug.WriteLine("Block Processing Rate: {0:#,##0.000}/s".Format2(1 / chainStateBlockProcessingTimeLocal.TotalSeconds));
+            //Debug.WriteLine("Block Request Time: {0}".Format2(avgBlockRequestTime));
+            //Debug.WriteLine("Look Ahead: {0:#,##0}".Format2(this.targetChainLookAhead));
+            //Debug.WriteLine("Critical Look Ahead: {0:#,##0}".Format2(this.criticalTargetChainLookAhead));
+            //Debug.WriteLine("Missing Block Queue Count: {0:#,##0}".Format2(this.missingBlockQueue.Count));
+            //Debug.WriteLine("Block Request Count: {0:#,##0}".Format2(this.allBlockRequests.Count));
+            //Debug.WriteLine(new string('-', 80));
         }
 
         private void UpdateMissingBlockQueue()
