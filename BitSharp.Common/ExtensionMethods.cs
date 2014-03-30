@@ -182,7 +182,19 @@ namespace BitSharp.Common.ExtensionMethods
 
         public static string Format2(this string value, params object[] args)
         {
-            return string.Format(value, args);
+            var result = string.Format(value, args);
+
+            var commentIndex = 0;
+            while ((commentIndex = result.IndexOf("/*")) >= 0)
+            {
+                var commentEndIndex = result.IndexOf("*/", commentIndex + 2);
+                if (commentEndIndex < 0)
+                    break;
+
+                result = result.Remove(commentIndex, commentEndIndex - commentIndex + 2);
+            }
+
+            return result;
         }
 
         public static int ToIntChecked(this UInt32 value)
