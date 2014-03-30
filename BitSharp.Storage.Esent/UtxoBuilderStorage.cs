@@ -3,8 +3,10 @@ using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using Microsoft.Isam.Esent.Collections.Generic;
 using Microsoft.Isam.Esent.Interop;
+using NLog;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -15,13 +17,15 @@ namespace BitSharp.Storage.Esent
 {
     public class UtxoBuilderStorage : IUtxoBuilderStorage
     {
+        private readonly Logger logger;
         private readonly string directory;
         private readonly PersistentByteDictionary unspentTransactions;
         private readonly PersistentByteDictionary unspentOutputs;
         private bool closed = false;
 
-        public UtxoBuilderStorage(IUtxoStorage parentUtxo)
+        public UtxoBuilderStorage(IUtxoStorage parentUtxo, Logger logger)
         {
+            this.logger = logger;
             this.directory = GetDirectory();
             if (parentUtxo is UtxoStorage)
             {
@@ -152,12 +156,15 @@ namespace BitSharp.Storage.Esent
 
         public IUtxoStorage ToImmutable(UInt256 blockHash)
         {
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
             // prepare destination directory
             var destPath = UtxoStorage.GetDirectory(blockHash);
             UtxoStorage.DeleteUtxoDirectory(destPath);
             Directory.CreateDirectory(destPath + "_tx");
             Directory.CreateDirectory(destPath + "_output");
-            
+
             // get database instances
             var instanceField = typeof(PersistentDictionary<string, string>)
                 .GetField("instance", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -169,6 +176,9 @@ namespace BitSharp.Storage.Esent
                 Api.JetBackupInstance(unspentTransactionsInstance, destPath + "_tx", BackupGrbit.Atomic, null);
             using (var session = new Session(unspentOutputsInstance))
                 Api.JetBackupInstance(unspentOutputsInstance, destPath + "_output", BackupGrbit.Atomic, null);
+
+            // log snapshot info
+            this.logger.Info("Saved UTXO snapshot for {0} in: {1}".Format2(blockHash, stopwatch.Elapsed));
 
             // return saved utxo
             return new UtxoStorage(blockHash);
