@@ -40,12 +40,12 @@ namespace BitSharp.Blockchain
 
         public void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
         {
-            chainStateBuilder.Stats.totalStopwatch.Start();
-            chainStateBuilder.Stats.currentRateStopwatch.Start();
+            //chainStateBuilder.Stats.totalStopwatch.Start();
+            //chainStateBuilder.Stats.currentRateStopwatch.Start();
 
             // calculate the new blockchain along the target path
             chainStateBuilder.IsConsistent = true;
-            foreach (var pathElement in BlockAndInputsLookAhead(chainStateBuilder.Chain.NavigateTowards(getTargetChain), lookAhead: 1))
+            foreach (var pathElement in BlockLookAhead(chainStateBuilder.Chain.NavigateTowards(getTargetChain), lookAhead: 1))
             {
                 chainStateBuilder.IsConsistent = false;
                 var startTime = DateTime.UtcNow;
@@ -60,7 +60,6 @@ namespace BitSharp.Blockchain
                 var direction = pathElement.Item1;
                 var chainedBlock = pathElement.Item2;
                 var block = pathElement.Item3;
-                //var prevInputTxes = pathElement.Item4;
 
                 if (direction < 0)
                 {
@@ -76,7 +75,7 @@ namespace BitSharp.Blockchain
                     // validate the block
                     chainStateBuilder.Stats.validateStopwatch.Start();
                     new MethodTimer(false).Time("ValidateBlock", () =>
-                        this.rules.ValidateBlock(block, chainStateBuilder/*, prevInputTxes*/));
+                        this.rules.ValidateBlock(block, chainStateBuilder));
                     chainStateBuilder.Stats.validateStopwatch.Stop();
 
                     // calculate the new block utxo, double spends will be checked for
@@ -104,23 +103,15 @@ namespace BitSharp.Blockchain
                         onProgress(DateTime.UtcNow - startTime);
 
                     // blockchain processing statistics
-                    chainStateBuilder.Stats.currentBlockCount++;
-                    chainStateBuilder.Stats.currentTxCount += txCount;
-                    chainStateBuilder.Stats.currentInputCount += inputCount;
-                    chainStateBuilder.Stats.totalTxCount += txCount;
-                    chainStateBuilder.Stats.totalInputCount += inputCount;
+                    chainStateBuilder.Stats.blockCount++;
+                    chainStateBuilder.Stats.txCount += txCount;
+                    chainStateBuilder.Stats.inputCount += inputCount;
 
                     var txInterval = TimeSpan.FromSeconds(15);
                     if (DateTime.UtcNow - chainStateBuilder.Stats.lastLogTime >= txInterval)
                     {
                         LogBlockchainProgress(chainStateBuilder);
                         chainStateBuilder.Stats.lastLogTime = DateTime.UtcNow;
-
-                        chainStateBuilder.Stats.currentBlockCount = 0;
-                        chainStateBuilder.Stats.currentTxCount = 0;
-                        chainStateBuilder.Stats.currentInputCount = 0;
-                        chainStateBuilder.Stats.currentRateStopwatch.Reset();
-                        chainStateBuilder.Stats.currentRateStopwatch.Start();
                     }
                 }
                 else
@@ -128,33 +119,30 @@ namespace BitSharp.Blockchain
 
                 chainStateBuilder.IsConsistent = true;
             }
-
-            chainStateBuilder.Stats.totalStopwatch.Stop();
-            chainStateBuilder.Stats.currentRateStopwatch.Stop();
         }
 
         public void LogBlockchainProgress(ChainStateBuilder chainStateBuilder)
         {
-            var currentBlockRate = (float)chainStateBuilder.Stats.currentBlockCount / chainStateBuilder.Stats.currentRateStopwatch.ElapsedSecondsFloat();
-            var currentTxRate = (float)chainStateBuilder.Stats.currentTxCount / chainStateBuilder.Stats.currentRateStopwatch.ElapsedSecondsFloat();
-            var currentInputRate = (float)chainStateBuilder.Stats.currentInputCount / chainStateBuilder.Stats.currentRateStopwatch.ElapsedSecondsFloat();
+            var blockRate = (float)chainStateBuilder.Stats.blockCount / chainStateBuilder.Stats.durationStopwatch.ElapsedSecondsFloat();
+            var txRate = (float)chainStateBuilder.Stats.txCount / chainStateBuilder.Stats.durationStopwatch.ElapsedSecondsFloat();
+            var inputRate = (float)chainStateBuilder.Stats.inputCount / chainStateBuilder.Stats.durationStopwatch.ElapsedSecondsFloat();
 
             Debug.WriteLine(
                 string.Join("\n",
                     new string('-', 200),
-                    "Height: {0,10} | Duration: {1} hh:mm:ss | Validation: {2} hh:mm:ss | Blocks/s: {3,7} | Tx/s: {4,7} | Inputs/s: {5,7} | Total Tx: {6,7} | Total Inputs: {7,7} | Utxo Size: {8,7}",
+                    "Height: {0,10} | Duration: {1} /*| Validation: {2} */| Blocks/s: {3,7} | Tx/s: {4,7} | Inputs/s: {5,7} | Processed Tx: {6,7} | Processed Inputs: {7,7} | Utxo Size: {8,7}",
                     new string('-', 200)
                 )
                 .Format2
                 (
                 /*0*/ chainStateBuilder.Height.ToString("#,##0"),
-                /*1*/ chainStateBuilder.Stats.totalStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
+                /*1*/ chainStateBuilder.Stats.durationStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
                 /*2*/ chainStateBuilder.Stats.validateStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
-                /*3*/ currentBlockRate.ToString("#,##0"),
-                /*4*/ currentTxRate.ToString("#,##0"),
-                /*5*/ currentInputRate.ToString("#,##0"),
-                /*6*/ chainStateBuilder.Stats.totalTxCount.ToString("#,##0"),
-                /*7*/ chainStateBuilder.Stats.totalInputCount.ToString("#,##0"),
+                /*3*/ blockRate.ToString("#,##0"),
+                /*4*/ txRate.ToString("#,##0"),
+                /*5*/ inputRate.ToString("#,##0"),
+                /*6*/ chainStateBuilder.Stats.txCount.ToString("#,##0"),
+                /*7*/ chainStateBuilder.Stats.inputCount.ToString("#,##0"),
                 /*8*/ chainStateBuilder.Utxo.OutputCount.ToString("#,##0")
                 ));
         }
@@ -296,7 +284,7 @@ namespace BitSharp.Blockchain
             }
         }
 
-        public IEnumerable<Tuple<int, ChainedBlock, Block/*, ImmutableDictionary<UInt256, Transaction>*/>> BlockAndInputsLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chain, int lookAhead)
+        public IEnumerable<Tuple<int, ChainedBlock, Block>> BlockLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chain, int lookAhead)
         {
             return chain
                 .Select(
@@ -310,18 +298,7 @@ namespace BitSharp.Blockchain
                             var block = new MethodTimer(false).Time("GetBlock", () =>
                                 this.blockView[chainedBlock.BlockHash]);
 
-                            //var prevInputTxes = ImmutableDictionary.CreateBuilder<UInt256, Transaction>();
-                            //new MethodTimer(false).Time("GetPrevInputTxes", () =>
-                            //{
-                            //    foreach (var prevInput in block.Transactions.Skip(1).SelectMany(x => x.Inputs))
-                            //    {
-                            //        var prevInputTxHash = prevInput.PreviousTxOutputKey.TxHash;
-                            //        if (!prevInputTxes.ContainsKey(prevInputTxHash))
-                            //            prevInputTxes.Add(prevInputTxHash, this.CacheContext.TransactionCache[prevInputTxHash]);
-                            //    }
-                            //});
-
-                            return Tuple.Create(chainedBlockDirection, chainedBlock, block/*, prevInputTxes.ToImmutable()*/);
+                            return Tuple.Create(chainedBlockDirection, chainedBlock, block);
                         }
                         catch (MissingDataException e)
                         {

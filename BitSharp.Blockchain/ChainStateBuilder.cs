@@ -21,6 +21,7 @@ namespace BitSharp.Blockchain
             this.chain = chain;
             this.utxo = utxo;
             this.stats = new BuilderStats();
+            this.stats.durationStopwatch.Start();
             this.IsConsistent = true;
         }
 
@@ -71,14 +72,13 @@ namespace BitSharp.Blockchain
 
         public sealed class BuilderStats
         {
-            public long totalTxCount;
-            public long totalInputCount;
-            public Stopwatch totalStopwatch = new Stopwatch();
-            public Stopwatch currentRateStopwatch = new Stopwatch();
+            public Stopwatch durationStopwatch = new Stopwatch();
             public Stopwatch validateStopwatch = new Stopwatch();
-            public long currentBlockCount;
-            public long currentTxCount;
-            public long currentInputCount;
+            
+            public long blockCount;
+            public long txCount;
+            public long inputCount;
+            
             public DateTime lastLogTime = DateTime.UtcNow;
 
             internal BuilderStats() { }
