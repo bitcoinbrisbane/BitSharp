@@ -151,7 +151,7 @@ namespace BitSharp.Blockchain
             //TDOO everytime a rollback occurs going forward, a new sent of spent outputs will need to be redownloaded,
             //TODO unlesss the entire UTXO is rescanned with all missing pieces redownloaded
             
-            //TODO the extra information can still be easily cleaned up easily during pruning, just delete it like BlockRollbackCache.
+            //TODO the extra information can still be cleaned up easily during pruning, just delete it like BlockRollbackCache.
             
             //TODO also, the current rollback dictionary and this one should be added directly to IUtxoStorage like the other two
 
