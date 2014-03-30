@@ -123,9 +123,10 @@ namespace BitSharp.Blockchain
 
         public void LogBlockchainProgress(ChainStateBuilder chainStateBuilder)
         {
-            var blockRate = (float)chainStateBuilder.Stats.blockCount / chainStateBuilder.Stats.durationStopwatch.ElapsedSecondsFloat();
-            var txRate = (float)chainStateBuilder.Stats.txCount / chainStateBuilder.Stats.durationStopwatch.ElapsedSecondsFloat();
-            var inputRate = (float)chainStateBuilder.Stats.inputCount / chainStateBuilder.Stats.durationStopwatch.ElapsedSecondsFloat();
+            var elapsedSeconds = chainStateBuilder.Stats.durationStopwatch.ElapsedSecondsFloat();
+            var blockRate = (float)chainStateBuilder.Stats.blockCount / elapsedSeconds;
+            var txRate = (float)chainStateBuilder.Stats.txCount / elapsedSeconds;
+            var inputRate = (float)chainStateBuilder.Stats.inputCount / elapsedSeconds;
 
             Debug.WriteLine(
                 string.Join("\n",
