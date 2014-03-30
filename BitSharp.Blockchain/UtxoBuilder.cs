@@ -145,6 +145,16 @@ namespace BitSharp.Blockchain
             // the block containing the previous transaction will need to be known during rollback in case the previous transaction cannot be found
             this.blockRollbackInformation[input.PreviousTxOutputKey.TxHash] = unspentTx.ConfirmedBlockHash;
 
+            //TODO i should store the spent TxOutput as well, otherwise rollback performance will
+            //TODO be permanently slow when fast synchronizing by tossing blocks as they come in
+            
+            //TDOO everytime a rollback occurs going forward, a new sent of spent outputs will need to be redownloaded,
+            //TODO unlesss the entire UTXO is rescanned with all missing pieces redownloaded
+            
+            //TODO the extra information can still be easily cleaned up easily during pruning, just delete it like BlockRollbackCache.
+            
+            //TODO also, the current rollback dictionary and this one should be added directly to IUtxoStorage like the other two
+
             // remove the output from the utxo
             this.utxoBuilderStorage.RemoveOutput(input.PreviousTxOutputKey);
         }
