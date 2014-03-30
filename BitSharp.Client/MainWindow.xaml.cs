@@ -61,7 +61,7 @@ namespace BitSharp.Client
 #elif MONGODB
                 modules.Add(new MongoStorageModule());
 #elif MIXED
-                modules.Add(new MixedStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: int.MaxValue)); // 500.MILLION()));
+                modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), transientBlockStorage: true));
 #else
                 modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION()));
 #endif
