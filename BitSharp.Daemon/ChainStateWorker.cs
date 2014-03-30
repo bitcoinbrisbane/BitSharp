@@ -119,6 +119,7 @@ namespace BitSharp.Daemon
 
                     //TODO keep the builder open favors performance when catching up
                     //TODO once caught up, it should switch over to quickly returning committed utxo's as new blocks come in
+                    //TODO should be configurable, as doing this requires keeping two copies of the utxo on disk at all times
                     var newChain = this.chainStateBuilder.Chain.ToImmutable();
                     var newUtxo = this.chainStateBuilder.Utxo.ToImmutable(newChain.LastBlock.BlockHash);
                     //this.chainStateBuilder.Dispose();
