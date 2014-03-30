@@ -87,6 +87,9 @@ namespace BitSharp.Blockchain
                         CalculateUtxo(chainedBlock, block, chainStateBuilder.Utxo, out txCount, out inputCount));
 
                     // collect rollback informatino and store it
+                    //TODO currently a MissingDataException will get thrown if the rollback information is missing
+                    //TODO rollback is still possible if any resurrecting transactions can be found
+                    //TODO the network does not allow arbitrary transaction lookup, but if the transactions can be retrieved then this code should allow it
                     var blockRollbackInformation = chainStateBuilder.Utxo.CollectBlockRollbackInformation();
                     this.blockRollbackCache[block.Hash] = blockRollbackInformation;
 
