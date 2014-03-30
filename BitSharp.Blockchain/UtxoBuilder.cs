@@ -21,16 +21,16 @@ namespace BitSharp.Blockchain
         private readonly Logger logger;
         private readonly IUtxoBuilderStorage utxoBuilderStorage;
         private readonly TransactionCache transactionCache;
-        
-        private ImmutableList<KeyValuePair<UInt256, UInt256>>.Builder blockRollbackInformation;
+
+        private ImmutableDictionary<UInt256, UInt256>.Builder blockRollbackInformation;
 
         public UtxoBuilder(Utxo parentUtxo, Logger logger, IKernel kernel, TransactionCache transactionCache)
         {
             this.logger = logger;
             this.utxoBuilderStorage = kernel.Get<IUtxoBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo.Storage));
             this.transactionCache = transactionCache;
-            
-            this.blockRollbackInformation = ImmutableList.CreateBuilder<KeyValuePair<UInt256, UInt256>>();
+
+            this.blockRollbackInformation = ImmutableDictionary.CreateBuilder<UInt256, UInt256>();
         }
 
         ~UtxoBuilder()
@@ -134,13 +134,16 @@ namespace BitSharp.Blockchain
             if (unspentTx.OutputStates.Any(x => x == OutputState.Unspent))
             {
                 this.utxoBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
-                this.blockRollbackInformation.Add(new KeyValuePair<UInt256, UInt256>(input.PreviousTxOutputKey.TxHash, unspentTx.ConfirmedBlockHash));
             }
             // remove fully spent transaction from the utxo
             else
             {
                 this.utxoBuilderStorage.RemoveTransaction(input.PreviousTxOutputKey.TxHash);
             }
+
+            // store rollback information
+            // the block containing the previous transaction will need to be known during rollback in case the previous transaction cannot be found
+            this.blockRollbackInformation[input.PreviousTxOutputKey.TxHash] = unspentTx.ConfirmedBlockHash;
 
             // remove the output from the utxo
             this.utxoBuilderStorage.RemoveOutput(input.PreviousTxOutputKey);
@@ -181,7 +184,7 @@ namespace BitSharp.Blockchain
                 //TODO throw should indicate rollback info is missing
                 throw new MissingDataException(null);
             }
-            
+
             // retrieve previous transaction
             Transaction prevTx;
             if (!this.transactionCache.TryGetValue(input.PreviousTxOutputKey.TxHash, out prevTx))
@@ -223,8 +226,8 @@ namespace BitSharp.Blockchain
 
         public IImmutableList<KeyValuePair<UInt256, UInt256>> CollectBlockRollbackInformation()
         {
-            var info = this.blockRollbackInformation.ToImmutable();
-            this.blockRollbackInformation = ImmutableList.CreateBuilder<KeyValuePair<UInt256, UInt256>>();
+            var info = this.blockRollbackInformation.ToImmutableList();
+            this.blockRollbackInformation = ImmutableDictionary.CreateBuilder<UInt256, UInt256>();
             return info;
         }
 
