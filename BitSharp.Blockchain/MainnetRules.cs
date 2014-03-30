@@ -323,7 +323,7 @@ namespace BitSharp.Blockchain
 
             var scriptEngine = new ScriptEngine();
 
-            Parallel.ForEach(GetAllBlockScripts(block, blockTxIndices, utxoBuilder), new ParallelOptions { MaxDegreeOfParallelism = 1 }, (tuple, loopState) =>
+            Parallel.ForEach(GetAllBlockScripts(block, blockTxIndices, utxoBuilder), (tuple, loopState) =>
             {
                 try
                 {
@@ -337,6 +337,7 @@ namespace BitSharp.Blockchain
                     var script = input.ScriptSignature.AddRange(prevOutput.ScriptPublicKey);
                     if (!scriptEngine.VerifyScript(block.Hash, txIndex, prevOutput.ScriptPublicKey.ToArray(), tx, inputIndex, script.ToArray()))
                     {
+                        Debug.WriteLine("Script did not pass in block: {0}, tx: {1}, {2}, input: {3}".Format2(block.Hash, txIndex, tx.Hash, inputIndex));
                         exceptions.Add(new ValidationException(block.Hash));
                         if (!IgnoreScriptErrors)
                             loopState.Break();
