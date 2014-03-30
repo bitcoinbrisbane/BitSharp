@@ -95,9 +95,9 @@ namespace BitSharp.Network
                         this.isConnected = true;
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    //Debug.WriteLine(string.Format("Error on connecting to {0}: {1}", remoteEndPoint, e.Message));
+                    this.logger.DebugException(string.Format("Error on connecting to {0}", remoteEndPoint), e);
                     Disconnect();
                 }
             });
@@ -147,7 +147,7 @@ namespace BitSharp.Network
 
         private void HandleFailed(Exception e)
         {
-            //Debug.WriteLine(string.Format("Remote peer {0} failed, disconnecting: {1}", this.remoteEndPoint, e.Message));
+            this.logger.DebugException("Remote peer failed: {0}".Format2(this.remoteEndPoint), e);
             Disconnect();
         }
 

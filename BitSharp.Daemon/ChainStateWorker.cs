@@ -165,7 +165,7 @@ namespace BitSharp.Daemon
             {
                 if (!(e is MissingDataException))
                 {
-                    Debug.WriteLine(
+                    this.logger.Warn(
                         string.Join("\n",
                             new string('-', 200),
                             "ChainStateWorker failure: {0}",

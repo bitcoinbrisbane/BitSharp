@@ -30,6 +30,7 @@ using System.Windows.Navigation;
 using BitSharp.Network;
 using Ninject;
 using Ninject.Modules;
+using NLog;
 
 namespace BitSharp.Client
 {
@@ -39,6 +40,7 @@ namespace BitSharp.Client
     public partial class MainWindow : Window
     {
         private IKernel kernel;
+        private Logger logger;
         private MainWindowViewModel viewModel;
 
         public MainWindow()
@@ -49,12 +51,17 @@ namespace BitSharp.Client
                 //MainnetRules.BypassValidation = true;
                 MainnetRules.IgnoreScriptErrors = true;
 
-                Debug.WriteLine(DateTime.Now);
-
-                var modules = new List<INinjectModule>();
+                // initialize kernel
+                this.kernel = new StandardKernel();
 
                 // add logging module
-                modules.Add(new LoggingModule());
+                this.kernel.Load(new LoggingModule(LogLevel.Info));
+                
+                // log startup
+                this.logger = kernel.Get<Logger>();
+                this.logger.Info("Starting up: {0}".Format2(DateTime.Now));
+
+                var modules = new List<INinjectModule>();
 
                 // add storage module
 #if TEST_TOOL
@@ -81,8 +88,8 @@ namespace BitSharp.Client
                 modules.Add(new RulesModule(RulesEnum.MainNet));
 #endif
 
-                // initialize kernel
-                this.kernel = new StandardKernel(modules.ToArray());
+                // load modules
+                this.kernel.Load(modules.ToArray());
 
                 // start the blockchain daemon
                 this.kernel.Bind<BlockchainDaemon>().ToSelf().InSingletonScope();
@@ -128,7 +135,16 @@ namespace BitSharp.Client
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e);
+                if (this.logger != null)
+                {
+                    this.logger.FatalException("Application failed", e);
+                    LogManager.Flush();
+                }
+                else
+                {
+                    Console.WriteLine(e);
+                }
+
                 Environment.Exit(-1);
             }
         }

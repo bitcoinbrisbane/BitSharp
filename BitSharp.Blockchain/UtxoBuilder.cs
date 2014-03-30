@@ -88,7 +88,7 @@ namespace BitSharp.Blockchain
                 else
                 {
                     // duplicate transaction output
-                    //Debug.WriteLine("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(blockHeight, block.Hash.ToHexNumberString()));
+                    this.logger.Warn("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(block.Height, block.BlockHash.ToHexNumberString()));
                     throw new ValidationException(block.BlockHash);
                 }
             }
@@ -153,7 +153,7 @@ namespace BitSharp.Blockchain
             if (!this.utxoBuilderStorage.TryGetTransaction(tx.Hash, out unspentTx))
             {
                 // missing transaction output
-                //Debug.WriteLine("Missing transaction at block {0:#,##0}, {1}, tx {2}, output {3}".Format2(blockHeight, block.Hash.ToHexNumberString(), txIndex, outputIndex));
+                this.logger.Warn("Missing transaction at block {0:#,##0}, {1}, tx {2}".Format2(block.Height, block.BlockHash.ToHexNumberString(), tx.Hash));
                 throw new ValidationException(block.BlockHash);
             }
 

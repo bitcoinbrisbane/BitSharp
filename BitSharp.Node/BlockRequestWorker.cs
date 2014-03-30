@@ -146,15 +146,15 @@ namespace BitSharp.Node
             var criticalLookAheadTime = avgBlockRequestTime + TimeSpan.FromMilliseconds(500);
             this.criticalTargetChainLookAhead = (int)Math.Max(1, criticalLookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
 
-            //Debug.WriteLine(new string('-', 80));
-            //Debug.WriteLine("Block Processing Time: {0}".Format2(chainStateBlockProcessingTimeLocal));
-            //Debug.WriteLine("Block Processing Rate: {0:#,##0.000}/s".Format2(1 / chainStateBlockProcessingTimeLocal.TotalSeconds));
-            //Debug.WriteLine("Block Request Time: {0}".Format2(avgBlockRequestTime));
-            //Debug.WriteLine("Look Ahead: {0:#,##0}".Format2(this.targetChainLookAhead));
-            //Debug.WriteLine("Critical Look Ahead: {0:#,##0}".Format2(this.criticalTargetChainLookAhead));
-            //Debug.WriteLine("Missing Block Queue Count: {0:#,##0}".Format2(this.missingBlockQueue.Count));
-            //Debug.WriteLine("Block Request Count: {0:#,##0}".Format2(this.allBlockRequests.Count));
-            //Debug.WriteLine(new string('-', 80));
+            this.logger.Debug(new string('-', 80));
+            this.logger.Debug("Block Processing Time: {0}".Format2(chainStateBlockProcessingTimeLocal));
+            this.logger.Debug("Block Processing Rate: {0:#,##0.000}/s".Format2(1 / chainStateBlockProcessingTimeLocal.TotalSeconds));
+            this.logger.Debug("Block Request Time: {0}".Format2(avgBlockRequestTime));
+            this.logger.Debug("Look Ahead: {0:#,##0}".Format2(this.targetChainLookAhead));
+            this.logger.Debug("Critical Look Ahead: {0:#,##0}".Format2(this.criticalTargetChainLookAhead));
+            this.logger.Debug("Missing Block Queue Count: {0:#,##0}".Format2(this.missingBlockQueue.Count));
+            this.logger.Debug("Block Request Count: {0:#,##0}".Format2(this.allBlockRequests.Count));
+            this.logger.Debug(new string('-', 80));
         }
 
         private void UpdateMissingBlockQueue()
@@ -355,8 +355,6 @@ namespace BitSharp.Node
 
                 this.NotifyWork();
             }
-
-            //Debug.WriteLine("Look-ahead: {0}".Format2(this.lookAhead));
         }
 
         private void HandleBlock(RemoteNode remoteNode, Block block)

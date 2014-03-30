@@ -19,7 +19,7 @@ using NLog;
 namespace BitSharp.Test
 {
     [TestClass]
-    public class ScriptEngineTest : TestBase
+    public class ScriptEngineTest
     {
         private readonly Logger logger;
         private BlockProvider provider;
@@ -147,10 +147,6 @@ namespace BitSharp.Test
 
                 byte[] txSignature, txSignatureHash;
                 var result = scriptEngine.VerifySignature(prevOutput.ScriptPublicKey, tx, sig.ToArray(), pubKey.ToArray(), inputIndex, out hashType, out txSignature, out txSignatureHash);
-
-                Debug.WriteLine(hashType);
-                Debug.WriteLine(txSignature.ToHexDataString());
-                Debug.WriteLine(txSignatureHash.ToHexNumberString());
 
                 Assert.AreEqual(expectedHashTypes[inputIndex], hashType);
                 CollectionAssert.AreEqual(expectedSignatures[inputIndex].ToList(), txSignature.ToList());

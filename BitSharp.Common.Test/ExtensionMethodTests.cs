@@ -11,7 +11,7 @@ using BitSharp.Common.Test;
 namespace BitSharp.Common.Test
 {
     [TestClass]
-    public class ExtensionMethodTests : TestBase
+    public class ExtensionMethodTests
     {
         [TestMethod]
         public void TestByteArrayConcat()

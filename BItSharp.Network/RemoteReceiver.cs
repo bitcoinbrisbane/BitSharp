@@ -141,7 +141,7 @@ namespace BitSharp.Network
                     handler(message);
 
                 stopwatch.Stop();
-                //Debug.WriteLine(string.Format("{2,25} Received message {0,12} in {1,6} ms", message.Command, stopwatch.ElapsedMilliseconds, this.socket.RemoteEndPoint));
+                this.logger.Trace("{2,25} Received message {0,12} in {1,6} ms".Format2(message.Command, stopwatch.ElapsedMilliseconds, this.socket.RemoteEndPoint));
             }
         }
 
@@ -290,7 +290,6 @@ namespace BitSharp.Network
                 case "version":
                     {
                         var versionPayload = NetworkEncoder.DecodeVersionPayload(payload, payload.Length);
-                        //Debug.WriteLine(string.Format("{0}, {1}", versionPayload.RemoteAddress.ToIPEndPoint(), this.socket.RemoteEndPoint));
 
                         var handler = this.OnVersion;
                         if (handler != null)
@@ -308,7 +307,7 @@ namespace BitSharp.Network
 
                 default:
                     {
-                        Debug.WriteLine("Unhandled incoming message: {0}".Format2(message.Command));
+                        this.logger.Warn("Unhandled incoming message: {0}".Format2(message.Command));
                     }
                     break;
             }

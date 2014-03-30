@@ -34,13 +34,12 @@ namespace BitSharp.Script
 
         public bool VerifyScript(UInt256 blockHash, int txIndex, byte[] scriptPubKey, Transaction tx, int inputIndex, byte[] script)
         {
-            //            logger.LogTrace(
-            //@"
-            //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-            //Verifying script for block {0}, transaction {1}, input {2}
-            //{3}
-            //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-            //                , blockHash, txIndex, inputIndex, script.ToArray().ToHexDataString());
+            this.logger.Trace(
+@"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Verifying script for block {0}, transaction {1}, input {2}
+{3}
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+                , blockHash, txIndex, inputIndex, script.ToArray().ToHexDataString());
 
             Stack stack, altStack;
             if (
@@ -73,7 +72,7 @@ namespace BitSharp.Script
                     var opByte = opReader.ReadByte();
                     var op = (ScriptOp)Enum.ToObject(typeof(ScriptOp), opByte);
 
-                    //logger.LogTrace("Executing {0} with stack count: {1}", OpName(opByte), stack.Count);
+                    this.logger.Trace("Executing {0} with stack count: {1}", OpName(opByte), stack.Count);
 
                     switch (op)
                     {
@@ -122,7 +121,7 @@ namespace BitSharp.Script
 
                                 var value = stack.PopBytes();
 
-                                //logger.LogTrace("{0} dropped {1}", OpName(opByte), value);
+                                this.logger.Trace("{0} dropped {1}", OpName(opByte), value);
                             }
                             break;
 
@@ -134,7 +133,7 @@ namespace BitSharp.Script
                                 var value = stack.PeekBytes();
                                 stack.PushBytes(value);
 
-                                //logger.LogTrace("{0} duplicated {2}", OpName(opByte), value);
+                                this.logger.Trace("{0} duplicated {2}", OpName(opByte), value);
                             }
                             break;
 
@@ -153,11 +152,11 @@ namespace BitSharp.Script
                                 var result = value1.SequenceEqual(value2);
                                 stack.PushBool(result);
 
-                                //                            logger.LogTrace(
-                                //@"{0} compared values:
-                                //value1: {1}
-                                //value2: {2}
-                                //result: {3}", OpName(opByte), value1, value2, result);
+                                this.logger.Trace(
+@"{0} compared values:
+    value1: {1}
+    value2: {2}
+    result: {3}", OpName(opByte), value1, value2, result);
 
                                 if (op == ScriptOp.OP_EQUALVERIFY)
                                 {
@@ -183,10 +182,10 @@ namespace BitSharp.Script
                                 var hash = Crypto.SingleSHA256(value);
                                 stack.PushBytes(hash);
 
-                                //                            logger.LogTrace(
-                                //@"{0} hashed value:
-                                //value:  {1}
-                                //hash:   {2}", OpName(opByte), value, hash);
+                                this.logger.Trace(
+@"{0} hashed value:
+    value:  {1}
+    hash:   {2}", OpName(opByte), value, hash);
                             }
                             break;
 
@@ -200,10 +199,10 @@ namespace BitSharp.Script
                                 var hash = Crypto.SingleRIPEMD160(Crypto.SingleSHA256(value));
                                 stack.PushBytes(hash);
 
-                                //                            logger.LogTrace(
-                                //@"{0} hashed value:
-                                //value:  {1}
-                                //hash:   {2}", OpName(opByte), value, hash);
+                                this.logger.Trace(
+@"{0} hashed value:
+    value:  {1}
+    hash:   {2}", OpName(opByte), value, hash);
                             }
                             break;
 
@@ -223,20 +222,16 @@ namespace BitSharp.Script
                                 stack.PushBool(result);
 
                                 var finishTime = DateTime.UtcNow;
-                                //                            logger.LogTrace(
-                                //@"{0} executed in {13} ms:
-                                //tx:                 {1}
-                                //inputIndex:         {2}
-                                //pubKey:             {3}
-                                //sig:                {4}
-                                //hashType:           {5}
-                                //txSignature:        {6}
-                                //txSignatureHash:    {7}
-                                //x:                  {8}
-                                //y:                  {9}
-                                //r:                  {10}
-                                //s:                  {11}
-                                //result:             {12}", OpName(opByte), tx.ToRawBytes(), inputIndex, pubKey, sig, hashType, txSignature, txSignatureHash, x, y, r, s, result, (finishTime - startTime).TotalMilliseconds.ToString("0"));
+                                this.logger.Trace(
+@"{0} executed in {9} ms:
+    tx:                 {1}
+    inputIndex:         {2}
+    pubKey:             {3}
+    sig:                {4}
+    hashType:           {5}
+    txSignature:        {6}
+    txSignatureHash:    {7}
+    result:             {8}", OpName(opByte), new byte[0] /*tx.ToRawBytes()*/, inputIndex, pubKey, sig, hashType, txSignature, txSignatureHash, result, (finishTime - startTime).TotalMilliseconds.ToString("0"));
 
                                 if (op == ScriptOp.OP_CHECKSIGVERIFY)
                                 {
@@ -259,19 +254,19 @@ namespace BitSharp.Script
                             if (opByte >= (int)ScriptOp.OP_PUSHBYTES1 && opByte <= (int)ScriptOp.OP_PUSHBYTES75)
                             {
                                 stack.PushBytes(opReader.ReadBytes(opByte));
-                                //logger.LogTrace("{0} loaded {1} bytes onto the stack: {2}", OpName(opByte), opByte, stack.PeekBytes());
+                                this.logger.Trace("{0} loaded {1} bytes onto the stack: {2}", OpName(opByte), opByte, stack.PeekBytes());
                             }
                             // Unknown op
                             else
                             {
                                 var message = string.Format("Invalid operation in tx {0} input {1}: {2} {3}", tx.Hash.ToHexNumberString(), inputIndex, new[] { opByte }.ToHexNumberString(), OpName(opByte));
-                                Debug.WriteLine(message);
+                                this.logger.Warn(message);
                                 throw new Exception(message);
                             }
                             break;
                     }
 
-                    //logger.LogTrace(new string('-', 80));
+                    this.logger.Trace(new string('-', 80));
                 }
             }
 

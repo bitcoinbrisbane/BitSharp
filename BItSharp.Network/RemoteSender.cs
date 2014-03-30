@@ -169,8 +169,7 @@ namespace BitSharp.Network
                         }
 
                         stopwatch.Stop();
-                        //Debug.WriteLine("-------------------------");
-                        //Debug.WriteLine(string.Format("Sent {0} in {1} ms\nPayload: {2}", message.Command, stopwatch.ElapsedMilliseconds, message.Payload.ToHexDataString()));
+                        this.logger.Trace("Sent {0} in {1} ms\nPayload: {2}".Format2(message.Command, stopwatch.ElapsedMilliseconds, message.Payload.ToHexDataString()));
                     }
                 });
             }

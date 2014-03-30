@@ -124,7 +124,7 @@ namespace BitSharp.Daemon
                             this.invalidBlockCache.TryAdd(advanceBlock.BlockHash, "");
                     }
 
-                    //Debug.WriteLine("Winning chained block {0} at height {1}, total work: {2}".Format2(targetBlock.BlockHash.ToHexNumberString(), targetBlock.Height, targetBlock.TotalWork.ToString("X")));
+                    this.logger.Debug("Winning chained block {0} at height {1}, total work: {2}".Format2(newTargetChain.LastBlock.BlockHash.ToHexNumberString(), newTargetChain.Height, newTargetChain.LastBlock.TotalWork.ToString("X")));
                     this.targetChain = newTargetChain.ToImmutable();
 
                     var handler = this.OnTargetChainChanged;

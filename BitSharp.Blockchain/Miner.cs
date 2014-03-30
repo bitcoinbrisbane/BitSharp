@@ -49,7 +49,7 @@ namespace BitSharp.Blockchain
             var nonceIndex = 76;
             var minedNonce = (UInt32?)null;
 
-            //Debug.WriteLine("Starting mining: {0}".Format2(DateTime.Now.ToString("hh:mm:ss")));
+            this.logger.Debug("Starting mining: {0}".Format2(DateTime.Now.ToString("hh:mm:ss")));
 
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -85,12 +85,12 @@ namespace BitSharp.Blockchain
 
             if (minedNonce != null)
             {
-                //Debug.WriteLine("Found block in {0} hh:mm:ss at Nonce {1}, Hash Rate: {2} mHash/s, Total Hash Attempts: {3}, Found Hash: {4}".Format2(stopwatch.Elapsed.ToString(@"hh\:mm\:ss"), minedNonce, hashRate, total.ToString("#,##0"), blockHeader.With(Nonce: minedNonce).Hash));
+                this.logger.Debug("Found block in {0} hh:mm:ss at Nonce {1}, Hash Rate: {2} mHash/s, Total Hash Attempts: {3}, Found Hash: {4}".Format2(stopwatch.Elapsed.ToString(@"hh\:mm\:ss"), minedNonce, hashRate, total.ToString("#,##0"), blockHeader.With(Nonce: minedNonce).Hash));
                 return blockHeader.With(Nonce: minedNonce);
             }
             else
             {
-                //Debug.WriteLine("No block found in {0} hh:mm:ss, Hash Rate: {1} mHash/s, Total Hash Attempts: {2}, Found Hash: {3}".Format2(stopwatch.Elapsed.ToString(@"hh\:mm\:ss"), hashRate, total.ToString("#,##0"), blockHeader.With(Nonce: minedNonce).Hash));
+                this.logger.Debug("No block found in {0} hh:mm:ss, Hash Rate: {1} mHash/s, Total Hash Attempts: {2}, Found Hash: {3}".Format2(stopwatch.Elapsed.ToString(@"hh\:mm\:ss"), hashRate, total.ToString("#,##0"), blockHeader.With(Nonce: minedNonce).Hash));
                 return null;
             }
         }

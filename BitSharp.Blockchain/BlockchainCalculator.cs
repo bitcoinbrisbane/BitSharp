@@ -131,7 +131,7 @@ namespace BitSharp.Blockchain
             var txRate = (float)chainStateBuilder.Stats.txCount / elapsedSeconds;
             var inputRate = (float)chainStateBuilder.Stats.inputCount / elapsedSeconds;
 
-            Debug.WriteLine(
+            this.logger.Info(
                 string.Join("\n",
                     new string('-', 200),
                     "Height: {0,10} | Duration: {1} /*| Validation: {2} */| Blocks/s: {3,7} | Tx/s: {4,7} | Inputs/s: {5,7} | Processed Tx: {6,7} | Processed Inputs: {7,7} | Utxo Size: {8,7}",
@@ -284,7 +284,7 @@ namespace BitSharp.Blockchain
             finally
             {
                 stopwatch.Stop();
-                Debug.WriteLine("Blockchain revalidation: {0:#,##0.000000}s".Format2(stopwatch.ElapsedSecondsFloat()));
+                this.logger.Info("Blockchain revalidation: {0:#,##0.000000}s".Format2(stopwatch.ElapsedSecondsFloat()));
             }
         }
 
@@ -306,7 +306,7 @@ namespace BitSharp.Blockchain
                         }
                         catch (MissingDataException e)
                         {
-                            Debug.WriteLine("Stalled, MissingDataException: {0}".Format2(e.Key));
+                            this.logger.Debug("Stalled, MissingDataException: {0}".Format2(e.Key));
                             throw;
                         }
                     })

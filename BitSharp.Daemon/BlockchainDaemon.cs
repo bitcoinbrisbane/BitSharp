@@ -134,7 +134,7 @@ namespace BitSharp.Daemon
             this.gcWorker = new WorkerMethod("GC Worker",
                 () =>
                 {
-                    Debug.WriteLine(
+                    this.logger.Info(
                         string.Join("\n",
                             new string('-', 80),
                             "GC Memory:      {0,10:#,##0.00} MB",
@@ -354,15 +354,6 @@ namespace BitSharp.Daemon
             //            (float)Process.GetCurrentProcess().PrivateMemorySize64 / 1.MILLION()
             //        ));
             //}
-        }
-
-        private void ValidationWorker()
-        {
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
-
-            stopwatch.Stop();
-            Debug.WriteLine("ValidationWorker: {0:#,##0.000}s".Format2(stopwatch.ElapsedSecondsFloat()));
         }
 
         private void ValidateCurrentChainWorker()

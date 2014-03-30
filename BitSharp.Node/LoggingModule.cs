@@ -13,6 +13,13 @@ namespace BitSharp.Node
 {
     public class LoggingModule : NinjectModule
     {
+        private readonly LogLevel logLevel;
+
+        public LoggingModule(LogLevel logLevel)
+        {
+            this.logLevel = logLevel;
+        }
+
         public override void Load()
         {
             // Step 1. Create configuration object 
@@ -27,14 +34,15 @@ namespace BitSharp.Node
 
             // Step 3. Set target properties 
             consoleTarget.Layout = @"${date:format=HH\\:MM\\:ss} ${logger} ${message}";
-            fileTarget.FileName = "${basedir}/file.txt";
+            fileTarget.FileName = "${basedir}/BitSharp.log";
             fileTarget.Layout = "${message}";
+            fileTarget.DeleteOldFileOnStartup = true;
 
             // Step 4. Define rules
-            var rule1 = new LoggingRule("*", LogLevel.Debug, consoleTarget);
+            var rule1 = new LoggingRule("*", logLevel, consoleTarget);
             config.LoggingRules.Add(rule1);
 
-            var rule2 = new LoggingRule("*", LogLevel.Debug, fileTarget);
+            var rule2 = new LoggingRule("*", logLevel, fileTarget);
             config.LoggingRules.Add(rule2);
 
             // Step 5. Activate the configuration

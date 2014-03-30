@@ -38,7 +38,7 @@ namespace BitSharp.Storage
 
             // load from storage
             this.cache = new ConcurrentDictionary<TKey, TValue>(this.dataStorage);
-            Debug.WriteLine("{0}: Finished loading from storage: {1:#,##0}".Format2(this.Name, this.Count));
+            this.logger.Info("{0}: Finished loading from storage: {1:#,##0}".Format2(this.Name, this.Count));
         }
 
         public void Dispose()

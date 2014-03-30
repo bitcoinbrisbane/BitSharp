@@ -209,7 +209,7 @@ namespace BitSharp.Node
                     // cooperative loop
                     this.shutdownToken.Token.ThrowIfCancellationRequested();
 
-                    //Debug.WriteLine(string.Format("Too many peers connected ({0}), disconnecting {1}", overConnected, remoteEndpoint));
+                    this.logger.Debug("Too many peers connected ({0}), disconnecting {1}".Format2(overConnected, remoteEndpoint));
                     DisconnectPeer(remoteEndpoint, null);
                 }
             }
@@ -263,7 +263,7 @@ namespace BitSharp.Node
 
         private void StatsWorker()
         {
-            Debug.WriteLine(string.Format("UNCONNECTED: {0,3}, PENDING: {1,3}, CONNECTED: {2,3}, BAD: {3,3}, INCOMING: {4,3}, MESSAGES/SEC: {5,6}", this.unconnectedPeers.Count, this.pendingPeers.Count, this.connectedPeers.Count, this.badPeers.Count, this.incomingCount, ((float)this.messageCount / ((float)this.messageStopwatch.ElapsedMilliseconds / 1000)).ToString("0")));
+            this.logger.Info(string.Format("UNCONNECTED: {0,3}, PENDING: {1,3}, CONNECTED: {2,3}, BAD: {3,3}, INCOMING: {4,3}, MESSAGES/SEC: {5,6}", this.unconnectedPeers.Count, this.pendingPeers.Count, this.connectedPeers.Count, this.badPeers.Count, this.incomingCount, ((float)this.messageCount / ((float)this.messageStopwatch.ElapsedMilliseconds / 1000)).ToString("0")));
 
             this.messageStopwatch.Restart();
             this.messageCount = 0;
@@ -271,7 +271,7 @@ namespace BitSharp.Node
 
         private void Startup()
         {
-            Debug.WriteLine("LocalClients starting up");
+            this.logger.Info("LocalClients starting up");
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
@@ -285,12 +285,12 @@ namespace BitSharp.Node
             AddKnownPeers();
 
             stopwatch.Stop();
-            Debug.WriteLine("LocalClients finished starting up: {0} ms".Format2(stopwatch.ElapsedMilliseconds));
+            this.logger.Info("LocalClients finished starting up: {0} ms".Format2(stopwatch.ElapsedMilliseconds));
         }
 
         private void Shutdown()
         {
-            Debug.WriteLine("LocalClient shutting down");
+            this.logger.Info("LocalClient shutting down");
 
             try
             {
@@ -305,7 +305,7 @@ namespace BitSharp.Node
             }
             catch (Exception) { } // swallow any looping exceptions
 
-            Debug.WriteLine("LocalClient shutdown finished");
+            this.logger.Info("LocalClient shutdown finished");
         }
 
         private async void StartListening()
@@ -332,7 +332,7 @@ namespace BitSharp.Node
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e.Message);
+                this.logger.ErrorException("Failed to start listener socket.", e);
                 if (this.listenSocket != null)
                     this.listenSocket.Dispose();
                 return;
@@ -372,7 +372,7 @@ namespace BitSharp.Node
                     }
                     catch (Exception e)
                     {
-                        Debug.WriteLine(e.Message);
+                        this.logger.WarnException("Failed incoming connection.", e);
                     }
                 }
             }
@@ -427,7 +427,7 @@ namespace BitSharp.Node
                     }
                     catch (SocketException e)
                     {
-                        Debug.WriteLine("Failed to add seed peer {0}: {1}".Format2(hostNameOrAddress, e.Message));
+                        this.logger.WarnException("Failed to add seed peer {0}".Format2(hostNameOrAddress), e);
                     }
                 };
 
@@ -478,7 +478,7 @@ namespace BitSharp.Node
                 count++;
             }
 
-            Debug.WriteLine("LocalClients loaded {0} known peers from database".Format2(count));
+            this.logger.Info("LocalClients loaded {0} known peers from database".Format2(count));
         }
 
         private async Task<RemoteNode> ConnectToPeer(IPEndPoint remoteEndPoint)
@@ -507,7 +507,7 @@ namespace BitSharp.Node
             }
             catch (Exception e)
             {
-                //Debug.WriteLine(string.Format("Could not connect to {0}: {1}", remoteEndpoint, e.Message));
+                this.logger.DebugException("Could not connect to {0}".Format2(remoteEndPoint), e);
                 //this.knownAddressCache[remoteEndPoint.ToNetworkAddressKey()] =
                 //    new NetworkAddressWithTime(0, remoteEndPoint.ToNetworkAddress(0));
                 DisconnectPeer(remoteEndPoint, e);
@@ -601,13 +601,13 @@ namespace BitSharp.Node
 
         private void OnBlockHeader(BlockHeader blockHeader)
         {
-            //Debug.WriteLine("Received block header {0}".Format2(blockHeader.Hash);
+            this.logger.Trace("Received block header {0}".Format2(blockHeader.Hash));
             this.blockHeaderCache.TryAdd(blockHeader.Hash, blockHeader);
         }
 
         private void OnTransaction(Transaction transaction)
         {
-            //Debug.WriteLine("Received block header {0}".Format2(transaction.Hash);
+            this.logger.Trace("Received block header {0}".Format2(transaction.Hash));
 
             DateTime ignore;
             this.requestedTransactions.TryRemove(transaction.Hash, out ignore);
@@ -847,10 +847,7 @@ namespace BitSharp.Node
             RemoteNode connectedPeer;
             this.connectedPeers.TryRemove(remoteEndpoint, out connectedPeer);
 
-            if (this.connectedPeers.Count <= 10 && e != null)
-            {
-                Debug.WriteLine("Remote peer {0} failed, disconnecting: {1}".Format2(remoteEndpoint, e != null ? e.Message : null));
-            }
+            this.logger.DebugException("Remote peer failed: {0}".Format2(remoteEndpoint), e);
 
             if (pendingPeer != null)
             {
