@@ -2,10 +2,12 @@
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Data;
 using Microsoft.Isam.Esent.Collections.Generic;
+using Microsoft.Isam.Esent.Interop;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -148,23 +150,50 @@ namespace BitSharp.Storage.Esent
             this.unspentOutputs.Flush();
         }
 
-        public IUtxoStorage Close(UInt256 blockHash)
+        public IUtxoStorage ToImmutable(UInt256 blockHash)
         {
-            this.closed = true;
-            this.Dispose();
-
-            //TODO obviously a stop gap here...
+            // prepare destination directory
             var destPath = UtxoStorage.GetDirectory(blockHash);
             UtxoStorage.DeleteUtxoDirectory(destPath);
             Directory.CreateDirectory(destPath + "_tx");
             Directory.CreateDirectory(destPath + "_output");
             
+            // get database instances
+            var instanceField = typeof(PersistentDictionary<string, string>)
+                .GetField("instance", BindingFlags.NonPublic | BindingFlags.Instance);
+            var unspentTransactionsInstance = (Instance)instanceField.GetValue(this.unspentTransactions.RawDictionary);
+            var unspentOutputsInstance = (Instance)instanceField.GetValue(this.unspentOutputs.RawDictionary);
+
+            // backup to destination directory
+            using (var session = new Session(unspentTransactionsInstance))
+                Api.JetBackupInstance(unspentTransactionsInstance, destPath + "_tx", BackupGrbit.Atomic, null);
+            using (var session = new Session(unspentOutputsInstance))
+                Api.JetBackupInstance(unspentOutputsInstance, destPath + "_output", BackupGrbit.Atomic, null);
+
+            // return saved utxo
+            return new UtxoStorage(blockHash);
+        }
+
+        public IUtxoStorage Close(UInt256 blockHash)
+        {
+            // close builder
+            this.closed = true;
+            this.Dispose();
+
+            // prepare destination directory
+            var destPath = UtxoStorage.GetDirectory(blockHash);
+            UtxoStorage.DeleteUtxoDirectory(destPath);
+            Directory.CreateDirectory(destPath + "_tx");
+            Directory.CreateDirectory(destPath + "_output");
+
+            // move utxo to new location
             foreach (var srcFile in Directory.GetFiles(this.directory + "_tx", "*.edb"))
                 File.Move(srcFile, Path.Combine(destPath + "_tx", Path.GetFileName(srcFile)));
             foreach (var srcFile in Directory.GetFiles(this.directory + "_output", "*.edb"))
                 File.Move(srcFile, Path.Combine(destPath + "_output", Path.GetFileName(srcFile)));
             UtxoStorage.DeleteUtxoDirectory(this.directory);
 
+            // return saved utxo
             return new UtxoStorage(blockHash);
         }
 

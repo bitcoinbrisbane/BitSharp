@@ -233,6 +233,11 @@ namespace BitSharp.Blockchain
             this.utxoBuilderStorage.Flush();
         }
 
+        public Utxo ToImmutable(UInt256 blockHash)
+        {
+            return new Utxo(utxoBuilderStorage.ToImmutable(blockHash));
+        }
+
         public Utxo Close(UInt256 blockHash)
         {
             return new Utxo(utxoBuilderStorage.Close(blockHash));

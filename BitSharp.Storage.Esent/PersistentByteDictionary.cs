@@ -33,6 +33,8 @@ namespace BitSharp.Storage.Esent
             this.Dispose();
         }
 
+        internal PersistentDictionary<string, string> RawDictionary { get { return this.dict; } }
+
         public void Add(byte[] key, byte[] value)
         {
             this.dict.Add(EncodeKey(key), EncodeValue(value));
@@ -159,7 +161,7 @@ namespace BitSharp.Storage.Esent
         {
             return Convert.ToBase64String(bytes);
         }
-        
+
         private static byte[] DecodeKey(string s)
         {
             return Base32Encoder.Decode(s);

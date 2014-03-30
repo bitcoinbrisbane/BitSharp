@@ -117,11 +117,12 @@ namespace BitSharp.Daemon
                     }
                     this.blockRollbackCache.Flush();
 
+                    //TODO keep the builder open favors performance when catching up
+                    //TODO once caught up, it should switch over to quickly returning committed utxo's as new blocks come in
                     var newChain = this.chainStateBuilder.Chain.ToImmutable();
-                    var newUtxo = this.chainStateBuilder.Utxo.Close(newChain.LastBlock.BlockHash);
-
-                    this.chainStateBuilder.Dispose();
-                    this.chainStateBuilder = null;
+                    var newUtxo = this.chainStateBuilder.Utxo.ToImmutable(newChain.LastBlock.BlockHash);
+                    //this.chainStateBuilder.Dispose();
+                    //this.chainStateBuilder = null;
 
                     UpdateCurrentBlockchain(new ChainState(newChain, newUtxo));
                     chainStateLocal = this.chainState;

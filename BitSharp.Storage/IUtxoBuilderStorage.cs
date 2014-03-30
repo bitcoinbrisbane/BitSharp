@@ -40,6 +40,8 @@ namespace BitSharp.Storage
         
         void Flush();
 
+        IUtxoStorage ToImmutable(UInt256 blockHash);
+
         IUtxoStorage Close(UInt256 blockHash);
     }
 }

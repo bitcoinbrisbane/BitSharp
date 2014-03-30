@@ -101,7 +101,7 @@ namespace BitSharp.Storage
         {
         }
 
-        public IUtxoStorage Close(UInt256 blockHash)
+        public IUtxoStorage ToImmutable(UInt256 blockHash)
         {
             //TODO figure out if creating clean dictionaries actually has any benefits
             if (true)
@@ -117,9 +117,14 @@ namespace BitSharp.Storage
                 var compactUnspentOutputs = ImmutableDictionary.CreateBuilder<TxOutputKey, TxOutput>();
                 foreach (var unspentOutput in this.unspentOutputs)
                     compactUnspentOutputs.Add(unspentOutput);
-                
+
                 return new MemoryUtxoStorage(blockHash, compactUnspentTransactions.ToImmutable(), compactUnspentOutputs.ToImmutable());
             }
+        }
+        
+        public IUtxoStorage Close(UInt256 blockHash)
+        {
+            return this.ToImmutable(blockHash);
         }
 
         public void Dispose()
