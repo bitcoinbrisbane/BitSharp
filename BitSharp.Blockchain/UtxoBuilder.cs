@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Blockchain
 {
+    //TODO bundle Utxo and ChainState together into ChainState? make Chain persisted along with this change, and then cache it
     public class UtxoBuilder : IDisposable
     {
         private readonly Logger logger;
