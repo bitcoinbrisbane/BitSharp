@@ -123,6 +123,7 @@ namespace BitSharp.Daemon
                     var newUtxo = this.chainStateBuilder.Utxo.ToImmutable(newChain.LastBlock.BlockHash);
                     //this.chainStateBuilder.Dispose();
                     //this.chainStateBuilder = null;
+                    this.chainStateBuilderTime = DateTime.UtcNow;
 
                     UpdateCurrentBlockchain(new ChainState(newChain, newUtxo));
                     chainStateLocal = this.chainState;
