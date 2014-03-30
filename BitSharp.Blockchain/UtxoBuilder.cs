@@ -153,7 +153,7 @@ namespace BitSharp.Blockchain
             
             //TODO the extra information can still be cleaned up easily during pruning, just delete it like BlockRollbackCache.
             
-            //TODO also, the current rollback dictionary and this one should be added directly to IUtxoStorage like the other two
+            //TODO also, the current rollback dictionary and this one should be written directly by this builder, not done with collect
 
             // remove the output from the utxo
             this.utxoBuilderStorage.RemoveOutput(input.PreviousTxOutputKey);
