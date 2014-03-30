@@ -90,7 +90,10 @@ namespace BitSharp.Blockchain
                     var blockRollbackInformation = chainStateBuilder.Utxo.CollectBlockRollbackInformation();
                     this.blockRollbackCache[block.Hash] = blockRollbackInformation;
 
-                    //TODO for memory mode
+                    //TODO remove the block and its transactions immediately after processing
+                    //TODO this is for startup mode where blocks are not saved but kept in memory just long enough to update the UTXO
+                    //TODO when fully caught up, rollback blocks can be reacquired backwards from that point, to the pruning limit
+                    //TODO reacquiring is not required, but if a rollback does occur then the information will need to be downloaded then
                     if (true)
                     {
                         foreach (var tx in block.Transactions)
