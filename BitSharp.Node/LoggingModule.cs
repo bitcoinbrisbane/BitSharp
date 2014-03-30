@@ -22,32 +22,33 @@ namespace BitSharp.Node
 
         public override void Load()
         {
-            // Step 1. Create configuration object 
+            // initialize logging configuration
             var config = new LoggingConfiguration();
 
-            // Step 2. Create targets and add them to the configuration 
+            // create console target
             var consoleTarget = new ColoredConsoleTarget();
             config.AddTarget("console", consoleTarget);
 
+            // console settings
+            consoleTarget.Layout = "${message}";
+
+            // console rules
+            config.LoggingRules.Add(new LoggingRule("*", logLevel, consoleTarget));
+
+            // create file target
             var fileTarget = new FileTarget();
             config.AddTarget("file", fileTarget);
 
-            // Step 3. Set target properties 
-            consoleTarget.Layout = @"${date:format=HH\\:MM\\:ss} ${logger} ${message}";
+            // file settings
             fileTarget.FileName = "${basedir}/BitSharp.log";
             fileTarget.Layout = "${message}";
             fileTarget.DeleteOldFileOnStartup = true;
 
-            // Step 4. Define rules
-            var rule1 = new LoggingRule("*", logLevel, consoleTarget);
-            config.LoggingRules.Add(rule1);
+            // file rules
+            config.LoggingRules.Add(new LoggingRule("*", logLevel, fileTarget));
 
-            var rule2 = new LoggingRule("*", logLevel, fileTarget);
-            config.LoggingRules.Add(rule2);
-
-            // Step 5. Activate the configuration
+            // activate configuration and bind
             LogManager.Configuration = config;
-
             this.Kernel.Bind<Logger>().ToMethod(context => LogManager.GetLogger("BitSharp"));
         }
     }
