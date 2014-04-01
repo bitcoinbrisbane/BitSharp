@@ -95,6 +95,8 @@ namespace BitSharp.Storage
 
     public sealed class MemoryBlockRollbackStorage : MemoryStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>>, IBlockRollbackStorage { }
 
+    public sealed class MemorySpentOutputsStorage : MemoryStorage<UInt256, IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>>, ISpentOutputsStorage { }
+
     public sealed class MemoryInvalidBlockStorage : MemoryStorage<UInt256, string>, IInvalidBlockStorage { }
 
     public sealed class MemoryNetworkPeerStorage : MemoryStorage<NetworkAddressKey, NetworkAddressWithTime>, INetworkPeerStorage { }
