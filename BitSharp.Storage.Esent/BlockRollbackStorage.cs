@@ -41,6 +41,7 @@ namespace BitSharp.Storage.Esent
                         Buffer.BlockCopy(bytes, i, txHashBytes, 0, 32);
                         Buffer.BlockCopy(bytes, i + 32, blockHashBytes, 0, 32);
                         var keyPair = new KeyValuePair<UInt256, UInt256>(new UInt256(txHashBytes), new UInt256(blockHashBytes));
+                        keyPairs.Add(keyPair);
                     }
 
                     return keyPairs.ToImmutable();
