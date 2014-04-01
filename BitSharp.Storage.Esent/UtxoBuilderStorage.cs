@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage.Esent
 {
+    //TODO this should eventually be written directly against the Jet API so that everything can be tuned specifically to the UTXO
     public class UtxoBuilderStorage : IUtxoBuilderStorage
     {
         private readonly Logger logger;
@@ -195,6 +196,9 @@ namespace BitSharp.Storage.Esent
             UtxoStorage.DeleteUtxoDirectory(destPath);
             Directory.CreateDirectory(destPath + "_tx");
             Directory.CreateDirectory(destPath + "_output");
+
+            //TOOD can something with JetCompact be done here to save off optimized UTXO snapshots?
+            //TODO once the blockchain is synced, see if this can be used to shrink used space during normal operation
 
             // move utxo to new location
             foreach (var srcFile in Directory.GetFiles(this.directory + "_tx", "*.edb"))
