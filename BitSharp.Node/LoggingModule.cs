@@ -40,7 +40,7 @@ namespace BitSharp.Node
             config.AddTarget("file", fileTarget);
 
             // file settings
-            fileTarget.FileName = "${basedir}/BitSharp.log";
+            fileTarget.FileName = "${specialfolder:folder=localapplicationdata}/BitSharp/BitSharp.log";
             fileTarget.Layout = "${message}";
             fileTarget.DeleteOldFileOnStartup = true;
 
