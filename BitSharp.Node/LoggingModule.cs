@@ -30,7 +30,7 @@ namespace BitSharp.Node
             config.AddTarget("console", consoleTarget);
 
             // console settings
-            consoleTarget.Layout = "${message}";
+            consoleTarget.Layout = "${message} ${exception}";
 
             // console rules
             config.LoggingRules.Add(new LoggingRule("*", logLevel, consoleTarget));
@@ -41,7 +41,7 @@ namespace BitSharp.Node
 
             // file settings
             fileTarget.FileName = "${specialfolder:folder=localapplicationdata}/BitSharp/BitSharp.log";
-            fileTarget.Layout = "${message}";
+            fileTarget.Layout = "${message} ${exception}";
             fileTarget.DeleteOldFileOnStartup = true;
 
             // file rules
