@@ -91,15 +91,17 @@ namespace BitSharp.Client
                 // load modules
                 this.kernel.Load(modules.ToArray());
 
-                // start the blockchain daemon
+                // initialize the blockchain daemon
                 this.kernel.Bind<BlockchainDaemon>().ToSelf().InSingletonScope();
                 var blockchainDaemon = this.kernel.Get<BlockchainDaemon>();
-                blockchainDaemon.Start();
 
                 // setup view model
                 this.viewModel = new MainWindowViewModel(this.kernel);
                 InitializeComponent();
                 this.viewModel.ViewBlockchainLast();
+
+                // start the blockchain daemon
+                blockchainDaemon.Start();
 
                 // start p2p client
                 this.kernel.Bind<LocalClient>().ToSelf().InSingletonScope();
