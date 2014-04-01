@@ -14,7 +14,8 @@
 
 [Dd]ebug/
 [Rr]elease/
-x64/
+# x64/
+
 build/
 [Bb]in/
 [Oo]bj/
@@ -109,7 +110,6 @@ csx
 AppPackages/
 
 # Others
-sql/
 *.Cache
 ClientBin/
 [Ss]tyle[Cc]op.*
@@ -150,3 +150,6 @@ $RECYCLE.BIN/
 
 # Mac crap
 .DS_Store
+
+# Exception for SQLite .dll file
+!SQLite.Interop.dll
