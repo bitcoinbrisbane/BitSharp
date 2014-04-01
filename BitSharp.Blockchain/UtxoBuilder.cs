@@ -258,10 +258,13 @@ namespace BitSharp.Blockchain
             this.utxoBuilderStorage.AddOutput(input.PreviousTxOutputKey, prevTxOutput);
         }
 
-        public void SaveRollbackInformation(UInt256 blockHash, BlockRollbackCache blockRollbackCache, SpentOutputsCache spentOutputsCache)
+        public void SaveRollbackInformation(int height, UInt256 blockHash, BlockRollbackCache blockRollbackCache, SpentOutputsCache spentOutputsCache)
         {
             blockRollbackCache[blockHash] = this.spentTransactions.ToImmutable();
+            this.spentTransactions.Clear();
+
             spentOutputsCache[blockHash] = this.spentOutputs.ToImmutable();
+            this.spentOutputs.Clear();
         }
 
         public void Flush()

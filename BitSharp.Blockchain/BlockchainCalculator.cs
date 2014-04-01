@@ -89,7 +89,7 @@ namespace BitSharp.Blockchain
                         CalculateUtxo(chainedBlock, block, chainStateBuilder.Utxo, out txCount, out inputCount));
 
                     // collect rollback informatino and store it
-                    chainStateBuilder.Utxo.SaveRollbackInformation(block.Hash, this.blockRollbackCache, this.spentOutputsCache);
+                    chainStateBuilder.Utxo.SaveRollbackInformation(chainedBlock.Height, block.Hash, this.blockRollbackCache, this.spentOutputsCache);
 
                     //TODO remove the block and its transactions immediately after processing
                     //TODO this is for startup mode where blocks are not saved but kept in memory just long enough to update the UTXO
