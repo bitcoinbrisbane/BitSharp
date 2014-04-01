@@ -63,8 +63,9 @@ namespace BitSharp.Daemon
             this.blockTimesIndex = -1;
 
             this.pruningWorker = kernel.Get<PruningWorker>(
-                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5))),
-                new ConstructorArgument("getChainState", (Func<ChainState>)(() => this.ChainState)));
+                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromMinutes(5))),
+                new ConstructorArgument("getChainState", (Func<ChainState>)(() => this.chainState)),
+                new ConstructorArgument("getChainStateBuilder", (Func<ChainStateBuilder>)(() => this.chainStateBuilder)));
         }
 
         public ChainState ChainState { get { return this.chainState; } }
@@ -151,6 +152,8 @@ namespace BitSharp.Daemon
                         {
                             this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;
                             this.blockTimes[this.blockTimesIndex] = blockTime;
+
+                            this.pruningWorker.NotifyWork();
 
                             var handler = this.OnChainStateBuilderChanged;
                             if (handler != null)
