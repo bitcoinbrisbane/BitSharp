@@ -17,13 +17,15 @@ using System.Threading.Tasks;
 namespace BitSharp.Blockchain
 {
     //TODO bundle Utxo and ChainState together into ChainState? make Chain persisted along with this change, and then cache it
+    //TODO eventually the UtxoBuilder should have an open/close mechanism
     public class UtxoBuilder : IDisposable
     {
         private readonly Logger logger;
         private readonly IUtxoBuilderStorage utxoBuilderStorage;
         private readonly TransactionCache transactionCache;
 
-        private ImmutableDictionary<UInt256, UInt256>.Builder blockRollbackInformation;
+        private readonly ImmutableList<KeyValuePair<UInt256, UInt256>>.Builder spentTransactions;
+        private readonly ImmutableList<KeyValuePair<TxOutputKey, TxOutput>>.Builder spentOutputs;
 
         public UtxoBuilder(Utxo parentUtxo, Logger logger, IKernel kernel, TransactionCache transactionCache)
         {
@@ -31,7 +33,8 @@ namespace BitSharp.Blockchain
             this.utxoBuilderStorage = kernel.Get<IUtxoBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo.Storage));
             this.transactionCache = transactionCache;
 
-            this.blockRollbackInformation = ImmutableDictionary.CreateBuilder<UInt256, UInt256>();
+            this.spentTransactions = ImmutableList.CreateBuilder<KeyValuePair<UInt256, UInt256>>();
+            this.spentOutputs = ImmutableList.CreateBuilder<KeyValuePair<TxOutputKey, TxOutput>>();
         }
 
         ~UtxoBuilder()
@@ -82,9 +85,23 @@ namespace BitSharp.Blockchain
                     for (var i = 0; i < unspentTx.OutputStates.Length; i++)
                     {
                         if (unspentTx.OutputStates[i] == OutputState.Unspent)
-                            this.utxoBuilderStorage.RemoveOutput(new TxOutputKey(tx.Hash, (UInt32)i));
+                        {
+                            var txOutputKey = new TxOutputKey(tx.Hash, (UInt32)i);
+
+                            TxOutput prevOutput;
+                            if (!this.utxoBuilderStorage.TryGetOutput(txOutputKey, out prevOutput))
+                                throw new Exception("TODO");
+
+                            this.utxoBuilderStorage.RemoveOutput(txOutputKey);
+
+                            // store rollback information, the output will need to be added back during rollback
+                            this.spentOutputs.Add(new KeyValuePair<TxOutputKey, TxOutput>(txOutputKey, prevOutput));
+                        }
                     }
                     this.utxoBuilderStorage.RemoveTransaction(tx.Hash);
+
+                    // store rollback information, the block containing the previous transaction will need to be known during rollback
+                    this.spentTransactions.Add(new KeyValuePair<UInt256, UInt256>(tx.Hash, unspentTx.ConfirmedBlockHash));
                 }
                 else
                 {
@@ -140,20 +157,26 @@ namespace BitSharp.Blockchain
             else
             {
                 this.utxoBuilderStorage.RemoveTransaction(input.PreviousTxOutputKey.TxHash);
+
+                // store rollback information, the block containing the previous transaction will need to be known during rollback
+                this.spentTransactions.Add(new KeyValuePair<UInt256, UInt256>(input.PreviousTxOutputKey.TxHash, unspentTx.ConfirmedBlockHash));
             }
 
-            // store rollback information
-            // the block containing the previous transaction will need to be known during rollback in case the previous transaction cannot be found
-            this.blockRollbackInformation[input.PreviousTxOutputKey.TxHash] = unspentTx.ConfirmedBlockHash;
+            TxOutput prevOutput;
+            if (!this.utxoBuilderStorage.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
+                throw new Exception("TODO");
+
+            // store rollback information, the output will need to be added back during rollback
+            this.spentOutputs.Add(new KeyValuePair<TxOutputKey, TxOutput>(input.PreviousTxOutputKey, prevOutput));
 
             //TODO i should store the spent TxOutput as well, otherwise rollback performance will
             //TODO be permanently slow when fast synchronizing by tossing blocks as they come in
-            
+
             //TDOO everytime a rollback occurs going forward, a new sent of spent outputs will need to be redownloaded,
             //TODO unlesss the entire UTXO is rescanned with all missing pieces redownloaded
-            
+
             //TODO the extra information can still be cleaned up easily during pruning, just delete it like BlockRollbackCache.
-            
+
             //TODO also, the current rollback dictionary and this one should be written directly by this builder, not done with collect
 
             // remove the output from the utxo
@@ -235,11 +258,10 @@ namespace BitSharp.Blockchain
             this.utxoBuilderStorage.AddOutput(input.PreviousTxOutputKey, prevTxOutput);
         }
 
-        public IImmutableList<KeyValuePair<UInt256, UInt256>> CollectBlockRollbackInformation()
+        public void SaveRollbackInformation(UInt256 blockHash, BlockRollbackCache blockRollbackCache, SpentOutputsCache spentOutputsCache)
         {
-            var info = this.blockRollbackInformation.ToImmutableList();
-            this.blockRollbackInformation = ImmutableDictionary.CreateBuilder<UInt256, UInt256>();
-            return info;
+            blockRollbackCache[blockHash] = this.spentTransactions.ToImmutable();
+            spentOutputsCache[blockHash] = this.spentOutputs.ToImmutable();
         }
 
         public void Flush()

@@ -22,6 +22,7 @@ namespace BitSharp.Storage
         private IBoundedCache<UInt256, IImmutableList<UInt256>> blockTxHashesCache;
         private IUnboundedCache<UInt256, Transaction> transactionCache;
         private IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> blockRollbackCache;
+        private IBoundedCache<UInt256, IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>> spentOutputsCache;
         private IBoundedCache<UInt256, string> invalidBlockCache;
         private IBoundedCache<NetworkAddressKey, NetworkAddressWithTime> networkPeerCache;
 
@@ -47,13 +48,17 @@ namespace BitSharp.Storage
             this.blockRollbackCache = this.Kernel.Get<BoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>>>(
                 new ConstructorArgument("name", "Block Rollback Cache"), new ConstructorArgument("dataStorage", blockRollbackStorage));
 
+            var spentOutputsStorage = this.Kernel.Get<ISpentOutputsStorage>();
+            this.spentOutputsCache = this.Kernel.Get<BoundedCache<UInt256, IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>>>(
+                new ConstructorArgument("name", "Spent Outputs Cache"), new ConstructorArgument("dataStorage", spentOutputsStorage));
+
             var invalidBlockStorage = this.Kernel.Get<IInvalidBlockStorage>();
             this.invalidBlockCache = this.Kernel.Get<BoundedCache<UInt256, string>>(
                 new ConstructorArgument("name", "Invalid Block Cache"), new ConstructorArgument("dataStorage", invalidBlockStorage));
 
-            var networkPeerStroage = this.Kernel.Get<INetworkPeerStorage>();
+            var networkPeerStorage = this.Kernel.Get<INetworkPeerStorage>();
             this.networkPeerCache = this.Kernel.Get<BoundedCache<NetworkAddressKey, NetworkAddressWithTime>>(
-                new ConstructorArgument("name", "Network Peer Cache"), new ConstructorArgument("dataStorage", networkPeerStroage));
+                new ConstructorArgument("name", "Network Peer Cache"), new ConstructorArgument("dataStorage", networkPeerStorage));
 
             this.Bind<BlockHeaderCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockHeaderCache);
             this.Bind<ChainedBlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.chainedBlockCache);
@@ -61,6 +66,7 @@ namespace BitSharp.Storage
             this.Bind<TransactionCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.transactionCache);
             this.Bind<BlockView>().ToSelf().InSingletonScope();
             this.Bind<BlockRollbackCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockRollbackCache);
+            this.Bind<SpentOutputsCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.spentOutputsCache);
             this.Bind<InvalidBlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.invalidBlockCache);
             this.Bind<NetworkPeerCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.networkPeerCache);
         }

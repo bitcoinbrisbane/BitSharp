@@ -25,6 +25,9 @@ namespace BitSharp.Storage
     public interface IBlockRollbackStorage :
         IBoundedStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> { }
 
+    public interface ISpentOutputsStorage :
+        IBoundedStorage<UInt256, IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>> { }
+
     public interface IInvalidBlockStorage :
         IBoundedStorage<UInt256, string> { }
 
@@ -58,6 +61,12 @@ namespace BitSharp.Storage
     public sealed class BlockRollbackCache : PassthroughBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>>
     {
         public BlockRollbackCache(IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> cache)
+            : base(cache) { }
+    }
+
+    public sealed class SpentOutputsCache : PassthroughBoundedCache<UInt256, IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>>
+    {
+        public SpentOutputsCache(IBoundedCache<UInt256, IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>> cache)
             : base(cache) { }
     }
 

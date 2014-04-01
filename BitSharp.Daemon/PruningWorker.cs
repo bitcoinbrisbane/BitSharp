@@ -24,8 +24,9 @@ namespace BitSharp.Daemon
         private readonly BlockTxHashesCache blockTxHashesCache;
         private readonly TransactionCache transactionCache;
         private readonly BlockRollbackCache blockRollbackCache;
+        private readonly SpentOutputsCache spentOutputsCache;
 
-        public PruningWorker(WorkerConfig workerConfig, Func<ChainState> getChainState, Logger logger, IBlockchainRules rules, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache)
+        public PruningWorker(WorkerConfig workerConfig, Func<ChainState> getChainState, Logger logger, IBlockchainRules rules, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache, SpentOutputsCache spentOutputsCache)
             : base("PruningWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.getChainState = getChainState;
@@ -33,6 +34,7 @@ namespace BitSharp.Daemon
             this.blockTxHashesCache = blockTxHashesCache;
             this.transactionCache = transactionCache;
             this.blockRollbackCache = blockRollbackCache;
+            this.spentOutputsCache = spentOutputsCache;
 
             this.Mode = PruningMode.Full;
         }
@@ -87,10 +89,12 @@ namespace BitSharp.Daemon
 
                 this.blockTxHashesCache.TryRemove(block.BlockHash);
                 this.blockRollbackCache.TryRemove(block.BlockHash);
+                this.spentOutputsCache.TryRemove(block.BlockHash);
             }
 
             this.blockTxHashesCache.Flush();
             this.blockRollbackCache.Flush();
+            this.spentOutputsCache.Flush();
         }
     }
 

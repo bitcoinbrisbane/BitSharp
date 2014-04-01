@@ -28,8 +28,9 @@ namespace BitSharp.Blockchain
         private readonly TransactionCache transactionCache;
         private readonly BlockView blockView;
         private readonly BlockRollbackCache blockRollbackCache;
+        private readonly SpentOutputsCache spentOutputsCache;
 
-        public BlockchainCalculator(CancellationToken shutdownToken, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockView blockView, BlockRollbackCache blockRollbackCache)
+        public BlockchainCalculator(CancellationToken shutdownToken, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockView blockView, BlockRollbackCache blockRollbackCache, SpentOutputsCache spentOutputsCache)
         {
             this.logger = logger;
             this.shutdownToken = shutdownToken;
@@ -39,6 +40,7 @@ namespace BitSharp.Blockchain
             this.transactionCache = transactionCache;
             this.blockView = blockView;
             this.blockRollbackCache = blockRollbackCache;
+            this.spentOutputsCache = spentOutputsCache;
         }
 
         public void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
@@ -87,8 +89,7 @@ namespace BitSharp.Blockchain
                         CalculateUtxo(chainedBlock, block, chainStateBuilder.Utxo, out txCount, out inputCount));
 
                     // collect rollback informatino and store it
-                    var blockRollbackInformation = chainStateBuilder.Utxo.CollectBlockRollbackInformation();
-                    this.blockRollbackCache[block.Hash] = blockRollbackInformation;
+                    chainStateBuilder.Utxo.SaveRollbackInformation(block.Hash, this.blockRollbackCache, this.spentOutputsCache);
 
                     //TODO remove the block and its transactions immediately after processing
                     //TODO this is for startup mode where blocks are not saved but kept in memory just long enough to update the UTXO
@@ -187,6 +188,7 @@ namespace BitSharp.Blockchain
             }
         }
 
+        //TODO with the rollback information that's now being stored, rollback could be down without needing the block
         private void RollbackUtxo(ChainStateBuilder chainStateBuilder, Block block)
         {
             var blockHeight = chainStateBuilder.Height;
