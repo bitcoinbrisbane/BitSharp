@@ -93,7 +93,7 @@ namespace BitSharp.Storage
 
     public sealed class MemoryTransactionStorage : MemoryStorage<UInt256, Transaction>, ITransactionStorage { }
 
-    public sealed class MemoryBlockRollbackStorage : MemoryStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>>, IBlockRollbackStorage { }
+    public sealed class MemorySpentTransactionsStorage : MemoryStorage<UInt256, IImmutableList<KeyValuePair<UInt256, SpentTx>>>, ISpentTransactionsStorage { }
 
     public sealed class MemorySpentOutputsStorage : MemoryStorage<UInt256, IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>>, ISpentOutputsStorage { }
 

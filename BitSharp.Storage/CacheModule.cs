@@ -21,7 +21,7 @@ namespace BitSharp.Storage
         private IBoundedCache<UInt256, ChainedBlock> chainedBlockCache;
         private IBoundedCache<UInt256, IImmutableList<UInt256>> blockTxHashesCache;
         private IUnboundedCache<UInt256, Transaction> transactionCache;
-        private IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> blockRollbackCache;
+        private IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, SpentTx>>> spentTransactionsCache;
         private IBoundedCache<UInt256, IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>> spentOutputsCache;
         private IBoundedCache<UInt256, string> invalidBlockCache;
         private IBoundedCache<NetworkAddressKey, NetworkAddressWithTime> networkPeerCache;
@@ -44,9 +44,9 @@ namespace BitSharp.Storage
             this.transactionCache = this.Kernel.Get<UnboundedCache<UInt256, Transaction>>(
                 new ConstructorArgument("name", "Transaction Cache"), new ConstructorArgument("dataStorage", transactionStorage));
 
-            var blockRollbackStorage = this.Kernel.Get<IBlockRollbackStorage>();
-            this.blockRollbackCache = this.Kernel.Get<BoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>>>(
-                new ConstructorArgument("name", "Block Rollback Cache"), new ConstructorArgument("dataStorage", blockRollbackStorage));
+            var spentTransactionsStorage = this.Kernel.Get<ISpentTransactionsStorage>();
+            this.spentTransactionsCache = this.Kernel.Get<BoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, SpentTx>>>>(
+                new ConstructorArgument("name", "Spent Transactions Cache"), new ConstructorArgument("dataStorage", spentTransactionsStorage));
 
             var spentOutputsStorage = this.Kernel.Get<ISpentOutputsStorage>();
             this.spentOutputsCache = this.Kernel.Get<BoundedCache<UInt256, IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>>>(
@@ -65,7 +65,7 @@ namespace BitSharp.Storage
             this.Bind<BlockTxHashesCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockTxHashesCache);
             this.Bind<TransactionCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.transactionCache);
             this.Bind<BlockView>().ToSelf().InSingletonScope();
-            this.Bind<BlockRollbackCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockRollbackCache);
+            this.Bind<SpentTransactionsCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.spentTransactionsCache);
             this.Bind<SpentOutputsCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.spentOutputsCache);
             this.Bind<InvalidBlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.invalidBlockCache);
             this.Bind<NetworkPeerCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.networkPeerCache);
@@ -79,7 +79,7 @@ namespace BitSharp.Storage
                 this.chainedBlockCache,
                 this.blockTxHashesCache,
                 this.transactionCache,
-                this.blockRollbackCache,
+                this.spentTransactionsCache,
                 this.invalidBlockCache
             }
             .DisposeList();

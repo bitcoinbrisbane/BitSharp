@@ -15,6 +15,39 @@ namespace BitSharp.Storage
 {
     public class StorageEncoder
     {
+        public static UInt256 DecodeUInt256(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return reader.Read32Bytes();
+            }
+        }
+
+        public static UInt256 DecodeUInt256(UInt256 confirmedBlockHash, byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeUInt256(stream);
+            }
+        }
+
+        public static void EncodeUInt256(Stream stream, UInt256 value)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.Write32Bytes(value);
+            }
+        }
+
+        public static byte[] EncodeUInt256(UInt256 value)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeUInt256(stream, value);
+                return stream.ToArray();
+            }
+        }
+
         public static Block DecodeBlock(Stream stream, UInt256? blockHash = null)
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
@@ -346,6 +379,43 @@ namespace BitSharp.Storage
             using (var stream = new MemoryStream())
             {
                 EncodeUnspentTx(stream, unspentTx);
+                return stream.ToArray();
+            }
+        }
+
+        public static SpentTx DecodeSpentTx(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new SpentTx(
+                    confirmedBlockHash: reader.Read32Bytes(),
+                    outputCount: reader.ReadInt32()
+                );
+            }
+        }
+
+        public static SpentTx DecodeSpentTx(UInt256 confirmedBlockHash, byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeSpentTx(stream);
+            }
+        }
+
+        public static void EncodeSpentTx(Stream stream, SpentTx spentTx)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.Write32Bytes(spentTx.ConfirmedBlockHash);
+                writer.WriteInt32(spentTx.OutputCount);
+            }
+        }
+
+        public static byte[] EncodeSpentTx(SpentTx spentTx)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeSpentTx(stream, spentTx);
                 return stream.ToArray();
             }
         }

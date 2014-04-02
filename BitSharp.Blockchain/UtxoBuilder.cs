@@ -25,7 +25,7 @@ namespace BitSharp.Blockchain
         private readonly TransactionCache transactionCache;
 
         //TODO when written more directly against Esent, these can be streamed out so an entire list doesn't need to be held in memory
-        private readonly ImmutableList<KeyValuePair<UInt256, UInt256>>.Builder spentTransactions;
+        private readonly ImmutableList<KeyValuePair<UInt256, SpentTx>>.Builder spentTransactions;
         private readonly ImmutableList<KeyValuePair<TxOutputKey, TxOutput>>.Builder spentOutputs;
 
         public UtxoBuilder(Utxo parentUtxo, Logger logger, IKernel kernel, TransactionCache transactionCache)
@@ -34,7 +34,7 @@ namespace BitSharp.Blockchain
             this.utxoBuilderStorage = kernel.Get<IUtxoBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo.Storage));
             this.transactionCache = transactionCache;
 
-            this.spentTransactions = ImmutableList.CreateBuilder<KeyValuePair<UInt256, UInt256>>();
+            this.spentTransactions = ImmutableList.CreateBuilder<KeyValuePair<UInt256, SpentTx>>();
             this.spentOutputs = ImmutableList.CreateBuilder<KeyValuePair<TxOutputKey, TxOutput>>();
         }
 
@@ -102,7 +102,7 @@ namespace BitSharp.Blockchain
                     this.utxoBuilderStorage.RemoveTransaction(tx.Hash);
 
                     // store rollback information, the block containing the previous transaction will need to be known during rollback
-                    this.spentTransactions.Add(new KeyValuePair<UInt256, UInt256>(tx.Hash, unspentTx.ConfirmedBlockHash));
+                    this.spentTransactions.Add(new KeyValuePair<UInt256, SpentTx>(tx.Hash, unspentTx.ToSpent()));
                 }
                 else
                 {
@@ -160,25 +160,16 @@ namespace BitSharp.Blockchain
                 this.utxoBuilderStorage.RemoveTransaction(input.PreviousTxOutputKey.TxHash);
 
                 // store rollback information, the block containing the previous transaction will need to be known during rollback
-                this.spentTransactions.Add(new KeyValuePair<UInt256, UInt256>(input.PreviousTxOutputKey.TxHash, unspentTx.ConfirmedBlockHash));
+                this.spentTransactions.Add(new KeyValuePair<UInt256, SpentTx>(input.PreviousTxOutputKey.TxHash, unspentTx.ToSpent()));
             }
 
+            // retrieve previous output
             TxOutput prevOutput;
             if (!this.utxoBuilderStorage.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
-                throw new Exception("TODO");
+                throw new Exception("TODO - corruption");
 
             // store rollback information, the output will need to be added back during rollback
             this.spentOutputs.Add(new KeyValuePair<TxOutputKey, TxOutput>(input.PreviousTxOutputKey, prevOutput));
-
-            //TODO i should store the spent TxOutput as well, otherwise rollback performance will
-            //TODO be permanently slow when fast synchronizing by tossing blocks as they come in
-
-            //TDOO everytime a rollback occurs going forward, a new sent of spent outputs will need to be redownloaded,
-            //TODO unlesss the entire UTXO is rescanned with all missing pieces redownloaded
-
-            //TODO the extra information can still be cleaned up easily during pruning, just delete it like BlockRollbackCache.
-
-            //TODO also, the current rollback dictionary and this one should be written directly by this builder, not done with collect
 
             // remove the output from the utxo
             this.utxoBuilderStorage.RemoveOutput(input.PreviousTxOutputKey);
@@ -207,46 +198,42 @@ namespace BitSharp.Blockchain
             this.utxoBuilderStorage.RemoveTransaction(tx.Hash);
         }
 
-        public void Unspend(TxInput input, ChainedBlock block, Dictionary<UInt256, UInt256> blockRollbackDictionary)
+        public void Unspend(TxInput input, ChainedBlock block, Dictionary<UInt256, SpentTx> spentTransactions, Dictionary<TxOutputKey, TxOutput> spentOutputs)
         {
-            // retrieve rollback information
             //TODO currently a MissingDataException will get thrown if the rollback information is missing
             //TODO rollback is still possible if any resurrecting transactions can be found
             //TODO the network does not allow arbitrary transaction lookup, but if the transactions can be retrieved then this code should allow it
-            UInt256 prevTxBlockHash;
-            if (!blockRollbackDictionary.TryGetValue(input.PreviousTxOutputKey.TxHash, out prevTxBlockHash))
-            {
-                //TODO throw should indicate rollback info is missing
-                throw new MissingDataException(null);
-            }
 
-            // retrieve previous transaction
-            Transaction prevTx;
-            if (!this.transactionCache.TryGetValue(input.PreviousTxOutputKey.TxHash, out prevTx))
-            {
-                // if transaction is missing, use rollback information to determine which block contains it
-                throw new MissingDataException(prevTxBlockHash);
-            }
-
-            // check if output is out of bounds
-            var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
-            if (outputIndex < 0 || outputIndex >= prevTx.Outputs.Count)
-                throw new ValidationException(block.BlockHash);
+            //// retrieve rollback information
+            //UInt256 prevTxBlockHash;
+            //if (!spentTransactions.TryGetValue(input.PreviousTxOutputKey.TxHash, out prevTxBlockHash))
+            //{
+            //    //TODO throw should indicate rollback info is missing
+            //    throw new MissingDataException(null);
+            //}
 
             // retrieve previous output
-            var prevTxOutput = prevTx.Outputs[outputIndex];
+            TxOutput prevTxOutput;
+            if (!spentOutputs.TryGetValue(input.PreviousTxOutputKey, out prevTxOutput))
+                throw new Exception("TODO - corruption");
 
             // retrieve transaction output states, if not found then a fully spent transaction is being resurrected
             UnspentTx unspentTx;
             if (!this.utxoBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
             {
+                // retrieve spent transaction
+                SpentTx prevSpentTx;
+                if (!spentTransactions.TryGetValue(input.PreviousTxOutputKey.TxHash, out prevSpentTx))
+                    throw new Exception("TODO - corruption");
+
                 // create fully spent transaction output state
-                unspentTx = new UnspentTx(prevTxBlockHash, prevTx.Outputs.Count, OutputState.Spent);
+                unspentTx = new UnspentTx(prevSpentTx.ConfirmedBlockHash, prevSpentTx.OutputCount, OutputState.Spent);
             }
 
-            // double-check for out of bounds
-            if (unspentTx.OutputStates.Length != prevTx.Outputs.Count)
-                throw new ValidationException(block.BlockHash);
+            // retrieve previous output index
+            var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
+            if (outputIndex < 0 || outputIndex >= unspentTx.OutputStates.Length)
+                throw new Exception("TODO - corruption");
 
             // check that output isn't already considered unspent
             if (unspentTx.OutputStates[outputIndex] == OutputState.Unspent)
@@ -259,9 +246,9 @@ namespace BitSharp.Blockchain
             this.utxoBuilderStorage.AddOutput(input.PreviousTxOutputKey, prevTxOutput);
         }
 
-        public void SaveRollbackInformation(int height, UInt256 blockHash, BlockRollbackCache blockRollbackCache, SpentOutputsCache spentOutputsCache)
+        public void SaveRollbackInformation(int height, UInt256 blockHash, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
         {
-            blockRollbackCache[blockHash] = this.spentTransactions.ToImmutable();
+            spentTransactionsCache[blockHash] = this.spentTransactions.ToImmutable();
             this.spentTransactions.Clear();
 
             spentOutputsCache[blockHash] = this.spentOutputs.ToImmutable();

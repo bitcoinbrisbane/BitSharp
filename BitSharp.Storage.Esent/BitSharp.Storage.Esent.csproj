@@ -82,7 +82,7 @@
   <ItemGroup>
     <Compile Include="BlockHeaderStorage.cs" />
     <Compile Include="SpentOutputsStorage.cs" />
-    <Compile Include="BlockRollbackStorage.cs" />
+    <Compile Include="SpentTransactionsStorage.cs" />
     <Compile Include="BlockTxHashesStorage.cs" />
     <Compile Include="ChainedBlockStorage.cs" />
     <Compile Include="NetworkPeerStorage.cs" />

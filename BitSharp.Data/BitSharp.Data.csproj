@@ -84,6 +84,7 @@
     <Compile Include="Transaction.cs" />
     <Compile Include="TxInput.cs" />
     <Compile Include="TxOutput.cs" />
+    <Compile Include="SpentTx.cs" />
     <Compile Include="UnspentTx.cs" />
     <Compile Include="TxOutputKey.cs" />
     <Compile Include="WriterExtensionMethods.cs" />

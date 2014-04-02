@@ -22,7 +22,7 @@ namespace BitSharp.Storage
             this.Bind<MemoryChainedBlockStorage>().ToSelf().InSingletonScope();
             this.Bind<MemoryBlockTxHashesStorage>().ToSelf().InSingletonScope();
             this.Bind<MemoryTransactionStorage>().ToSelf().InSingletonScope();
-            this.Bind<MemoryBlockRollbackStorage>().ToSelf().InSingletonScope();
+            this.Bind<MemorySpentTransactionsStorage>().ToSelf().InSingletonScope();
             this.Bind<MemorySpentOutputsStorage>().ToSelf().InSingletonScope();
             this.Bind<MemoryInvalidBlockStorage>().ToSelf().InSingletonScope();
             this.Bind<MemoryNetworkPeerStorage>().ToSelf().InSingletonScope();
@@ -32,7 +32,7 @@ namespace BitSharp.Storage
             this.Bind<IChainedBlockStorage>().ToMethod(x => this.Kernel.Get<MemoryChainedBlockStorage>()).InSingletonScope();
             this.Bind<IBlockTxHashesStorage>().ToMethod(x => this.Kernel.Get<MemoryBlockTxHashesStorage>()).InSingletonScope();
             this.Bind<ITransactionStorage>().ToMethod(x => this.Kernel.Get<MemoryTransactionStorage>()).InSingletonScope();
-            this.Bind<IBlockRollbackStorage>().ToMethod(x => this.Kernel.Get<MemoryBlockRollbackStorage>()).InSingletonScope();
+            this.Bind<ISpentTransactionsStorage>().ToMethod(x => this.Kernel.Get<MemorySpentTransactionsStorage>()).InSingletonScope();
             this.Bind<ISpentOutputsStorage>().ToMethod(x => this.Kernel.Get<MemorySpentOutputsStorage>()).InSingletonScope();
             this.Bind<IInvalidBlockStorage>().ToMethod(x => this.Kernel.Get<MemoryInvalidBlockStorage>()).InSingletonScope();
             this.Bind<INetworkPeerStorage>().ToMethod(x => this.Kernel.Get<MemoryNetworkPeerStorage>()).InSingletonScope();

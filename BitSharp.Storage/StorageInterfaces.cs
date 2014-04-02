@@ -22,8 +22,8 @@ namespace BitSharp.Storage
     public interface ITransactionStorage :
         IUnboundedStorage<UInt256, Transaction> { }
 
-    public interface IBlockRollbackStorage :
-        IBoundedStorage<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> { }
+    public interface ISpentTransactionsStorage :
+        IBoundedStorage<UInt256, IImmutableList<KeyValuePair<UInt256, SpentTx>>> { }
 
     public interface ISpentOutputsStorage :
         IBoundedStorage<UInt256, IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>> { }
@@ -58,9 +58,9 @@ namespace BitSharp.Storage
             : base(cache) { }
     }
 
-    public sealed class BlockRollbackCache : PassthroughBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>>
+    public sealed class SpentTransactionsCache : PassthroughBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, SpentTx>>>
     {
-        public BlockRollbackCache(IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, UInt256>>> cache)
+        public SpentTransactionsCache(IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, SpentTx>>> cache)
             : base(cache) { }
     }
 

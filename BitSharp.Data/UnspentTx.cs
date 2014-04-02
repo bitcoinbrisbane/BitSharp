@@ -32,5 +32,10 @@ namespace BitSharp.Data
         {
             return new UnspentTx(this.confirmedBlockHash, this.outputStates.Set(index, value));
         }
+
+        public SpentTx ToSpent()
+        {
+            return new SpentTx(this.confirmedBlockHash, this.outputStates.Length);
+        }
     }
 }

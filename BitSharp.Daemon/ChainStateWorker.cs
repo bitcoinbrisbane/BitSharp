@@ -29,7 +29,7 @@ namespace BitSharp.Daemon
         private readonly IBlockchainRules rules;
         private readonly BlockchainCalculator calculator;
         private readonly TransactionCache transactionCache;
-        private readonly BlockRollbackCache blockRollbackCache;
+        private readonly SpentTransactionsCache spentTransactionsCache;
         private readonly InvalidBlockCache invalidBlockCache;
 
         private ChainState chainState;
@@ -43,7 +43,7 @@ namespace BitSharp.Daemon
 
         private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, Logger logger, IKernel kernel, IBlockchainRules rules, TransactionCache transactionCache, BlockRollbackCache blockRollbackCache, InvalidBlockCache invalidBlockCache)
+        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, Logger logger, IKernel kernel, IBlockchainRules rules, TransactionCache transactionCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
@@ -51,7 +51,7 @@ namespace BitSharp.Daemon
             this.kernel = kernel;
             this.rules = rules;
             this.transactionCache = transactionCache;
-            this.blockRollbackCache = blockRollbackCache;
+            this.spentTransactionsCache = spentTransactionsCache;
             this.invalidBlockCache = invalidBlockCache;
 
             this.calculator = kernel.Get<BlockchainCalculator>(new ConstructorArgument("shutdownToken", this.ShutdownToken.Token));
@@ -113,10 +113,10 @@ namespace BitSharp.Daemon
                     var pruneBuffer = blocksPerDay * 7;
                     foreach (var block in this.chainStateBuilder.Chain.Blocks.Reverse().Take(pruneBuffer))
                     {
-                        if (block.Height > 0 && !this.blockRollbackCache.ContainsKey(block.BlockHash))
+                        if (block.Height > 0 && !this.spentTransactionsCache.ContainsKey(block.BlockHash))
                             throw new InvalidOperationException();
                     }
-                    this.blockRollbackCache.Flush();
+                    this.spentTransactionsCache.Flush();
 
                     //TODO keep the builder open favors performance when catching up
                     //TODO once caught up, it should switch over to quickly returning committed utxo's as new blocks come in
