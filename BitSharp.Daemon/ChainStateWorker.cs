@@ -171,14 +171,7 @@ namespace BitSharp.Daemon
             {
                 if (!(e is MissingDataException))
                 {
-                    this.logger.Warn(
-                        string.Join("\n",
-                            new string('-', 200),
-                            "ChainStateWorker failure: {0}",
-                            "{1}",
-                            new string('-', 200)
-                        )
-                        .Format2(e.Message, e));
+                    this.logger.WarnException("ChainStateWorker exception", e);
                 }
 
                 if (this.chainStateBuilder != null && !this.chainStateBuilder.IsConsistent)
