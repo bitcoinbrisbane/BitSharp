@@ -24,6 +24,7 @@ namespace BitSharp.Blockchain
         private readonly IUtxoBuilderStorage utxoBuilderStorage;
         private readonly TransactionCache transactionCache;
 
+        //TODO when written more directly against Esent, these can be streamed out so an entire list doesn't need to be held in memory
         private readonly ImmutableList<KeyValuePair<UInt256, UInt256>>.Builder spentTransactions;
         private readonly ImmutableList<KeyValuePair<TxOutputKey, TxOutput>>.Builder spentOutputs;
 
