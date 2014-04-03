@@ -172,17 +172,38 @@ namespace BitSharp.Storage.Esent
             var unspentTransactionsInstance = (Instance)instanceField.GetValue(this.unspentTransactions.RawDictionary);
             var unspentOutputsInstance = (Instance)instanceField.GetValue(this.unspentOutputs.RawDictionary);
 
-            // backup to destination directory
+            // backup to temporary directory
             using (var session = new Session(unspentTransactionsInstance))
-                Api.JetBackupInstance(unspentTransactionsInstance, destPath + "_tx", BackupGrbit.Atomic, null);
+                Api.JetBackupInstance(unspentTransactionsInstance, this.directory + "_tx_snapshot", BackupGrbit.Atomic, null);
             using (var session = new Session(unspentOutputsInstance))
-                Api.JetBackupInstance(unspentOutputsInstance, destPath + "_output", BackupGrbit.Atomic, null);
+                Api.JetBackupInstance(unspentOutputsInstance, this.directory + "_output_snapshot", BackupGrbit.Atomic, null);
+
+            // restore to destination directory
+            using (var instance = CreateInstance(destPath + "_tx"))
+                Api.JetRestoreInstance(instance, this.directory + "_tx_snapshot", destPath + "_tx", null);
+            using (var instance = CreateInstance(destPath + "_output"))
+                Api.JetRestoreInstance(instance, this.directory + "_output_snapshot", destPath + "_output", null);
+
+            // cleanup temporary directory
+            try { Directory.Delete(this.directory + "_tx_snapshot", recursive: true); }
+            catch (Exception) { }
+            try { Directory.Delete(this.directory + "_output_snapshot", recursive: true); }
+            catch (Exception) { }
+
+            // initialize saved utxo
+            var utxoStorage = new UtxoStorage(blockHash);
+
+            // verify restore
+            if (utxoStorage.TransactionCount != this.TransactionCount)
+                throw new Exception("TODO");
+            if (utxoStorage.OutputCount != this.OutputCount)
+                throw new Exception("TODO");
 
             // log snapshot info
             this.logger.Info("Saved UTXO snapshot for {0} in: {1}".Format2(blockHash, stopwatch.Elapsed));
 
             // return saved utxo
-            return new UtxoStorage(blockHash);
+            return utxoStorage;
         }
 
         public IUtxoStorage Close(UInt256 blockHash)
@@ -232,6 +253,31 @@ namespace BitSharp.Storage.Esent
         private string GetDirectory()
         {
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", Guid.NewGuid().ToString());
+        }
+
+        private static Instance CreateInstance(string directory)
+        {
+            var instance = new Instance(Guid.NewGuid().ToString());
+
+            instance.Parameters.SystemDirectory = directory;
+            instance.Parameters.LogFileDirectory = directory;
+            instance.Parameters.TempDirectory = directory;
+            instance.Parameters.AlternateDatabaseRecoveryDirectory = directory;
+            instance.Parameters.CreatePathIfNotExist = true;
+            instance.Parameters.BaseName = "epc";
+            instance.Parameters.EnableIndexChecking = false;
+            instance.Parameters.CircularLog = true;
+            instance.Parameters.CheckpointDepthMax = 64 * 1024 * 1024;
+            instance.Parameters.LogFileSize = 1024;
+            instance.Parameters.LogBuffers = 1024;
+            instance.Parameters.MaxTemporaryTables = 0;
+            instance.Parameters.MaxVerPages = 1024;
+            instance.Parameters.NoInformationEvent = true;
+            instance.Parameters.WaypointLatency = 1;
+            instance.Parameters.MaxSessions = 256;
+            instance.Parameters.MaxOpenTables = 256;
+            
+            return instance;
         }
     }
 }
