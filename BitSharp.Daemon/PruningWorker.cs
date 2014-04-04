@@ -93,7 +93,7 @@ namespace BitSharp.Daemon
                     break;
 
                 case PruningMode.Full:
-                    for (var i = minHeight; i < chain.Blocks.Count /*- pruneBuffer*/; i++)
+                    for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
                     {
                         var block = chain.Blocks[i];
 
