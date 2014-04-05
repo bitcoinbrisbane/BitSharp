@@ -33,5 +33,14 @@ namespace BitSharp.Data
                 ScriptPublicKey ?? this.ScriptPublicKey
             );
         }
+
+        public override bool Equals(object obj)
+        {
+            if (!(obj is TxOutput))
+                return false;
+
+            var other = (TxOutput)obj;
+            return other._value == this._value && other._scriptPublicKey.SequenceEqual(this._scriptPublicKey);
+        }
     }
 }

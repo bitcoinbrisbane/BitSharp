@@ -74,5 +74,14 @@ namespace BitSharp.Data
         {
             return value ? OutputState.Unspent : OutputState.Spent;
         }
+
+        public override bool Equals(object obj)
+        {
+            if (!(obj is OutputStates))
+                return false;
+
+            var other = (OutputStates)obj;
+            return other.bitArray.SequenceEqual(this.bitArray);
+        }
     }
 }

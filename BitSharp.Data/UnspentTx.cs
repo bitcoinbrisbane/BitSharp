@@ -37,5 +37,14 @@ namespace BitSharp.Data
         {
             return new SpentTx(this.confirmedBlockHash, this.outputStates.Length);
         }
+
+        public override bool Equals(object obj)
+        {
+            if (!(obj is UnspentTx))
+                return false;
+
+            var other = (UnspentTx)obj;
+            return other.confirmedBlockHash == this.confirmedBlockHash && other.outputStates.Equals(this.outputStates);
+        }
     }
 }
