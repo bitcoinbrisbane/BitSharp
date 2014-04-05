@@ -87,7 +87,7 @@
     <Compile Include="Network\NetworkAddressKey.cs" />
     <Compile Include="Network\NetworkAddressWithTime.cs" />
     <Compile Include="Network\VersionPayload.cs" />
-    <Compile Include="OutputStates.cs" />
+    <Compile Include="Blockchain\OutputStates.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Blockchain\Block.cs" />
     <Compile Include="Blockchain\BlockHeader.cs" />
