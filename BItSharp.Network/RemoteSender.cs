@@ -10,6 +10,7 @@ using System.Net;
 using BitSharp.Network;
 using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
+using BitSharp.Data.ExtensionMethods;
 using System.Collections.Immutable;
 using System.IO;
 using BitSharp.Data;
