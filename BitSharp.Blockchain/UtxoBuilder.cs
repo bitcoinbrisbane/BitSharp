@@ -196,6 +196,10 @@ namespace BitSharp.Blockchain
 
             // remove the transaction
             this.utxoBuilderStorage.RemoveTransaction(tx.Hash);
+
+            // remove the transaction outputs
+            for (var outputIndex = 0U; outputIndex < tx.Outputs.Count; outputIndex++)
+                this.utxoBuilderStorage.RemoveOutput(new TxOutputKey(tx.Hash, outputIndex));
         }
 
         public void Unspend(TxInput input, ChainedBlock block, Dictionary<UInt256, SpentTx> spentTransactions, Dictionary<TxOutputKey, TxOutput> spentOutputs)
