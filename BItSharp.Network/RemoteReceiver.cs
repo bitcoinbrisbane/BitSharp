@@ -27,7 +27,7 @@ namespace BitSharp.Network
         public event Action<ImmutableArray<InventoryVector>> OnInventoryVectors;
         public event Action<ImmutableArray<InventoryVector>> OnNotFound;
         public event Action<RemoteNode, Block> OnBlock;
-        public event Action<BlockHeader> OnBlockHeader;
+        public event Action<RemoteNode, BlockHeader> OnBlockHeader;
         public event Action<Transaction> OnTransaction;
         public event Action<ImmutableArray<NetworkAddressWithTime>> OnReceivedAddresses;
         public event Action<GetBlocksPayload> OnGetBlocks;
@@ -245,7 +245,7 @@ namespace BitSharp.Network
 
                                 var handler = this.OnBlockHeader;
                                 if (handler != null)
-                                    handler(blockHeader);
+                                    handler(this.owner, blockHeader);
                             }
                         }
                     }

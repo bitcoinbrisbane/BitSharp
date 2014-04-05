@@ -28,6 +28,7 @@ namespace BitSharp.Node
     public class LocalClient : IDisposable
     {
         public event Action<RemoteNode, Block> OnBlock;
+        public event Action<RemoteNode, BlockHeader> OnBlockHeader;
 
         private static readonly int SERVER_BACKLOG = 10;
         private static readonly int CONNECTED_MAX = 25;
@@ -53,8 +54,8 @@ namespace BitSharp.Node
         private readonly NetworkPeerCache networkPeerCache;
 
         private readonly WorkerMethod connectWorker;
+        private readonly HeadersRequestWorker headersRequestWorker;
         private readonly BlockRequestWorker blockRequestWorker;
-        private readonly WorkerMethod requestHeadersWorker;
         private readonly WorkerMethod requestTransactionsWorker;
         private readonly WorkerMethod statsWorker;
 
@@ -88,14 +89,14 @@ namespace BitSharp.Node
             this.networkPeerCache = networkPeerCache;
 
             this.connectWorker = new WorkerMethod("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), this.logger);
+            this.headersRequestWorker = kernel.Get<HeadersRequestWorker>(
+                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30))),
+                new ConstructorArgument("localClient", this));
             this.blockRequestWorker = kernel.Get<BlockRequestWorker>(
                 new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30))),
                 new ConstructorArgument("localClient", this));
-            this.requestHeadersWorker = new WorkerMethod("LocalClient.RequestHeadersWorker", RequestHeadersWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000), this.logger);
             this.requestTransactionsWorker = new WorkerMethod("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000), this.logger);
             this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30), this.logger);
-
-            this.blockchainDaemon.OnTargetChainChanged += OnTargetChainChanged;
 
             switch (this.Type)
             {
@@ -126,8 +127,11 @@ namespace BitSharp.Node
 
             this.connectWorker.Start();
 
+            if (this.Type != RulesEnum.ComparisonToolTestNet)
+            {
+                this.headersRequestWorker.Start();
+            }
             this.blockRequestWorker.Start();
-            this.requestHeadersWorker.Start();
             this.requestTransactionsWorker.Start();
 
             this.messageStopwatch.Start();
@@ -137,26 +141,19 @@ namespace BitSharp.Node
 
         public void Dispose()
         {
-            this.blockchainDaemon.OnTargetChainChanged -= OnTargetChainChanged;
-
             this.shutdownToken.Cancel();
 
             Shutdown();
 
             new IDisposable[]
             {
+                this.headersRequestWorker,
                 this.blockRequestWorker,
-                this.requestHeadersWorker,
                 this.requestTransactionsWorker,
                 this.connectWorker,
                 this.statsWorker,
                 this.shutdownToken
             }.DisposeList();
-        }
-
-        private void OnTargetChainChanged(object sender, EventArgs e)
-        {
-            this.requestHeadersWorker.NotifyWork();
         }
 
         private void ConnectWorker()
@@ -212,17 +209,6 @@ namespace BitSharp.Node
                     DisconnectPeer(remoteEndpoint, null);
                 }
             }
-        }
-
-        private void RequestHeadersWorker()
-        {
-            var connectedPeersLocal = this.connectedPeers.Values.SafeToList();
-            if (connectedPeersLocal.Count == 0)
-                return;
-
-            // send out request for unknown block headers
-            if (this.Type != RulesEnum.ComparisonToolTestNet)
-                SendGetHeaders(connectedPeersLocal.RandomOrDefault()).Forget();
         }
 
         private void RequestTransactionsWorker()
@@ -387,28 +373,6 @@ namespace BitSharp.Node
             await remoteNode.Sender.RequestKnownAddressesAsync();
         }
 
-        private async Task SendGetHeaders(RemoteNode remoteNode)
-        {
-            var targetChainLocal = this.blockchainDaemon.TargetChain;
-            if (targetChainLocal != null)
-            {
-                var blockLocatorHashes = CalculateBlockLocatorHashes(targetChainLocal.Blocks);
-
-                await remoteNode.Sender.SendGetHeaders(blockLocatorHashes, hashStop: 0);
-            }
-        }
-
-        private async Task SendGetBlocks(RemoteNode remoteNode)
-        {
-            var targetChainLocal = this.blockchainDaemon.TargetChain;
-            if (targetChainLocal != null)
-            {
-                var blockLocatorHashes = CalculateBlockLocatorHashes(targetChainLocal.Blocks);
-
-                await remoteNode.Sender.SendGetBlocks(blockLocatorHashes, hashStop: 0);
-            }
-        }
-
         private void AddSeedPeers()
         {
             Action<string> addSeed =
@@ -519,7 +483,7 @@ namespace BitSharp.Node
             remoteNode.Receiver.OnMessage += OnMessage;
             remoteNode.Receiver.OnInventoryVectors += OnInventoryVectors;
             remoteNode.Receiver.OnBlock += HandleBlock;
-            remoteNode.Receiver.OnBlockHeader += OnBlockHeader;
+            remoteNode.Receiver.OnBlockHeader += HandleBlockHeader;
             remoteNode.Receiver.OnTransaction += OnTransaction;
             remoteNode.Receiver.OnReceivedAddresses += OnReceivedAddresses;
             remoteNode.OnGetBlocks += OnGetBlocks;
@@ -534,7 +498,7 @@ namespace BitSharp.Node
             remoteNode.Receiver.OnMessage -= OnMessage;
             remoteNode.Receiver.OnInventoryVectors -= OnInventoryVectors;
             remoteNode.Receiver.OnBlock -= HandleBlock;
-            remoteNode.Receiver.OnBlockHeader -= OnBlockHeader;
+            remoteNode.Receiver.OnBlockHeader -= HandleBlockHeader;
             remoteNode.Receiver.OnTransaction -= OnTransaction;
             remoteNode.Receiver.OnReceivedAddresses -= OnReceivedAddresses;
             remoteNode.OnGetBlocks -= OnGetBlocks;
@@ -598,12 +562,11 @@ namespace BitSharp.Node
                 handler(remoteNode, block);
         }
 
-        private void OnBlockHeader(BlockHeader blockHeader)
+        private void HandleBlockHeader(RemoteNode remoteNode, BlockHeader blockHeader)
         {
-            if (this.logger.IsTraceEnabled)
-                this.logger.Trace("Received block header {0}".Format2(blockHeader.Hash));
-            
-            this.blockHeaderCache.TryAdd(blockHeader.Hash, blockHeader);
+            var handler = this.OnBlockHeader;
+            if (handler != null)
+                handler(remoteNode, blockHeader);
         }
 
         private void OnTransaction(Transaction transaction)
@@ -827,6 +790,7 @@ namespace BitSharp.Node
                 // acknowledge their version
                 await remoteNode.Sender.SendVersionAcknowledge();
 
+                this.headersRequestWorker.NotifyWork();
                 this.blockRequestWorker.NotifyWork();
                 this.statsWorker.NotifyWork();
 
@@ -862,28 +826,6 @@ namespace BitSharp.Node
                 UnwireNode(connectedPeer);
                 connectedPeer.Disconnect();
             }
-        }
-
-        //TODO move into p2p node
-        private static ImmutableArray<UInt256> CalculateBlockLocatorHashes(IImmutableList<ChainedBlock> blockHashes)
-        {
-            var blockLocatorHashes = new List<UInt256>();
-
-            if (blockHashes.Count > 0)
-            {
-                var step = 1;
-                var start = 0;
-                for (var i = blockHashes.Count - 1; i > 0; i -= step, start++)
-                {
-                    if (start >= 10)
-                        step *= 2;
-
-                    blockLocatorHashes.Add(blockHashes[i].BlockHash);
-                }
-                blockLocatorHashes.Add(blockHashes[0].BlockHash);
-            }
-
-            return blockLocatorHashes.ToImmutableArray();
         }
     }
 
