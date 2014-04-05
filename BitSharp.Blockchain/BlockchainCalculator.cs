@@ -315,7 +315,7 @@ namespace BitSharp.Blockchain
 
         private UInt256 CalculateHash(BlockHeader blockHeader)
         {
-            return new UInt256(Crypto.DoubleSHA256(DataCalculator.EncodeBlockHeader(blockHeader)));
+            return new UInt256(Crypto.DoubleSHA256(DataEncoder.EncodeBlockHeader(blockHeader)));
         }
     }
 }

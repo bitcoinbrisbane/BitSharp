@@ -39,7 +39,7 @@ namespace BitSharp.Blockchain
 
         public BlockHeader MineBlockHeader(BlockHeader blockHeader, UInt256 hashTarget)
         {
-            var blockHeaderBytes = DataCalculator.EncodeBlockHeader(blockHeader);
+            var blockHeaderBytes = DataEncoder.EncodeBlockHeader(blockHeader);
             
             var hashTargetBytes = hashTarget.ToByteArray();
 

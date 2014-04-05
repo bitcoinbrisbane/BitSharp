@@ -16,74 +16,22 @@ namespace BitSharp.Data
     {
         public static UInt256 CalculateBlockHash(BlockHeader blockHeader)
         {
-            return new UInt256(Crypto.DoubleSHA256(EncodeBlockHeader(blockHeader)));
+            return new UInt256(Crypto.DoubleSHA256(DataEncoder.EncodeBlockHeader(blockHeader)));
         }
 
         public static UInt256 CalculateBlockHash(UInt32 Version, UInt256 PreviousBlock, UInt256 MerkleRoot, UInt32 Time, UInt32 Bits, UInt32 Nonce)
         {
-            return new UInt256(Crypto.DoubleSHA256(EncodeBlockHeader(Version, PreviousBlock, MerkleRoot, Time, Bits, Nonce)));
-        }
-
-        public static byte[] EncodeBlockHeader(BlockHeader blockHeader)
-        {
-            return EncodeBlockHeader(blockHeader.Version, blockHeader.PreviousBlock, blockHeader.MerkleRoot, blockHeader.Time, blockHeader.Bits, blockHeader.Nonce);
-        }
-
-        public static byte[] EncodeBlockHeader(UInt32 Version, UInt256 PreviousBlock, UInt256 MerkleRoot, UInt32 Time, UInt32 Bits, UInt32 Nonce)
-        {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
-            {
-                writer.Write4Bytes(Version);
-                writer.Write32Bytes(PreviousBlock);
-                writer.Write32Bytes(MerkleRoot);
-                writer.Write4Bytes(Time);
-                writer.Write4Bytes(Bits);
-                writer.Write4Bytes(Nonce);
-
-                return stream.ToArray();
-            }
+            return new UInt256(Crypto.DoubleSHA256(DataEncoder.EncodeBlockHeader(Version, PreviousBlock, MerkleRoot, Time, Bits, Nonce)));
         }
 
         public static UInt256 CalculateTransactionHash(Transaction tx)
         {
-            return new UInt256(Crypto.DoubleSHA256(EncodeTransaction(tx)));
+            return new UInt256(Crypto.DoubleSHA256(DataEncoder.EncodeTransaction(tx)));
         }
 
         public static UInt256 CalculateTransactionHash(UInt32 Version, ImmutableArray<TxInput> Inputs, ImmutableArray<TxOutput> Outputs, UInt32 LockTime)
         {
-            return new UInt256(Crypto.DoubleSHA256(EncodeTransaction(Version, Inputs, Outputs, LockTime)));
-        }
-
-        public static byte[] EncodeTransaction(Transaction tx)
-        {
-            return EncodeTransaction(tx.Version, tx.Inputs, tx.Outputs, tx.LockTime);
-        }
-
-        public static byte[] EncodeTransaction(UInt32 Version, ImmutableArray<TxInput> Inputs, ImmutableArray<TxOutput> Outputs, UInt32 LockTime)
-        {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
-            {
-                writer.Write4Bytes(Version);
-                writer.WriteVarInt((UInt64)Inputs.Count);
-                foreach (var input in Inputs)
-                {
-                    writer.Write32Bytes(input.PreviousTxOutputKey.TxHash);
-                    writer.Write4Bytes(input.PreviousTxOutputKey.TxOutputIndex);
-                    writer.WriteVarBytes(input.ScriptSignature.ToArray());
-                    writer.Write4Bytes(input.Sequence);
-                }
-                writer.WriteVarInt((UInt64)Outputs.Count);
-                foreach (var output in Outputs)
-                {
-                    writer.Write8Bytes(output.Value);
-                    writer.WriteVarBytes(output.ScriptPublicKey.ToArray());
-                }
-                writer.Write4Bytes(LockTime);
-
-                return stream.ToArray();
-            }
+            return new UInt256(Crypto.DoubleSHA256(DataEncoder.EncodeTransaction(Version, Inputs, Outputs, LockTime)));
         }
 
         public static UInt256 CalculateMerkleRoot(IImmutableList<UInt256> txHashes)
@@ -123,7 +71,7 @@ namespace BitSharp.Data
         }
 
         //TDOO name...
-        private static readonly BigInteger Max256BitTarget = new BigInteger(1) << 256;
+        private static readonly BigInteger Max256BitTarget = BigInteger.Pow(2, 256);
         public static BigInteger CalculateWork(BlockHeader blockHeader)
         {
             try

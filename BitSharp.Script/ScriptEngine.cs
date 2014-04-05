@@ -359,7 +359,7 @@ Verifying script for block {0}, transaction {1}, input {2}
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
-                writer.WriteBytes(DataCalculator.EncodeTransaction(newTx));
+                writer.WriteBytes(DataEncoder.EncodeTransaction(newTx));
                 writer.Write4Bytes(hashType);
 
                 return stream.ToArray();

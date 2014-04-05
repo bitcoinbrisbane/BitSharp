@@ -124,6 +124,22 @@ namespace BitSharp.Data
             }
         }
 
+        public static byte[] EncodeBlockHeader(UInt32 Version, UInt256 PreviousBlock, UInt256 MerkleRoot, UInt32 Time, UInt32 Bits, UInt32 Nonce)
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.Write4Bytes(Version);
+                writer.Write32Bytes(PreviousBlock);
+                writer.Write32Bytes(MerkleRoot);
+                writer.Write4Bytes(Time);
+                writer.Write4Bytes(Bits);
+                writer.Write4Bytes(Nonce);
+
+                return stream.ToArray();
+            }
+        }
+
         public static byte[] EncodeBlockHeader(BlockHeader blockHeader)
         {
             using (var stream = new MemoryStream())
@@ -248,6 +264,20 @@ namespace BitSharp.Data
                 writer.WriteList(tx.Inputs, input => EncodeTxInput(stream, input));
                 writer.WriteList(tx.Outputs, output => EncodeTxOutput(stream, output));
                 writer.Write4Bytes(tx.LockTime);
+            }
+        }
+
+        public static byte[] EncodeTransaction(UInt32 Version, ImmutableArray<TxInput> Inputs, ImmutableArray<TxOutput> Outputs, UInt32 LockTime)
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.Write4Bytes(Version);
+                writer.WriteList(Inputs, input => EncodeTxInput(stream, input));
+                writer.WriteList(Outputs, output => EncodeTxOutput(stream, output));
+                writer.Write4Bytes(LockTime);
+
+                return stream.ToArray();
             }
         }
 
