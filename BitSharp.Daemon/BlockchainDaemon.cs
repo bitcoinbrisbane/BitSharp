@@ -92,7 +92,8 @@ namespace BitSharp.Daemon
 
             this.chainStateWorker = kernel.Get<ChainStateWorker>(
                 new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5))),
-                new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)));
+                new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)),
+                new ConstructorArgument("maxBuilderTime", TimeSpan.FromMinutes(30)));
 
             this.targetChainWorker.OnTargetBlockChanged +=
                 () =>
@@ -211,6 +212,12 @@ namespace BitSharp.Daemon
                 else
                     return chainStateLocal.Height;
             }
+        }
+
+        public TimeSpan MaxBuilderTime
+        {
+            get { return this.chainStateWorker.MaxBuilderTime; }
+            set { this.chainStateWorker.MaxBuilderTime = value; }
         }
 
         public TimeSpan AverageBlockProcessingTime()

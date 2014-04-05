@@ -21,10 +21,8 @@ namespace BitSharp.Daemon
         public event Action OnChainStateChanged;
         public event Action OnChainStateBuilderChanged;
 
-        private static readonly TimeSpan MAX_BUILDER_LIFETIME = TimeSpan.FromMinutes(30);
-
         private readonly Logger logger;
-        private Func<Chain> getTargetChain;
+        private readonly Func<Chain> getTargetChain;
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
         private readonly BlockchainCalculator calculator;
@@ -43,11 +41,12 @@ namespace BitSharp.Daemon
 
         private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, Logger logger, IKernel kernel, IBlockchainRules rules, TransactionCache transactionCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
+        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, TimeSpan maxBuilderTime, Logger logger, IKernel kernel, IBlockchainRules rules, TransactionCache transactionCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.getTargetChain = getTargetChain;
+            this.MaxBuilderTime = maxBuilderTime;
             this.kernel = kernel;
             this.rules = rules;
             this.transactionCache = transactionCache;
@@ -67,6 +66,8 @@ namespace BitSharp.Daemon
                 new ConstructorArgument("getChainState", (Func<ChainState>)(() => this.chainState)),
                 new ConstructorArgument("getChainStateBuilder", (Func<ChainStateBuilder>)(() => this.chainStateBuilder)));
         }
+
+        public TimeSpan MaxBuilderTime { get; set; }
 
         public ChainState ChainState { get { return this.chainState; } }
 
@@ -104,7 +105,7 @@ namespace BitSharp.Daemon
 
                 if (this.chainStateBuilder != null
                     && this.chainStateBuilder.LastBlockHash != chainStateLocal.LastBlockHash
-                    && DateTime.UtcNow - this.chainStateBuilderTime > MAX_BUILDER_LIFETIME)
+                    && DateTime.UtcNow - this.chainStateBuilderTime > this.MaxBuilderTime)
                 {
                     this.calculator.LogBlockchainProgress(this.chainStateBuilder);
 
@@ -159,7 +160,7 @@ namespace BitSharp.Daemon
                             if (handler != null)
                                 handler();
 
-                            if (DateTime.UtcNow - this.chainStateBuilderTime > MAX_BUILDER_LIFETIME)
+                            if (DateTime.UtcNow - this.chainStateBuilderTime > this.MaxBuilderTime)
                             {
                                 this.NotifyWork();
                                 cancelToken.Cancel();
