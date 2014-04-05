@@ -30,7 +30,7 @@ namespace BitSharp.Daemon.Test
         public void TestSimpleChain()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new TestLoggingModule(), new MemoryStorageModule(), new CacheModule());
+            var kernel = new StandardKernel(new ConsoleLoggingModule(), new MemoryStorageModule(), new CacheModule());
 
             // initialize data
             var chainedBlock0 = new ChainedBlock(blockHash: 0, previousBlockHash: 9999, height: 0, totalWork: 0);
@@ -111,7 +111,7 @@ namespace BitSharp.Daemon.Test
         public void TestSimpleChainReverse()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new TestLoggingModule(), new MemoryStorageModule(), new CacheModule());
+            var kernel = new StandardKernel(new ConsoleLoggingModule(), new MemoryStorageModule(), new CacheModule());
 
             // initialize data
             var chainedBlock0 = new ChainedBlock(blockHash: 0, previousBlockHash: 9999, height: 0, totalWork: 0);
@@ -215,7 +215,7 @@ namespace BitSharp.Daemon.Test
         public void TestTargetChainReorganize()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new TestLoggingModule(), new MemoryStorageModule(), new CacheModule());
+            var kernel = new StandardKernel(new ConsoleLoggingModule(), new MemoryStorageModule(), new CacheModule());
 
             // initialize data
             var chainedBlock0 = new ChainedBlock(blockHash: 0, previousBlockHash: 9999, height: 0, totalWork: 0);

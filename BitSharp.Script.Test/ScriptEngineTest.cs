@@ -29,7 +29,7 @@ namespace BitSharp.Test
         [TestInitialize]
         public void TestInitialize()
         {
-            this.kernel = new StandardKernel(new TestLoggingModule());
+            this.kernel = new StandardKernel(new ConsoleLoggingModule());
             this.logger = this.kernel.Get<Logger>();
             this.provider = new FileSystemBlockProvider();
             //this.provider = new BlockExplorerProvider();

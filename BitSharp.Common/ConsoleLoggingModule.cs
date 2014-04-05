@@ -11,8 +11,15 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Common
 {
-    public class TestLoggingModule : NinjectModule
+    public class ConsoleLoggingModule : NinjectModule
     {
+        private readonly LogLevel logLevel;
+
+        public ConsoleLoggingModule(LogLevel logLevel = null)
+        {
+            this.logLevel = logLevel ?? LogLevel.Debug;
+        }
+
         public override void Load()
         {
             // initialize logging configuration
@@ -23,10 +30,10 @@ namespace BitSharp.Common
             config.AddTarget("console", consoleTarget);
 
             // console settings
-            consoleTarget.Layout = "${message}";
+            consoleTarget.Layout = "${message} ${exception:separator=\r\n:format=message,type,method,stackTrace}";
 
             // console rules
-            config.LoggingRules.Add(new LoggingRule("*", LogLevel.Trace, consoleTarget));
+            config.LoggingRules.Add(new LoggingRule("*", this.logLevel, consoleTarget));
 
             // activate configuration and bind
             LogManager.Configuration = config;
