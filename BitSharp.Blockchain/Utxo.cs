@@ -64,6 +64,11 @@ namespace BitSharp.Blockchain
             }
         }
 
+        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> GetUnspentTransactions()
+        {
+            return this.utxoStorage.UnspentTransactions();
+        }
+
         public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> GetUnspentOutputs()
         {
             return this.utxoStorage.UnspentOutputs();
