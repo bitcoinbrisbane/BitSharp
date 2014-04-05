@@ -30,7 +30,7 @@ namespace BitSharp.Daemon.Test
         private readonly ECPublicKeyParameters coinbasePublicKey;
         private readonly Miner miner;
         private readonly Block genesisBlock;
-        private readonly BlockView blockView;
+        private readonly BlockCache blockCache;
         private readonly UnitTestRules rules;
         private readonly BlockchainDaemon blockchainDaemon;
 
@@ -67,7 +67,7 @@ namespace BitSharp.Daemon.Test
             this.kernel.Load(new CacheModule());
 
             // initialize block view
-            this.blockView = this.kernel.Get<BlockView>();
+            this.blockCache = this.kernel.Get<BlockCache>();
 
             // initialize unit test rules
             this.rules = this.kernel.Get<UnitTestRules>();
@@ -109,7 +109,7 @@ namespace BitSharp.Daemon.Test
 
         public Block GenesisBlock { get { return this.genesisBlock; } }
 
-        public BlockView BlockView { get { return this.blockView; } }
+        public BlockCache BlockCache { get { return this.blockCache; } }
 
         public UnitTestRules Rules { get { return this.rules; } }
 
@@ -218,7 +218,7 @@ namespace BitSharp.Daemon.Test
 
         public void AddBlock(Block block)
         {
-            this.blockView[block.Hash] = block;
+            this.blockCache[block.Hash] = block;
 
             //TODO ugly to loop like this
             for (var i = 0; i < 10; i++)

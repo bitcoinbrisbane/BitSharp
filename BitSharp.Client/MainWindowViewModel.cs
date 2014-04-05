@@ -27,7 +27,7 @@ namespace BitSharp.Client
         private readonly IKernel kernel;
         private readonly BlockchainDaemon blockchainDaemon;
         private readonly BlockTxHashesCache blockTxHashesCache;
-        private readonly BlockView blockView;
+        private readonly BlockCache blockCache;
 
         private readonly DateTime startTime;
         private string runningTime;
@@ -44,7 +44,7 @@ namespace BitSharp.Client
             this.kernel = kernel;
             this.blockchainDaemon = kernel.Get<BlockchainDaemon>();
             this.blockTxHashesCache = kernel.Get<BlockTxHashesCache>();
-            this.blockView = kernel.Get<BlockView>();
+            this.blockCache = kernel.Get<BlockCache>();
 
             this.startTime = DateTime.UtcNow;
             this.runningTimeTimer = new DispatcherTimer();
@@ -204,7 +204,7 @@ namespace BitSharp.Client
             {
                 if (chainState.Height > 0)
                 {
-                    var block = this.blockView[this.viewChainState.LastBlockHash];
+                    var block = this.blockCache[this.viewChainState.LastBlockHash];
                     // TODO this is abusing rollback a bit just to get the transactions that exist in a target block that's already known
                     // TODO make a better api for get the net output of a block
                     //List<TxOutputKey> spendOutputs, receiveOutputs;

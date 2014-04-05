@@ -46,6 +46,12 @@ namespace BitSharp.Storage
             : base(cache) { }
     }
 
+    public sealed class BlockCache : PassthroughUnboundedCache<UInt256, Block>
+    {
+        public BlockCache(IUnboundedCache<UInt256, Block> cache)
+            : base(cache) { }
+    }
+
     public sealed class BlockTxHashesCache : PassthroughBoundedCache<UInt256, IImmutableList<UInt256>>
     {
         public BlockTxHashesCache(IBoundedCache<UInt256, IImmutableList<UInt256>> cache)
@@ -81,10 +87,4 @@ namespace BitSharp.Storage
         public NetworkPeerCache(IBoundedCache<NetworkAddressKey, NetworkAddressWithTime> cache)
             : base(cache) { }
     }
-
-    //public sealed class BlockView : PassthroughBoundedCache<UInt256, Transaction>
-    //{
-    //    public BlockView(IBoundedCache<UInt256, Transaction> cache)
-    //        : base(cache) { }
-    //}
 }

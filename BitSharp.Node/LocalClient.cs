@@ -50,7 +50,7 @@ namespace BitSharp.Node
         private readonly BlockHeaderCache blockHeaderCache;
         private readonly ChainedBlockCache chainedBlockCache;
         private readonly TransactionCache transactionCache;
-        private readonly BlockView blockView;
+        private readonly BlockCache blockCache;
         private readonly NetworkPeerCache networkPeerCache;
 
         private readonly WorkerMethod connectWorker;
@@ -73,7 +73,7 @@ namespace BitSharp.Node
 
         private Socket listenSocket;
 
-        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, BlockchainDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, TransactionCache transactionCache, BlockView blockView, NetworkPeerCache networkPeerCache)
+        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, BlockchainDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, TransactionCache transactionCache, BlockCache blockCache, NetworkPeerCache networkPeerCache)
         {
             this.shutdownToken = new CancellationTokenSource();
 
@@ -85,7 +85,7 @@ namespace BitSharp.Node
             this.blockHeaderCache = blockHeaderCache;
             this.chainedBlockCache = chainedBlockCache;
             this.transactionCache = transactionCache;
-            this.blockView = blockView;
+            this.blockCache = blockCache;
             this.networkPeerCache = networkPeerCache;
 
             this.connectWorker = new WorkerMethod("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), this.logger);
@@ -563,7 +563,7 @@ namespace BitSharp.Node
                 foreach (var invVector in invVectors)
                 {
                     if (invVector.Type == InventoryVector.TYPE_MESSAGE_BLOCK
-                        && !this.blockView.ContainsKey(invVector.Hash))
+                        && !this.blockCache.ContainsKey(invVector.Hash))
                     {
                         responseInvVectors.Add(invVector);
                     }
@@ -746,7 +746,7 @@ namespace BitSharp.Node
                 {
                     case InventoryVector.TYPE_MESSAGE_BLOCK:
                         Block block;
-                        if (this.blockView.TryGetValue(invVector.Hash, out block))
+                        if (this.blockCache.TryGetValue(invVector.Hash, out block))
                         {
                             //remoteNode.Sender.SendBlock(block).Forget();
                         }

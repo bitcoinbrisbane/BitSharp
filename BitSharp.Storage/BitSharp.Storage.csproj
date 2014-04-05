@@ -71,7 +71,7 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BlockView.cs" />
+    <Compile Include="BlockCompositeCache.cs" />
     <Compile Include="BoundedFullCache.cs" />
     <Compile Include="CacheModule.cs" />
     <Compile Include="GenesisUtxoStorage.cs" />

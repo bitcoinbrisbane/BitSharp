@@ -48,7 +48,7 @@ namespace BitSharp.Daemon
         private readonly ChainedBlockCache chainedBlockCache;
         private readonly BlockTxHashesCache blockTxHashesCache;
         private readonly TransactionCache transactionCache;
-        private readonly BlockView blockView;
+        private readonly BlockCache blockCache;
 
         private readonly CancellationTokenSource shutdownToken;
 
@@ -58,7 +58,7 @@ namespace BitSharp.Daemon
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
 
-        public BlockchainDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockView blockView)
+        public BlockchainDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockCache blockCache)
         {
             this.logger = logger;
             this.shutdownToken = new CancellationTokenSource();
@@ -69,10 +69,10 @@ namespace BitSharp.Daemon
             this.chainedBlockCache = chainedBlockCache;
             this.blockTxHashesCache = blockTxHashesCache;
             this.transactionCache = transactionCache;
-            this.blockView = blockView;
+            this.blockCache = blockCache;
 
             // write genesis block out to storage
-            this.blockView[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
+            this.blockCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
             this.chainedBlockCache[this.rules.GenesisChainedBlock.BlockHash] = this.rules.GenesisChainedBlock;
 
             // wire up cache events

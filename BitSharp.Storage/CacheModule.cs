@@ -19,6 +19,7 @@ namespace BitSharp.Storage
     {
         private IBoundedCache<UInt256, BlockHeader> blockHeaderCache;
         private IBoundedCache<UInt256, ChainedBlock> chainedBlockCache;
+        private IUnboundedCache<UInt256, Block> blockCache;
         private IBoundedCache<UInt256, IImmutableList<UInt256>> blockTxHashesCache;
         private IUnboundedCache<UInt256, Transaction> transactionCache;
         private IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, SpentTx>>> spentTransactionsCache;
@@ -64,11 +65,13 @@ namespace BitSharp.Storage
             this.Bind<ChainedBlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.chainedBlockCache);
             this.Bind<BlockTxHashesCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockTxHashesCache);
             this.Bind<TransactionCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.transactionCache);
-            this.Bind<BlockView>().ToSelf().InSingletonScope();
             this.Bind<SpentTransactionsCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.spentTransactionsCache);
             this.Bind<SpentOutputsCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.spentOutputsCache);
             this.Bind<InvalidBlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.invalidBlockCache);
             this.Bind<NetworkPeerCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.networkPeerCache);
+
+            this.blockCache = this.Kernel.Get<BlockCompositeCache>();
+            this.Bind<BlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockCache);
         }
 
         public override void Unload()

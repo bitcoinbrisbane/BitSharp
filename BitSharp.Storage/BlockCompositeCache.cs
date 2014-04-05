@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage
 {
-    public class BlockView : IUnboundedCache<UInt256, Block>
+    public class BlockCompositeCache : IUnboundedCache<UInt256, Block>
     {
         private readonly BlockHeaderCache blockHeaderCache;
         private readonly BlockTxHashesCache blockTxHashesCache;
@@ -19,12 +19,12 @@ namespace BitSharp.Storage
 
         private readonly ConcurrentSetBuilder<UInt256> missingData;
 
-        public BlockView(BlockHeaderCache blockHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache)
+        public BlockCompositeCache(BlockHeaderCache blockHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache)
         {
             this.blockHeaderCache = blockHeaderCache;
             this.blockTxHashesCache = blockTxHashesCache;
             this.transactionCache = transactionCache;
-            
+
             this.missingData = new ConcurrentSetBuilder<UInt256>();
         }
 
@@ -121,7 +121,23 @@ namespace BitSharp.Storage
 
         public bool TryRemove(UInt256 blockHash)
         {
-            throw new NotSupportedException();
+            var result = false;
+
+            // remove block header
+            result |= this.blockHeaderCache.TryRemove(blockHash);
+
+            // remove transactions
+            IImmutableList<UInt256> txHashes;
+            if (this.blockTxHashesCache.TryGetValue(blockHash, out txHashes))
+            {
+                foreach (var txHash in txHashes)
+                    result |= this.transactionCache.TryRemove(txHash);
+            }
+
+            // remove transactions list
+            result |= this.blockTxHashesCache.TryRemove(blockHash);
+
+            return result;
         }
 
         public Block this[UInt256 blockHash]
@@ -140,7 +156,7 @@ namespace BitSharp.Storage
                     var handler = this.OnMissing;
                     if (handler != null)
                         handler(blockHash);
-                    
+
                     throw new MissingDataException(blockHash);
                 }
             }
@@ -166,7 +182,9 @@ namespace BitSharp.Storage
 
         public void Flush()
         {
-            throw new NotSupportedException();
+            this.blockHeaderCache.Flush();
+            this.blockTxHashesCache.Flush();
+            this.transactionCache.Flush();
         }
     }
 }

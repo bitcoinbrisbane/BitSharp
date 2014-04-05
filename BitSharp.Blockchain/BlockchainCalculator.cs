@@ -26,11 +26,11 @@ namespace BitSharp.Blockchain
         private readonly BlockHeaderCache blockHeaderCache;
         private readonly BlockTxHashesCache blockTxHashesCache;
         private readonly TransactionCache transactionCache;
-        private readonly BlockView blockView;
+        private readonly BlockCache blockCache;
         private readonly SpentTransactionsCache spentTransactionsCache;
         private readonly SpentOutputsCache spentOutputsCache;
 
-        public BlockchainCalculator(CancellationToken shutdownToken, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockView blockView, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
+        public BlockchainCalculator(CancellationToken shutdownToken, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
         {
             this.logger = logger;
             this.shutdownToken = shutdownToken;
@@ -38,7 +38,7 @@ namespace BitSharp.Blockchain
             this.blockHeaderCache = blockHeaderCache;
             this.blockTxHashesCache = blockTxHashesCache;
             this.transactionCache = transactionCache;
-            this.blockView = blockView;
+            this.blockCache = blockCache;
             this.spentTransactionsCache = spentTransactionsCache;
             this.spentOutputsCache = spentOutputsCache;
         }
@@ -300,7 +300,7 @@ namespace BitSharp.Blockchain
                             var chainedBlock = chainedBlockTuple.Item2;
 
                             var block = new MethodTimer(false).Time("GetBlock", () =>
-                                this.blockView[chainedBlock.BlockHash]);
+                                this.blockCache[chainedBlock.BlockHash]);
 
                             return Tuple.Create(chainedBlockDirection, chainedBlock, block);
                         }
