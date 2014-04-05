@@ -89,7 +89,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Referenced Assemblies\Secp256k1.NET.dll" />
+    <Content Include="Secp256k1.NET.dll" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
