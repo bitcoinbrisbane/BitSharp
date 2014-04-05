@@ -17,7 +17,6 @@ namespace BitSharp.Data
         private readonly ImmutableArray<TxOutput> _outputs;
         private readonly UInt32 _lockTime;
         private readonly UInt256 _hash;
-        private readonly long _sizeEstimate;
 
         public Transaction(UInt32 version, ImmutableArray<TxInput> inputs, ImmutableArray<TxOutput> outputs, UInt32 lockTime, UInt256? hash = null)
         {
@@ -25,15 +24,6 @@ namespace BitSharp.Data
             this._inputs = inputs;
             this._outputs = outputs;
             this._lockTime = lockTime;
-
-            var sizeEstimate = 0L;
-            for (var i = 0; i < inputs.Count; i++)
-                sizeEstimate += inputs[i].ScriptSignature.Count;
-
-            for (var i = 0; i < outputs.Count; i++)
-                sizeEstimate += outputs[i].ScriptPublicKey.Count;
-            sizeEstimate = (long)(sizeEstimate * 1.5);
-            this._sizeEstimate = sizeEstimate;
 
             this._hash = hash ?? DataCalculator.CalculateTransactionHash(version, inputs, outputs, lockTime);
         }
@@ -47,8 +37,6 @@ namespace BitSharp.Data
         public UInt32 LockTime { get { return this._lockTime; } }
 
         public UInt256 Hash { get { return this._hash; } }
-
-        public long SizeEstimate { get { return this._sizeEstimate; } }
 
         public Transaction With(UInt32? Version = null, ImmutableArray<TxInput>? Inputs = null, ImmutableArray<TxOutput>? Outputs = null, UInt32? LockTime = null)
         {
