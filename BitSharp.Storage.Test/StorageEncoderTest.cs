@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Storage.Test
 {
+    [Ignore]
     [TestClass]
     public class StorageEncoderTest
     {
-        [Ignore]
         [TestMethod]
         public void TestDecodeBlock()
         {
