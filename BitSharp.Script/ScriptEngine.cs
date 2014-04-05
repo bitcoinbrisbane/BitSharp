@@ -18,7 +18,6 @@ using NLog;
 
 #if SIPA
 using Secp256k1;
-using NLog;
 #endif
 
 namespace BitSharp.Script
