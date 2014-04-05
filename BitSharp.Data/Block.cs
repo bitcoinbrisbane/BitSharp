@@ -34,11 +34,5 @@ namespace BitSharp.Data
                 Transactions ?? this.Transactions
             );
         }
-
-        //TODO for unit test, move elsewhere
-        public Block WithAddedTransactions(params Transaction[] transactions)
-        {
-            return this.With(Transactions: this.Transactions.AddRange(transactions));
-        }
     }
 }

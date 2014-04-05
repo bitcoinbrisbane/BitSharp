@@ -58,9 +58,6 @@
     <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="BouncyCastle.Crypto">
-      <HintPath>..\packages\BouncyCastle.1.7.0\lib\Net40-Client\BouncyCastle.Crypto.dll</HintPath>
-    </Reference>
     <Reference Include="Moq">
       <HintPath>..\packages\Moq.4.2.1402.2112\lib\net40\Moq.dll</HintPath>
     </Reference>
@@ -90,11 +87,9 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="BlockchainTest.cs" />
     <Compile Include="BlockchainWalkerTest.cs" />
     <Compile Include="MainnetRulesTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="UnitTestRules.cs" />
     <Compile Include="UtxoBuilderTest.cs" />
     <Compile Include="UtxoTest.cs" />
   </ItemGroup>
@@ -118,10 +113,6 @@
     <ProjectReference Include="..\BitSharp.Script\BitSharp.Script.csproj">
       <Project>{b5419c45-7f0f-4dae-84bc-b6c206d8d753}</Project>
       <Name>BitSharp.Script</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BitSharp.Transactions\BitSharp.Transactions.csproj">
-      <Project>{d05dfc3e-dbf2-4ae9-9e6e-229b6cafa36f}</Project>
-      <Name>BitSharp.Transactions</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -1,4 +1,5 @@
-﻿using BitSharp.Common;
+﻿using BitSharp.Blockchain;
+using BitSharp.Common;
 using BitSharp.Data;
 using BitSharp.Storage;
 using NLog;
@@ -10,7 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Blockchain.Test
+namespace BitSharp.Daemon.Test
 {
     public class UnitTestRules : MainnetRules
     {
