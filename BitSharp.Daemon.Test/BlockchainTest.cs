@@ -194,8 +194,8 @@ namespace BitSharp.Daemon.Test
                     var actualUnspentTransactions = ImmutableDictionary.CreateRange<UInt256, UnspentTx>(actualUtxo.GetUnspentTransactions());
                     var actualUnspentOutputs = ImmutableDictionary.CreateRange<TxOutputKey, TxOutput>(actualUtxo.GetUnspentOutputs());
 
-                    Assert.IsTrue(expectedUnspentTransactions.SequenceEqual(actualUnspentTransactions));
-                    Assert.IsTrue(expectedUnspentOutputs.SequenceEqual(actualUnspentOutputs));
+                    CollectionAssert.AreEquivalent(expectedUnspentTransactions, actualUnspentTransactions);
+                    CollectionAssert.AreEquivalent(expectedUnspentOutputs, actualUnspentOutputs);
                 }
             }
         }
