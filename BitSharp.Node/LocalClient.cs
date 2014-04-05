@@ -56,7 +56,6 @@ namespace BitSharp.Node
         private readonly WorkerMethod connectWorker;
         private readonly HeadersRequestWorker headersRequestWorker;
         private readonly BlockRequestWorker blockRequestWorker;
-        private readonly WorkerMethod requestTransactionsWorker;
         private readonly WorkerMethod statsWorker;
 
         private Stopwatch messageStopwatch = new Stopwatch();
@@ -95,7 +94,6 @@ namespace BitSharp.Node
             this.blockRequestWorker = kernel.Get<BlockRequestWorker>(
                 new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30))),
                 new ConstructorArgument("localClient", this));
-            this.requestTransactionsWorker = new WorkerMethod("LocalClient.RequestTransactionsWorker", RequestTransactionsWorker, true, TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(5000), this.logger);
             this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30), this.logger);
 
             switch (this.Type)
@@ -132,7 +130,6 @@ namespace BitSharp.Node
                 this.headersRequestWorker.Start();
             }
             this.blockRequestWorker.Start();
-            this.requestTransactionsWorker.Start();
 
             this.messageStopwatch.Start();
             this.messageCount = 0;
@@ -149,7 +146,6 @@ namespace BitSharp.Node
             {
                 this.headersRequestWorker,
                 this.blockRequestWorker,
-                this.requestTransactionsWorker,
                 this.connectWorker,
                 this.statsWorker,
                 this.shutdownToken
@@ -208,41 +204,6 @@ namespace BitSharp.Node
                     this.logger.Debug("Too many peers connected ({0}), disconnecting {1}".Format2(overConnected, remoteEndpoint));
                     DisconnectPeer(remoteEndpoint, null);
                 }
-            }
-        }
-
-        private void RequestTransactionsWorker()
-        {
-            var connectedPeersLocal = this.connectedPeers.Values.SafeToList();
-            if (connectedPeersLocal.Count == 0)
-                return;
-
-            var now = DateTime.UtcNow;
-
-            // remove old requests
-            this.requestedTransactions.RemoveRange(
-                this.requestedTransactions
-                .Where(x => (now - x.Value) > TimeSpan.FromSeconds(REQUEST_LIFETIME_SECONDS))
-                .Select(x => x.Key));
-
-            if (this.requestedTransactions.Count > MAX_TRANSACTION_REQUESTS)
-                return;
-
-            var requestTasks = new List<Task>();
-
-            // send out requests for any missing transactions
-            foreach (var transaction in this.transactionCache.MissingData)
-            {
-                //if (requestTasks.Count > requestAmount)
-                if (this.requestedTransactions.Count > MAX_TRANSACTION_REQUESTS)
-                    break;
-
-                // cooperative loop
-                this.shutdownToken.Token.ThrowIfCancellationRequested();
-
-                var task = RequestTransaction(connectedPeersLocal.RandomOrDefault(), transaction);
-                if (task != null)
-                    requestTasks.Add(task);
             }
         }
 
@@ -577,8 +538,6 @@ namespace BitSharp.Node
             DateTime ignore;
             this.requestedTransactions.TryRemove(transaction.Hash, out ignore);
             this.transactionCache.TryAdd(transaction.Hash, transaction);
-
-            this.requestTransactionsWorker.NotifyWork();
         }
 
         private void OnReceivedAddresses(ImmutableArray<NetworkAddressWithTime> addresses)
