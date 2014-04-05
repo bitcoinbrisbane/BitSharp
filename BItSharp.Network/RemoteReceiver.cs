@@ -154,8 +154,8 @@ namespace BitSharp.Network
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
                 var command = reader.ReadFixedString(12);
-                var payloadSize = reader.Read4Bytes();
-                var payloadChecksum = reader.Read4Bytes();
+                var payloadSize = reader.ReadUInt32();
+                var payloadChecksum = reader.ReadUInt32();
 
                 payload = reader.ReadBytes(payloadSize.ToIntChecked());
 

@@ -19,7 +19,7 @@ namespace BitSharp.Data
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
-                return reader.Read32Bytes();
+                return reader.ReadUInt256();
             }
         }
 
@@ -35,7 +35,7 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write32Bytes(value);
+                writer.WriteUInt256(value);
             }
         }
 
@@ -92,12 +92,12 @@ namespace BitSharp.Data
             {
                 return new BlockHeader
                 (
-                    version: reader.Read4Bytes(),
-                    previousBlock: reader.Read32Bytes(),
-                    merkleRoot: reader.Read32Bytes(),
-                    time: reader.Read4Bytes(),
-                    bits: reader.Read4Bytes(),
-                    nonce: reader.Read4Bytes(),
+                    version: reader.ReadUInt32(),
+                    previousBlock: reader.ReadUInt256(),
+                    merkleRoot: reader.ReadUInt256(),
+                    time: reader.ReadUInt32(),
+                    bits: reader.ReadUInt32(),
+                    nonce: reader.ReadUInt32(),
                     hash: blockHash
                 );
             }
@@ -115,12 +115,12 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write4Bytes(blockHeader.Version);
-                writer.Write32Bytes(blockHeader.PreviousBlock);
-                writer.Write32Bytes(blockHeader.MerkleRoot);
-                writer.Write4Bytes(blockHeader.Time);
-                writer.Write4Bytes(blockHeader.Bits);
-                writer.Write4Bytes(blockHeader.Nonce);
+                writer.WriteUInt32(blockHeader.Version);
+                writer.WriteUInt256(blockHeader.PreviousBlock);
+                writer.WriteUInt256(blockHeader.MerkleRoot);
+                writer.WriteUInt32(blockHeader.Time);
+                writer.WriteUInt32(blockHeader.Bits);
+                writer.WriteUInt32(blockHeader.Nonce);
             }
         }
 
@@ -129,12 +129,12 @@ namespace BitSharp.Data
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write4Bytes(Version);
-                writer.Write32Bytes(PreviousBlock);
-                writer.Write32Bytes(MerkleRoot);
-                writer.Write4Bytes(Time);
-                writer.Write4Bytes(Bits);
-                writer.Write4Bytes(Nonce);
+                writer.WriteUInt32(Version);
+                writer.WriteUInt256(PreviousBlock);
+                writer.WriteUInt256(MerkleRoot);
+                writer.WriteUInt32(Time);
+                writer.WriteUInt32(Bits);
+                writer.WriteUInt32(Nonce);
 
                 return stream.ToArray();
             }
@@ -197,8 +197,8 @@ namespace BitSharp.Data
             {
                 return new ChainedBlock
                 (
-                    blockHash: reader.Read32Bytes(),
-                    previousBlockHash: reader.Read32Bytes(),
+                    blockHash: reader.ReadUInt256(),
+                    previousBlockHash: reader.ReadUInt256(),
                     height: reader.ReadInt32(),
                     totalWork: new BigInteger(reader.ReadVarBytes())
                 );
@@ -217,8 +217,8 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write32Bytes(chainedBlock.BlockHash);
-                writer.Write32Bytes(chainedBlock.PreviousBlockHash);
+                writer.WriteUInt256(chainedBlock.BlockHash);
+                writer.WriteUInt256(chainedBlock.PreviousBlockHash);
                 writer.WriteInt32(chainedBlock.Height);
                 writer.WriteVarBytes(chainedBlock.TotalWork.ToByteArray());
             }
@@ -239,10 +239,10 @@ namespace BitSharp.Data
             {
                 return new Transaction
                 (
-                    version: reader.Read4Bytes(),
+                    version: reader.ReadUInt32(),
                     inputs: reader.ReadList(() => DecodeTxInput(stream)),
                     outputs: reader.ReadList(() => DecodeTxOutput(stream)),
-                    lockTime: reader.Read4Bytes(),
+                    lockTime: reader.ReadUInt32(),
                     hash: txHash
                 );
             }
@@ -260,10 +260,10 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write4Bytes(tx.Version);
+                writer.WriteUInt32(tx.Version);
                 writer.WriteList(tx.Inputs, input => EncodeTxInput(stream, input));
                 writer.WriteList(tx.Outputs, output => EncodeTxOutput(stream, output));
-                writer.Write4Bytes(tx.LockTime);
+                writer.WriteUInt32(tx.LockTime);
             }
         }
 
@@ -272,10 +272,10 @@ namespace BitSharp.Data
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write4Bytes(Version);
+                writer.WriteUInt32(Version);
                 writer.WriteList(Inputs, input => EncodeTxInput(stream, input));
                 writer.WriteList(Outputs, output => EncodeTxOutput(stream, output));
-                writer.Write4Bytes(LockTime);
+                writer.WriteUInt32(LockTime);
 
                 return stream.ToArray();
             }
@@ -298,11 +298,11 @@ namespace BitSharp.Data
                 (
                     previousTxOutputKey: new TxOutputKey
                     (
-                        txHash: reader.Read32Bytes(),
-                        txOutputIndex: reader.Read4Bytes()
+                        txHash: reader.ReadUInt256(),
+                        txOutputIndex: reader.ReadUInt32()
                     ),
                     scriptSignature: reader.ReadVarBytes().ToImmutableArray(),
-                    sequence: reader.Read4Bytes()
+                    sequence: reader.ReadUInt32()
                 );
             }
         }
@@ -319,10 +319,10 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write32Bytes(txInput.PreviousTxOutputKey.TxHash);
-                writer.Write4Bytes(txInput.PreviousTxOutputKey.TxOutputIndex);
+                writer.WriteUInt256(txInput.PreviousTxOutputKey.TxHash);
+                writer.WriteUInt32(txInput.PreviousTxOutputKey.TxOutputIndex);
                 writer.WriteVarBytes(txInput.ScriptSignature.ToArray());
-                writer.Write4Bytes(txInput.Sequence);
+                writer.WriteUInt32(txInput.Sequence);
             }
         }
 
@@ -341,7 +341,7 @@ namespace BitSharp.Data
             {
                 return new TxOutput
                 (
-                    value: reader.Read8Bytes(),
+                    value: reader.ReadUInt64(),
                     scriptPublicKey: reader.ReadVarBytes().ToImmutableArray()
                 );
             }
@@ -359,7 +359,7 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write8Bytes(txOutput.Value);
+                writer.WriteUInt64(txOutput.Value);
                 writer.WriteVarBytes(txOutput.ScriptPublicKey.ToArray());
             }
         }
@@ -378,7 +378,7 @@ namespace BitSharp.Data
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
                 return new UnspentTx(
-                    confirmedBlockHash: reader.Read32Bytes(),
+                    confirmedBlockHash: reader.ReadUInt256(),
                     outputStates: new OutputStates(
                         bytes: reader.ReadVarBytes(),
                         length: reader.ReadInt32())
@@ -398,7 +398,7 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write32Bytes(unspentTx.ConfirmedBlockHash);
+                writer.WriteUInt256(unspentTx.ConfirmedBlockHash);
                 writer.WriteVarBytes(unspentTx.OutputStates.ToByteArray());
                 writer.WriteInt32(unspentTx.OutputStates.Length);
             }
@@ -418,7 +418,7 @@ namespace BitSharp.Data
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
                 return new SpentTx(
-                    confirmedBlockHash: reader.Read32Bytes(),
+                    confirmedBlockHash: reader.ReadUInt256(),
                     outputCount: reader.ReadInt32()
                 );
             }
@@ -436,7 +436,7 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write32Bytes(spentTx.ConfirmedBlockHash);
+                writer.WriteUInt256(spentTx.ConfirmedBlockHash);
                 writer.WriteInt32(spentTx.OutputCount);
             }
         }
@@ -494,7 +494,7 @@ namespace BitSharp.Data
             {
                 return new TxOutputKey
                 (
-                    txHash: reader.Read32Bytes(),
+                    txHash: reader.ReadUInt256(),
                     txOutputIndex: reader.ReadUInt32()
                 );
             }
@@ -512,8 +512,8 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write32Bytes(txOutputKey.TxHash);
-                writer.Write4Bytes(txOutputKey.TxOutputIndex);
+                writer.WriteUInt256(txOutputKey.TxHash);
+                writer.WriteUInt32(txOutputKey.TxOutputIndex);
             }
         }
 
@@ -606,9 +606,9 @@ namespace BitSharp.Data
             {
                 return new GetBlocksPayload
                 (
-                    Version: reader.Read4Bytes(),
-                    BlockLocatorHashes: reader.ReadList(() => reader.Read32Bytes()),
-                    HashStop: reader.Read32Bytes()
+                    Version: reader.ReadUInt32(),
+                    BlockLocatorHashes: reader.ReadList(() => reader.ReadUInt256()),
+                    HashStop: reader.ReadUInt256()
                 );
             }
         }
@@ -625,9 +625,9 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write4Bytes(getBlocksPayload.Version);
-                writer.WriteList(getBlocksPayload.BlockLocatorHashes, locatorHash => writer.Write32Bytes(locatorHash));
-                writer.Write32Bytes(getBlocksPayload.HashStop);
+                writer.WriteUInt32(getBlocksPayload.Version);
+                writer.WriteList(getBlocksPayload.BlockLocatorHashes, locatorHash => writer.WriteUInt256(locatorHash));
+                writer.WriteUInt256(getBlocksPayload.HashStop);
             }
         }
 
@@ -682,8 +682,8 @@ namespace BitSharp.Data
             {
                 return new InventoryVector
                 (
-                    Type: reader.Read4Bytes(),
-                    Hash: reader.Read32Bytes()
+                    Type: reader.ReadUInt32(),
+                    Hash: reader.ReadUInt256()
                 );
             }
         }
@@ -700,8 +700,8 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write4Bytes(invVector.Type);
-                writer.Write32Bytes(invVector.Hash);
+                writer.WriteUInt32(invVector.Type);
+                writer.WriteUInt256(invVector.Hash);
             }
         }
 
@@ -718,10 +718,10 @@ namespace BitSharp.Data
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
-                var magic = reader.Read4Bytes();
+                var magic = reader.ReadUInt32();
                 var command = reader.ReadFixedString(12);
-                var payloadSize = reader.Read4Bytes();
-                var payloadChecksum = reader.Read4Bytes();
+                var payloadSize = reader.ReadUInt32();
+                var payloadChecksum = reader.ReadUInt32();
                 var payload = reader.ReadBytes(payloadSize.ToIntChecked()).ToImmutableArray();
 
                 return new Message
@@ -747,10 +747,10 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write4Bytes(message.Magic);
+                writer.WriteUInt32(message.Magic);
                 writer.WriteFixedString(12, message.Command);
-                writer.Write4Bytes(message.PayloadSize);
-                writer.Write4Bytes(message.PayloadChecksum);
+                writer.WriteUInt32(message.PayloadSize);
+                writer.WriteUInt32(message.PayloadChecksum);
                 writer.WriteBytes(message.PayloadSize.ToIntChecked(), message.Payload.ToArray());
             }
         }
@@ -770,9 +770,9 @@ namespace BitSharp.Data
             {
                 return new NetworkAddress
                 (
-                    Services: reader.Read8Bytes(),
+                    Services: reader.ReadUInt64(),
                     IPv6Address: reader.ReadBytes(16).ToImmutableArray(),
-                    Port: reader.Read2BytesBE()
+                    Port: reader.ReadUInt16BE()
                 );
             }
         }
@@ -789,9 +789,9 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write8Bytes(networkAddress.Services);
+                writer.WriteUInt64(networkAddress.Services);
                 writer.WriteBytes(16, networkAddress.IPv6Address.ToArray());
-                writer.Write2BytesBE(networkAddress.Port);
+                writer.WriteUInt16BE(networkAddress.Port);
             }
         }
 
@@ -810,7 +810,7 @@ namespace BitSharp.Data
             {
                 return new NetworkAddressWithTime
                 (
-                    Time: reader.Read4Bytes(),
+                    Time: reader.ReadUInt32(),
                     NetworkAddress: DecodeNetworkAddress(stream)
                 );
             }
@@ -828,7 +828,7 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write4Bytes(networkAddressWithTime.Time);
+                writer.WriteUInt32(networkAddressWithTime.Time);
                 EncodeNetworkAddress(stream, networkAddressWithTime.NetworkAddress);
             }
         }
@@ -850,14 +850,14 @@ namespace BitSharp.Data
 
                 var versionPayload = new VersionPayload
                 (
-                    ProtocolVersion: reader.Read4Bytes(),
-                    ServicesBitfield: reader.Read8Bytes(),
-                    UnixTime: reader.Read8Bytes(),
+                    ProtocolVersion: reader.ReadUInt32(),
+                    ServicesBitfield: reader.ReadUInt64(),
+                    UnixTime: reader.ReadUInt64(),
                     RemoteAddress: DecodeNetworkAddress(stream),
                     LocalAddress: DecodeNetworkAddress(stream),
-                    Nonce: reader.Read8Bytes(),
+                    Nonce: reader.ReadUInt64(),
                     UserAgent: reader.ReadVarString(),
-                    StartBlockHeight: reader.Read4Bytes(),
+                    StartBlockHeight: reader.ReadUInt32(),
                     Relay: false
                 );
 
@@ -881,14 +881,14 @@ namespace BitSharp.Data
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.Write4Bytes(versionPayload.ProtocolVersion);
-                writer.Write8Bytes(versionPayload.ServicesBitfield);
-                writer.Write8Bytes(versionPayload.UnixTime);
+                writer.WriteUInt32(versionPayload.ProtocolVersion);
+                writer.WriteUInt64(versionPayload.ServicesBitfield);
+                writer.WriteUInt64(versionPayload.UnixTime);
                 EncodeNetworkAddress(stream, versionPayload.RemoteAddress);
                 EncodeNetworkAddress(stream, versionPayload.LocalAddress);
-                writer.Write8Bytes(versionPayload.Nonce);
+                writer.WriteUInt64(versionPayload.Nonce);
                 writer.WriteVarString(versionPayload.UserAgent);
-                writer.Write4Bytes(versionPayload.StartBlockHeight);
+                writer.WriteUInt32(versionPayload.StartBlockHeight);
 
                 if (withRelay)
                     writer.WriteBool(versionPayload.Relay);

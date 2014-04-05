@@ -94,7 +94,7 @@ Verifying script for block {0}, transaction {1}, input {2}
                                 if (opReader.BaseStream.Position + 2 >= script.Length)
                                     return false;
 
-                                var length = opReader.Read2Bytes();
+                                var length = opReader.ReadUInt16();
                                 stack.PushBytes(opReader.ReadBytes(length));
                             }
                             break;
@@ -104,7 +104,7 @@ Verifying script for block {0}, transaction {1}, input {2}
                                 if (opReader.BaseStream.Position + 4 >= script.Length)
                                     return false;
 
-                                var length = opReader.Read4Bytes();
+                                var length = opReader.ReadUInt32();
                                 stack.PushBytes(opReader.ReadBytes(length.ToIntChecked()));
                             }
                             break;
@@ -360,7 +360,7 @@ Verifying script for block {0}, transaction {1}, input {2}
             using (var writer = new BinaryWriter(stream))
             {
                 writer.WriteBytes(DataEncoder.EncodeTransaction(newTx));
-                writer.Write4Bytes(hashType);
+                writer.WriteUInt32(hashType);
 
                 return stream.ToArray();
             }

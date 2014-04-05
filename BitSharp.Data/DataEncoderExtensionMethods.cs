@@ -18,28 +18,13 @@ namespace BitSharp.Data.ExtensionMethods
             return reader.ReadByte() != 0;
         }
 
-        public static UInt16 Read2Bytes(this BinaryReader reader)
-        {
-            return reader.ReadUInt16();
-        }
-
-        public static UInt16 Read2BytesBE(this BinaryReader reader)
+        public static UInt16 ReadUInt16BE(this BinaryReader reader)
         {
             using (var reverse = reader.ReverseRead(2))
-                return reverse.Read2Bytes();
+                return reverse.ReadUInt16();
         }
 
-        public static UInt32 Read4Bytes(this BinaryReader reader)
-        {
-            return reader.ReadUInt32();
-        }
-
-        public static UInt64 Read8Bytes(this BinaryReader reader)
-        {
-            return reader.ReadUInt64();
-        }
-
-        public static UInt256 Read32Bytes(this BinaryReader reader)
+        public static UInt256 ReadUInt256(this BinaryReader reader)
         {
             return new UInt256(reader.ReadBytes(32));
         }
@@ -50,11 +35,11 @@ namespace BitSharp.Data.ExtensionMethods
             if (value < 0xFD)
                 return value;
             else if (value == 0xFD)
-                return reader.Read2Bytes();
+                return reader.ReadUInt16();
             else if (value == 0xFE)
-                return reader.Read4Bytes();
+                return reader.ReadUInt32();
             else if (value == 0xFF)
-                return reader.Read8Bytes();
+                return reader.ReadUInt64();
             else
                 throw new Exception();
         }
@@ -81,15 +66,6 @@ namespace BitSharp.Data.ExtensionMethods
             return decoded;
         }
 
-        private static BinaryReader ReverseRead(this BinaryReader reader, int length)
-        {
-            var bytes = reader.ReadBytes(length);
-            Array.Reverse(bytes);
-
-            var stream = new MemoryStream(bytes);
-            return new BinaryReader(stream, Encoding.ASCII, leaveOpen: false);
-        }
-
         public static ImmutableArray<T> ReadList<T>(this BinaryReader reader, Func<T> decode)
         {
             var length = reader.ReadVarInt().ToIntChecked();
@@ -102,14 +78,18 @@ namespace BitSharp.Data.ExtensionMethods
 
             return list.ToImmutableArray();
         }
+
+        private static BinaryReader ReverseRead(this BinaryReader reader, int length)
+        {
+            var bytes = reader.ReadBytes(length);
+            Array.Reverse(bytes);
+
+            var stream = new MemoryStream(bytes);
+            return new BinaryReader(stream, Encoding.ASCII, leaveOpen: false);
+        }
         #endregion
 
         #region Writer Methods
-        public static void WriteUInt32LE(this BinaryWriter writer, UInt32 value)
-        {
-            writer.Write(value);
-        }
-
         public static void WriteBool(this BinaryWriter writer, bool value)
         {
             writer.Write((byte)(value ? 1 : 0));
@@ -120,17 +100,17 @@ namespace BitSharp.Data.ExtensionMethods
             writer.Write(value);
         }
 
-        public static void Write2Bytes(this BinaryWriter writer, UInt16 value)
+        public static void WriteUInt16(this BinaryWriter writer, UInt16 value)
         {
             writer.Write(value);
         }
 
-        public static void Write2BytesBE(this BinaryWriter writer, UInt16 value)
+        public static void WriteUInt16BE(this BinaryWriter writer, UInt16 value)
         {
-            writer.ReverseWrite(2, reverseWriter => reverseWriter.Write2Bytes(value));
+            writer.ReverseWrite(2, reverseWriter => reverseWriter.WriteUInt16(value));
         }
 
-        public static void Write4Bytes(this BinaryWriter writer, UInt32 value)
+        public static void WriteUInt32(this BinaryWriter writer, UInt32 value)
         {
             writer.Write(value);
         }
@@ -140,12 +120,12 @@ namespace BitSharp.Data.ExtensionMethods
             writer.Write(value);
         }
 
-        public static void Write8Bytes(this BinaryWriter writer, UInt64 value)
+        public static void WriteUInt64(this BinaryWriter writer, UInt64 value)
         {
             writer.Write(value);
         }
 
-        public static void Write32Bytes(this BinaryWriter writer, UInt256 value)
+        public static void WriteUInt256(this BinaryWriter writer, UInt256 value)
         {
             writer.Write(value.ToByteArray());
         }
@@ -172,17 +152,17 @@ namespace BitSharp.Data.ExtensionMethods
             else if (value <= 0xFFFF)
             {
                 writer.Write1Byte(0xFD);
-                writer.Write2Bytes((UInt16)value);
+                writer.WriteUInt16((UInt16)value);
             }
             else if (value <= 0xFFFFFFFF)
             {
                 writer.Write1Byte(0xFE);
-                writer.Write4Bytes((UInt32)value);
+                writer.WriteUInt32((UInt32)value);
             }
             else
             {
                 writer.Write1Byte(0xFF);
-                writer.Write8Bytes(value);
+                writer.WriteUInt64(value);
             }
         }
 
@@ -209,6 +189,16 @@ namespace BitSharp.Data.ExtensionMethods
             writer.WriteBytes(encoded.Length, encoded);
         }
 
+        public static void WriteList<T>(this BinaryWriter writer, ImmutableArray<T> list, Action<T> encode)
+        {
+            writer.WriteVarInt((UInt64)list.Count);
+
+            for (var i = 0; i < list.Count; i++)
+            {
+                encode(list[i]);
+            }
+        }
+
         private static void ReverseWrite(this BinaryWriter writer, int length, Action<BinaryWriter> write)
         {
             var bytes = new byte[length];
@@ -224,16 +214,6 @@ namespace BitSharp.Data.ExtensionMethods
             Array.Reverse(bytes);
 
             writer.WriteBytes(bytes);
-        }
-
-        public static void WriteList<T>(this BinaryWriter writer, ImmutableArray<T> list, Action<T> encode)
-        {
-            writer.WriteVarInt((UInt64)list.Count);
-
-            for (var i = 0; i < list.Count; i++)
-            {
-                encode(list[i]);
-            }
         }
         #endregion
     }
