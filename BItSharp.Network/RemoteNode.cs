@@ -13,6 +13,7 @@ using BitSharp.Common.ExtensionMethods;
 using System.Collections.Immutable;
 using BitSharp.Common;
 using NLog;
+using BitSharp.Data;
 
 namespace BitSharp.Network
 {

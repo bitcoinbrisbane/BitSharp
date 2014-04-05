@@ -1,4 +1,6 @@
-﻿using System;
+﻿using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -6,9 +8,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Common.ExtensionMethods
+namespace BitSharp.Data.ExtensionMethods
 {
-    public static class ReaderExtensionMethods
+    public static class DataEncoderExtensionMethods
     {
         public static bool ReadBool(this BinaryReader reader)
         {
@@ -85,6 +87,29 @@ namespace BitSharp.Common.ExtensionMethods
 
             var stream = new MemoryStream(bytes);
             return new BinaryReader(stream, Encoding.ASCII, leaveOpen: false);
+        }
+
+        public static ImmutableArray<T> ReadList<T>(this BinaryReader reader, Func<T> decode)
+        {
+            var length = reader.ReadVarInt().ToIntChecked();
+
+            var list = new T[length];
+            for (var i = 0; i < length; i++)
+            {
+                list[i] = decode();
+            }
+
+            return list.ToImmutableArray();
+        }
+
+        public static void WriteList<T>(this BinaryWriter writer, ImmutableArray<T> list, Action<T> encode)
+        {
+            writer.WriteVarInt((UInt64)list.Count);
+
+            for (var i = 0; i < list.Count; i++)
+            {
+                encode(list[i]);
+            }
         }
     }
 }

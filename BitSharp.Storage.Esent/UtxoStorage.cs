@@ -60,7 +60,7 @@ namespace BitSharp.Storage.Esent
                 byte[] bytes;
                 if (this.unspentTransactions.TryGetValue(txHash.ToByteArray(), out bytes))
                 {
-                    unspentTxLocal = StorageEncoder.DecodeUnspentTx(txHash, bytes);
+                    unspentTxLocal = DataEncoder.DecodeUnspentTx(txHash, bytes);
                     result = true;
                 }
             });
@@ -75,7 +75,7 @@ namespace BitSharp.Storage.Esent
                 this.unspentTransactions.Select(keyPair =>
                 {
                     var txHash = new UInt256(keyPair.Key);
-                    var unspentTx = StorageEncoder.DecodeUnspentTx(txHash, keyPair.Value);
+                    var unspentTx = DataEncoder.DecodeUnspentTx(txHash, keyPair.Value);
 
                     return new KeyValuePair<UInt256, UnspentTx>(txHash, unspentTx);
                 }));
@@ -93,7 +93,7 @@ namespace BitSharp.Storage.Esent
         public bool ContainsOutput(TxOutputKey txOutputKey)
         {
             return this.utxoLock.DoRead(() =>
-                this.unspentOutputs.ContainsKey(StorageEncoder.EncodeTxOutputKey(txOutputKey)));
+                this.unspentOutputs.ContainsKey(DataEncoder.EncodeTxOutputKey(txOutputKey)));
         }
 
         public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
@@ -104,9 +104,9 @@ namespace BitSharp.Storage.Esent
             this.utxoLock.DoRead(() =>
             {
                 byte[] bytes;
-                if (this.unspentOutputs.TryGetValue(StorageEncoder.EncodeTxOutputKey(txOutputKey), out bytes))
+                if (this.unspentOutputs.TryGetValue(DataEncoder.EncodeTxOutputKey(txOutputKey), out bytes))
                 {
-                    txOutputLocal = StorageEncoder.DecodeTxOutput(bytes);
+                    txOutputLocal = DataEncoder.DecodeTxOutput(bytes);
                     result = true;
                 }
             });
@@ -120,8 +120,8 @@ namespace BitSharp.Storage.Esent
             return this.utxoLock.DoRead(() =>
                 this.unspentOutputs.Select(keyPair =>
                 {
-                    var txOutputKey = StorageEncoder.DecodeTxOutputKey(keyPair.Key);
-                    var txOutput = StorageEncoder.DecodeTxOutput(keyPair.Value);
+                    var txOutputKey = DataEncoder.DecodeTxOutputKey(keyPair.Key);
+                    var txOutput = DataEncoder.DecodeTxOutput(keyPair.Value);
 
                     return new KeyValuePair<TxOutputKey, TxOutput>(txOutputKey, txOutput);
                 }));

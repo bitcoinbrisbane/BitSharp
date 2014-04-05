@@ -7,7 +7,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Network
+namespace BitSharp.Data
 {
     public class NetworkAddressKey
     {

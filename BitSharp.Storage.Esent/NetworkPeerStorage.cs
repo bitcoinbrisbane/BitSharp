@@ -125,22 +125,22 @@ namespace BitSharp.Storage.Esent
 
         private static byte[] EncodeKey(NetworkAddressKey networkAddressKey)
         {
-            return NetworkEncoder.EncodeNetworkAddressKey(networkAddressKey);
+            return DataEncoder.EncodeNetworkAddressKey(networkAddressKey);
         }
 
         private static byte[] EncodeValue(NetworkAddressWithTime networkAddressWithTime)
         {
-            return NetworkEncoder.EncodeNetworkAddressWithTime(networkAddressWithTime);
+            return DataEncoder.EncodeNetworkAddressWithTime(networkAddressWithTime);
         }
 
         private static NetworkAddressKey DecodeKey(byte[] networkAddressKeyBytes)
         {
-            return NetworkEncoder.DecodeNetworkAddressKey(networkAddressKeyBytes);
+            return DataEncoder.DecodeNetworkAddressKey(networkAddressKeyBytes);
         }
 
         private static NetworkAddressWithTime DecodeValue(byte[] networkAddressWithTimeBytes)
         {
-            return NetworkEncoder.DecodeNetworkAddressWithTime(networkAddressWithTimeBytes);
+            return DataEncoder.DecodeNetworkAddressWithTime(networkAddressWithTimeBytes);
         }
     }
 }

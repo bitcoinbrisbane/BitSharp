@@ -1,12 +1,11 @@
 ﻿using System;
 using BitSharp.Common;
-using BitSharp.Network.ExtensionMethods;
 using System.Linq;
 using System.IO;
 using System.Diagnostics;
 using System.Collections.Immutable;
 
-namespace BitSharp.Network
+namespace BitSharp.Data
 {
     public class VersionPayload
     {

@@ -1,12 +1,11 @@
 ﻿using BitSharp.Common;
-using BitSharp.Network.ExtensionMethods;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-namespace BitSharp.Network
+namespace BitSharp.Data
 {
     public class InventoryVector
     {

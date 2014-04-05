@@ -26,8 +26,8 @@ namespace BitSharp.Storage.Esent
                     {
                         foreach (var keyPair in keyPairs)
                         {
-                            StorageEncoder.EncodeUInt256(stream, keyPair.Key);
-                            StorageEncoder.EncodeSpentTx(stream, keyPair.Value);
+                            DataEncoder.EncodeUInt256(stream, keyPair.Key);
+                            DataEncoder.EncodeSpentTx(stream, keyPair.Value);
                         }
 
                         return stream.ToArray();
@@ -41,8 +41,8 @@ namespace BitSharp.Storage.Esent
 
                         while (stream.Position < stream.Length)
                         {
-                            var txHash = StorageEncoder.DecodeUInt256(stream);
-                            var spentTx = StorageEncoder.DecodeSpentTx(stream);
+                            var txHash = DataEncoder.DecodeUInt256(stream);
+                            var spentTx = DataEncoder.DecodeSpentTx(stream);
 
                             keyPairs.Add(new KeyValuePair<UInt256, SpentTx>(txHash, spentTx));
                         }

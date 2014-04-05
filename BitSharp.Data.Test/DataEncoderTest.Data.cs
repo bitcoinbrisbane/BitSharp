@@ -8,9 +8,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Network.Test
+namespace BitSharp.Data.Test
 {
-    public partial class NetworkEncoderTest
+    public partial class DataEncoderTest
     {
         public static readonly NetworkAddress NETWORK_ADDRESS_1 = new NetworkAddress
         (

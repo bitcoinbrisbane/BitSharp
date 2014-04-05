@@ -88,7 +88,6 @@
   <ItemGroup>
     <Compile Include="MemoryBlockchainStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="StorageEncoderTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BitSharp.Common\BitSharp.Common.csproj">

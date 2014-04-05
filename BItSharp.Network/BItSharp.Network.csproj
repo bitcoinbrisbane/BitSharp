@@ -70,22 +70,9 @@
     <Compile Include="Bootstrap.cs" />
     <Compile Include="Messaging.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ReaderExtensionMethods.cs" />
     <Compile Include="RemoteNode.cs" />
     <Compile Include="RemoteReceiver.cs" />
     <Compile Include="RemoteSender.cs" />
-    <Compile Include="Structs\AddressPayload.cs" />
-    <Compile Include="Structs\AlertPayload.cs" />
-    <Compile Include="Structs\GetBlocksPayload.cs" />
-    <Compile Include="Structs\InventoryPayload.cs" />
-    <Compile Include="Structs\InventoryVector.cs" />
-    <Compile Include="Structs\NetworkAddressKey.cs" />
-    <Compile Include="Structs\Message.cs" />
-    <Compile Include="Structs\NetworkAddress.cs" />
-    <Compile Include="Structs\NetworkAddressWithTime.cs" />
-    <Compile Include="Structs\VersionPayload.cs" />
-    <Compile Include="NetworkEncoder.cs" />
-    <Compile Include="WriterExtensionMethods.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BitSharp.Common\BitSharp.Common.csproj">

@@ -1,5 +1,4 @@
 ﻿using BitSharp.Common;
-using BitSharp.Network.ExtensionMethods;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Collections.Immutable;
 
-namespace BitSharp.Network
+namespace BitSharp.Data
 {
     public class Message
     {

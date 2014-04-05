@@ -1,6 +1,6 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
-using BitSharp.Data;
+using BitSharp.Data.ExtensionMethods;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -11,9 +11,9 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Storage
+namespace BitSharp.Data
 {
-    public class StorageEncoder
+    public class DataEncoder
     {
         public static UInt256 DecodeUInt256(Stream stream)
         {
@@ -55,7 +55,7 @@ namespace BitSharp.Storage
                 return new Block
                 (
                     header: DecodeBlockHeader(stream, blockHash),
-                    transactions: DecodeList(reader, () => DecodeTransaction(stream))
+                    transactions: reader.ReadList(() => DecodeTransaction(stream))
                 );
             }
         }
@@ -73,7 +73,7 @@ namespace BitSharp.Storage
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
                 EncodeBlockHeader(stream, block.Header);
-                EncodeList(writer, block.Transactions, tx => EncodeTransaction(stream, tx));
+                writer.WriteList(block.Transactions, tx => EncodeTransaction(stream, tx));
             }
         }
 
@@ -224,8 +224,8 @@ namespace BitSharp.Storage
                 return new Transaction
                 (
                     version: reader.Read4Bytes(),
-                    inputs: DecodeList(reader, () => DecodeTxInput(stream)),
-                    outputs: DecodeList(reader, () => DecodeTxOutput(stream)),
+                    inputs: reader.ReadList(() => DecodeTxInput(stream)),
+                    outputs: reader.ReadList(() => DecodeTxOutput(stream)),
                     lockTime: reader.Read4Bytes(),
                     hash: txHash
                 );
@@ -245,8 +245,8 @@ namespace BitSharp.Storage
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
                 writer.Write4Bytes(tx.Version);
-                EncodeList(writer, tx.Inputs, input => EncodeTxInput(stream, input));
-                EncodeList(writer, tx.Outputs, output => EncodeTxOutput(stream, output));
+                writer.WriteList(tx.Inputs, input => EncodeTxInput(stream, input));
+                writer.WriteList(tx.Outputs, output => EncodeTxOutput(stream, output));
                 writer.Write4Bytes(tx.LockTime);
             }
         }
@@ -271,7 +271,7 @@ namespace BitSharp.Storage
                         txHash: reader.Read32Bytes(),
                         txOutputIndex: reader.Read4Bytes()
                     ),
-                    scriptSignature: DecodeVarBytes(reader).ToImmutableArray(),
+                    scriptSignature: reader.ReadVarBytes().ToImmutableArray(),
                     sequence: reader.Read4Bytes()
                 );
             }
@@ -291,7 +291,7 @@ namespace BitSharp.Storage
             {
                 writer.Write32Bytes(txInput.PreviousTxOutputKey.TxHash);
                 writer.Write4Bytes(txInput.PreviousTxOutputKey.TxOutputIndex);
-                EncodeVarBytes(writer, txInput.ScriptSignature.ToArray());
+                writer.WriteVarBytes(txInput.ScriptSignature.ToArray());
                 writer.Write4Bytes(txInput.Sequence);
             }
         }
@@ -312,7 +312,7 @@ namespace BitSharp.Storage
                 return new TxOutput
                 (
                     value: reader.Read8Bytes(),
-                    scriptPublicKey: DecodeVarBytes(reader).ToImmutableArray()
+                    scriptPublicKey: reader.ReadVarBytes().ToImmutableArray()
                 );
             }
         }
@@ -330,7 +330,7 @@ namespace BitSharp.Storage
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
                 writer.Write8Bytes(txOutput.Value);
-                EncodeVarBytes(writer, txOutput.ScriptPublicKey.ToArray());
+                writer.WriteVarBytes(txOutput.ScriptPublicKey.ToArray());
             }
         }
 
@@ -496,24 +496,427 @@ namespace BitSharp.Storage
             }
         }
 
-        public static byte[] DecodeVarBytes(BinaryReader reader)
+        public static AlertPayload DecodeAlertPayload(Stream stream)
         {
-            var length = reader.ReadInt32();
-            return reader.ReadBytes(length);
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new AlertPayload
+                (
+                    Payload: reader.ReadVarString(),
+                    Signature: reader.ReadVarString()
+                );
+            }
         }
 
-        public static void EncodeVarBytes(BinaryWriter writer, byte[] bytes)
+        public static AlertPayload DecodeAlertPayload(byte[] bytes)
         {
-            writer.WriteInt32(bytes.Length);
-            writer.WriteBytes(bytes);
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeAlertPayload(stream);
+            }
+        }
+
+        public static void EncodeAlertPayload(Stream stream, AlertPayload alertPayload)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.WriteVarString(alertPayload.Payload);
+                writer.WriteVarString(alertPayload.Signature);
+            }
+        }
+
+        public static byte[] EncodeAlertPayload(AlertPayload alertPayload)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeAlertPayload(stream, alertPayload);
+                return stream.ToArray();
+            }
+        }
+
+        public static AddressPayload DecodeAddressPayload(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new AddressPayload
+                (
+                    NetworkAddresses: reader.ReadList(() => DecodeNetworkAddressWithTime(stream))
+                );
+            }
+        }
+
+        public static AddressPayload DecodeAddressPayload(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeAddressPayload(stream);
+            }
+        }
+
+        public static void EncodeAddressPayload(Stream stream, AddressPayload addressPayload)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.WriteList(addressPayload.NetworkAddresses, networkAddress => EncodeNetworkAddressWithTime(stream, networkAddress));
+            }
+        }
+
+        public static byte[] EncodeAddressPayload(AddressPayload addressPayload)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeAddressPayload(stream, addressPayload);
+                return stream.ToArray();
+            }
+        }
+
+        public static GetBlocksPayload DecodeGetBlocksPayload(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new GetBlocksPayload
+                (
+                    Version: reader.Read4Bytes(),
+                    BlockLocatorHashes: reader.ReadList(() => reader.Read32Bytes()),
+                    HashStop: reader.Read32Bytes()
+                );
+            }
+        }
+
+        public static GetBlocksPayload DecodeGetBlocksPayload(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeGetBlocksPayload(stream);
+            }
+        }
+
+        public static void EncodeGetBlocksPayload(Stream stream, GetBlocksPayload getBlocksPayload)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.Write4Bytes(getBlocksPayload.Version);
+                writer.WriteList(getBlocksPayload.BlockLocatorHashes, locatorHash => writer.Write32Bytes(locatorHash));
+                writer.Write32Bytes(getBlocksPayload.HashStop);
+            }
+        }
+
+        public static byte[] EncodeGetBlocksPayload(GetBlocksPayload getBlocksPayload)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeGetBlocksPayload(stream, getBlocksPayload);
+                return stream.ToArray();
+            }
+        }
+
+        public static InventoryPayload DecodeInventoryPayload(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new InventoryPayload
+                (
+                    InventoryVectors: reader.ReadList(() => DecodeInventoryVector(stream))
+                );
+            }
+        }
+
+        public static InventoryPayload DecodeInventoryPayload(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeInventoryPayload(stream);
+            }
+        }
+
+        public static void EncodeInventoryPayload(Stream stream, InventoryPayload invPayload)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.WriteList(invPayload.InventoryVectors, invVector => EncodeInventoryVector(stream, invVector));
+            }
+        }
+
+        public static byte[] EncodeInventoryPayload(InventoryPayload invPayload)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeInventoryPayload(stream, invPayload);
+                return stream.ToArray();
+            }
+        }
+
+        public static InventoryVector DecodeInventoryVector(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new InventoryVector
+                (
+                    Type: reader.Read4Bytes(),
+                    Hash: reader.Read32Bytes()
+                );
+            }
+        }
+
+        public static InventoryVector DecodeInventoryVector(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeInventoryVector(stream);
+            }
+        }
+
+        public static void EncodeInventoryVector(Stream stream, InventoryVector invVector)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.Write4Bytes(invVector.Type);
+                writer.Write32Bytes(invVector.Hash);
+            }
+        }
+
+        public static byte[] EncodeInventoryVector(InventoryVector invVector)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeInventoryVector(stream, invVector);
+                return stream.ToArray();
+            }
+        }
+
+        public static Message DecodeMessage(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                var magic = reader.Read4Bytes();
+                var command = reader.ReadFixedString(12);
+                var payloadSize = reader.Read4Bytes();
+                var payloadChecksum = reader.Read4Bytes();
+                var payload = reader.ReadBytes(payloadSize.ToIntChecked()).ToImmutableArray();
+
+                return new Message
+                (
+                    Magic: magic,
+                    Command: command,
+                    PayloadSize: payloadSize,
+                    PayloadChecksum: payloadChecksum,
+                    Payload: payload
+                );
+            }
+        }
+
+        public static Message DecodeMessage(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeMessage(stream);
+            }
+        }
+
+        public static void EncodeMessage(Stream stream, Message message)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.Write4Bytes(message.Magic);
+                writer.WriteFixedString(12, message.Command);
+                writer.Write4Bytes(message.PayloadSize);
+                writer.Write4Bytes(message.PayloadChecksum);
+                writer.WriteBytes(message.PayloadSize.ToIntChecked(), message.Payload.ToArray());
+            }
+        }
+
+        public static byte[] EncodeMessage(Message message)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeMessage(stream, message);
+                return stream.ToArray();
+            }
+        }
+
+        public static NetworkAddress DecodeNetworkAddress(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new NetworkAddress
+                (
+                    Services: reader.Read8Bytes(),
+                    IPv6Address: reader.ReadBytes(16).ToImmutableArray(),
+                    Port: reader.Read2BytesBE()
+                );
+            }
+        }
+
+        public static NetworkAddress DecodeNetworkAddress(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeNetworkAddress(stream);
+            }
+        }
+
+        public static void EncodeNetworkAddress(Stream stream, NetworkAddress networkAddress)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.Write8Bytes(networkAddress.Services);
+                writer.WriteBytes(16, networkAddress.IPv6Address.ToArray());
+                writer.Write2BytesBE(networkAddress.Port);
+            }
+        }
+
+        public static byte[] EncodeNetworkAddress(NetworkAddress networkAddress)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeNetworkAddress(stream, networkAddress);
+                return stream.ToArray();
+            }
+        }
+
+        public static NetworkAddressWithTime DecodeNetworkAddressWithTime(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new NetworkAddressWithTime
+                (
+                    Time: reader.Read4Bytes(),
+                    NetworkAddress: DecodeNetworkAddress(stream)
+                );
+            }
+        }
+
+        public static NetworkAddressWithTime DecodeNetworkAddressWithTime(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeNetworkAddressWithTime(stream);
+            }
+        }
+
+        public static void EncodeNetworkAddressWithTime(Stream stream, NetworkAddressWithTime networkAddressWithTime)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.Write4Bytes(networkAddressWithTime.Time);
+                EncodeNetworkAddress(stream, networkAddressWithTime.NetworkAddress);
+            }
+        }
+
+        public static byte[] EncodeNetworkAddressWithTime(NetworkAddressWithTime networkAddressWithTime)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeNetworkAddressWithTime(stream, networkAddressWithTime);
+                return stream.ToArray();
+            }
+        }
+
+        public static VersionPayload DecodeVersionPayload(Stream stream, int payloadLength)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                var position = stream.Position;
+
+                var versionPayload = new VersionPayload
+                (
+                    ProtocolVersion: reader.Read4Bytes(),
+                    ServicesBitfield: reader.Read8Bytes(),
+                    UnixTime: reader.Read8Bytes(),
+                    RemoteAddress: DecodeNetworkAddress(stream),
+                    LocalAddress: DecodeNetworkAddress(stream),
+                    Nonce: reader.Read8Bytes(),
+                    UserAgent: reader.ReadVarString(),
+                    StartBlockHeight: reader.Read4Bytes(),
+                    Relay: false
+                );
+
+                var readCount = stream.Position - position;
+                if (versionPayload.ProtocolVersion >= VersionPayload.RELAY_VERSION && payloadLength - readCount == 1)
+                    versionPayload = versionPayload.With(Relay: reader.ReadBool());
+
+                return versionPayload;
+            }
+        }
+
+        public static VersionPayload DecodeVersionPayload(byte[] bytes, int payloadLength)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeVersionPayload(stream, payloadLength);
+            }
+        }
+
+        public static void EncodeVersionPayload(Stream stream, VersionPayload versionPayload, bool withRelay)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.Write4Bytes(versionPayload.ProtocolVersion);
+                writer.Write8Bytes(versionPayload.ServicesBitfield);
+                writer.Write8Bytes(versionPayload.UnixTime);
+                EncodeNetworkAddress(stream, versionPayload.RemoteAddress);
+                EncodeNetworkAddress(stream, versionPayload.LocalAddress);
+                writer.Write8Bytes(versionPayload.Nonce);
+                writer.WriteVarString(versionPayload.UserAgent);
+                writer.Write4Bytes(versionPayload.StartBlockHeight);
+
+                if (withRelay)
+                    writer.WriteBool(versionPayload.Relay);
+            }
+        }
+
+        public static byte[] EncodeVersionPayload(VersionPayload versionPayload, bool withRelay)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeVersionPayload(stream, versionPayload, withRelay);
+                return stream.ToArray();
+            }
+        }
+
+        public static NetworkAddressKey DecodeNetworkAddressKey(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new NetworkAddressKey
+                (
+                    IPv6Address: reader.ReadVarBytes().ToImmutableArray(),
+                    Port: reader.ReadUInt16()
+                );
+            }
+        }
+
+        public static NetworkAddressKey DecodeNetworkAddressKey(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeNetworkAddressKey(stream);
+            }
+        }
+
+        public static void EncodeNetworkAddressKey(Stream stream, NetworkAddressKey networkAddressKey)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.WriteVarBytes(networkAddressKey.IPv6Address.ToArray());
+                writer.Write(networkAddressKey.Port);
+            }
+        }
+
+        public static byte[] EncodeNetworkAddressKey(NetworkAddressKey networkAddressKey)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeNetworkAddressKey(stream, networkAddressKey);
+                return stream.ToArray();
+            }
         }
 
         public static string DecodeVarString(Stream stream)
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
-                var length = reader.ReadInt32();
-                return Encoding.ASCII.GetString(reader.ReadBytes(length));
+                return reader.ReadVarString();
             }
         }
 
@@ -529,9 +932,7 @@ namespace BitSharp.Storage
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                var bytes = Encoding.ASCII.GetBytes(s);
-                writer.WriteInt32(bytes.Length);
-                writer.WriteBytes(bytes);
+                writer.WriteVarString(s);
             }
         }
 
@@ -541,29 +942,6 @@ namespace BitSharp.Storage
             {
                 EncodeVarString(stream, s);
                 return stream.ToArray();
-            }
-        }
-
-        public static ImmutableArray<T> DecodeList<T>(BinaryReader reader, Func<T> decode)
-        {
-            var length = reader.ReadInt32();
-
-            var list = new T[length];
-            for (var i = 0; i < length; i++)
-            {
-                list[i] = decode();
-            }
-
-            return list.ToImmutableArray();
-        }
-
-        public static void EncodeList<T>(BinaryWriter writer, ImmutableArray<T> list, Action<T> encode)
-        {
-            writer.WriteInt32(list.Count);
-
-            for (var i = 0; i < list.Count; i++)
-            {
-                encode(list[i]);
             }
         }
     }

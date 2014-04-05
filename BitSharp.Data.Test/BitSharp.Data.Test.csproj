@@ -86,6 +86,8 @@
   <ItemGroup>
     <Compile Include="BlockHeaderTest.cs" />
     <Compile Include="ChainedBlockTest.cs" />
+    <Compile Include="DataEncoderTest.cs" />
+    <Compile Include="DataEncoderTest.Data.cs" />
     <Compile Include="TxOutputKeyTest.cs" />
     <Compile Include="DataCalculatorTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -14,6 +14,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Collections.Immutable;
 using BitSharp.Data;
+using BitSharp.Data.ExtensionMethods;
 using NLog;
 
 #if SIPA

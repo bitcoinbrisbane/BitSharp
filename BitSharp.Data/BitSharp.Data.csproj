@@ -77,17 +77,28 @@
     <Compile Include="ChainedBlock.cs" />
     <Compile Include="Chain.cs" />
     <Compile Include="DataCalculator.cs" />
+    <Compile Include="Network\AddressPayload.cs" />
+    <Compile Include="Network\AlertPayload.cs" />
+    <Compile Include="Network\GetBlocksPayload.cs" />
+    <Compile Include="Network\InventoryPayload.cs" />
+    <Compile Include="Network\InventoryVector.cs" />
+    <Compile Include="Network\Message.cs" />
+    <Compile Include="Network\NetworkAddress.cs" />
+    <Compile Include="Network\NetworkAddressKey.cs" />
+    <Compile Include="Network\NetworkAddressWithTime.cs" />
+    <Compile Include="Network\VersionPayload.cs" />
     <Compile Include="OutputStates.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Block.cs" />
     <Compile Include="BlockHeader.cs" />
+    <Compile Include="DataEncoder.cs" />
+    <Compile Include="DataEncoderExtensionMethods.cs" />
     <Compile Include="Transaction.cs" />
     <Compile Include="TxInput.cs" />
     <Compile Include="TxOutput.cs" />
     <Compile Include="SpentTx.cs" />
     <Compile Include="UnspentTx.cs" />
     <Compile Include="TxOutputKey.cs" />
-    <Compile Include="WriterExtensionMethods.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BitSharp.Common\BitSharp.Common.csproj">

@@ -9,11 +9,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.IO;
 using BitSharp.Network;
-using BitSharp.Network.ExtensionMethods;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Common;
 using System.Collections.Immutable;
 using BitSharp.Data;
+using BitSharp.Data.ExtensionMethods;
 using NLog;
 
 namespace BitSharp.Network
@@ -176,7 +176,7 @@ namespace BitSharp.Network
             {
                 case "addr":
                     {
-                        var addressPayload = NetworkEncoder.DecodeAddressPayload(payload);
+                        var addressPayload = DataEncoder.DecodeAddressPayload(payload);
 
                         var handler = this.OnReceivedAddresses;
                         if (handler != null)
@@ -186,13 +186,13 @@ namespace BitSharp.Network
 
                 case "alert":
                     {
-                        var alertPayload = NetworkEncoder.DecodeAlertPayload(payload);
+                        var alertPayload = DataEncoder.DecodeAlertPayload(payload);
                     }
                     break;
 
                 case "block":
                     {
-                        var block = NetworkEncoder.DecodeBlock(payload);
+                        var block = DataEncoder.DecodeBlock(payload);
 
                         var handler = this.OnBlock;
                         if (handler != null)
@@ -202,7 +202,7 @@ namespace BitSharp.Network
 
                 case "getblocks":
                     {
-                        var getBlocksPayload = NetworkEncoder.DecodeGetBlocksPayload(payload);
+                        var getBlocksPayload = DataEncoder.DecodeGetBlocksPayload(payload);
 
                         var handler = this.OnGetBlocks;
                         if (handler != null)
@@ -212,7 +212,7 @@ namespace BitSharp.Network
 
                 case "getheaders":
                     {
-                        var getHeadersPayload = NetworkEncoder.DecodeGetBlocksPayload(payload);
+                        var getHeadersPayload = DataEncoder.DecodeGetBlocksPayload(payload);
 
                         var handler = this.OnGetHeaders;
                         if (handler != null)
@@ -222,7 +222,7 @@ namespace BitSharp.Network
 
                 case "getdata":
                     {
-                        var invPayload = NetworkEncoder.DecodeInventoryPayload(payload);
+                        var invPayload = DataEncoder.DecodeInventoryPayload(payload);
 
                         var handler = this.OnGetData;
                         if (handler != null)
@@ -239,7 +239,7 @@ namespace BitSharp.Network
 
                             for (var i = 0; i < headerCount; i++)
                             {
-                                var blockHeader = NetworkEncoder.DecodeBlockHeader(headerStream);
+                                var blockHeader = DataEncoder.DecodeBlockHeader(headerStream);
                                 //TODO wiki says this is a byte and a var int, which is it?
                                 var txCount = reader.ReadVarInt();
 
@@ -253,7 +253,7 @@ namespace BitSharp.Network
 
                 case "inv":
                     {
-                        var invPayload = NetworkEncoder.DecodeInventoryPayload(payload);
+                        var invPayload = DataEncoder.DecodeInventoryPayload(payload);
 
                         var handler = this.OnInventoryVectors;
                         if (handler != null)
@@ -263,7 +263,7 @@ namespace BitSharp.Network
 
                 case "notfound":
                     {
-                        var invPayload = NetworkEncoder.DecodeInventoryPayload(payload);
+                        var invPayload = DataEncoder.DecodeInventoryPayload(payload);
 
                         var handler = this.OnNotFound;
                         if (handler != null)
@@ -281,7 +281,7 @@ namespace BitSharp.Network
 
                 case "tx":
                     {
-                        var tx = NetworkEncoder.DecodeTransaction(payload);
+                        var tx = DataEncoder.DecodeTransaction(payload);
 
                         var handler = this.OnTransaction;
                         if (handler != null)
@@ -291,7 +291,7 @@ namespace BitSharp.Network
 
                 case "version":
                     {
-                        var versionPayload = NetworkEncoder.DecodeVersionPayload(payload, payload.Length);
+                        var versionPayload = DataEncoder.DecodeVersionPayload(payload, payload.Length);
 
                         var handler = this.OnVersion;
                         if (handler != null)

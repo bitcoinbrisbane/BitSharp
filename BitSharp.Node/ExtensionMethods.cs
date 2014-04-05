@@ -1,4 +1,5 @@
-﻿using BitSharp.Network;
+﻿using BitSharp.Data;
+using BitSharp.Network;
 using System;
 using System.Collections.Generic;
 using System.Linq;

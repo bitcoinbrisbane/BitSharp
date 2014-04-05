@@ -3,7 +3,6 @@ using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Daemon;
 using BitSharp.Network;
-using BitSharp.Network.ExtensionMethods;
 using BitSharp.Node.ExtensionMethods;
 using BitSharp.Script;
 using BitSharp.Storage;
@@ -809,7 +808,7 @@ namespace BitSharp.Node
 
                 //TODO shouldn't have to decode again
                 var versionMessage = versionTask.Result;
-                var versionPayload = NetworkEncoder.DecodeVersionPayload(versionMessage.Payload.ToArray(), versionMessage.Payload.Count);
+                var versionPayload = DataEncoder.DecodeVersionPayload(versionMessage.Payload.ToArray(), versionMessage.Payload.Count);
 
                 var remoteAddressWithTime = new NetworkAddressWithTime
                 (

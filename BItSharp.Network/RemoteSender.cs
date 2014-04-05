@@ -52,7 +52,7 @@ namespace BitSharp.Network
         {
             await Task.Yield();
 
-            var sendBlockMessage = Messaging.ConstructMessage("block", NetworkEncoder.EncodeBlock(block));
+            var sendBlockMessage = Messaging.ConstructMessage("block", DataEncoder.EncodeBlock(block));
             
             await SendMessageAsync(sendBlockMessage);
         }
@@ -67,7 +67,7 @@ namespace BitSharp.Network
             await Task.Yield();
 
             var getDataPayload = Messaging.ConstructInventoryPayload(invVectors);
-            var getDataMessage = Messaging.ConstructMessage("getdata", NetworkEncoder.EncodeInventoryPayload(getDataPayload));
+            var getDataMessage = Messaging.ConstructMessage("getdata", DataEncoder.EncodeInventoryPayload(getDataPayload));
 
             await SendMessageAsync(getDataMessage);
         }
@@ -77,7 +77,7 @@ namespace BitSharp.Network
             await Task.Yield();
 
             var getHeadersPayload = Messaging.ConstructGetBlocksPayload(blockLocatorHashes, hashStop);
-            var getBlocksMessage = Messaging.ConstructMessage("getheaders", NetworkEncoder.EncodeGetBlocksPayload(getHeadersPayload));
+            var getBlocksMessage = Messaging.ConstructMessage("getheaders", DataEncoder.EncodeGetBlocksPayload(getHeadersPayload));
 
             await SendMessageAsync(getBlocksMessage);
         }
@@ -87,7 +87,7 @@ namespace BitSharp.Network
             await Task.Yield();
 
             var getBlocksPayload = Messaging.ConstructGetBlocksPayload(blockLocatorHashes, hashStop);
-            var getBlocksMessage = Messaging.ConstructMessage("getblocks", NetworkEncoder.EncodeGetBlocksPayload(getBlocksPayload));
+            var getBlocksMessage = Messaging.ConstructMessage("getblocks", DataEncoder.EncodeGetBlocksPayload(getBlocksPayload));
 
             await SendMessageAsync(getBlocksMessage);
         }
@@ -102,7 +102,7 @@ namespace BitSharp.Network
                 payloadWriter.WriteVarInt((UInt64)blockHeaders.Count);
                 foreach (var blockHeader in blockHeaders)
                 {
-                    NetworkEncoder.EncodeBlockHeader(payloadStream, blockHeader);
+                    DataEncoder.EncodeBlockHeader(payloadStream, blockHeader);
                     payloadWriter.WriteVarInt(0);
                 }
                 
@@ -115,7 +115,7 @@ namespace BitSharp.Network
             await Task.Yield();
 
             var invPayload = Messaging.ConstructInventoryPayload(invVectors);
-            var invMessage = Messaging.ConstructMessage("inv", NetworkEncoder.EncodeInventoryPayload(invPayload));
+            var invMessage = Messaging.ConstructMessage("inv", DataEncoder.EncodeInventoryPayload(invPayload));
 
             await SendMessageAsync(invMessage);
         }
@@ -124,7 +124,7 @@ namespace BitSharp.Network
         {
             await Task.Yield();
 
-            var sendTxMessage = Messaging.ConstructMessage("tx", NetworkEncoder.EncodeTransaction(transaction));
+            var sendTxMessage = Messaging.ConstructMessage("tx", DataEncoder.EncodeTransaction(transaction));
 
             await SendMessageAsync(sendTxMessage);
         }
@@ -134,7 +134,7 @@ namespace BitSharp.Network
             await Task.Yield();
 
             var versionPayload = Messaging.ConstructVersionPayload(localEndPoint, remoteEndPoint, nodeId, startBlockHeight);
-            var versionMessage = Messaging.ConstructMessage("version", NetworkEncoder.EncodeVersionPayload(versionPayload, withRelay: false));
+            var versionMessage = Messaging.ConstructMessage("version", DataEncoder.EncodeVersionPayload(versionPayload, withRelay: false));
 
             await SendMessageAsync(versionMessage);
         }
@@ -162,7 +162,7 @@ namespace BitSharp.Network
 
                         using (var byteStream = new MemoryStream())
                         {
-                            NetworkEncoder.EncodeMessage(byteStream, message);
+                            DataEncoder.EncodeMessage(byteStream, message);
 
                             var messageBytes = byteStream.ToArray();
                             await stream.WriteAsync(messageBytes, 0, messageBytes.Length);

@@ -1,5 +1,4 @@
 ﻿using BitSharp.Common;
-using BitSharp.Network.ExtensionMethods;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -8,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 
-namespace BitSharp.Network
+namespace BitSharp.Data
 {
     public class NetworkAddress
     {

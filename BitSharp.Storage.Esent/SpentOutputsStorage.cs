@@ -26,8 +26,8 @@ namespace BitSharp.Storage.Esent
                     {
                         foreach (var keyPair in keyPairs)
                         {
-                            StorageEncoder.EncodeTxOutputKey(stream, keyPair.Key);
-                            StorageEncoder.EncodeTxOutput(stream, keyPair.Value);
+                            DataEncoder.EncodeTxOutputKey(stream, keyPair.Key);
+                            DataEncoder.EncodeTxOutput(stream, keyPair.Value);
                         }
 
                         return stream.ToArray();
@@ -40,8 +40,8 @@ namespace BitSharp.Storage.Esent
                         var keyPairs = ImmutableList.CreateBuilder<KeyValuePair<TxOutputKey, TxOutput>>();
                         while (stream.Position < stream.Length)
                         {
-                            var txOutputKey = StorageEncoder.DecodeTxOutputKey(stream);
-                            var txOutput = StorageEncoder.DecodeTxOutput(stream);
+                            var txOutputKey = DataEncoder.DecodeTxOutputKey(stream);
+                            var txOutput = DataEncoder.DecodeTxOutput(stream);
                             keyPairs.Add(new KeyValuePair<TxOutputKey, TxOutput>(txOutputKey, txOutput));
                         }
                         

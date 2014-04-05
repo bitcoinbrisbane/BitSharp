@@ -87,8 +87,6 @@
   <ItemGroup>
     <Compile Include="NetworkTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="NetworkEncoderTest.cs" />
-    <Compile Include="NetworkEncoderTest.Data.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BitSharp.Common\BitSharp.Common.csproj">

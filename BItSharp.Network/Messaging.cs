@@ -9,6 +9,7 @@ using BitSharp.Common.ExtensionMethods;
 using BitSharp.Common;
 using System.Collections.Immutable;
 using System.IO;
+using BitSharp.Data;
 
 namespace BitSharp.Network
 {

@@ -67,7 +67,7 @@ namespace BitSharp.Storage.Esent
             byte[] bytes;
             if (this.unspentTransactions.TryGetValue(txHash.ToByteArray(), out bytes))
             {
-                unspentTx = StorageEncoder.DecodeUnspentTx(txHash, bytes);
+                unspentTx = DataEncoder.DecodeUnspentTx(txHash, bytes);
                 return true;
             }
             else
@@ -79,7 +79,7 @@ namespace BitSharp.Storage.Esent
 
         public void AddTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
-            this.unspentTransactions.Add(txHash.ToByteArray(), StorageEncoder.EncodeUnspentTx(unspentTx));
+            this.unspentTransactions.Add(txHash.ToByteArray(), DataEncoder.EncodeUnspentTx(unspentTx));
         }
 
         public bool RemoveTransaction(UInt256 txHash)
@@ -89,7 +89,7 @@ namespace BitSharp.Storage.Esent
 
         public void UpdateTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
-            this.unspentTransactions[txHash.ToByteArray()] = StorageEncoder.EncodeUnspentTx(unspentTx);
+            this.unspentTransactions[txHash.ToByteArray()] = DataEncoder.EncodeUnspentTx(unspentTx);
         }
 
         public IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions()
@@ -97,7 +97,7 @@ namespace BitSharp.Storage.Esent
             return this.unspentTransactions.Select(keyPair =>
             {
                 var txHash = new UInt256(keyPair.Key);
-                var unspentTx = StorageEncoder.DecodeUnspentTx(txHash, keyPair.Value);
+                var unspentTx = DataEncoder.DecodeUnspentTx(txHash, keyPair.Value);
 
                 return new KeyValuePair<UInt256, UnspentTx>(txHash, unspentTx);
             });
@@ -110,15 +110,15 @@ namespace BitSharp.Storage.Esent
 
         public bool ContainsOutput(TxOutputKey txOutputKey)
         {
-            return this.unspentOutputs.ContainsKey(StorageEncoder.EncodeTxOutputKey(txOutputKey));
+            return this.unspentOutputs.ContainsKey(DataEncoder.EncodeTxOutputKey(txOutputKey));
         }
 
         public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
         {
             byte[] bytes;
-            if (this.unspentOutputs.TryGetValue(StorageEncoder.EncodeTxOutputKey(txOutputKey), out bytes))
+            if (this.unspentOutputs.TryGetValue(DataEncoder.EncodeTxOutputKey(txOutputKey), out bytes))
             {
-                txOutput = StorageEncoder.DecodeTxOutput(bytes);
+                txOutput = DataEncoder.DecodeTxOutput(bytes);
                 return true;
             }
             else
@@ -130,20 +130,20 @@ namespace BitSharp.Storage.Esent
 
         public void AddOutput(TxOutputKey txOutputKey, TxOutput txOutput)
         {
-            this.unspentOutputs.Add(StorageEncoder.EncodeTxOutputKey(txOutputKey), StorageEncoder.EncodeTxOutput(txOutput));
+            this.unspentOutputs.Add(DataEncoder.EncodeTxOutputKey(txOutputKey), DataEncoder.EncodeTxOutput(txOutput));
         }
 
         public bool RemoveOutput(TxOutputKey txOutputKey)
         {
-            return this.unspentOutputs.Remove(StorageEncoder.EncodeTxOutputKey(txOutputKey));
+            return this.unspentOutputs.Remove(DataEncoder.EncodeTxOutputKey(txOutputKey));
         }
 
         public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs()
         {
             return this.unspentOutputs.Select(keyPair =>
             {
-                var txOutputKey = StorageEncoder.DecodeTxOutputKey(keyPair.Key);
-                var txOutput = StorageEncoder.DecodeTxOutput(keyPair.Value);
+                var txOutputKey = DataEncoder.DecodeTxOutputKey(keyPair.Key);
+                var txOutput = DataEncoder.DecodeTxOutput(keyPair.Value);
 
                 return new KeyValuePair<TxOutputKey, TxOutput>(txOutputKey, txOutput);
             });
