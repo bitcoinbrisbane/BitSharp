@@ -20,7 +20,7 @@ namespace BitSharp.Node
 {
     public class BlockRequestWorker : Worker
     {
-        private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromSeconds(60);
+        private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromMinutes(5);
 
         private readonly Logger logger;
         private readonly LocalClient localClient;
@@ -143,7 +143,7 @@ namespace BitSharp.Node
             this.targetChainLookAhead = (int)Math.Max(1, lookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
 
             // determine critical target chain look ahead
-            var criticalLookAheadTime = avgBlockRequestTime + TimeSpan.FromMilliseconds(500);
+            var criticalLookAheadTime = /*avgBlockRequestTime +*/ TimeSpan.FromMilliseconds(500);
             this.criticalTargetChainLookAhead = (int)Math.Max(1, criticalLookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
 
             this.logger.Debug(new string('-', 80));
