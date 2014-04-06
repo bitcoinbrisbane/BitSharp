@@ -1,5 +1,6 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
+using BitSharp.Core.JsonRpc;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Script;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
