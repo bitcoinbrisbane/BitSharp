@@ -13,8 +13,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Common.Test", "Bit
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.BlockHelper", "BitSharp.BlockHelper\BitSharp.BlockHelper.csproj", "{017C5F91-CCE6-4BFC-88F4-9369F68F3E24}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Metrics", "BitSharp.Metrics\BitSharp.Metrics.csproj", "{F3073F05-7E97-4BEC-A6EB-86A4D148E82F}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Client", "BitSharp.Client\BitSharp.Client.csproj", "{0EE7A0E7-573E-4CE7-B4C2-2BAAEE4E4E9F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Client.Test", "BitSharp.Client.Test\BitSharp.Client.Test.csproj", "{D58EB98F-C181-4D36-9545-A6D4DD9F8DE3}"
@@ -73,14 +71,6 @@ Global
 		{017C5F91-CCE6-4BFC-88F4-9369F68F3E24}.Release|Any CPU.Build.0 = Release|Any CPU
 		{017C5F91-CCE6-4BFC-88F4-9369F68F3E24}.Release|x64.ActiveCfg = Release|x64
 		{017C5F91-CCE6-4BFC-88F4-9369F68F3E24}.Release|x64.Build.0 = Release|x64
-		{F3073F05-7E97-4BEC-A6EB-86A4D148E82F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F3073F05-7E97-4BEC-A6EB-86A4D148E82F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F3073F05-7E97-4BEC-A6EB-86A4D148E82F}.Debug|x64.ActiveCfg = Debug|x64
-		{F3073F05-7E97-4BEC-A6EB-86A4D148E82F}.Debug|x64.Build.0 = Debug|x64
-		{F3073F05-7E97-4BEC-A6EB-86A4D148E82F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F3073F05-7E97-4BEC-A6EB-86A4D148E82F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F3073F05-7E97-4BEC-A6EB-86A4D148E82F}.Release|x64.ActiveCfg = Release|x64
-		{F3073F05-7E97-4BEC-A6EB-86A4D148E82F}.Release|x64.Build.0 = Release|x64
 		{0EE7A0E7-573E-4CE7-B4C2-2BAAEE4E4E9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0EE7A0E7-573E-4CE7-B4C2-2BAAEE4E4E9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0EE7A0E7-573E-4CE7-B4C2-2BAAEE4E4E9F}.Debug|x64.ActiveCfg = Debug|x64
