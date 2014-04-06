@@ -25,7 +25,6 @@ namespace BitSharp.Daemon
         private readonly Func<Chain> getTargetChain;
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
-        private readonly BlockchainCalculator calculator;
         private readonly TransactionCache transactionCache;
         private readonly SpentTransactionsCache spentTransactionsCache;
         private readonly InvalidBlockCache invalidBlockCache;
@@ -52,8 +51,6 @@ namespace BitSharp.Daemon
             this.transactionCache = transactionCache;
             this.spentTransactionsCache = spentTransactionsCache;
             this.invalidBlockCache = invalidBlockCache;
-
-            this.calculator = kernel.Get<BlockchainCalculator>(new ConstructorArgument("shutdownToken", this.ShutdownToken.Token));
 
             this.chainState = ChainState.CreateForGenesisBlock(this.rules.GenesisChainedBlock);
             this.chainStateLock = new ReaderWriterLockSlim();
@@ -107,7 +104,7 @@ namespace BitSharp.Daemon
                     && this.chainStateBuilder.LastBlockHash != chainStateLocal.LastBlockHash
                     && DateTime.UtcNow - this.chainStateBuilderTime > this.MaxBuilderTime)
                 {
-                    this.calculator.LogBlockchainProgress(this.chainStateBuilder);
+                    this.chainStateBuilder.LogBlockchainProgress();
 
                     // ensure rollback information is fully saved, back to pruning limit, before considering new chain state committed
                     var blocksPerDay = 144;
@@ -138,17 +135,16 @@ namespace BitSharp.Daemon
                 {
                     this.chainStateBuilderTime = DateTime.UtcNow;
                     this.chainStateBuilder =
-                        new ChainStateBuilder
-                        (
-                            chainStateLocal.Chain.ToBuilder(),
-                            new UtxoBuilder(chainStateLocal.Utxo, this.logger, this.kernel, this.transactionCache)
-                        );
+                        this.kernel.Get<ChainStateBuilder>(
+                        new ConstructorArgument("chain", chainStateLocal.Chain.ToBuilder()),
+                        new ConstructorArgument("utxo", new UtxoBuilder(chainStateLocal.Utxo, this.logger, this.kernel, this.transactionCache)),
+                        new ConstructorArgument("shutdownToken", this.ShutdownToken.Token));
                 }
 
                 // try to advance the blockchain with the new winning block
                 using (var cancelToken = new CancellationTokenSource())
                 {
-                    this.calculator.CalculateBlockchainFromExisting(this.chainStateBuilder, getTargetChain, cancelToken.Token,
+                    this.chainStateBuilder.CalculateBlockchainFromExisting(this.chainStateBuilder, getTargetChain, cancelToken.Token,
                         (blockTime) =>
                         {
                             this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;

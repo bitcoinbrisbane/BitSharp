@@ -74,10 +74,9 @@
     <Reference Include="System.Runtime.Caching" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BlockchainCalculator.cs" />
+    <Compile Include="ChainStateBuilder.cs" />
     <Compile Include="BlockchainWalker.cs" />
     <Compile Include="ChainState.cs" />
-    <Compile Include="ChainStateBuilder.cs" />
     <Compile Include="RulesModule.cs" />
     <Compile Include="Testnet3Rules.cs" />
     <Compile Include="Testnet2Rules.cs" />
