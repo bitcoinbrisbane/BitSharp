@@ -64,7 +64,7 @@ namespace BitSharp.Blockchain
             GC.SuppressFinalize(this);
         }
 
-        public bool IsConsistent { get; set; }
+        public bool IsConsistent { get; private set; }
 
         public ChainBuilder Chain { get { return this.chain; } }
 
@@ -98,7 +98,7 @@ namespace BitSharp.Blockchain
 
         public BuilderStats Stats { get { return this.stats; } }
 
-        public void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
+        private void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
         {
             //this.Stats.totalStopwatch.Start();
             //this.Stats.currentRateStopwatch.Start();
@@ -268,7 +268,7 @@ namespace BitSharp.Blockchain
             utxoBuilder.Unmint(coinbaseTx, chainStateBuilder.LastBlock);
         }
 
-        public void RevalidateBlockchain(Chain blockchain, Block genesisBlock)
+        private void RevalidateBlockchain(Chain blockchain, Block genesisBlock)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -343,7 +343,7 @@ namespace BitSharp.Blockchain
             }
         }
 
-        public IEnumerable<Tuple<int, ChainedBlock, Block>> BlockLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chain, int lookAhead)
+        private IEnumerable<Tuple<int, ChainedBlock, Block>> BlockLookAhead(IEnumerable<Tuple<int, ChainedBlock>> chain, int lookAhead)
         {
             return chain
                 .Select(
