@@ -11,6 +11,7 @@ namespace BitSharp.Core.Storage
         BlockHeaderCache BlockHeaderCache { get; }
         ChainedBlockCache ChainedBlockCache { get; }
         BlockCache BlockCache { get; }
+        InvalidBlockCache InvalidBlockCache { get; }
 
         //TODO move to utxo storage
         SpentTransactionsCache SpentTransactionsCache { get; }
@@ -19,6 +20,5 @@ namespace BitSharp.Core.Storage
         //TODO move to indexed storage
         BlockTxHashesCache BlockTxHashesCache { get; }
         TransactionCache TransactionCache { get; }
-        InvalidBlockCache InvalidBlockCache { get; }
     }
 }
