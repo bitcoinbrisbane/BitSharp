@@ -112,11 +112,13 @@
     <Compile Include="Rules\RulesModule.cs" />
     <Compile Include="Rules\Testnet2Rules.cs" />
     <Compile Include="Rules\Testnet3Rules.cs" />
+    <Compile Include="Script\PayToPublicKeyBuilder.cs" />
     <Compile Include="Script\ScriptBuilder.cs" />
     <Compile Include="Script\ScriptEngine.cs" />
     <Compile Include="Script\ScriptHashType.cs" />
     <Compile Include="Script\ScriptOp.cs" />
     <Compile Include="Script\Stack.cs" />
+    <Compile Include="Script\PayToPublicKeyHashBuilder.cs" />
     <Compile Include="Script\TransactionManager.cs" />
     <Compile Include="Storage\BlockCompositeCache.cs" />
     <Compile Include="Storage\BoundedCache.cs" />

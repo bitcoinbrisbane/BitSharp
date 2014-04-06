@@ -64,15 +64,15 @@ namespace BitSharp.Core.Script
             return CreatePublicKeyScript(CreatePublicAddress(publicKey));
         }
 
-        public byte[] CreatePublicKeyScript(byte[] publicAddress)
+        public byte[] CreatePublicKeyScript(byte[] publicKey)
         {
-            var publicAddressHash = Crypto.SingleRIPEMD160(Crypto.SingleSHA256(publicAddress));
+            var publicKeyHash = Crypto.SingleRIPEMD160(Crypto.SingleSHA256(publicKey));
 
             using (var publicKeyScript = new ScriptBuilder())
             {
                 publicKeyScript.WriteOp(ScriptOp.OP_DUP);
                 publicKeyScript.WriteOp(ScriptOp.OP_HASH160);
-                publicKeyScript.WritePushData(publicAddressHash);
+                publicKeyScript.WritePushData(publicKeyHash);
                 publicKeyScript.WriteOp(ScriptOp.OP_EQUALVERIFY);
                 publicKeyScript.WriteOp(ScriptOp.OP_CHECKSIG);
 
