@@ -1,10 +1,4 @@
-﻿using BitSharp.Blockchain;
-using BitSharp.Common.ExtensionMethods;
-using BitSharp.Daemon;
-using BitSharp.Data;
-using BitSharp.Storage;
-using BitSharp.Storage.ExtensionMethods;
-using BitSharp.Network;
+﻿using BitSharp.Common.ExtensionMethods;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -17,6 +11,9 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Ninject;
+using BitSharp.Core;
+using BitSharp.Core.Storage;
+using BitSharp.Core.Domain;
 
 namespace BitSharp.Client
 {
@@ -25,7 +22,7 @@ namespace BitSharp.Client
         public event PropertyChangedEventHandler PropertyChanged;
 
         private readonly IKernel kernel;
-        private readonly BlockchainDaemon blockchainDaemon;
+        private readonly CoreDaemon blockchainDaemon;
         private readonly BlockTxHashesCache blockTxHashesCache;
         private readonly BlockCache blockCache;
 
@@ -42,7 +39,7 @@ namespace BitSharp.Client
         public MainWindowViewModel(IKernel kernel)
         {
             this.kernel = kernel;
-            this.blockchainDaemon = kernel.Get<BlockchainDaemon>();
+            this.blockchainDaemon = kernel.Get<CoreDaemon>();
             this.blockTxHashesCache = kernel.Get<BlockTxHashesCache>();
             this.blockCache = kernel.Get<BlockCache>();
 

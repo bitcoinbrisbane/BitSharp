@@ -5,12 +5,7 @@
 #define MIXED
 
 using BitSharp.Common.ExtensionMethods;
-using BitSharp.Blockchain;
-using BitSharp.Daemon;
 using BitSharp.Node;
-using BitSharp.Script;
-using BitSharp.Storage;
-using BitSharp.Storage.Esent;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -27,10 +22,14 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
-using BitSharp.Network;
 using Ninject;
 using Ninject.Modules;
 using NLog;
+using BitSharp.Core.Rules;
+using BitSharp.Core.Storage;
+using BitSharp.Core;
+using BitSharp.Esent;
+using BitSharp.Node.Storage;
 
 namespace BitSharp.Client
 {
@@ -76,8 +75,9 @@ namespace BitSharp.Client
                 modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION()));
 #endif
 
-                // add cache module
-                modules.Add(new CacheModule());
+                // add cache modules
+                modules.Add(new CoreCacheModule());
+                modules.Add(new NodeCacheModule());
 
                 // add rules module
 #if TEST_TOOL
@@ -92,8 +92,8 @@ namespace BitSharp.Client
                 this.kernel.Load(modules.ToArray());
 
                 // initialize the blockchain daemon
-                this.kernel.Bind<BlockchainDaemon>().ToSelf().InSingletonScope();
-                var blockchainDaemon = this.kernel.Get<BlockchainDaemon>();
+                this.kernel.Bind<CoreDaemon>().ToSelf().InSingletonScope();
+                var blockchainDaemon = this.kernel.Get<CoreDaemon>();
 
                 // setup view model
                 this.viewModel = new MainWindowViewModel(this.kernel);

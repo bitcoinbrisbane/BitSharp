@@ -1,6 +1,6 @@
 ﻿using BitSharp.Common;
-using BitSharp.Data;
-using BitSharp.Script;
+using BitSharp.Core.Domain;
+using BitSharp.Core.Script;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;

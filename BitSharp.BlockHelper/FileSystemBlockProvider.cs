@@ -1,4 +1,4 @@
-﻿using BitSharp.Data;
+﻿using BitSharp.Core.Domain;
 using System;
 using System.Collections.Generic;
 using System.IO;

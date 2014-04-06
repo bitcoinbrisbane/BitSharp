@@ -81,8 +81,27 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HeadersRequestWorker.cs" />
-    <Compile Include="BlockRequestWorker.cs" />
+    <Compile Include="Domain\AddressPayload.cs" />
+    <Compile Include="Domain\AlertPayload.cs" />
+    <Compile Include="Domain\GetBlocksPayload.cs" />
+    <Compile Include="Domain\InventoryPayload.cs" />
+    <Compile Include="Domain\InventoryVector.cs" />
+    <Compile Include="Domain\Message.cs" />
+    <Compile Include="Domain\NetworkAddress.cs" />
+    <Compile Include="Domain\NetworkAddressKey.cs" />
+    <Compile Include="Domain\NetworkAddressWithTime.cs" />
+    <Compile Include="Domain\VersionPayload.cs" />
+    <Compile Include="Network\Messaging.cs" />
+    <Compile Include="Network\RemoteNode.cs" />
+    <Compile Include="Network\RemoteReceiver.cs" />
+    <Compile Include="Network\RemoteSender.cs" />
+    <Compile Include="NodeEncoder.cs" />
+    <Compile Include="Storage\NodeCacheModule.cs" />
+    <Compile Include="Storage\Memory\MemoryStorage.cs" />
+    <Compile Include="Storage\Memory\MemoryStorageModule.cs" />
+    <Compile Include="Storage\StorageInterfaces.cs" />
+    <Compile Include="Workers\HeadersRequestWorker.cs" />
+    <Compile Include="Workers\BlockRequestWorker.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="LocalClient.cs" />
@@ -94,38 +113,15 @@
       <Project>{b8d21dec-5370-4194-9e6d-2f620804a892}</Project>
       <Name>BitSharp.Common</Name>
     </ProjectReference>
-    <ProjectReference Include="..\BitSharp.Blockchain.Test\BitSharp.Blockchain.Test.csproj">
-      <Project>{8e888df3-c2f2-440c-ba5d-fb8ac33fb891}</Project>
-      <Name>BitSharp.Blockchain.Test</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BitSharp.Blockchain\BitSharp.Blockchain.csproj">
-      <Project>{fddffcb8-4445-4699-9ddc-e2d40b5c1697}</Project>
-      <Name>BitSharp.Blockchain</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BitSharp.Daemon\BitSharp.Daemon.csproj">
-      <Project>{bcba029f-f866-45ea-89dd-fb5bec60a3b6}</Project>
-      <Name>BitSharp.Daemon</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BitSharp.Data\BitSharp.Data.csproj">
-      <Project>{3099c2ee-055d-4856-9d86-f9f495f9c761}</Project>
-      <Name>BitSharp.Data</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BitSharp.Storage\BitSharp.Storage.csproj">
-      <Project>{1955dd75-ab8a-46df-9060-5b0af06338f2}</Project>
-      <Name>BitSharp.Storage</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BItSharp.Network\BitSharp.Network.csproj">
-      <Project>{4d92a9b1-577f-4d24-9153-088ced047b68}</Project>
-      <Name>BitSharp.Network</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BitSharp.Script\BitSharp.Script.csproj">
-      <Project>{b5419c45-7f0f-4dae-84bc-b6c206d8d753}</Project>
-      <Name>BitSharp.Script</Name>
+    <ProjectReference Include="..\BitSharp.Core\BitSharp.Core.csproj">
+      <Project>{2ecfa6c0-46b6-4587-a662-3f61c7efbc44}</Project>
+      <Name>BitSharp.Core</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>

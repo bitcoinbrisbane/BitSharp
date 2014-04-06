@@ -89,20 +89,14 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="NodeEncoderTest.cs" />
+    <Compile Include="NodeEncoderTest.Data.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BitSharp.Blockchain\BitSharp.Blockchain.csproj">
-      <Project>{fddffcb8-4445-4699-9ddc-e2d40b5c1697}</Project>
-      <Name>BitSharp.Blockchain</Name>
-    </ProjectReference>
     <ProjectReference Include="..\BitSharp.Common.Test\BitSharp.Common.Test.csproj">
       <Project>{299d32ed-61a5-4c8d-8ae1-8f502cfa6b99}</Project>
       <Name>BitSharp.Common.Test</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BitSharp.Daemon\BitSharp.Daemon.csproj">
-      <Project>{bcba029f-f866-45ea-89dd-fb5bec60a3b6}</Project>
-      <Name>BitSharp.Daemon</Name>
     </ProjectReference>
     <ProjectReference Include="..\BitSharp.Node\BitSharp.Node.csproj">
       <Project>{b76235bf-6037-45b8-9341-957e6407f8e1}</Project>
@@ -111,18 +105,6 @@
     <ProjectReference Include="..\BitSharp.Common\BitSharp.Common.csproj">
       <Project>{b8d21dec-5370-4194-9e6d-2f620804a892}</Project>
       <Name>BitSharp.Common</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BItSharp.Network\BitSharp.Network.csproj">
-      <Project>{4d92a9b1-577f-4d24-9153-088ced047b68}</Project>
-      <Name>BitSharp.Network</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BitSharp.Script\BitSharp.Script.csproj">
-      <Project>{b5419c45-7f0f-4dae-84bc-b6c206d8d753}</Project>
-      <Name>BitSharp.Script</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BitSharp.Storage\BitSharp.Storage.csproj">
-      <Project>{1955dd75-ab8a-46df-9060-5b0af06338f2}</Project>
-      <Name>BitSharp.Storage</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

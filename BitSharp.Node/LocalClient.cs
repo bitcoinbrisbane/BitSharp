@@ -1,11 +1,6 @@
-﻿using BitSharp.Blockchain;
-using BitSharp.Common;
+﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
-using BitSharp.Daemon;
-using BitSharp.Network;
 using BitSharp.Node.ExtensionMethods;
-using BitSharp.Script;
-using BitSharp.Storage;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -16,12 +11,19 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using BitSharp.Data;
 using System.IO;
 using System.Globalization;
 using Ninject;
 using Ninject.Parameters;
 using NLog;
+using BitSharp.Node.Network;
+using BitSharp.Core.Domain;
+using BitSharp.Core.Rules;
+using BitSharp.Core.Storage;
+using BitSharp.Core;
+using BitSharp.Node.Workers;
+using BitSharp.Node.Domain;
+using BitSharp.Node.Storage;
 
 namespace BitSharp.Node
 {
@@ -43,7 +45,7 @@ namespace BitSharp.Node
         private readonly RulesEnum type;
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
-        private readonly BlockchainDaemon blockchainDaemon;
+        private readonly CoreDaemon blockchainDaemon;
         private readonly BlockHeaderCache blockHeaderCache;
         private readonly ChainedBlockCache chainedBlockCache;
         private readonly TransactionCache transactionCache;
@@ -69,7 +71,7 @@ namespace BitSharp.Node
 
         private Socket listenSocket;
 
-        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, BlockchainDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, TransactionCache transactionCache, BlockCache blockCache, NetworkPeerCache networkPeerCache)
+        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, CoreDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, TransactionCache transactionCache, BlockCache blockCache, NetworkPeerCache networkPeerCache)
         {
             this.shutdownToken = new CancellationTokenSource();
 
@@ -727,7 +729,7 @@ namespace BitSharp.Node
 
                 //TODO shouldn't have to decode again
                 var versionMessage = versionTask.Result;
-                var versionPayload = DataEncoder.DecodeVersionPayload(versionMessage.Payload.ToArray(), versionMessage.Payload.Count);
+                var versionPayload = NodeEncoder.DecodeVersionPayload(versionMessage.Payload.ToArray(), versionMessage.Payload.Count);
 
                 var remoteAddressWithTime = new NetworkAddressWithTime
                 (
