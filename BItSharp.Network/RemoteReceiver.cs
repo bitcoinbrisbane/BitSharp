@@ -27,7 +27,7 @@ namespace BitSharp.Network
         public event Action<ImmutableArray<InventoryVector>> OnInventoryVectors;
         public event Action<ImmutableArray<InventoryVector>> OnNotFound;
         public event Action<RemoteNode, Block> OnBlock;
-        public event Action<RemoteNode, BlockHeader> OnBlockHeader;
+        public event Action<RemoteNode, IImmutableList<BlockHeader>> OnBlockHeaders;
         public event Action<Transaction> OnTransaction;
         public event Action<ImmutableArray<NetworkAddressWithTime>> OnReceivedAddresses;
         public event Action<GetBlocksPayload> OnGetBlocks;
@@ -232,6 +232,8 @@ namespace BitSharp.Network
 
                 case "headers":
                     {
+                        var blockHeaders = ImmutableList.CreateBuilder<BlockHeader>();
+
                         using (var headerStream = new MemoryStream(payload))
                         using (var reader = new BinaryReader(headerStream))
                         {
@@ -243,11 +245,13 @@ namespace BitSharp.Network
                                 //TODO wiki says this is a byte and a var int, which is it?
                                 var txCount = reader.ReadVarInt();
 
-                                var handler = this.OnBlockHeader;
-                                if (handler != null)
-                                    handler(this.owner, blockHeader);
+                                blockHeaders.Add(blockHeader);
                             }
                         }
+
+                        var handler = this.OnBlockHeaders;
+                        if (handler != null)
+                            handler(this.owner, blockHeaders.ToImmutable());
                     }
                     break;
 

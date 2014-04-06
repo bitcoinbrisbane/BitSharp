@@ -28,7 +28,7 @@ namespace BitSharp.Node
     public class LocalClient : IDisposable
     {
         public event Action<RemoteNode, Block> OnBlock;
-        public event Action<RemoteNode, BlockHeader> OnBlockHeader;
+        public event Action<RemoteNode, IImmutableList<BlockHeader>> OnBlockHeaders;
 
         private static readonly int SERVER_BACKLOG = 10;
         private static readonly int CONNECTED_MAX = 25;
@@ -441,7 +441,7 @@ namespace BitSharp.Node
             remoteNode.Receiver.OnMessage += OnMessage;
             remoteNode.Receiver.OnInventoryVectors += OnInventoryVectors;
             remoteNode.Receiver.OnBlock += HandleBlock;
-            remoteNode.Receiver.OnBlockHeader += HandleBlockHeader;
+            remoteNode.Receiver.OnBlockHeaders += HandleBlockHeaders;
             remoteNode.Receiver.OnTransaction += OnTransaction;
             remoteNode.Receiver.OnReceivedAddresses += OnReceivedAddresses;
             remoteNode.OnGetBlocks += OnGetBlocks;
@@ -456,7 +456,7 @@ namespace BitSharp.Node
             remoteNode.Receiver.OnMessage -= OnMessage;
             remoteNode.Receiver.OnInventoryVectors -= OnInventoryVectors;
             remoteNode.Receiver.OnBlock -= HandleBlock;
-            remoteNode.Receiver.OnBlockHeader -= HandleBlockHeader;
+            remoteNode.Receiver.OnBlockHeaders -= HandleBlockHeaders;
             remoteNode.Receiver.OnTransaction -= OnTransaction;
             remoteNode.Receiver.OnReceivedAddresses -= OnReceivedAddresses;
             remoteNode.OnGetBlocks -= OnGetBlocks;
@@ -520,11 +520,11 @@ namespace BitSharp.Node
                 handler(remoteNode, block);
         }
 
-        private void HandleBlockHeader(RemoteNode remoteNode, BlockHeader blockHeader)
+        private void HandleBlockHeaders(RemoteNode remoteNode, IImmutableList<BlockHeader> blockHeaders)
         {
-            var handler = this.OnBlockHeader;
+            var handler = this.OnBlockHeaders;
             if (handler != null)
-                handler(remoteNode, blockHeader);
+                handler(remoteNode, blockHeaders);
         }
 
         private void OnTransaction(Transaction transaction)
