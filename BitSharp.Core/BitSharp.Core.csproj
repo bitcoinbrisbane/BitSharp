@@ -106,7 +106,7 @@
     <Compile Include="Domain\TxOutputKey.cs" />
     <Compile Include="Domain\UnspentTx.cs" />
     <Compile Include="Domain\Utxo.cs" />
-    <Compile Include="CoreRpcServer.cs" />
+    <Compile Include="JsonRpc\CoreRpcServer.cs" />
     <Compile Include="Rules\IBlockchainRules.cs" />
     <Compile Include="Rules\MainnetRules.cs" />
     <Compile Include="Rules\RulesModule.cs" />

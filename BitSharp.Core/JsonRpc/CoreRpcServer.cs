@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Node
+namespace BitSharp.Core.JsonRpc
 {
     public class CoreRpcServer : JsonRpcService
     {

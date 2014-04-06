@@ -1,5 +1,6 @@
 ﻿using AustinHarris.JsonRpc;
 using BitSharp.Core;
+using BitSharp.Core.JsonRpc;
 using System;
 using System.Collections.Generic;
 using System.Linq;

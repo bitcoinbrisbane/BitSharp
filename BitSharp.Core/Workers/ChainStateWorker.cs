@@ -187,13 +187,7 @@ namespace BitSharp.Core.Workers
                     var validationException = (ValidationException)e;
                     this.invalidBlockCache[validationException.BlockHash] = validationException.Message;
                 }
-
-                // try again on failure
-                this.NotifyWork();
             }
-
-            // collect after processing
-            //GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
         }
 
         private void UpdateCurrentBlockchain(ChainState newChainState)

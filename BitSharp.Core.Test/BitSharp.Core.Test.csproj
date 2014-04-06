@@ -87,6 +87,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="AssertMethods.cs" />
     <Compile Include="BlockchainWalkerTest.cs" />
     <Compile Include="CoreDaemonTest.cs" />
     <Compile Include="DataCalculatorTest.cs" />
@@ -94,6 +95,7 @@
     <Compile Include="DataEncoderTest.Data.cs" />
     <Compile Include="Domain\BlockHeaderTest.cs" />
     <Compile Include="Domain\ChainedBlockTest.cs" />
+    <Compile Include="JsonRpc\CoreRpcServerTest.cs" />
     <Compile Include="RandomData.cs" />
     <Compile Include="Domain\TxOutputKeyTest.cs" />
     <Compile Include="ExtensionMethods.cs" />
@@ -103,6 +105,7 @@
     <Compile Include="Script\ScriptBuilderTest.cs" />
     <Compile Include="Script\ScriptEngineTest.cs" />
     <Compile Include="Script\TransactionManagerTest.cs" />
+    <Compile Include="MainnetSimulator.cs" />
     <Compile Include="TestDaemon.cs" />
     <Compile Include="Rules\UnitTestRules.cs" />
     <Compile Include="Domain\Builders\UtxoBuilderTest.cs" />
@@ -128,6 +131,7 @@
       <Name>BitSharp.Core</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>

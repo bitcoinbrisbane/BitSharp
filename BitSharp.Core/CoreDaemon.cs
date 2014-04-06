@@ -90,7 +90,7 @@ namespace BitSharp.Core
               new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))));
 
             this.chainStateWorker = kernel.Get<ChainStateWorker>(
-                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5))),
+                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5))),
                 new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)),
                 new ConstructorArgument("maxBuilderTime", TimeSpan.FromMinutes(30)));
 
@@ -222,6 +222,21 @@ namespace BitSharp.Core
         public TimeSpan AverageBlockProcessingTime()
         {
             return this.chainStateWorker.AverageBlockProcessingTime();
+        }
+
+        internal ChainingWorker ChainingWorker
+        {
+            get { return this.chainingWorker; }
+        }
+
+        internal TargetChainWorker TargetChainWorker
+        {
+            get { return this.targetChainWorker; }
+        }
+
+        internal ChainStateWorker ChainStateWorker
+        {
+            get { return this.chainStateWorker; }
         }
 
         public void Start()
