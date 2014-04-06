@@ -144,7 +144,7 @@ namespace BitSharp.Daemon
                 // try to advance the blockchain with the new winning block
                 using (var cancelToken = new CancellationTokenSource())
                 {
-                    this.chainStateBuilder.CalculateBlockchainFromExisting(this.chainStateBuilder, getTargetChain, cancelToken.Token,
+                    this.chainStateBuilder.CalculateBlockchainFromExisting(getTargetChain, cancelToken.Token,
                         (blockTime) =>
                         {
                             this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;

@@ -98,16 +98,16 @@ namespace BitSharp.Blockchain
 
         public BuilderStats Stats { get { return this.stats; } }
 
-        private void CalculateBlockchainFromExisting(ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
+        public void CalculateBlockchainFromExisting(Func<Chain> getTargetChain, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
         {
             //this.Stats.totalStopwatch.Start();
             //this.Stats.currentRateStopwatch.Start();
 
             // calculate the new blockchain along the target path
-            chainStateBuilder.IsConsistent = true;
-            foreach (var pathElement in BlockLookAhead(chainStateBuilder.Chain.NavigateTowards(getTargetChain), lookAhead: 1))
+            this.IsConsistent = true;
+            foreach (var pathElement in BlockLookAhead(this.Chain.NavigateTowards(getTargetChain), lookAhead: 1))
             {
-                chainStateBuilder.IsConsistent = false;
+                this.IsConsistent = false;
                 var startTime = DateTime.UtcNow;
 
                 // cooperative loop
@@ -123,31 +123,31 @@ namespace BitSharp.Blockchain
 
                 if (direction < 0)
                 {
-                    RollbackUtxo(chainStateBuilder, block);
+                    this.RollbackUtxo(block);
 
-                    chainStateBuilder.Chain.RemoveBlock(chainedBlock);
+                    this.Chain.RemoveBlock(chainedBlock);
                 }
                 else if (direction > 0)
                 {
                     // add the block to the current chain
-                    chainStateBuilder.Chain.AddBlock(chainedBlock);
+                    this.Chain.AddBlock(chainedBlock);
 
                     // validate the block
                     this.Stats.validateStopwatch.Start();
                     new MethodTimer(false).Time("ValidateBlock", () =>
-                        this.rules.ValidateBlock(block, chainStateBuilder));
+                        this.rules.ValidateBlock(block, this));
                     this.Stats.validateStopwatch.Stop();
 
                     // calculate the new block utxo, double spends will be checked for
                     long txCount = 0, inputCount = 0;
                     new MethodTimer(false).Time("CalculateUtxo", () =>
-                        CalculateUtxo(chainedBlock, block, chainStateBuilder.Utxo, out txCount, out inputCount));
+                        CalculateUtxo(chainedBlock, block, this.Utxo, out txCount, out inputCount));
 
                     // collect rollback informatino and store it
-                    chainStateBuilder.Utxo.SaveRollbackInformation(chainedBlock.Height, block.Hash, this.spentTransactionsCache, this.spentOutputsCache);
+                    this.Utxo.SaveRollbackInformation(chainedBlock.Height, block.Hash, this.spentTransactionsCache, this.spentOutputsCache);
 
                     // flush utxo progress
-                    //chainStateBuilder.Utxo.Flush();
+                    //this.Utxo.Flush();
 
                     // create the next link in the new blockchain
                     if (onProgress != null)
@@ -168,7 +168,7 @@ namespace BitSharp.Blockchain
                 else
                     throw new InvalidOperationException();
 
-                chainStateBuilder.IsConsistent = true;
+                this.IsConsistent = true;
             }
         }
 
@@ -233,11 +233,8 @@ namespace BitSharp.Blockchain
         }
 
         //TODO with the rollback information that's now being stored, rollback could be down without needing the block
-        private void RollbackUtxo(ChainStateBuilder chainStateBuilder, Block block)
+        private void RollbackUtxo(Block block)
         {
-            var blockHeight = chainStateBuilder.Height;
-            var utxoBuilder = chainStateBuilder.Utxo;
-
             //TODO currently a MissingDataException will get thrown if the rollback information is missing
             //TODO rollback is still possible if any resurrecting transactions can be found
             //TODO the network does not allow arbitrary transaction lookup, but if the transactions can be retrieved then this code should allow it
@@ -253,19 +250,19 @@ namespace BitSharp.Blockchain
                 var tx = block.Transactions[txIndex];
 
                 // remove outputs
-                utxoBuilder.Unmint(tx, chainStateBuilder.LastBlock);
+                this.Utxo.Unmint(tx, this.LastBlock);
 
                 // remove inputs in reverse order
                 for (var inputIndex = tx.Inputs.Count - 1; inputIndex >= 0; inputIndex--)
                 {
                     var input = tx.Inputs[inputIndex];
-                    utxoBuilder.Unspend(input, chainStateBuilder.LastBlock, spentTransactions, spentOutputs);
+                    this.Utxo.Unspend(input, this.LastBlock, spentTransactions, spentOutputs);
                 }
             }
 
             // remove coinbase outputs
             var coinbaseTx = block.Transactions[0];
-            utxoBuilder.Unmint(coinbaseTx, chainStateBuilder.LastBlock);
+            this.Utxo.Unmint(coinbaseTx, this.LastBlock);
         }
 
         private void RevalidateBlockchain(Chain blockchain, Block genesisBlock)
