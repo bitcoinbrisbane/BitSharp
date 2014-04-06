@@ -58,6 +58,12 @@
     <DocumentationFile>bin\x64\Release\BitSharp.Node.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="AustinHarris.JsonRpc">
+      <HintPath>..\packages\AustinHarris.JsonRpc.1.0.3.0\lib\net40\AustinHarris.JsonRpc.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.4.5.1\lib\net40\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="Ninject">
       <HintPath>..\packages\Ninject.3.2.0.0\lib\net45-full\Ninject.dll</HintPath>
     </Reference>
@@ -96,6 +102,7 @@
     <Compile Include="Network\RemoteReceiver.cs" />
     <Compile Include="Network\RemoteSender.cs" />
     <Compile Include="NodeEncoder.cs" />
+    <Compile Include="NodeRpcServer.cs" />
     <Compile Include="Storage\NodeCacheModule.cs" />
     <Compile Include="Storage\Memory\MemoryStorage.cs" />
     <Compile Include="Storage\Memory\MemoryStorageModule.cs" />
