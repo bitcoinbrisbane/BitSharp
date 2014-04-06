@@ -716,7 +716,7 @@ namespace BitSharp.Node
                 remoteNode.Receiver.Listen();
 
                 // send our local version
-                var nodeId = (((UInt64)random.Next()) << 32) + (UInt64)random.Next(); //TODO should be generated and verified on version message
+                var nodeId = random.NextUInt64(); //TODO should be generated and verified on version message
 
                 var currentHeight = this.blockchainDaemon.ChainState.Height;
                 await remoteNode.Sender.SendVersion(Messaging.GetExternalIPEndPoint(), remoteNode.RemoteEndPoint, nodeId, (UInt32)currentHeight);
