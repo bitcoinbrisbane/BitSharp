@@ -7,8 +7,8 @@
     <ProjectGuid>{6D4D2210-A54F-41F0-BCA4-727B7DDB27C2}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BitSharp.Storage.Esent</RootNamespace>
-    <AssemblyName>BitSharp.Storage.Esent</AssemblyName>
+    <RootNamespace>BitSharp.Esent</RootNamespace>
+    <AssemblyName>BitSharp.Esent</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
