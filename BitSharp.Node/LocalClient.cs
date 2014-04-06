@@ -35,8 +35,6 @@ namespace BitSharp.Node
         private static readonly int PENDING_MAX = 2 * CONNECTED_MAX;
         private static readonly int HANDSHAKE_TIMEOUT_MS = 15000;
 
-        private static readonly int MAX_TRANSACTION_REQUESTS = 20 * CONNECTED_MAX;
-
         private static readonly Random random = new Random();
 
         private readonly Logger logger;
