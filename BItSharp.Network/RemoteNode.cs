@@ -148,7 +148,11 @@ namespace BitSharp.Network
 
         private void HandleFailed(Exception e)
         {
-            this.logger.DebugException("Remote peer failed: {0}".Format2(this.remoteEndPoint), e);
+            if (e != null)
+                this.logger.DebugException("Remote peer failed: {0}".Format2(this.remoteEndPoint), e);
+            else
+                this.logger.Debug("Remote peer failed: {0}".Format2(this.remoteEndPoint));
+            
             Disconnect();
         }
 
