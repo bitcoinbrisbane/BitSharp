@@ -20,17 +20,22 @@ namespace BitSharp.Core.Test.Script
     [TestClass]
     public class ScriptEngineTest
     {
+        private static BlockProvider provider;
+
         private IKernel kernel;
         private Logger logger;
-        private BlockProvider provider;
+
+        [ClassInitialize]
+        public static void ClassInitialize(TestContext context)
+        {
+            ScriptEngineTest.provider = new ResourceBlockProvider();
+        }
 
         [TestInitialize]
         public void TestInitialize()
         {
             this.kernel = new StandardKernel(new ConsoleLoggingModule());
             this.logger = this.kernel.Get<Logger>();
-            this.provider = new FileSystemBlockProvider();
-            //this.provider = new BlockExplorerProvider();
         }
 
         [TestCleanup]
