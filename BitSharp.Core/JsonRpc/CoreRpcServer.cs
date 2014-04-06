@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.JsonRpc
 {
+    //TODO the reference implementation has the chain information, network information, and wallet information all running under one RPC service
+    //TODO i'm not touching private keys, so all of the wallet commands will be for monitoring
+    //TODO i'll have to add something non-standard to tell it what addresses to watch, so i can use standard commands like "getreceivedbyaddress"
     public class CoreRpcServer : JsonRpcService
     {
         private readonly CoreDaemon coreDaemon;
@@ -20,6 +23,11 @@ namespace BitSharp.Core.JsonRpc
 
         [JsonRpcMethod("getblock")]
         public void GetBlock(UInt256 blockHash)
+        {
+        }
+
+        [JsonRpcMethod("getreceivedbyaddress")]
+        public void GetReceivedByAddress(string address, int minConf)
         {
         }
     }
