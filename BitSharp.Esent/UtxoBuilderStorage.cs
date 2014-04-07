@@ -159,6 +159,8 @@ namespace BitSharp.Esent
 
         public IUtxoStorage ToImmutable(UInt256 blockHash)
         {
+            //TODO see if JetOSSnapshotPrepare for taking snapshots here
+
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
