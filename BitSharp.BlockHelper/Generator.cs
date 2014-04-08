@@ -20,6 +20,8 @@ namespace BitSharp.BlockHelper
                 projectFolder = Path.GetDirectoryName(projectFolder);
 
             var blockFolder = Path.Combine(projectFolder, "Blocks");
+            if (!Directory.Exists(blockFolder))
+                Directory.CreateDirectory(blockFolder);
 
             var blockExplorerProvider = new BlockExplorerProvider();
 
