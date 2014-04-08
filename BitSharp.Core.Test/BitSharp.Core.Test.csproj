@@ -80,6 +80,7 @@
     <Reference Include="System.Collections.Immutable">
       <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.30\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
     </Reference>
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <Choose>
@@ -97,6 +98,7 @@
   <ItemGroup>
     <Compile Include="AssertMethods.cs" />
     <Compile Include="BlockchainWalkerTest.cs" />
+    <Compile Include="MainnetTestData.cs" />
     <Compile Include="CoreDaemonTest.cs" />
     <Compile Include="DataCalculatorTest.cs" />
     <Compile Include="DataEncoderTest.cs" />
@@ -110,6 +112,7 @@
     <Compile Include="MainnetRulesTest.cs" />
     <Compile Include="Miner.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="MainnetBlockProvider.cs" />
     <Compile Include="Script\ScriptBuilderTest.cs" />
     <Compile Include="Script\ScriptEngineTest.cs" />
     <Compile Include="Script\TransactionManagerTest.cs" />
@@ -123,13 +126,10 @@
     <Compile Include="Workers\TargetChainWorkerTest.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Blocks.zip" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\BitSharp.BlockHelper\BitSharp.BlockHelper.csproj">
-      <Project>{017c5f91-cce6-4bfc-88f4-9369f68f3e24}</Project>
-      <Name>BitSharp.BlockHelper</Name>
-    </ProjectReference>
     <ProjectReference Include="..\BitSharp.Common\BitSharp.Common.csproj">
       <Project>{b8d21dec-5370-4194-9e6d-2f620804a892}</Project>
       <Name>BitSharp.Common</Name>

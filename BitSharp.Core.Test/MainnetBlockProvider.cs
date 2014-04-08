@@ -12,18 +12,18 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BitSharp.BlockHelper
+namespace BitSharp.Core.Test
 {
-    public class ResourceBlockProvider : BlockProvider
+    public class MainnetBlockProvider
     {
         private readonly Dictionary<string, Block> blocks;
 
-        public ResourceBlockProvider()
+        public MainnetBlockProvider()
         {
             this.blocks = new Dictionary<string, Block>();
 
             var assembly = Assembly.GetExecutingAssembly();
-            using (var stream = assembly.GetManifestResourceStream("BitSharp.BlockHelper.Blocks.zip"))
+            using (var stream = assembly.GetManifestResourceStream("BitSharp.Core.Test.Blocks.zip"))
             using (var zip = new ZipArchive(stream))
             {
                 foreach (var entry in zip.Entries)
@@ -36,13 +36,13 @@ namespace BitSharp.BlockHelper
             }
         }
 
-        public override Block GetBlock(int index)
+        public Block GetBlock(int index)
         {
             var name = "{0}.blk".Format2(index);
             return this.blocks[name];
         }
 
-        public override Block GetBlock(string hash)
+        public Block GetBlock(string hash)
         {
             var name = "{0}.blk".Format2(hash);
             return this.blocks[name];

@@ -8,7 +8,6 @@ using System.Diagnostics;
 using BitSharp;
 using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
-using BitSharp.BlockHelper;
 using System.Collections.Immutable;
 using NLog;
 using Ninject;
@@ -20,7 +19,7 @@ namespace BitSharp.Core.Test.Script
     [TestClass]
     public class ScriptEngineTest
     {
-        private static BlockProvider provider;
+        private static MainnetBlockProvider provider;
 
         private IKernel kernel;
         private Logger logger;
@@ -28,7 +27,7 @@ namespace BitSharp.Core.Test.Script
         [ClassInitialize]
         public static void ClassInitialize(TestContext context)
         {
-            ScriptEngineTest.provider = new ResourceBlockProvider();
+            ScriptEngineTest.provider = new MainnetBlockProvider();
         }
 
         [TestInitialize]
@@ -47,61 +46,61 @@ namespace BitSharp.Core.Test.Script
         public void TestFirstTransactionSignature()
         {
             Block block; Transaction tx; IDictionary<UInt256, Transaction> txLookup;
-            BlockHelperTestData.GetFirstTransaction(provider, out block, out tx, out txLookup);
+            MainnetTestData.GetFirstTransaction(provider, out block, out tx, out txLookup);
 
-            TestTransactionSignature(BlockHelperTestData.TX_0_SIGNATURES, tx, txLookup);
+            TestTransactionSignature(MainnetTestData.TX_0_SIGNATURES, tx, txLookup);
         }
 
         [TestMethod]
         public void TestFirstMultiInputTransactionSignature()
         {
             Block block; Transaction tx; IDictionary<UInt256, Transaction> txLookup;
-            BlockHelperTestData.GetFirstMultiInputTransaction(provider, out block, out tx, out txLookup);
+            MainnetTestData.GetFirstMultiInputTransaction(provider, out block, out tx, out txLookup);
 
-            TestTransactionSignature(BlockHelperTestData.TX_0_MULTI_INPUT_SIGNATURES, tx, txLookup);
+            TestTransactionSignature(MainnetTestData.TX_0_MULTI_INPUT_SIGNATURES, tx, txLookup);
         }
 
         [TestMethod]
         public void TestFirstHash160TransactionSignature()
         {
             Block block; Transaction tx; IDictionary<UInt256, Transaction> txLookup;
-            BlockHelperTestData.GetFirstHash160Transaction(provider, out block, out tx, out txLookup);
+            MainnetTestData.GetFirstHash160Transaction(provider, out block, out tx, out txLookup);
 
-            TestTransactionSignature(BlockHelperTestData.TX_0_HASH160_SIGNATURES, tx, txLookup);
+            TestTransactionSignature(MainnetTestData.TX_0_HASH160_SIGNATURES, tx, txLookup);
         }
 
         [TestMethod]
         public void TestFirstTransactionVerifySignature()
         {
             Block block; Transaction tx; IDictionary<UInt256, Transaction> txLookup;
-            BlockHelperTestData.GetFirstTransaction(provider, out block, out tx, out txLookup);
+            MainnetTestData.GetFirstTransaction(provider, out block, out tx, out txLookup);
 
-            TestTransactionVerifySignature(BlockHelperTestData.TX_0_HASH_TYPES, BlockHelperTestData.TX_0_SIGNATURES, BlockHelperTestData.TX_0_SIGNATURE_HASHES, tx, txLookup);
+            TestTransactionVerifySignature(MainnetTestData.TX_0_HASH_TYPES, MainnetTestData.TX_0_SIGNATURES, MainnetTestData.TX_0_SIGNATURE_HASHES, tx, txLookup);
         }
 
         [TestMethod]
         public void TestFirstMultiInputTransactionVerifySignature()
         {
             Block block; Transaction tx; IDictionary<UInt256, Transaction> txLookup;
-            BlockHelperTestData.GetFirstMultiInputTransaction(provider, out block, out tx, out txLookup);
+            MainnetTestData.GetFirstMultiInputTransaction(provider, out block, out tx, out txLookup);
 
-            TestTransactionVerifySignature(BlockHelperTestData.TX_0_MULTI_INPUT_HASH_TYPES, BlockHelperTestData.TX_0_MULTI_INPUT_SIGNATURES, BlockHelperTestData.TX_0_MULTI_INPUT_SIGNATURE_HASHES, tx, txLookup);
+            TestTransactionVerifySignature(MainnetTestData.TX_0_MULTI_INPUT_HASH_TYPES, MainnetTestData.TX_0_MULTI_INPUT_SIGNATURES, MainnetTestData.TX_0_MULTI_INPUT_SIGNATURE_HASHES, tx, txLookup);
         }
 
         [TestMethod]
         public void TestFirstHash160TransactionVerifySignature()
         {
             Block block; Transaction tx; IDictionary<UInt256, Transaction> txLookup;
-            BlockHelperTestData.GetFirstHash160Transaction(provider, out block, out tx, out txLookup);
+            MainnetTestData.GetFirstHash160Transaction(provider, out block, out tx, out txLookup);
 
-            TestTransactionVerifySignature(BlockHelperTestData.TX_0_HASH160_HASH_TYPES, BlockHelperTestData.TX_0_HASH160_SIGNATURES, BlockHelperTestData.TX_0_HASH160_SIGNATURE_HASHES, tx, txLookup);
+            TestTransactionVerifySignature(MainnetTestData.TX_0_HASH160_HASH_TYPES, MainnetTestData.TX_0_HASH160_SIGNATURES, MainnetTestData.TX_0_HASH160_SIGNATURE_HASHES, tx, txLookup);
         }
 
         [TestMethod]
         public void TestFirstTransactionVerifyScript()
         {
             Block block; Transaction tx; IDictionary<UInt256, Transaction> txLookup;
-            BlockHelperTestData.GetFirstTransaction(provider, out block, out tx, out txLookup);
+            MainnetTestData.GetFirstTransaction(provider, out block, out tx, out txLookup);
 
             TestTransactionVerifyScript(tx, txLookup);
         }
@@ -110,7 +109,7 @@ namespace BitSharp.Core.Test.Script
         public void TestFirstMultiInputTransactionVerifyScript()
         {
             Block block; Transaction tx; IDictionary<UInt256, Transaction> txLookup;
-            BlockHelperTestData.GetFirstMultiInputTransaction(provider, out block, out tx, out txLookup);
+            MainnetTestData.GetFirstMultiInputTransaction(provider, out block, out tx, out txLookup);
 
             TestTransactionVerifyScript(tx, txLookup);
         }
@@ -119,7 +118,7 @@ namespace BitSharp.Core.Test.Script
         public void TestFirstHash160TransactionVerifyScript()
         {
             Block block; Transaction tx; IDictionary<UInt256, Transaction> txLookup;
-            BlockHelperTestData.GetFirstHash160Transaction(provider, out block, out tx, out txLookup);
+            MainnetTestData.GetFirstHash160Transaction(provider, out block, out tx, out txLookup);
 
             TestTransactionVerifyScript(tx, txLookup);
         }

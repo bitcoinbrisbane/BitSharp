@@ -10,11 +10,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web.Helpers;
 
 namespace BitSharp.BlockHelper
 {
-    public class BlockExplorerProvider : BlockProvider
+    public class BlockExplorerProvider
     {
         private static readonly Regex hashRegex = new Regex("http://blockexplorer.com/block/([0-9A-Fa-f]{64})");
         private static readonly double REQUESTS_PER_MINUTE = 60 * 400;
@@ -23,14 +22,36 @@ namespace BitSharp.BlockHelper
         //TODO not thread safe
         private static DateTime lastDownload;
 
-        public override Block GetBlock(int index)
+        public Block GetBlock(int index)
         {
             return BlockJson.GetBlockFromJson(GetBlockJson(index));
         }
 
-        public override Block GetBlock(string hash)
+        public Block GetBlock(string hash)
         {
             return BlockJson.GetBlockFromJson(GetBlockJson(hash));
+        }
+
+        public IEnumerable<Block> GetBlocks(IEnumerable<int> blockIndexes)
+        {
+            var enumerator = blockIndexes.GetEnumerator();
+
+            // move to the first block index
+            if (!enumerator.MoveNext())
+                yield break;
+
+            // load up the first block to be returned
+            var block = GetBlock(enumerator.Current);
+
+            while (enumerator.MoveNext())
+            {
+                var nextBlockTask = Task.Run(() => GetBlock(enumerator.Current));
+                yield return block;
+                nextBlockTask.Wait();
+                block = nextBlockTask.Result;
+            }
+
+            yield return block;
         }
 
         public string GetBlockJson(int index)

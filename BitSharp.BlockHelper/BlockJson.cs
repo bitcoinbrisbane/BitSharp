@@ -1,6 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Core.Domain;
 using BitSharp.Core.Script;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -8,7 +9,6 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Helpers;
 
 namespace BitSharp.BlockHelper
 {
@@ -16,7 +16,7 @@ namespace BitSharp.BlockHelper
     {
         public static Block GetBlockFromJson(string blockJson)
         {
-            var block = Json.Decode(blockJson);
+            var block = JsonConvert.DeserializeObject<JsonBlock>(blockJson);
             return new Block
             (
                 header: new BlockHeader
@@ -32,7 +32,7 @@ namespace BitSharp.BlockHelper
             );
         }
 
-        public static ImmutableArray<Transaction> ReadTransactions(dynamic transactions)
+        public static ImmutableArray<Transaction> ReadTransactions(JsonTransaction[] transactions)
         {
             return
                 Enumerable.Range(0, (int)transactions.Length)
@@ -40,7 +40,7 @@ namespace BitSharp.BlockHelper
                 .ToImmutableArray();
         }
 
-        public static Transaction ReadTransaction(dynamic transaction)
+        public static Transaction ReadTransaction(JsonTransaction transaction)
         {
             return new Transaction
             (
@@ -51,7 +51,7 @@ namespace BitSharp.BlockHelper
             );
         }
 
-        public static ImmutableArray<TxInput> ReadInputs(dynamic inputs)
+        public static ImmutableArray<TxInput> ReadInputs(JsonTxInput[] inputs)
         {
             return
                 Enumerable.Range(0, (int)inputs.Length)
@@ -59,7 +59,7 @@ namespace BitSharp.BlockHelper
                 .ToImmutableArray();
         }
 
-        public static ImmutableArray<TxOutput> ReadOutputs(dynamic outputs)
+        public static ImmutableArray<TxOutput> ReadOutputs(JsonTxOutput[] outputs)
         {
             return
                 Enumerable.Range(0, (int)outputs.Length)
@@ -67,7 +67,7 @@ namespace BitSharp.BlockHelper
                 .ToImmutableArray();
         }
 
-        public static TxInput ReadInput(dynamic input)
+        public static TxInput ReadInput(JsonTxInput input)
         {
             return new TxInput
             (
@@ -81,7 +81,7 @@ namespace BitSharp.BlockHelper
             );
         }
 
-        public static TxOutput ReadOutput(dynamic output)
+        public static TxOutput ReadOutput(JsonTxOutput output)
         {
             return new TxOutput
             (
@@ -132,6 +132,45 @@ namespace BitSharp.BlockHelper
                              .Where(x => x % 2 == 0)
                              .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
                              .ToImmutableArray();
+        }
+
+        public sealed class JsonBlock
+        {
+            public string ver { get; set; }
+            public string prev_block { get; set; }
+            public string mrkl_root { get; set; }
+            public string time { get; set; }
+            public string bits { get; set; }
+            public string nonce { get; set; }
+            public JsonTransaction[] tx { get; set; }
+        }
+
+        public sealed class JsonTransaction
+        {
+            public string ver { get; set; }
+            public JsonTxInput[] @in { get; set; }
+            public JsonTxOutput[] @out { get; set; }
+            public string lock_time { get; set; }
+        }
+
+        public sealed class JsonTxInput
+        {
+            public JsonPrevTxOutput prev_out { get; set; }
+            public string scriptSig { get; set; }
+            public string coinbase { get; set; }
+            public string sequence { get; set; }
+        }
+
+        public sealed class JsonPrevTxOutput
+        {
+            public string hash { get; set; }
+            public string n { get; set; }
+        }
+
+        public sealed class JsonTxOutput
+        {
+            public string value { get; set; }
+            public string scriptPubKey { get; set; }
         }
     }
 }

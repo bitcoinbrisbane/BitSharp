@@ -1,5 +1,4 @@
-﻿using BitSharp.BlockHelper;
-using BitSharp.Common;
+﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Domain;
 using System;
@@ -10,9 +9,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.BlockHelper
+namespace BitSharp.Core.Test
 {
-    public static class BlockHelperTestData
+    public static class MainnetTestData
     {
         public const UInt64 SATOSHI_PER_BTC = 100 * 1000 * 1000;
 
@@ -60,7 +59,7 @@ namespace BitSharp.BlockHelper
                     (
                         new TxOutput
                         (
-                            value: 50 * BlockHelperTestData.SATOSHI_PER_BTC,
+                            value: 50 * MainnetTestData.SATOSHI_PER_BTC,
                             scriptPublicKey: ImmutableArray.Create<byte>
                             (
                                 0x41, 0x04, 0x67, 0x8A, 0xFD, 0xB0, 0xFE, 0x55, 0x48, 0x27, 0x19, 0x67, 0xF1, 0xA6, 0x71, 0x30,
@@ -244,7 +243,7 @@ namespace BitSharp.BlockHelper
             }
         };
 
-        public static void GetFirstTransaction(BlockProvider blockProvider, out Block block, out Transaction tx, out IDictionary<UInt256, Transaction> txLookup)
+        public static void GetFirstTransaction(MainnetBlockProvider blockProvider, out Block block, out Transaction tx, out IDictionary<UInt256, Transaction> txLookup)
         {
             txLookup = new Dictionary<UInt256, Transaction>();
 
@@ -258,7 +257,7 @@ namespace BitSharp.BlockHelper
             txLookup.Add(tx.Hash, tx);
         }
 
-        public static void GetFirstMultiInputTransaction(BlockProvider blockProvider, out Block block, out Transaction tx, out IDictionary<UInt256, Transaction> txLookup)
+        public static void GetFirstMultiInputTransaction(MainnetBlockProvider blockProvider, out Block block, out Transaction tx, out IDictionary<UInt256, Transaction> txLookup)
         {
             txLookup = new Dictionary<UInt256, Transaction>();
 
@@ -278,7 +277,7 @@ namespace BitSharp.BlockHelper
             txLookup.Add(tx.Hash, tx);
         }
 
-        public static void GetFirstHash160Transaction(BlockProvider blockProvider, out Block block, out Transaction tx, out IDictionary<UInt256, Transaction> txLookup)
+        public static void GetFirstHash160Transaction(MainnetBlockProvider blockProvider, out Block block, out Transaction tx, out IDictionary<UInt256, Transaction> txLookup)
         {
             txLookup = new Dictionary<UInt256, Transaction>();
 
@@ -295,7 +294,7 @@ namespace BitSharp.BlockHelper
             txLookup.Add(tx.Hash, tx);
         }
 
-        public static void GetTransaction(BlockProvider blockProvider, int blockIndex, int txIndex, out Block block, out Transaction tx)
+        public static void GetTransaction(MainnetBlockProvider blockProvider, int blockIndex, int txIndex, out Block block, out Transaction tx)
         {
             block = blockProvider.GetBlock(blockIndex);
             tx = block.Transactions[txIndex];

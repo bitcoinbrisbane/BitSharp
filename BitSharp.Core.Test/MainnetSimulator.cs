@@ -1,5 +1,4 @@
 ﻿using BitSharp.Blockchain;
-using BitSharp.BlockHelper;
 using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Domain;
@@ -27,7 +26,7 @@ namespace BitSharp.Core.Test
         private const UInt64 SATOSHI_PER_BTC = 100 * 1000 * 1000;
 
         private readonly Random random;
-        private readonly ResourceBlockProvider blockProvider;
+        private readonly MainnetBlockProvider blockProvider;
         private readonly IKernel kernel;
         private readonly Logger logger;
         private readonly BlockCache blockCache;
@@ -36,7 +35,7 @@ namespace BitSharp.Core.Test
         public MainnetSimulator()
         {
             this.random = new Random();
-            this.blockProvider = new ResourceBlockProvider();
+            this.blockProvider = new MainnetBlockProvider();
 
             // initialize kernel
             this.kernel = new StandardKernel();
@@ -81,7 +80,7 @@ namespace BitSharp.Core.Test
             this.kernel.Dispose();
         }
 
-        public ResourceBlockProvider BlockProvider { get { return this.blockProvider; } }
+        public MainnetBlockProvider BlockProvider { get { return this.blockProvider; } }
 
         public IKernel Kernel { get { return this.kernel; } }
 
