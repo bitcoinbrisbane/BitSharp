@@ -149,6 +149,8 @@ namespace BitSharp.Common
         {
             if (this.isDisposed)
                 return;
+            if (!this.startedEvent.IsSet)
+                return;
 
             // wait for worker to idle
             this.idleEvent.Wait();
