@@ -59,8 +59,16 @@ namespace BitSharp.Esent
             // bind storage providers interfaces
             this.Bind<IBlockHeaderStorage>().ToMethod(x => this.Kernel.Get<BlockHeaderStorage>()).InSingletonScope();
             this.Bind<IChainedBlockStorage>().ToMethod(x => this.Kernel.Get<ChainedBlockStorage>()).InSingletonScope();
-            this.Bind<IBlockTxHashesStorage>().ToMethod(x => this.Kernel.Get<MemoryBlockTxHashesStorage>()).InSingletonScope();
-            this.Bind<ITransactionStorage>().ToMethod(x => this.Kernel.Get<MemoryTransactionStorage>()).InSingletonScope();
+            if (this.transientBlockStorage)
+            {
+                this.Bind<IBlockTxHashesStorage>().ToMethod(x => this.Kernel.Get<MemoryBlockTxHashesStorage>()).InSingletonScope();
+                this.Bind<ITransactionStorage>().ToMethod(x => this.Kernel.Get<MemoryTransactionStorage>()).InSingletonScope();
+            }
+            else
+            {
+                this.Bind<IBlockTxHashesStorage>().ToMethod(x => this.Kernel.Get<BlockTxHashesStorage>()).InSingletonScope();
+                this.Bind<ITransactionStorage>().ToMethod(x => this.Kernel.Get<TransactionStorage>()).InSingletonScope();
+            }
             this.Bind<ISpentTransactionsStorage>().ToMethod(x => this.Kernel.Get<SpentTransactionsStorage>()).InSingletonScope();
             this.Bind<ISpentOutputsStorage>().ToMethod(x => this.Kernel.Get<SpentOutputsStorage>()).InSingletonScope();
             this.Bind<IInvalidBlockStorage>().ToMethod(x => this.Kernel.Get<InvalidBlockStorage>()).InSingletonScope();
