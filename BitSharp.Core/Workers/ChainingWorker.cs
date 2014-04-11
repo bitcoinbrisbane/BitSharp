@@ -22,27 +22,31 @@ namespace BitSharp.Core.Workers
         private readonly IBlockchainRules rules;
         private readonly BlockHeaderCache blockHeaderCache;
         private readonly ChainedBlockCache chainedBlockCache;
+        private readonly BlockCache blockCache;
 
         private readonly ConcurrentQueue<BlockHeader> blockHeaders;
         private readonly Dictionary<UInt256, Dictionary<UInt256, BlockHeader>> unchainedByPrevious;
 
-        public ChainingWorker(WorkerConfig workerConfig, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache)
+        public ChainingWorker(WorkerConfig workerConfig, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, BlockCache blockCache)
             : base("ChainingWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.rules = rules;
             this.blockHeaderCache = blockHeaderCache;
             this.chainedBlockCache = chainedBlockCache;
+            this.blockCache = blockCache;
 
             this.blockHeaders = new ConcurrentQueue<BlockHeader>();
             this.unchainedByPrevious = new Dictionary<UInt256, Dictionary<UInt256, BlockHeader>>();
 
             this.blockHeaderCache.OnAddition += ChainBlockHeader;
+            this.blockCache.OnAddition += ChainBlock;
         }
 
         protected override void SubDispose()
         {
             // unwire events
             this.blockHeaderCache.OnAddition -= ChainBlockHeader;
+            this.blockCache.OnAddition -= ChainBlock;
         }
 
         public IReadOnlyDictionary<UInt256, IReadOnlyDictionary<UInt256, BlockHeader>> UnchainedByPrevious
@@ -65,7 +69,7 @@ namespace BitSharp.Core.Workers
                 {
                     new MethodTimer().Time(() =>
                         this.blockHeaders.EnqueueRange(this.blockHeaderCache.Values));
-                    
+
                     this.NotifyWork();
                 });
 
@@ -143,7 +147,7 @@ namespace BitSharp.Core.Workers
 
         private void ChainBlock(UInt256 blockHash, Block block)
         {
-            ChainBlockHeader(blockHash, block != null ? block.Header : null);
+            this.blockHeaderCache.TryAdd(blockHash, block.Header);
         }
     }
 }
