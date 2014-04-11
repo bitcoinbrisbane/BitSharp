@@ -14,82 +14,52 @@ namespace BitSharp.Common
     {
         public static IEnumerable<T> LookAhead<T>(this IEnumerable<T> values, int lookAhead, CancellationToken? cancelToken = null)
         {
-            var readValues = new ConcurrentQueue<T>();
-
-            var finished = false;
-            var abortToken = new CancellationTokenSource();
-            Exception readException = null;
-
-            var valueReadEvent = new AutoResetEvent(true);
-            var valueAvailableEvent = new AutoResetEvent(false);
-            var thread = new Thread(() =>
+            using (var readValues = new BlockingCollection<T>(1 + lookAhead))
+            using (var abortToken = new CancellationTokenSource())
             {
-                try
+                Exception readException = null;
+
+                var thread = new Thread(() =>
                 {
-                    using (var valuesEnumerator = values.GetEnumerator())
+                    try
                     {
-                        while (!finished)
+                        foreach (var value in values)
                         {
                             // cooperative loop
                             cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
                             abortToken.Token.ThrowIfCancellationRequested();
 
-                            var value = valuesEnumerator.Current;
-
-                            if (readValues.Count < 1 + lookAhead)
-                            {
-                                if (valuesEnumerator.MoveNext())
-                                {
-                                    readValues.Enqueue(valuesEnumerator.Current);
-                                    valueAvailableEvent.Set();
-                                }
-                                else
-                                {
-                                    finished = true;
-                                }
-                            }
-                            else
-                            {
-                                valueReadEvent.WaitOne();
-                            }
+                            readValues.Add(value);
                         }
+
+                        readValues.CompleteAdding();
                     }
-                    valueAvailableEvent.Set();
-                }
-                catch (Exception e)
-                {
-                    readException = e;
-                    valueAvailableEvent.Set();
-                }
-            });
-
-            thread.Name = "LookAhead<{0}>".Format2(typeof(T).Name);
-            thread.Start();
-            try
-            {
-                while (!finished || readValues.Count > 0)
-                {
-                    // cooperative loop
-                    cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
-
-                    if (!finished)
+                    catch (Exception e)
                     {
-                        valueAvailableEvent.WaitOne();
-                        if (readException != null)
-                            throw readException;
+                        readException = e;
+                        abortToken.Cancel();
+                    }
+                });
+
+                thread.Name = "LookAhead<{0}>".Format2(typeof(T).Name);
+                thread.Start();
+                try
+                {
+                    foreach (var value in readValues.GetConsumingEnumerable(abortToken.Token))
+                    {
+                        // cooperative loop
+                        cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
+
+                        yield return value;
                     }
 
-                    T value;
-                    if (readValues.TryDequeue(out value))
-                        yield return value;
-
-                    valueReadEvent.Set();
+                    if (readException != null)
+                        throw readException;
                 }
-            }
-            finally
-            {
-                abortToken.Cancel();
-                valueReadEvent.Set();
+                finally
+                {
+                    abortToken.Cancel();
+                }
             }
         }
 
