@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Storage
 {
-    public class BlockCompositeCache : IUnboundedCache<UInt256, Block>
+    public class BlockCompositeCache : IBoundedCache<UInt256, Block>
     {
         private readonly BlockHeaderCache blockHeaderCache;
         private readonly BlockTxHashesCache blockTxHashesCache;
@@ -32,6 +32,12 @@ namespace BitSharp.Core.Storage
         {
         }
 
+        public event Action<UInt256, Block> OnAddition;
+
+        public event Action<UInt256, Block> OnModification;
+
+        public event Action<UInt256> OnRemoved;
+
         public event Action<UInt256> OnMissing;
 
         public string Name
@@ -40,6 +46,29 @@ namespace BitSharp.Core.Storage
         }
 
         public ImmutableHashSet<UInt256> MissingData { get { return this.missingData.ToImmutable(); } }
+
+        public int Count
+        {
+            get { return this.blockTxHashesCache.Count; }
+        }
+
+        public IEnumerable<UInt256> Keys
+        {
+            get { return this.blockTxHashesCache.Keys; }
+        }
+
+        public IEnumerable<Block> Values
+        {
+            get
+            {
+                foreach (var blockHash in this.blockTxHashesCache.Keys)
+                {
+                    Block block;
+                    if (this.TryGetValue(blockHash, out block))
+                        yield return block;
+                }
+            }
+        }
 
         public bool ContainsKey(UInt256 blockHash)
         {
@@ -116,6 +145,14 @@ namespace BitSharp.Core.Storage
 
             this.missingData.Remove(blockHash);
 
+            //TODO should use knownKeys
+            if (result)
+            {
+                var handler = this.OnAddition;
+                if (handler != null)
+                    handler(blockHash, block);
+            }
+
             return result;
         }
 
@@ -136,6 +173,14 @@ namespace BitSharp.Core.Storage
 
             // remove transactions list
             result |= this.blockTxHashesCache.TryRemove(blockHash);
+
+            //TODO should use knownKeys
+            if (result)
+            {
+                var handler = this.OnRemoved;
+                if (handler != null)
+                    handler(blockHash);
+            }
 
             return result;
         }
@@ -177,6 +222,16 @@ namespace BitSharp.Core.Storage
                 this.blockTxHashesCache[value.Hash] = txHashesList.ToImmutableList();
 
                 this.missingData.Remove(blockHash);
+
+                //TODO should use knownKeys
+                var handler1 = this.OnAddition;
+                if (handler1 != null)
+                    handler1(blockHash, value);
+
+                //TODO should use knownKeys
+                var handler2 = this.OnModification;
+                if (handler2 != null)
+                    handler1(blockHash, value);
             }
         }
 

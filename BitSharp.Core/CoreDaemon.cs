@@ -77,6 +77,8 @@ namespace BitSharp.Core
             // wire up cache events
             this.blockHeaderCache.OnAddition += OnBlockHeaderAddition;
             this.blockHeaderCache.OnModification += OnBlockHeaderModification;
+            this.blockCache.OnAddition += OnBlockAddition;
+            this.blockCache.OnModification += OnBlockModification;
             this.blockTxHashesCache.OnAddition += OnBlockTxHashesAddition;
             this.blockTxHashesCache.OnModification += OnBlockTxHashesModification;
             this.chainedBlockCache.OnAddition += OnChainedBlockAddition;
@@ -265,6 +267,8 @@ namespace BitSharp.Core
             // cleanup events
             this.blockHeaderCache.OnAddition -= OnBlockHeaderAddition;
             this.blockHeaderCache.OnModification -= OnBlockHeaderModification;
+            this.blockCache.OnAddition -= OnBlockAddition;
+            this.blockCache.OnModification -= OnBlockModification;
             this.blockTxHashesCache.OnAddition -= OnBlockTxHashesAddition;
             this.blockTxHashesCache.OnModification -= OnBlockTxHashesModification;
             this.chainedBlockCache.OnAddition -= OnChainedBlockAddition;
@@ -300,6 +304,16 @@ namespace BitSharp.Core
         private void OnBlockHeaderModification(UInt256 blockHash, BlockHeader blockHeader)
         {
             OnBlockHeaderAddition(blockHash, blockHeader);
+        }
+
+        private void OnBlockAddition(UInt256 blockHash, Block block)
+        {
+            this.chainStateWorker.NotifyWork();
+        }
+
+        private void OnBlockModification(UInt256 blockHash, Block block)
+        {
+            OnBlockAddition(blockHash, block);
         }
 
         private void OnBlockTxHashesAddition(UInt256 blockHash, IImmutableList<UInt256> blockTxHashes)

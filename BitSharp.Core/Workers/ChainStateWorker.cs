@@ -87,7 +87,7 @@ namespace BitSharp.Core.Workers
 
         protected override void SubStart()
         {
-            this.pruningWorker.Start();
+            //this.pruningWorker.Start();
         }
 
         protected override void SubStop()
@@ -145,7 +145,7 @@ namespace BitSharp.Core.Workers
                 // try to advance the blockchain with the new winning block
                 using (var cancelToken = new CancellationTokenSource())
                 {
-                    this.chainStateBuilder.CalculateBlockchainFromExisting(getTargetChain, cancelToken.Token,
+                    this.chainStateBuilder.CalculateBlockchainFromExisting(this.getTargetChain, cancelToken.Token,
                         (blockTime) =>
                         {
                             this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;

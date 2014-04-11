@@ -23,7 +23,6 @@ namespace BitSharp.Client
 
         private readonly IKernel kernel;
         private readonly CoreDaemon blockchainDaemon;
-        private readonly BlockTxHashesCache blockTxHashesCache;
         private readonly BlockCache blockCache;
 
         private readonly DateTime startTime;
@@ -40,7 +39,6 @@ namespace BitSharp.Client
         {
             this.kernel = kernel;
             this.blockchainDaemon = kernel.Get<CoreDaemon>();
-            this.blockTxHashesCache = kernel.Get<BlockTxHashesCache>();
             this.blockCache = kernel.Get<BlockCache>();
 
             this.startTime = DateTime.UtcNow;
@@ -57,15 +55,15 @@ namespace BitSharp.Client
 
             this.WinningBlockchainHeight = this.blockchainDaemon.TargetBlockHeight;
             this.CurrentBlockchainHeight = this.blockchainDaemon.CurrentBuilderHeight;
-            this.DownloadedBlockCount = this.blockTxHashesCache.Count;
+            this.DownloadedBlockCount = this.blockCache.Count;
 
-            this.blockTxHashesCache.OnAddition +=
+            this.blockCache.OnAddition +=
                 (blockHash, block) =>
-                    DownloadedBlockCount = this.blockTxHashesCache.Count;
+                    DownloadedBlockCount = this.blockCache.Count;
 
-            this.blockTxHashesCache.OnRemoved +=
+            this.blockCache.OnRemoved +=
                 (blockHash) =>
-                    DownloadedBlockCount = this.blockTxHashesCache.Count;
+                    DownloadedBlockCount = this.blockCache.Count;
 
             this.blockchainDaemon.OnTargetBlockChanged +=
                 (sender, block) =>

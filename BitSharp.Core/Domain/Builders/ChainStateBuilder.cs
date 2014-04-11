@@ -24,8 +24,6 @@ namespace BitSharp.Core.Domain.Builders
         private readonly CancellationToken shutdownToken;
         private readonly IBlockchainRules rules;
         private readonly BlockHeaderCache blockHeaderCache;
-        private readonly BlockTxHashesCache blockTxHashesCache;
-        private readonly TransactionCache transactionCache;
         private readonly BlockCache blockCache;
         private readonly SpentTransactionsCache spentTransactionsCache;
         private readonly SpentOutputsCache spentOutputsCache;
@@ -34,14 +32,12 @@ namespace BitSharp.Core.Domain.Builders
         private readonly UtxoBuilder utxo;
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(ChainBuilder chain, UtxoBuilder utxo, CancellationToken shutdownToken, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
+        public ChainStateBuilder(ChainBuilder chain, UtxoBuilder utxo, CancellationToken shutdownToken, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
         {
             this.logger = logger;
             this.shutdownToken = shutdownToken;
             this.rules = rules;
             this.blockHeaderCache = blockHeaderCache;
-            this.blockTxHashesCache = blockTxHashesCache;
-            this.transactionCache = transactionCache;
             this.blockCache = blockCache;
             this.spentTransactionsCache = spentTransactionsCache;
             this.spentOutputsCache = spentOutputsCache;
@@ -358,7 +354,7 @@ namespace BitSharp.Core.Domain.Builders
                         }
                         catch (MissingDataException e)
                         {
-                            this.logger.Info("Stalled, MissingDataException: {0}".Format2(e.Key));
+                            this.logger.Debug("Stalled, MissingDataException: {0}".Format2(e.Key));
                             throw;
                         }
                     })

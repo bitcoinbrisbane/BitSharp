@@ -2,7 +2,7 @@
 //#define TESTNET3
 //#define MEMORY
 //#define MONGODB
-#define MIXED
+//#define TRANSIENT_BLOCKS
 
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Node;
@@ -69,7 +69,7 @@ namespace BitSharp.Client
                 modules.Add(new MemoryStorageModule());
 #elif MONGODB
                 modules.Add(new MongoStorageModule());
-#elif MIXED
+#elif TRANSIENT_BLOCKS
                 modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), transientBlockStorage: true));
 #else
                 modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION()));

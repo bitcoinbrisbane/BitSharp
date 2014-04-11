@@ -29,6 +29,7 @@ namespace BitSharp.Core.Test
         private readonly MainnetBlockProvider blockProvider;
         private readonly IKernel kernel;
         private readonly Logger logger;
+        private readonly BlockHeaderCache blockHeaderCache;
         private readonly BlockCache blockCache;
         private readonly CoreDaemon coreDaemon;
 
@@ -54,6 +55,7 @@ namespace BitSharp.Core.Test
             this.kernel.Load(new CoreCacheModule());
 
             // initialize block view
+            this.blockHeaderCache = this.kernel.Get<BlockHeaderCache>();
             this.blockCache = this.kernel.Get<BlockCache>();
 
             // add rules module
@@ -109,6 +111,7 @@ namespace BitSharp.Core.Test
 
         public void AddBlock(Block block)
         {
+            this.blockHeaderCache[block.Hash] = block.Header;
             this.blockCache[block.Hash] = block;
         }
 
