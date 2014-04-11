@@ -37,7 +37,7 @@ namespace BitSharp.Common
                     catch (Exception e)
                     {
                         readException = e;
-                        abortToken.Cancel();
+                        readValues.CompleteAdding();
                     }
                 });
 
@@ -45,7 +45,7 @@ namespace BitSharp.Common
                 thread.Start();
                 try
                 {
-                    foreach (var value in readValues.GetConsumingEnumerable(abortToken.Token))
+                    foreach (var value in readValues.GetConsumingEnumerable())
                     {
                         // cooperative loop
                         cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
