@@ -81,6 +81,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BlockHeaderStorage.cs" />
+    <Compile Include="BlockStorage.cs" />
     <Compile Include="SpentOutputsStorage.cs" />
     <Compile Include="SpentTransactionsStorage.cs" />
     <Compile Include="BlockTxHashesStorage.cs" />
