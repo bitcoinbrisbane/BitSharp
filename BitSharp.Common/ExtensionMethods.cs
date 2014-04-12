@@ -483,7 +483,7 @@ namespace BitSharp.Common.ExtensionMethods
             }
         }
 
-        public static byte[] ComputeDoubleHash(this SHA256Managed sha256, byte[] buffer)
+        public static byte[] ComputeDoubleHash(this SHA256 sha256, byte[] buffer)
         {
             return sha256.ComputeHash(sha256.ComputeHash(buffer));
         }

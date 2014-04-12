@@ -40,7 +40,7 @@ namespace BitSharp.Core.Test
         public BlockHeader MineBlockHeader(BlockHeader blockHeader, UInt256 hashTarget)
         {
             var blockHeaderBytes = DataEncoder.EncodeBlockHeader(blockHeader);
-            
+
             var hashTargetBytes = hashTarget.ToByteArray();
 
             var start = 0;
@@ -67,12 +67,12 @@ namespace BitSharp.Core.Test
 
                     var headerBytes = localState.headerBytes;
                     var sha256 = localState.sha256;
-                    var hashBytes = sha256.ComputeHash(sha256.ComputeHash(headerBytes));
+                    var hashBytes = sha256.ComputeDoubleHash(headerBytes);
 
                     if (BytesCompareLE(hashBytes, hashTargetBytes) < 0)
                     {
                         minedNonce = nonce;
-                        loopState.Break();
+                        loopState.Stop();
                     }
 
                     return localState;
