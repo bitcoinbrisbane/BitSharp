@@ -5,6 +5,7 @@ using BitSharp.Common.Test;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Globalization;
 using System.Numerics;
+using System.Security.Cryptography;
 
 namespace BitSharp.Common.Test
 {
@@ -78,7 +79,8 @@ namespace BitSharp.Common.Test
         [TestMethod]
         public void TestUInt256Sha256()
         {
-            var expected = Crypto.DoubleSHA256(UInt256.Parse(TestData.HEX_STRING_64, NumberStyles.HexNumber).ToByteArray());
+            var sha256 = new SHA256Managed();
+            var expected = sha256.ComputeDoubleHash(UInt256.Parse(TestData.HEX_STRING_64, NumberStyles.HexNumber).ToByteArray());
             var actual = new UInt256(expected).ToByteArray();
 
             CollectionAssert.AreEqual(expected, actual);

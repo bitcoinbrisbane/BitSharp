@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BitSharp.Common;
+using System.Security.Cryptography;
 
 namespace BitSharp.Common.ExtensionMethods
 {
@@ -480,6 +481,11 @@ namespace BitSharp.Common.ExtensionMethods
                 //TODO something better than catching exception?
                 return null;
             }
+        }
+
+        public static byte[] ComputeDoubleHash(this SHA256Managed sha256, byte[] buffer)
+        {
+            return sha256.ComputeHash(sha256.ComputeHash(buffer));
         }
     }
 }

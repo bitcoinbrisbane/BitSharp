@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,11 +20,12 @@ namespace BitSharp.Core.Test.JsonRpc
         [TestMethod]
         public void Test()
         {
+            var sha256 = new SHA256Managed();
             var publicKey =
                 "04ea1feff861b51fe3f5f8a3b12d0f4712db80e919548a80839fc47c6a21e66d957e9c5d8cd108c7a2d2324bad71f9904ac0ae7336507d785b17a2c115e427a32f"
                 .HexToByteArray();
             var outputScript = new PayToPublicKeyBuilder().CreateOutput(publicKey);
-            var outputScriptHash = new UInt256(Crypto.DoubleSHA256(outputScript));
+            var outputScriptHash = new UInt256(sha256.ComputeDoubleHash(outputScript));
 
             using (var simulator = new MainnetSimulator())
             {
@@ -44,7 +46,7 @@ namespace BitSharp.Core.Test.JsonRpc
                 //foreach (var keyPair in utxo.GetUnspentOutputs())
                 //{
                 //    var unspentOutput = keyPair.Value;
-                //    var unspentOutputScriptHash = new UInt256(Crypto.DoubleSHA256(unspentOutput.ScriptPublicKey.ToArray()));
+                //    var unspentOutputScriptHash = new UInt256(sha256.ComputeDoubleHash(unspentOutput.ScriptPublicKey.ToArray()));
 
                 //    Debug.WriteLine(scriptHash);
                 //    Debug.WriteLine(unspentOutputScriptHash);

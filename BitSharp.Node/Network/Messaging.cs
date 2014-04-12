@@ -10,6 +10,7 @@ using BitSharp.Common;
 using System.Collections.Immutable;
 using System.IO;
 using BitSharp.Node.Domain;
+using System.Security.Cryptography;
 
 namespace BitSharp.Node.Network
 {
@@ -70,7 +71,8 @@ namespace BitSharp.Node.Network
 
         public static UInt32 CalculatePayloadChecksum(byte[] payload)
         {
-            return Bits.ToUInt32(Crypto.DoubleSHA256(payload).Take(4).ToArray());
+            var sha256 = new SHA256Managed();
+            return Bits.ToUInt32(sha256.ComputeDoubleHash(payload).Take(4).ToArray());
         }
 
         public static bool VerifyPayloadChecksum(UInt32 checksum, byte[] payload)

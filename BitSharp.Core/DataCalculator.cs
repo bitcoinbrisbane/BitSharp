@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,22 +18,26 @@ namespace BitSharp.Core
     {
         public static UInt256 CalculateBlockHash(BlockHeader blockHeader)
         {
-            return new UInt256(Crypto.DoubleSHA256(DataEncoder.EncodeBlockHeader(blockHeader)));
+            var sha256 = new SHA256Managed();
+            return new UInt256(sha256.ComputeDoubleHash(DataEncoder.EncodeBlockHeader(blockHeader)));
         }
 
         public static UInt256 CalculateBlockHash(UInt32 Version, UInt256 PreviousBlock, UInt256 MerkleRoot, UInt32 Time, UInt32 Bits, UInt32 Nonce)
         {
-            return new UInt256(Crypto.DoubleSHA256(DataEncoder.EncodeBlockHeader(Version, PreviousBlock, MerkleRoot, Time, Bits, Nonce)));
+            var sha256 = new SHA256Managed();
+            return new UInt256(sha256.ComputeDoubleHash(DataEncoder.EncodeBlockHeader(Version, PreviousBlock, MerkleRoot, Time, Bits, Nonce)));
         }
 
         public static UInt256 CalculateTransactionHash(Transaction tx)
         {
-            return new UInt256(Crypto.DoubleSHA256(DataEncoder.EncodeTransaction(tx)));
+            var sha256 = new SHA256Managed();
+            return new UInt256(sha256.ComputeDoubleHash(DataEncoder.EncodeTransaction(tx)));
         }
 
         public static UInt256 CalculateTransactionHash(UInt32 Version, ImmutableArray<TxInput> Inputs, ImmutableArray<TxOutput> Outputs, UInt32 LockTime)
         {
-            return new UInt256(Crypto.DoubleSHA256(DataEncoder.EncodeTransaction(Version, Inputs, Outputs, LockTime)));
+            var sha256 = new SHA256Managed();
+            return new UInt256(sha256.ComputeDoubleHash(DataEncoder.EncodeTransaction(Version, Inputs, Outputs, LockTime)));
         }
 
         public static UInt256 CalculateMerkleRoot(IImmutableList<UInt256> txHashes)
@@ -43,6 +48,7 @@ namespace BitSharp.Core
 
         public static UInt256 CalculateMerkleRoot(IImmutableList<UInt256> txHashes, out ImmutableList<ImmutableArray<byte>> merkleTree)
         {
+            var sha256 = new SHA256Managed();
             var workingMerkleTree = ImmutableList.CreateBuilder<ImmutableArray<byte>>();
 
             var hashes = txHashes.Select(txHash => txHash.ToByteArray().ToImmutableArray()).ToList();
@@ -62,7 +68,7 @@ namespace BitSharp.Core
                     Enumerable.Range(0, hashes.Count / 2)
                     .Select(i => hashes[i * 2].AddRange(hashes[i * 2 + 1]))
                     //.AsParallel().AsOrdered().WithExecutionMode(ParallelExecutionMode.ForceParallelism).WithDegreeOfParallelism(10)
-                    .Select(pair => Crypto.DoubleSHA256(pair.ToArray()).ToImmutableArray())
+                    .Select(pair => sha256.ComputeDoubleHash(pair.ToArray()).ToImmutableArray())
                     .ToList();
             }
             Debug.Assert(hashes.Count == 1);

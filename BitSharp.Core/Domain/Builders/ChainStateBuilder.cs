@@ -15,6 +15,7 @@ using System.Collections;
 using NLog;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Storage;
+using System.Security.Cryptography;
 
 namespace BitSharp.Core.Domain.Builders
 {
@@ -289,7 +290,7 @@ namespace BitSharp.Core.Domain.Builders
                     || genesisBlock.Header.Bits != chainGenesisBlockHeader.Bits
                     || genesisBlock.Header.Nonce != chainGenesisBlockHeader.Nonce
                     || genesisBlock.Hash != chainGenesisBlockHeader.Hash
-                    || genesisBlock.Hash != CalculateHash(chainGenesisBlockHeader))
+                    || genesisBlock.Hash != DataCalculator.CalculateBlockHash(chainGenesisBlockHeader))
                 {
                     throw new ValidationException(chainGenesisBlockHeader.Hash);
                 }
@@ -320,7 +321,7 @@ namespace BitSharp.Core.Domain.Builders
                         throw new ValidationException(chainedBlock.BlockHash);
 
                     // verify block header hash
-                    if (CalculateHash(blockHeader) != chainedBlock.BlockHash)
+                    if (DataCalculator.CalculateBlockHash(blockHeader) != chainedBlock.BlockHash)
                         throw new ValidationException(chainedBlock.BlockHash);
 
                     // next block metadata should have the current metadata's hash as its previous hash value
@@ -359,11 +360,6 @@ namespace BitSharp.Core.Domain.Builders
                         }
                     })
                 .LookAhead(lookAhead, this.shutdownToken);
-        }
-
-        private UInt256 CalculateHash(BlockHeader blockHeader)
-        {
-            return new UInt256(Crypto.DoubleSHA256(DataEncoder.EncodeBlockHeader(blockHeader)));
         }
 
         public sealed class BuilderStats

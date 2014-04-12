@@ -18,6 +18,7 @@ using BitSharp.Core.Domain;
 using BitSharp.Core.Storage;
 using BitSharp.Core.Workers;
 using BitSharp.Core.Rules;
+using System.Security.Cryptography;
 
 namespace BitSharp.Core
 {
@@ -159,9 +160,10 @@ namespace BitSharp.Core
 
                     new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.OutputCount), () =>
                     {
+                        var sha256 = new SHA256Managed();
                         foreach (var output in chainStateLocal.Utxo.GetUnspentOutputs())
                         {
-                            if (new UInt256(Crypto.DoubleSHA256(output.Value.ScriptPublicKey.ToArray())) == UInt256.Zero)
+                            if (new UInt256(sha256.ComputeDoubleHash(output.Value.ScriptPublicKey.ToArray())) == UInt256.Zero)
                             {
                             }
                         }

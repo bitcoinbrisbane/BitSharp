@@ -14,6 +14,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -66,7 +67,9 @@ namespace BitSharp.Core.Script
 
         public byte[] CreatePublicKeyScript(byte[] publicKey)
         {
-            var publicKeyHash = Crypto.SingleRIPEMD160(Crypto.SingleSHA256(publicKey));
+            var sha256 = new SHA256Managed();
+            var ripemd160 = new RIPEMD160Managed();
+            var publicKeyHash = ripemd160.ComputeHash(sha256.ComputeHash(publicKey));
 
             using (var publicKeyScript = new ScriptBuilder())
             {
@@ -85,12 +88,13 @@ namespace BitSharp.Core.Script
         public byte[] CreatePrivateKeyScript(Transaction tx, int inputIndex, byte hashType, ECPrivateKeyParameters privateKey, ECPublicKeyParameters publicKey)
         {
             //TODO
+            var sha256 = new SHA256Managed();
             var scriptEngine = new ScriptEngine(this.logger);
 
             var publicAddress = CreatePublicAddress(publicKey);
             var publicKeyScript = CreatePublicKeyScript(publicAddress);
             var txSignature = scriptEngine.TxSignature(publicKeyScript.ToImmutableArray(), tx, inputIndex, hashType);
-            var txSignatureHash = Crypto.DoubleSHA256(txSignature);
+            var txSignatureHash = sha256.ComputeDoubleHash(txSignature);
 
             //Debug.WriteLine("Signing Tx:       {0}".Format2(txSignature.ToHexDataString()));
             //Debug.WriteLine("Signing Tx  Hash: {0}".Format2(txSignatureHash.ToHexDataString()));

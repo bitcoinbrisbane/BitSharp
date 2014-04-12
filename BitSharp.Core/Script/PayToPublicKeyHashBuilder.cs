@@ -14,6 +14,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -23,7 +24,9 @@ namespace BitSharp.Core.Script
     {
         public byte[] CreateOutputFromPublicKey(byte[] publicKey)
         {
-            var publicKeyHash = Crypto.SingleRIPEMD160(Crypto.SingleSHA256(publicKey));
+            var sha256 = new SHA256Managed();
+            var ripemd160 = new RIPEMD160Managed();
+            var publicKeyHash = ripemd160.ComputeHash(sha256.ComputeHash(publicKey));
             return CreateOutputFromPublicKeyHash(publicKeyHash);
         }
 
