@@ -58,7 +58,7 @@ namespace BitSharp.Core.Test.Monitor
                 txOutput =>
                 {
                     var sha256Thread = new SHA256Managed();
-                    var txOutputScriptHash = new UInt256(sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
+                    var txOutputScriptHash = new UInt256(sha256Thread.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
 
                     if (outputScriptHashes.Contains(txOutputScriptHash))
                     {
@@ -73,7 +73,7 @@ namespace BitSharp.Core.Test.Monitor
                 txOutput =>
                 {
                     var sha256Thread = new SHA256Managed();
-                    var txOutputScriptHash = new UInt256(sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
+                    var txOutputScriptHash = new UInt256(sha256Thread.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
 
                     if (outputScriptHashes.Contains(txOutputScriptHash))
                     {
