@@ -1,6 +1,7 @@
 ﻿using AustinHarris.JsonRpc;
 using BitSharp.Core;
 using BitSharp.Core.JsonRpc;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,8 +14,8 @@ namespace BitSharp.Node
     {
         private readonly CoreDaemon coreDaemon;
 
-        public NodeRpcServer(CoreDaemon coreDaemon)
-            : base(coreDaemon)
+        public NodeRpcServer(Logger logger, CoreDaemon coreDaemon)
+            : base(logger, coreDaemon)
         {
             this.coreDaemon = coreDaemon;
         }
