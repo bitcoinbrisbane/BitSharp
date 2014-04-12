@@ -43,56 +43,57 @@ namespace BitSharp.Core.Test.Workers
             chainedBlockCache[blockHeader0.Hash] = ChainedBlock.CreateForGenesisBlock(blockHeader0);
 
             // initialize the chaining worker
-            var chainingWorker = kernel.Get<ChainingWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue)));
+            using (var chainingWorker = kernel.Get<ChainingWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue))))
+            {
+                // monitor event firing
+                var workStoppedEvent = new AutoResetEvent(false);
+                chainingWorker.OnWorkStopped += () => workStoppedEvent.Set();
 
-            // monitor event firing
-            var workStoppedEvent = new AutoResetEvent(false);
-            chainingWorker.OnWorkStopped += () => workStoppedEvent.Set();
+                // start and wait for initial chaining
+                chainingWorker.Start();
+                workStoppedEvent.WaitOne();
 
-            // start and wait for initial chaining
-            chainingWorker.Start();
-            workStoppedEvent.WaitOne();
+                // add block 1
+                blockHeaderCache[blockHeader1.Hash] = blockHeader1;
 
-            // add block 1
-            blockHeaderCache[blockHeader1.Hash] = blockHeader1;
+                // wait for chaining
+                workStoppedEvent.WaitOne();
 
-            // wait for chaining
-            workStoppedEvent.WaitOne();
+                // verify block 1
+                Assert.AreEqual(2, chainedBlockCache.Count);
+                Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader1.Hash));
+                Assert.AreEqual(
+                    new ChainedBlock(
+                        blockHash: blockHeader1.Hash,
+                        previousBlockHash: blockHeader1.PreviousBlock,
+                        height: 1,
+                        totalWork: new[] { blockHeader0, blockHeader1 }.SumBigInteger(x => x.CalculateWork())
+                    )
+                    , chainedBlockCache[blockHeader1.Hash]);
+                Assert.AreEqual(0, chainingWorker.UnchainedByPrevious.Count);
 
-            // verify block 1
-            Assert.AreEqual(2, chainedBlockCache.Count);
-            Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader1.Hash));
-            Assert.AreEqual(
-                new ChainedBlock(
-                    blockHash: blockHeader1.Hash,
-                    previousBlockHash: blockHeader1.PreviousBlock,
-                    height: 1,
-                    totalWork: new[] { blockHeader0, blockHeader1 }.SumBigInteger(x => x.CalculateWork())
-                )
-                , chainedBlockCache[blockHeader1.Hash]);
-            Assert.AreEqual(0, chainingWorker.UnchainedByPrevious.Count);
+                // add block 2
+                blockHeaderCache[blockHeader2.Hash] = blockHeader2;
 
-            // add block 2
-            blockHeaderCache[blockHeader2.Hash] = blockHeader2;
+                // wait for chaining
+                workStoppedEvent.WaitOne();
 
-            // wait for chaining
-            workStoppedEvent.WaitOne();
+                // verify block 2
+                Assert.AreEqual(3, chainedBlockCache.Count);
+                Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader2.Hash));
+                Assert.AreEqual(
+                    new ChainedBlock(
+                        blockHash: blockHeader2.Hash,
+                        previousBlockHash: blockHeader2.PreviousBlock,
+                        height: 2,
+                        totalWork: new[] { blockHeader0, blockHeader1, blockHeader2 }.SumBigInteger(x => x.CalculateWork())
+                    )
+                    , chainedBlockCache[blockHeader2.Hash]);
+                Assert.AreEqual(0, chainingWorker.UnchainedByPrevious.Count);
 
-            // verify block 2
-            Assert.AreEqual(3, chainedBlockCache.Count);
-            Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader2.Hash));
-            Assert.AreEqual(
-                new ChainedBlock(
-                    blockHash: blockHeader2.Hash,
-                    previousBlockHash: blockHeader2.PreviousBlock,
-                    height: 2,
-                    totalWork: new[] { blockHeader0, blockHeader1, blockHeader2 }.SumBigInteger(x => x.CalculateWork())
-                )
-                , chainedBlockCache[blockHeader2.Hash]);
-            Assert.AreEqual(0, chainingWorker.UnchainedByPrevious.Count);
-
-            // verify no other work was done
-            Assert.IsFalse(workStoppedEvent.WaitOne(0));
+                // verify no other work was done
+                Assert.IsFalse(workStoppedEvent.WaitOne(0));
+            }
         }
 
         [TestMethod]
@@ -118,109 +119,110 @@ namespace BitSharp.Core.Test.Workers
             chainedBlockCache[blockHeader0.Hash] = ChainedBlock.CreateForGenesisBlock(blockHeader0);
 
             // initialize the chaining worker
-            var chainingWorker = kernel.Get<ChainingWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue)));
+            using (var chainingWorker = kernel.Get<ChainingWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue))))
+            {
+                // monitor event firing
+                var workStoppedEvent = new AutoResetEvent(false);
+                chainingWorker.OnWorkStopped += () => workStoppedEvent.Set();
 
-            // monitor event firing
-            var workStoppedEvent = new AutoResetEvent(false);
-            chainingWorker.OnWorkStopped += () => workStoppedEvent.Set();
+                // start and wait for initial chaining
+                chainingWorker.Start();
+                workStoppedEvent.WaitOne();
 
-            // start and wait for initial chaining
-            chainingWorker.Start();
-            workStoppedEvent.WaitOne();
+                // add block 4
+                blockHeaderCache[blockHeader4.Hash] = blockHeader4;
 
-            // add block 4
-            blockHeaderCache[blockHeader4.Hash] = blockHeader4;
+                // wait for chaining
+                workStoppedEvent.WaitOne();
 
-            // wait for chaining
-            workStoppedEvent.WaitOne();
+                // verify nothing chained
+                Assert.AreEqual(1, chainedBlockCache.Count);
+                Assert.AreEqual(1, chainingWorker.UnchainedByPrevious.Count);
+                AssertSingleUnchainedBlockByPrevious(blockHeader4, chainingWorker.UnchainedByPrevious);
 
-            // verify nothing chained
-            Assert.AreEqual(1, chainedBlockCache.Count);
-            Assert.AreEqual(1, chainingWorker.UnchainedByPrevious.Count);
-            AssertSingleUnchainedBlockByPrevious(blockHeader4, chainingWorker.UnchainedByPrevious);
+                // add block 3
+                blockHeaderCache[blockHeader3.Hash] = blockHeader3;
 
-            // add block 3
-            blockHeaderCache[blockHeader3.Hash] = blockHeader3;
+                // wait for chaining
+                workStoppedEvent.WaitOne();
 
-            // wait for chaining
-            workStoppedEvent.WaitOne();
+                // verify nothing chained
+                Assert.AreEqual(1, chainedBlockCache.Count);
+                Assert.AreEqual(2, chainingWorker.UnchainedByPrevious.Count);
+                AssertSingleUnchainedBlockByPrevious(blockHeader3, chainingWorker.UnchainedByPrevious);
+                AssertSingleUnchainedBlockByPrevious(blockHeader4, chainingWorker.UnchainedByPrevious);
 
-            // verify nothing chained
-            Assert.AreEqual(1, chainedBlockCache.Count);
-            Assert.AreEqual(2, chainingWorker.UnchainedByPrevious.Count);
-            AssertSingleUnchainedBlockByPrevious(blockHeader3, chainingWorker.UnchainedByPrevious);
-            AssertSingleUnchainedBlockByPrevious(blockHeader4, chainingWorker.UnchainedByPrevious);
+                // add block 2
+                blockHeaderCache[blockHeader2.Hash] = blockHeader2;
 
-            // add block 2
-            blockHeaderCache[blockHeader2.Hash] = blockHeader2;
+                // wait for chaining
+                workStoppedEvent.WaitOne();
 
-            // wait for chaining
-            workStoppedEvent.WaitOne();
+                // verify nothing chained
+                Assert.AreEqual(1, chainedBlockCache.Count);
+                Assert.AreEqual(3, chainingWorker.UnchainedByPrevious.Count);
+                Assert.IsTrue(chainingWorker.UnchainedByPrevious.ContainsKey(blockHeader2.PreviousBlock));
+                AssertSingleUnchainedBlockByPrevious(blockHeader2, chainingWorker.UnchainedByPrevious);
+                AssertSingleUnchainedBlockByPrevious(blockHeader3, chainingWorker.UnchainedByPrevious);
+                AssertSingleUnchainedBlockByPrevious(blockHeader4, chainingWorker.UnchainedByPrevious);
 
-            // verify nothing chained
-            Assert.AreEqual(1, chainedBlockCache.Count);
-            Assert.AreEqual(3, chainingWorker.UnchainedByPrevious.Count);
-            Assert.IsTrue(chainingWorker.UnchainedByPrevious.ContainsKey(blockHeader2.PreviousBlock));
-            AssertSingleUnchainedBlockByPrevious(blockHeader2, chainingWorker.UnchainedByPrevious);
-            AssertSingleUnchainedBlockByPrevious(blockHeader3, chainingWorker.UnchainedByPrevious);
-            AssertSingleUnchainedBlockByPrevious(blockHeader4, chainingWorker.UnchainedByPrevious);
+                // add block 1
+                blockHeaderCache[blockHeader1.Hash] = blockHeader1;
 
-            // add block 1
-            blockHeaderCache[blockHeader1.Hash] = blockHeader1;
+                // wait for chaining
+                workStoppedEvent.WaitOne();
 
-            // wait for chaining
-            workStoppedEvent.WaitOne();
+                // verify all blocks chained
+                Assert.AreEqual(5, chainedBlockCache.Count);
+                Assert.AreEqual(0, chainingWorker.UnchainedByPrevious.Count);
 
-            // verify all blocks chained
-            Assert.AreEqual(5, chainedBlockCache.Count);
-            Assert.AreEqual(0, chainingWorker.UnchainedByPrevious.Count);
+                // verify block 1
+                Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader1.Hash));
+                Assert.AreEqual(
+                    new ChainedBlock(
+                        blockHash: blockHeader1.Hash,
+                        previousBlockHash: blockHeader1.PreviousBlock,
+                        height: 1,
+                        totalWork: new[] { blockHeader0, blockHeader1 }.SumBigInteger(x => x.CalculateWork())
+                    )
+                    , chainedBlockCache[blockHeader1.Hash]);
 
-            // verify block 1
-            Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader1.Hash));
-            Assert.AreEqual(
-                new ChainedBlock(
-                    blockHash: blockHeader1.Hash,
-                    previousBlockHash: blockHeader1.PreviousBlock,
-                    height: 1,
-                    totalWork: new[] { blockHeader0, blockHeader1 }.SumBigInteger(x => x.CalculateWork())
-                )
-                , chainedBlockCache[blockHeader1.Hash]);
+                // verify block 2
+                Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader2.Hash));
+                Assert.AreEqual(
+                    new ChainedBlock(
+                        blockHash: blockHeader2.Hash,
+                        previousBlockHash: blockHeader2.PreviousBlock,
+                        height: 2,
+                        totalWork: new[] { blockHeader0, blockHeader1, blockHeader2 }.SumBigInteger(x => x.CalculateWork())
+                    )
+                    , chainedBlockCache[blockHeader2.Hash]);
 
-            // verify block 2
-            Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader2.Hash));
-            Assert.AreEqual(
-                new ChainedBlock(
-                    blockHash: blockHeader2.Hash,
-                    previousBlockHash: blockHeader2.PreviousBlock,
-                    height: 2,
-                    totalWork: new[] { blockHeader0, blockHeader1, blockHeader2 }.SumBigInteger(x => x.CalculateWork())
-                )
-                , chainedBlockCache[blockHeader2.Hash]);
+                // verify block 3
+                Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader3.Hash));
+                Assert.AreEqual(
+                    new ChainedBlock(
+                        blockHash: blockHeader3.Hash,
+                        previousBlockHash: blockHeader3.PreviousBlock,
+                        height: 3,
+                        totalWork: new[] { blockHeader0, blockHeader1, blockHeader2, blockHeader3 }.SumBigInteger(x => x.CalculateWork())
+                    )
+                    , chainedBlockCache[blockHeader3.Hash]);
 
-            // verify block 3
-            Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader3.Hash));
-            Assert.AreEqual(
-                new ChainedBlock(
-                    blockHash: blockHeader3.Hash,
-                    previousBlockHash: blockHeader3.PreviousBlock,
-                    height: 3,
-                    totalWork: new[] { blockHeader0, blockHeader1, blockHeader2, blockHeader3 }.SumBigInteger(x => x.CalculateWork())
-                )
-                , chainedBlockCache[blockHeader3.Hash]);
+                // verify block 4
+                Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader4.Hash));
+                Assert.AreEqual(
+                    new ChainedBlock(
+                        blockHash: blockHeader4.Hash,
+                        previousBlockHash: blockHeader4.PreviousBlock,
+                        height: 4,
+                        totalWork: new[] { blockHeader0, blockHeader1, blockHeader2, blockHeader3, blockHeader4 }.SumBigInteger(x => x.CalculateWork())
+                    )
+                    , chainedBlockCache[blockHeader4.Hash]);
 
-            // verify block 4
-            Assert.IsTrue(chainedBlockCache.ContainsKey(blockHeader4.Hash));
-            Assert.AreEqual(
-                new ChainedBlock(
-                    blockHash: blockHeader4.Hash,
-                    previousBlockHash: blockHeader4.PreviousBlock,
-                    height: 4,
-                    totalWork: new[] { blockHeader0, blockHeader1, blockHeader2, blockHeader3, blockHeader4 }.SumBigInteger(x => x.CalculateWork())
-                )
-                , chainedBlockCache[blockHeader4.Hash]);
-
-            // verify no other work was done
-            Assert.IsFalse(workStoppedEvent.WaitOne(0));
+                // verify no other work was done
+                Assert.IsFalse(workStoppedEvent.WaitOne(0));
+            }
         }
 
         private static void AssertSingleUnchainedBlockByPrevious(BlockHeader blockHeader, IReadOnlyDictionary<UInt256, IReadOnlyDictionary<UInt256, BlockHeader>> unchainByPrevious)
