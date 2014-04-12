@@ -18,6 +18,7 @@ using BitSharp.Core.Domain;
 using BitSharp.Core.Storage;
 using BitSharp.Core.Workers;
 using BitSharp.Core.Rules;
+using BitSharp.Core.Monitor;
 using System.Security.Cryptography;
 
 namespace BitSharp.Core
@@ -58,6 +59,8 @@ namespace BitSharp.Core
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
 
+        private readonly ConcurrentSetBuilder<ITransactionMonitor> txMonitors;
+
         public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockCache blockCache)
         {
             this.logger = logger;
@@ -70,6 +73,8 @@ namespace BitSharp.Core
             this.blockTxHashesCache = blockTxHashesCache;
             this.transactionCache = transactionCache;
             this.blockCache = blockCache;
+
+            this.txMonitors = new ConcurrentSetBuilder<ITransactionMonitor>();
 
             // write genesis block out to storage
             this.blockCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
@@ -95,6 +100,8 @@ namespace BitSharp.Core
             this.chainStateWorker = kernel.Get<ChainStateWorker>(
                 new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5))),
                 new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)),
+                new ConstructorArgument("getTxMonitors", (Func<IImmutableSet<ITransactionMonitor>>)(() => this.TxMonitors)),
+
                 new ConstructorArgument("maxBuilderTime", TimeSpan.FromMinutes(30)));
 
             this.targetChainWorker.OnTargetBlockChanged +=
@@ -169,6 +176,8 @@ namespace BitSharp.Core
                         }
                     });
                 }, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
+
+            this.RegistorMonitor(new DummyMonitor());
         }
 
         public ChainedBlock TargetBlock { get { return this.targetChainWorker.TargetBlock; } }
@@ -243,6 +252,11 @@ namespace BitSharp.Core
             get { return this.chainStateWorker; }
         }
 
+        internal ImmutableHashSet<ITransactionMonitor> TxMonitors
+        {
+            get { return this.txMonitors.ToImmutable(); }
+        }
+
         public void Start()
         {
             try
@@ -296,6 +310,16 @@ namespace BitSharp.Core
             this.chainingWorker.ForceWorkAndWait();
             this.targetChainWorker.ForceWorkAndWait();
             this.chainStateWorker.ForceWorkAndWait();
+        }
+
+        public void RegistorMonitor(ITransactionMonitor txMonitor)
+        {
+            this.txMonitors.Add(txMonitor);
+        }
+
+        public void UnegistorMonitor(ITransactionMonitor txMonitor)
+        {
+            this.txMonitors.Remove(txMonitor);
         }
 
         private void OnBlockHeaderAddition(UInt256 blockHash, BlockHeader blockHeader)
@@ -450,6 +474,47 @@ namespace BitSharp.Core
 
             //stopwatch.Stop();
             //Debug.WriteLine("WriteBlockchainWorker: {0:#,##0.000}s".Format2(stopwatch.ElapsedSecondsFloat()));
+        }
+
+        private sealed class DummyMonitor : ITransactionMonitor
+        {
+            private ConcurrentSet<UInt256> outputScriptHashes;
+            private ConcurrentBag<TxOutput> mintedTxOutputs;
+            private ConcurrentBag<TxOutput> spentTxOutputs;
+
+            public DummyMonitor()
+            {
+                this.outputScriptHashes = new ConcurrentSet<UInt256>();
+                for (var i = 0; i < 1.MILLION(); i++)
+                    outputScriptHashes.Add(i);
+
+                this.mintedTxOutputs = new ConcurrentBag<TxOutput>();
+                this.spentTxOutputs = new ConcurrentBag<TxOutput>();
+            }
+
+            public void MintTxOutput(TxOutput txOutput)
+            {
+                var sha256 = new SHA256Managed();
+                var txOutputScriptHash = new UInt256(sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
+
+                if (this.outputScriptHashes.Contains(txOutputScriptHash))
+                {
+                    Debug.WriteLine("+{0} BTC".Format2((decimal)txOutput.Value / (decimal)(100.MILLION())));
+                    mintedTxOutputs.Add(txOutput);
+                }
+            }
+
+            public void SpendTxOutput(TxOutput txOutput)
+            {
+                var sha256 = new SHA256Managed();
+                var txOutputScriptHash = new UInt256(sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
+
+                if (this.outputScriptHashes.Contains(txOutputScriptHash))
+                {
+                    Debug.WriteLine("-{0} BTC".Format2((decimal)txOutput.Value / (decimal)(100.MILLION())));
+                    spentTxOutputs.Add(txOutput);
+                }
+            }
         }
     }
 }

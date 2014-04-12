@@ -2,6 +2,7 @@
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Domain;
 using BitSharp.Core.Domain.Builders;
+using BitSharp.Core.Monitor;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Storage;
 using Ninject;
@@ -9,6 +10,7 @@ using Ninject.Parameters;
 using NLog;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -24,6 +26,7 @@ namespace BitSharp.Core.Workers
 
         private readonly Logger logger;
         private readonly Func<Chain> getTargetChain;
+        private readonly Func<IImmutableSet<ITransactionMonitor>> getTxMonitors;
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
         private readonly TransactionCache transactionCache;
@@ -41,11 +44,12 @@ namespace BitSharp.Core.Workers
 
         private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, TimeSpan maxBuilderTime, Logger logger, IKernel kernel, IBlockchainRules rules, TransactionCache transactionCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
+        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, Func<IImmutableSet<ITransactionMonitor>> getTxMonitors, TimeSpan maxBuilderTime, Logger logger, IKernel kernel, IBlockchainRules rules, TransactionCache transactionCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.getTargetChain = getTargetChain;
+            this.getTxMonitors = getTxMonitors;
             this.MaxBuilderTime = maxBuilderTime;
             this.kernel = kernel;
             this.rules = rules;
@@ -145,7 +149,7 @@ namespace BitSharp.Core.Workers
                 // try to advance the blockchain with the new winning block
                 using (var cancelToken = new CancellationTokenSource())
                 {
-                    this.chainStateBuilder.CalculateBlockchainFromExisting(this.getTargetChain, cancelToken.Token,
+                    this.chainStateBuilder.CalculateBlockchainFromExisting(this.getTargetChain, this.getTxMonitors, cancelToken.Token,
                         (blockTime) =>
                         {
                             this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;

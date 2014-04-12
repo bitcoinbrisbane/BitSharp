@@ -120,7 +120,7 @@ namespace BitSharp.Core.Domain.Builders
                 this.utxoBuilderStorage.AddOutput(output.Key, output.Value);
         }
 
-        public void Spend(TxInput input, ChainedBlock block)
+        public TxOutput Spend(TxInput input, ChainedBlock block)
         {
             UnspentTx unspentTx;
             if (!this.utxoBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx)
@@ -173,6 +173,8 @@ namespace BitSharp.Core.Domain.Builders
 
             // remove the output from the utxo
             this.utxoBuilderStorage.RemoveOutput(input.PreviousTxOutputKey);
+
+            return prevOutput;
         }
 
         public void Unmint(Transaction tx, ChainedBlock block)

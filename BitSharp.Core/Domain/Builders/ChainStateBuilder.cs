@@ -15,6 +15,8 @@ using System.Collections;
 using NLog;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Storage;
+using BitSharp.Core.Workers;
+using BitSharp.Core.Monitor;
 using System.Security.Cryptography;
 
 namespace BitSharp.Core.Domain.Builders
@@ -47,6 +49,7 @@ namespace BitSharp.Core.Domain.Builders
             this.utxo = utxo;
             this.stats = new BuilderStats();
             this.stats.durationStopwatch.Start();
+
             this.IsConsistent = true;
         }
 
@@ -95,7 +98,7 @@ namespace BitSharp.Core.Domain.Builders
 
         public BuilderStats Stats { get { return this.stats; } }
 
-        public void CalculateBlockchainFromExisting(Func<Chain> getTargetChain, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
+        public void CalculateBlockchainFromExisting(Func<Chain> getTargetChain, Func<IImmutableSet<ITransactionMonitor>> getTxMonitors, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
         {
             //this.Stats.totalStopwatch.Start();
             //this.Stats.currentRateStopwatch.Start();
@@ -138,7 +141,7 @@ namespace BitSharp.Core.Domain.Builders
                     // calculate the new block utxo, double spends will be checked for
                     long txCount = 0, inputCount = 0;
                     new MethodTimer(false).Time("CalculateUtxo", () =>
-                        CalculateUtxo(chainedBlock, block, this.Utxo, out txCount, out inputCount));
+                        CalculateUtxo(chainedBlock, block, this.Utxo, getTxMonitors, out txCount, out inputCount));
 
                     // collect rollback informatino and store it
                     this.Utxo.SaveRollbackInformation(chainedBlock.Height, block.Hash, this.spentTransactionsCache, this.spentOutputsCache);
@@ -196,37 +199,73 @@ namespace BitSharp.Core.Domain.Builders
                 ));
         }
 
-        private void CalculateUtxo(ChainedBlock chainedBlock, Block block, UtxoBuilder utxoBuilder, out long txCount, out long inputCount)
+        private void CalculateUtxo(ChainedBlock chainedBlock, Block block, UtxoBuilder utxoBuilder, Func<IImmutableSet<ITransactionMonitor>> getTxMonitors, out long txCount, out long inputCount)
         {
             txCount = 1;
             inputCount = 0;
 
-            // don't include genesis block coinbase in utxo
-            if (chainedBlock.Height > 0)
+            var txMonitors = getTxMonitors().ToArray();
+            using (var scannerQueue = new ProducerConsumer<Tuple<int, TxOutput>>())
+            using (var scannerTask = Task.Factory.StartNew(() => this.ScanTransactions(scannerQueue, txMonitors)))
             {
-                //TODO apply real coinbase rule
-                // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
-                var coinbaseTx = block.Transactions[0];
-
-                utxoBuilder.Mint(coinbaseTx, chainedBlock);
-            }
-
-            // check for double spends
-            for (var txIndex = 1; txIndex < block.Transactions.Count; txIndex++)
-            {
-                var tx = block.Transactions[txIndex];
-                txCount++;
-
-                for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
+                // don't include genesis block coinbase in utxo
+                if (chainedBlock.Height > 0)
                 {
-                    var input = tx.Inputs[inputIndex];
-                    inputCount++;
+                    //TODO apply real coinbase rule
+                    // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
+                    var coinbaseTx = block.Transactions[0];
 
-                    utxoBuilder.Spend(input, chainedBlock);
+                    utxoBuilder.Mint(coinbaseTx, chainedBlock);
+
+                    foreach (var output in coinbaseTx.Outputs)
+                        scannerQueue.Add(Tuple.Create<int, TxOutput>(+1, output));
                 }
 
-                utxoBuilder.Mint(tx, chainedBlock);
+                // check for double spends
+                for (var txIndex = 1; txIndex < block.Transactions.Count; txIndex++)
+                {
+                    var tx = block.Transactions[txIndex];
+                    txCount++;
+
+                    for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
+                    {
+                        var input = tx.Inputs[inputIndex];
+                        inputCount++;
+
+                        var spentOutput = utxoBuilder.Spend(input, chainedBlock);
+
+                        scannerQueue.Add(Tuple.Create<int, TxOutput>(-1, spentOutput));
+                    }
+
+                    utxoBuilder.Mint(tx, chainedBlock);
+
+                    foreach (var output in tx.Outputs)
+                        scannerQueue.Add(Tuple.Create<int, TxOutput>(+1, output));
+                }
+
+                // wait for scanner to finish
+                scannerQueue.CompleteAdding();
+                scannerTask.Wait();
+                Debug.Assert(scannerQueue.IsCompleted);
             }
+        }
+
+        private void ScanTransactions(ProducerConsumer<Tuple<int, TxOutput>> txOutputQueue, ITransactionMonitor[] txMonitors)
+        {
+            Parallel.ForEach(
+                txOutputQueue.GetConsumingEnumerable(),
+                new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
+                txOutput =>
+                {
+                    for (var i = 0; i < txMonitors.Length; i++)
+                    {
+                        var txMonitor = txMonitors[i];
+                        if (txOutput.Item1 < 0)
+                            txMonitor.SpendTxOutput(txOutput.Item2);
+                        else
+                            txMonitor.MintTxOutput(txOutput.Item2);
+                    }
+                });
         }
 
         //TODO with the rollback information that's now being stored, rollback could be down without needing the block
