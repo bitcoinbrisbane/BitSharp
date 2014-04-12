@@ -204,9 +204,6 @@ namespace BitSharp.Common
                         // notify that work is starting
                         this.idleEvent.Reset();
 
-                        var stopwatch = new Stopwatch();
-                        stopwatch.Start();
-
                         // notify
                         var startHandler = this.OnWorkStarted;
                         if (startHandler != null)
@@ -225,7 +222,10 @@ namespace BitSharp.Common
                         }
                         working = false;
 
-                        stopwatch.Stop();
+                        // notify
+                        var stopHandler = this.OnWorkStopped;
+                        if (stopHandler != null)
+                            stopHandler();
 
                         if (DateTime.Now - lastReportTime > TimeSpan.FromSeconds(30))
                         {
@@ -233,11 +233,6 @@ namespace BitSharp.Common
                             var percentWorkerTime = workerTime.ElapsedSecondsFloat() / totalTime.ElapsedSecondsFloat();
                             this.logger.Debug("{0,55} work time: {1,10:##0.00%}".Format2(this.Name, percentWorkerTime));
                         }
-
-                        // notify
-                        var stopHandler = this.OnWorkStopped;
-                        if (stopHandler != null)
-                            stopHandler();
                     }
                 }
                 catch (ObjectDisposedException)
