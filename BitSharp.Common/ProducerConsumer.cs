@@ -56,7 +56,7 @@ namespace BitSharp.Common
                     yield return value;
                 }
 
-                if (this.completedAdding)
+                if (this.completedAdding && this.queue.Count == 0)
                 {
                     this.completed = true;
                     this.completedEvent.Set();
