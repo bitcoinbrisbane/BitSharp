@@ -78,26 +78,22 @@ namespace BitSharp.Core.Test.Monitor
 
             using (var simulator = new MainnetSimulator())
             {
-                var logger = simulator.Kernel.Get<Logger>();
-                using (var rpcServer = new CoreRpcServer(logger, simulator.CoreDaemon))
-                {
-                    simulator.CoreDaemon.RegistorMonitor(txMonitor.Object);
+                simulator.CoreDaemon.RegistorMonitor(txMonitor.Object);
 
-                    var block9999 = simulator.BlockProvider.GetBlock(9999);
+                var block9999 = simulator.BlockProvider.GetBlock(9999);
 
-                    simulator.AddBlockRange(0, 9999);
-                    simulator.WaitForDaemon();
-                    simulator.CloseChainStateBuiler();
-                    AssertMethods.AssertDaemonAtBlock(9999, block9999.Hash, simulator.CoreDaemon);
+                simulator.AddBlockRange(0, 9999);
+                simulator.WaitForDaemon();
+                simulator.CloseChainStateBuiler();
+                AssertMethods.AssertDaemonAtBlock(9999, block9999.Hash, simulator.CoreDaemon);
 
-                    var actualMintedBtc = mintedTxOutputs.Sum(x => (decimal)x.Value) / 100.MILLION();
-                    var actualSpentBtc = spentTxOutputs.Sum(x => (decimal)x.Value) / 100.MILLION();
+                var actualMintedBtc = mintedTxOutputs.Sum(x => (decimal)x.Value) / 100.MILLION();
+                var actualSpentBtc = spentTxOutputs.Sum(x => (decimal)x.Value) / 100.MILLION();
 
-                    Assert.AreEqual(16, mintedTxOutputs.Count);
-                    Assert.AreEqual(14, spentTxOutputs.Count);
-                    Assert.AreEqual(569.44M, actualMintedBtc);
-                    Assert.AreEqual(536.52M, actualSpentBtc);
-                }
+                Assert.AreEqual(16, mintedTxOutputs.Count);
+                Assert.AreEqual(14, spentTxOutputs.Count);
+                Assert.AreEqual(569.44M, actualMintedBtc);
+                Assert.AreEqual(536.52M, actualSpentBtc);
             }
         }
     }
