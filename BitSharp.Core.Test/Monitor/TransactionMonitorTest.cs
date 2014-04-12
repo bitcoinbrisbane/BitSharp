@@ -57,7 +57,10 @@ namespace BitSharp.Core.Test.Monitor
             txMonitor.Setup(x => x.MintTxOutput(It.IsAny<TxOutput>())).Callback<TxOutput>(
                 txOutput =>
                 {
-                    if (outputScriptHashes.Contains(new UInt256(sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()))))
+                    var sha256Thread = new SHA256Managed();
+                    var txOutputScriptHash = new UInt256(sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
+
+                    if (outputScriptHashes.Contains(txOutputScriptHash))
                     {
                         Debug.WriteLine("+{0} BTC".Format2((decimal)txOutput.Value / 100.MILLION()));
                         mintedTxOutputs.Add(txOutput);
@@ -69,7 +72,10 @@ namespace BitSharp.Core.Test.Monitor
             txMonitor.Setup(x => x.SpendTxOutput(It.IsAny<TxOutput>())).Callback<TxOutput>(
                 txOutput =>
                 {
-                    if (outputScriptHashes.Contains(new UInt256(sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()))))
+                    var sha256Thread = new SHA256Managed();
+                    var txOutputScriptHash = new UInt256(sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
+
+                    if (outputScriptHashes.Contains(txOutputScriptHash))
                     {
                         Debug.WriteLine("-{0} BTC".Format2((decimal)txOutput.Value / 100.MILLION()));
                         spentTxOutputs.Add(txOutput);
