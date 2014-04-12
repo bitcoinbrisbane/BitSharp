@@ -17,7 +17,7 @@ namespace BitSharp.Common.Test
             var expectedException = new Exception();
             try
             {
-                foreach (var value in this.BadEnumerable(expectedException).LookAhead(1))
+                foreach (var value in this.ThrowsEnumerable(expectedException).LookAhead(1))
                 {
                 }
 
@@ -29,13 +29,40 @@ namespace BitSharp.Common.Test
             }
         }
 
-        private IEnumerable<object> BadEnumerable(Exception e)
+        [TestMethod]
+        [ExpectedException(typeof(OperationCanceledException))]
+        public void TestCancelToken()
+        {
+            using (var cancelToken = new CancellationTokenSource())
+            using (var waitEvent = new ManualResetEventSlim())
+            {
+                foreach (var value in this.WaitsEnumerable(waitEvent.WaitHandle).LookAhead(1, cancelToken.Token))
+                {
+                    cancelToken.Cancel();
+                    waitEvent.Set();
+                }
+            }
+        }
+
+        private IEnumerable<object> ThrowsEnumerable(Exception e)
         {
             yield return new Object();
             yield return new Object();
             yield return new Object();
             yield return new Object();
             throw e;
+        }
+
+        private IEnumerable<object> WaitsEnumerable(WaitHandle waitHandle)
+        {
+            yield return new Object();
+            yield return new Object();
+            waitHandle.WaitOne();
+            yield return new Object();
+            yield return new Object();
+            yield return new Object();
+            yield return new Object();
+            yield return new Object();
         }
     }
 }
