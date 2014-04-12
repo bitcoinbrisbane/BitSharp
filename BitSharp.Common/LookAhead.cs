@@ -37,7 +37,8 @@ namespace BitSharp.Common
                     catch (Exception e)
                     {
                         readException = e;
-                        readValues.CompleteAdding();
+                        try { readValues.CompleteAdding(); }
+                        catch (ObjectDisposedException) { }
                     }
                 });
 
