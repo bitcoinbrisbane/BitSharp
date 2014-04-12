@@ -4,6 +4,7 @@ using BitSharp.Core;
 using NLog;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -69,7 +70,7 @@ namespace BitSharp.Core.JsonRpc
             {
                 if (this.server == null)
                     this.server = new TcpListener(IPAddress.Parse("127.0.0.1"), 8332);
-                
+
                 this.server.Start();
             }
 
@@ -86,27 +87,23 @@ namespace BitSharp.Core.JsonRpc
                     using (var client = this.server.AcceptTcpClient())
                     using (var stream = client.GetStream())
                     {
-                        this.logger.Info("Client Connected..");
                         var reader = new StreamReader(stream, Encoding.UTF8);
                         var writer = new StreamWriter(stream, new UTF8Encoding(false));
 
                         while (!reader.EndOfStream)
                         {
                             var line = reader.ReadLine();
+                            Debug.WriteLine(line);
                             var async = new JsonRpcStateAsync(RpcResultHandler, writer) { JsonRpc = line };
                             JsonRpcProcessor.Process(async, writer);
-
-                            Console.WriteLine("REQUEST: {0}", line);
                         }
                     }
                 }
-                catch (Exception e)
+                finally
                 {
-                    Console.WriteLine("RPCServer exception " + e);
+                    // always notify to continue accepting connections
+                    this.NotifyWork();
                 }
-
-                // always notify to continue accepting connections
-                this.NotifyWork();
             }
 
             private void RpcResultHandler(IAsyncResult state)

@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using Ninject;
 using NLog;
 using System.Collections.Concurrent;
+using Newtonsoft.Json;
 
 namespace BitSharp.Core.Test.JsonRpc
 {
@@ -25,6 +26,7 @@ namespace BitSharp.Core.Test.JsonRpc
     public class CoreRpcServerTest
     {
         [TestMethod]
+        [Ignore]
         public void TestRpcGetBlock()
         {
             using (var simulator = new MainnetSimulator())
@@ -32,16 +34,25 @@ namespace BitSharp.Core.Test.JsonRpc
                 var logger = simulator.Kernel.Get<Logger>();
                 using (var rpcServer = new CoreRpcServer(logger, simulator.CoreDaemon))
                 {
-                    var block9999 = simulator.BlockProvider.GetBlock(9999);
+                    rpcServer.StartListening();
 
-                    simulator.AddBlockRange(0, 9999);
+                    var block9 = simulator.BlockProvider.GetBlock(9);
+
+                    simulator.AddBlockRange(0, 9);
                     simulator.WaitForDaemon();
                     simulator.CloseChainStateBuiler();
-                    AssertMethods.AssertDaemonAtBlock(9999, block9999.Hash, simulator.CoreDaemon);
+                    AssertMethods.AssertDaemonAtBlock(9, block9.Hash, simulator.CoreDaemon);
 
-                    //GetBlock call
+                    var jsonRequest = JsonConvert.SerializeObject(new JsonCall { method = "getblock" });
+
+                    Assert.Fail("TODO: Need HTTP JSON-RPC functionality.");
                 }
             }
+        }
+
+        private sealed class JsonCall
+        {
+            public string method { get; set; }
         }
     }
 }
