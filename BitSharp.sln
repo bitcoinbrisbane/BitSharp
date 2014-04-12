@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Express 2013 for Windows Desktop
 VisualStudioVersion = 12.0.30110.0
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Client", "BitSharp.Client\BitSharp.Client.csproj", "{0EE7A0E7-573E-4CE7-B4C2-2BAAEE4E4E9F}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Node", "BitSharp.Node\BitSharp.Node.csproj", "{B76235BF-6037-45B8-9341-957E6407F8E1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Node.Test", "BitSharp.Node.Test\BitSharp.Node.Test.csproj", "{14F4EA11-179A-4438-9F62-2589805A854C}"
@@ -12,8 +14,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Common.Test", "BitSharp.Common.Test\BitSharp.Common.Test.csproj", "{299D32ED-61A5-4C8D-8AE1-8F502CFA6B99}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.BlockHelper", "BitSharp.BlockHelper\BitSharp.BlockHelper.csproj", "{017C5F91-CCE6-4BFC-88F4-9369F68F3E24}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Client", "BitSharp.Client\BitSharp.Client.csproj", "{0EE7A0E7-573E-4CE7-B4C2-2BAAEE4E4E9F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Client.Test", "BitSharp.Client.Test\BitSharp.Client.Test.csproj", "{D58EB98F-C181-4D36-9545-A6D4DD9F8DE3}"
 EndProject
