@@ -254,9 +254,6 @@ namespace BitSharp.Core.Rules
                 blockUnspentValue += txUnspentValue;
             }
 
-            // validate transaction scripts
-            ValidateTransactionScripts(block, chainStateBuilder.Utxo, blockTxIndices);
-
             // calculate the expected reward in coinbase
             var expectedReward = (long)(50 * SATOSHI_PER_BTC);
             if (chainStateBuilder.Height / 210000 <= 32)
@@ -320,63 +317,16 @@ namespace BitSharp.Core.Rules
             // all validation has passed
         }
 
-        //TODO utxo needs to be as-at transaction, with regards to a transaction being fully spent and added back in in the same block
-        public virtual void ValidateTransactionScripts(Block block, UtxoBuilder utxoBuilder, Dictionary<UInt256, int> blockTxIndices)
+        public virtual void ValidationTransactionScript(Block block, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput)
         {
-            var exceptions = new ConcurrentBag<Exception>();
-
             var scriptEngine = new ScriptEngine(this.logger);
 
-            Parallel.ForEach(GetAllBlockScripts(block, blockTxIndices, utxoBuilder), (tuple, loopState) =>
+            // create the transaction script from the input and output
+            var script = txInput.ScriptSignature.AddRange(prevTxOutput.ScriptPublicKey);
+            if (!scriptEngine.VerifyScript(block.Hash, txIndex, prevTxOutput.ScriptPublicKey.ToArray(), tx, txInputIndex, script.ToArray()))
             {
-                try
-                {
-                    var tx = tuple.Item1;
-                    var txIndex = tuple.Item2;
-                    var input = tuple.Item3;
-                    var inputIndex = tuple.Item4;
-                    var prevOutput = tuple.Item5;
-
-                    // create the transaction script from the input and output
-                    var script = input.ScriptSignature.AddRange(prevOutput.ScriptPublicKey);
-                    if (!scriptEngine.VerifyScript(block.Hash, txIndex, prevOutput.ScriptPublicKey.ToArray(), tx, inputIndex, script.ToArray()))
-                    {
-                        this.logger.Debug("Script did not pass in block: {0}, tx: {1}, {2}, input: {3}".Format2(block.Hash, txIndex, tx.Hash, inputIndex));
-                        exceptions.Add(new ValidationException(block.Hash));
-                        if (!IgnoreScriptErrors)
-                            loopState.Break();
-                    }
-                }
-                catch (Exception e)
-                {
-                    exceptions.Add(e);
-                    if (!IgnoreScriptErrors)
-                        loopState.Break();
-                }
-            });
-
-            if (exceptions.Count > 0)
-            {
-                if (!IgnoreScriptErrors)
-                    throw new AggregateException(exceptions.ToArray());
-                else
-                    this.logger.Debug("Ignoring script error in block: {0}".Format2(block.Hash));
-            }
-        }
-
-        private IEnumerable<Tuple<Transaction, int, TxInput, int, TxOutput>> GetAllBlockScripts(Block block, Dictionary<UInt256, int> blockTxIndices, UtxoBuilder utxoBuilder)
-        {
-            for (var txIndex = 1; txIndex < block.Transactions.Count; txIndex++)
-            {
-                var tx = block.Transactions[txIndex];
-
-                for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
-                {
-                    var input = tx.Inputs[inputIndex];
-                    var prevOutput = LookupPreviousOutput(input.PreviousTxOutputKey, block, blockTxIndices, utxoBuilder);
-
-                    yield return Tuple.Create(tx, txIndex, input, inputIndex, prevOutput);
-                }
+                this.logger.Debug("Script did not pass in block: {0}, tx: {1}, {2}, input: {3}".Format2(block.Hash, txIndex, tx.Hash, txInputIndex));
+                throw new ValidationException(block.Hash);
             }
         }
 

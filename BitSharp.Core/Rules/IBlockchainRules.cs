@@ -20,5 +20,7 @@ namespace BitSharp.Core.Rules
         ChainedBlock GenesisChainedBlock { get; }
 
         void ValidateBlock(Block block, ChainStateBuilder chainStateBuilder);
+
+        void ValidationTransactionScript(Block block, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput);
     }
 }

@@ -205,8 +205,10 @@ namespace BitSharp.Core.Domain.Builders
             inputCount = 0;
 
             var txMonitors = getTxMonitors().ToArray();
-            using (var scannerQueue = new ProducerConsumer<Tuple<int, TxOutput>>())
-            using (var scannerTask = Task.Factory.StartNew(() => this.ScanTransactions(scannerQueue, txMonitors)))
+            using (var txInputQueue = new ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>>())
+            using (var validateScriptsTask = Task.Factory.StartNew(() => this.ValidateTransactionScripts(block, txInputQueue)))
+            using (var txOutputQueue = new ProducerConsumer<Tuple<int, TxOutput>>())
+            using (var scannerTask = Task.Factory.StartNew(() => this.ScanTransactions(txOutputQueue, txMonitors)))
             {
                 // don't include genesis block coinbase in utxo
                 if (chainedBlock.Height > 0)
@@ -218,7 +220,7 @@ namespace BitSharp.Core.Domain.Builders
                     utxoBuilder.Mint(coinbaseTx, chainedBlock);
 
                     foreach (var output in coinbaseTx.Outputs)
-                        scannerQueue.Add(Tuple.Create<int, TxOutput>(+1, output));
+                        txOutputQueue.Add(Tuple.Create<int, TxOutput>(+1, output));
                 }
 
                 // check for double spends
@@ -234,19 +236,56 @@ namespace BitSharp.Core.Domain.Builders
 
                         var spentOutput = utxoBuilder.Spend(input, chainedBlock);
 
-                        scannerQueue.Add(Tuple.Create<int, TxOutput>(-1, spentOutput));
+                        txInputQueue.Add(Tuple.Create<Transaction, int, TxInput, int, TxOutput>(tx, txIndex, input, inputIndex, spentOutput));
+                        txOutputQueue.Add(Tuple.Create<int, TxOutput>(-1, spentOutput));
                     }
 
                     utxoBuilder.Mint(tx, chainedBlock);
 
                     foreach (var output in tx.Outputs)
-                        scannerQueue.Add(Tuple.Create<int, TxOutput>(+1, output));
+                        txOutputQueue.Add(Tuple.Create<int, TxOutput>(+1, output));
                 }
 
                 // wait for scanner to finish
-                scannerQueue.CompleteAdding();
+                txInputQueue.CompleteAdding();
+                txOutputQueue.CompleteAdding();
+                
+                validateScriptsTask.Wait();
                 scannerTask.Wait();
-                Debug.Assert(scannerQueue.IsCompleted);
+
+                Debug.Assert(txInputQueue.IsCompleted);
+                Debug.Assert(txOutputQueue.IsCompleted);
+            }
+        }
+
+        private void ValidateTransactionScripts(Block block, ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>> txInputQueue)
+        {
+            var exceptions = new ConcurrentBag<Exception>();
+
+            Parallel.ForEach(
+                txInputQueue.GetConsumingEnumerable(),
+                new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
+                (tuple, loopState) =>
+                {
+                    try
+                    {
+                        this.rules.ValidationTransactionScript(block, tuple.Item1, tuple.Item2, tuple.Item3, tuple.Item4, tuple.Item5);
+                        throw new Exception();
+                    }
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                        if (!MainnetRules.IgnoreScriptErrors)
+                            loopState.Stop();
+                    }
+                });
+
+            if (exceptions.Count > 0)
+            {
+                if (!MainnetRules.IgnoreScriptErrors)
+                    throw new AggregateException(exceptions.ToArray());
+                else
+                    this.logger.Debug("Ignoring script error in block: {0}".Format2(block.Hash));
             }
         }
 
