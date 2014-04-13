@@ -270,7 +270,6 @@ namespace BitSharp.Core.Domain.Builders
                     try
                     {
                         this.rules.ValidationTransactionScript(block, tuple.Item1, tuple.Item2, tuple.Item3, tuple.Item4, tuple.Item5);
-                        throw new Exception();
                     }
                     catch (Exception e)
                     {
