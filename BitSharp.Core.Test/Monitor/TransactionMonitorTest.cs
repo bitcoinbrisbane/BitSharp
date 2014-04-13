@@ -2,7 +2,7 @@
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Domain;
 using BitSharp.Core.JsonRpc;
-using BitSharp.Core.Monitor;
+using BitSharp.Core.Wallet;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Script;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
