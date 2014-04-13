@@ -176,8 +176,6 @@ namespace BitSharp.Core
                         }
                     });
                 }, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
-
-            this.RegistorMonitor(new DummyMonitor());
         }
 
         public ChainedBlock TargetBlock { get { return this.targetChainWorker.TargetBlock; } }
@@ -474,47 +472,6 @@ namespace BitSharp.Core
 
             //stopwatch.Stop();
             //Debug.WriteLine("WriteBlockchainWorker: {0:#,##0.000}s".Format2(stopwatch.ElapsedSecondsFloat()));
-        }
-
-        private sealed class DummyMonitor : ITransactionMonitor
-        {
-            private ConcurrentSet<UInt256> outputScriptHashes;
-            private ConcurrentBag<TxOutput> mintedTxOutputs;
-            private ConcurrentBag<TxOutput> spentTxOutputs;
-
-            public DummyMonitor()
-            {
-                this.outputScriptHashes = new ConcurrentSet<UInt256>();
-                for (var i = 0; i < 1.MILLION(); i++)
-                    outputScriptHashes.Add(i);
-
-                this.mintedTxOutputs = new ConcurrentBag<TxOutput>();
-                this.spentTxOutputs = new ConcurrentBag<TxOutput>();
-            }
-
-            public void MintTxOutput(TxOutput txOutput)
-            {
-                var sha256 = new SHA256Managed();
-                var txOutputScriptHash = new UInt256(sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
-
-                if (this.outputScriptHashes.Contains(txOutputScriptHash))
-                {
-                    Debug.WriteLine("+{0} BTC".Format2((decimal)txOutput.Value / (decimal)(100.MILLION())));
-                    mintedTxOutputs.Add(txOutput);
-                }
-            }
-
-            public void SpendTxOutput(TxOutput txOutput)
-            {
-                var sha256 = new SHA256Managed();
-                var txOutputScriptHash = new UInt256(sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
-
-                if (this.outputScriptHashes.Contains(txOutputScriptHash))
-                {
-                    Debug.WriteLine("-{0} BTC".Format2((decimal)txOutput.Value / (decimal)(100.MILLION())));
-                    spentTxOutputs.Add(txOutput);
-                }
-            }
         }
     }
 }

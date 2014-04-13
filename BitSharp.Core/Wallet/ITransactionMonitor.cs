@@ -1,4 +1,5 @@
-﻿using BitSharp.Core.Domain;
+﻿using BitSharp.Common;
+using BitSharp.Core.Domain;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +10,8 @@ namespace BitSharp.Core.Wallet
 {
     public interface ITransactionMonitor
     {
-        void MintTxOutput(TxOutput txOutput);
-        void SpendTxOutput(TxOutput txOutput);
+        void MintTxOutput(ChainPosition chainPosition, TxOutput txOutput, UInt256 outputScriptHash);
+        void ReceiveTxOutput(ChainPosition chainPosition, TxOutput txOutput, UInt256 outputScriptHash);
+        void SpendTxOutput(ChainPosition chainPosition, TxOutput txOutput, UInt256 outputScriptHash);
     }
 }

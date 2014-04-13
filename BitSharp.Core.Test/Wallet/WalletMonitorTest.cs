@@ -22,7 +22,7 @@ using System.Collections.Concurrent;
 namespace BitSharp.Core.Test.Monitor
 {
     [TestClass]
-    public class TransactionMonitorTest
+    public class WalletMonitorTest
     {
         [TestMethod]
         public void TestMonitorAddress()
@@ -42,49 +42,13 @@ namespace BitSharp.Core.Test.Monitor
             var outputScript2 = new PayToPublicKeyHashBuilder().CreateOutputFromPublicKey(publicKey);
             var outputScript2Hash = new UInt256(sha256.ComputeHash(outputScript2));
 
-            var outputScriptHashes = new ConcurrentSet<UInt256>();
-            for (var i = 0; i < 1.MILLION(); i++)
-                outputScriptHashes.Add(i);
-
-            outputScriptHashes.Add(outputScript1Hash);
-            outputScriptHashes.Add(outputScript2Hash);
-
-            var txMonitor = new Mock<ITransactionMonitor>();
-
-            var mintedTxOutputs = new ConcurrentBag<TxOutput>();
-            var spentTxOutputs = new ConcurrentBag<TxOutput>();
-
-            txMonitor.Setup(x => x.MintTxOutput(It.IsAny<TxOutput>())).Callback<TxOutput>(
-                txOutput =>
-                {
-                    var sha256Thread = new SHA256Managed();
-                    var txOutputScriptHash = new UInt256(sha256Thread.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
-
-                    if (outputScriptHashes.Contains(txOutputScriptHash))
-                    {
-                        Debug.WriteLine("+{0} BTC".Format2((decimal)txOutput.Value / 100.MILLION()));
-                        mintedTxOutputs.Add(txOutput);
-                    }
-                });
-            var outputScript = new PayToPublicKeyBuilder().CreateOutput(publicKey);
-            var outputScriptHash = new UInt256(sha256.ComputeHash(outputScript));
-
-            txMonitor.Setup(x => x.SpendTxOutput(It.IsAny<TxOutput>())).Callback<TxOutput>(
-                txOutput =>
-                {
-                    var sha256Thread = new SHA256Managed();
-                    var txOutputScriptHash = new UInt256(sha256Thread.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
-
-                    if (outputScriptHashes.Contains(txOutputScriptHash))
-                    {
-                        Debug.WriteLine("-{0} BTC".Format2((decimal)txOutput.Value / 100.MILLION()));
-                        spentTxOutputs.Add(txOutput);
-                    }
-                });
+            var walletMonitor = new WalletMonitor();
+            walletMonitor.AddAddress(new WalletAddress(outputScript1Hash));
+            walletMonitor.AddAddress(new WalletAddress(outputScript2Hash));
 
             using (var simulator = new MainnetSimulator())
             {
-                simulator.CoreDaemon.RegistorMonitor(txMonitor.Object);
+                simulator.CoreDaemon.RegistorMonitor(walletMonitor);
 
                 var block9999 = simulator.BlockProvider.GetBlock(9999);
 
@@ -93,12 +57,19 @@ namespace BitSharp.Core.Test.Monitor
                 simulator.CloseChainStateBuiler();
                 AssertMethods.AssertDaemonAtBlock(9999, block9999.Hash, simulator.CoreDaemon);
 
+                var mintedTxOutputs = walletMonitor.Entries.Where(x => x.Type == EnumWalletEntryType.Mint).ToList();
+                var receivedTxOutputs = walletMonitor.Entries.Where(x => x.Type == EnumWalletEntryType.Receive).ToList();
+                var spentTxOutputs = walletMonitor.Entries.Where(x => x.Type == EnumWalletEntryType.Spend).ToList();
+
                 var actualMintedBtc = mintedTxOutputs.Sum(x => (decimal)x.Value) / 100.MILLION();
+                var actualReceivedBtc = receivedTxOutputs.Sum(x => (decimal)x.Value) / 100.MILLION();
                 var actualSpentBtc = spentTxOutputs.Sum(x => (decimal)x.Value) / 100.MILLION();
 
-                Assert.AreEqual(16, mintedTxOutputs.Count);
+                Assert.AreEqual(0, mintedTxOutputs.Count);
+                Assert.AreEqual(16, receivedTxOutputs.Count);
                 Assert.AreEqual(14, spentTxOutputs.Count);
-                Assert.AreEqual(569.44M, actualMintedBtc);
+                Assert.AreEqual(0M, actualMintedBtc);
+                Assert.AreEqual(569.44M, actualReceivedBtc);
                 Assert.AreEqual(536.52M, actualSpentBtc);
             }
         }

@@ -106,7 +106,7 @@
     <Compile Include="Domain\BlockHeaderTest.cs" />
     <Compile Include="Domain\ChainedBlockTest.cs" />
     <Compile Include="JsonRpc\CoreRpcServerTest.cs" />
-    <Compile Include="Monitor\TransactionMonitorTest.cs" />
+    <Compile Include="Wallet\WalletMonitorTest.cs" />
     <Compile Include="RandomData.cs" />
     <Compile Include="Domain\TxOutputKeyTest.cs" />
     <Compile Include="ExtensionMethods.cs" />

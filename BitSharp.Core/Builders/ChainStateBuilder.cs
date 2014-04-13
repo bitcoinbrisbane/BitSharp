@@ -208,7 +208,7 @@ namespace BitSharp.Core.Builders
             var txMonitors = getTxMonitors().ToArray();
             using (var txInputQueue = new ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>>())
             using (var validateScriptsTask = Task.Factory.StartNew(() => this.ValidateTransactionScripts(block, txInputQueue)))
-            using (var txOutputQueue = new ProducerConsumer<Tuple<int, TxOutput>>())
+            using (var txOutputQueue = new ProducerConsumer<Tuple<int, ChainPosition, TxOutput>>())
             using (var scannerTask = Task.Factory.StartNew(() => this.ScanTransactions(txOutputQueue, txMonitors)))
             {
                 // don't include genesis block coinbase in utxo
@@ -221,7 +221,7 @@ namespace BitSharp.Core.Builders
                     utxoBuilder.Mint(coinbaseTx, chainedBlock);
 
                     foreach (var output in coinbaseTx.Outputs)
-                        txOutputQueue.Add(Tuple.Create<int, TxOutput>(+1, output));
+                        txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(0, new ChainPosition(0, 0, 0, 0), output));
                 }
 
                 // check for double spends
@@ -238,19 +238,19 @@ namespace BitSharp.Core.Builders
                         var spentOutput = utxoBuilder.Spend(input, chainedBlock);
 
                         txInputQueue.Add(Tuple.Create<Transaction, int, TxInput, int, TxOutput>(tx, txIndex, input, inputIndex, spentOutput));
-                        txOutputQueue.Add(Tuple.Create<int, TxOutput>(-1, spentOutput));
+                        txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(-1, new ChainPosition(0, 0, 0, 0), spentOutput));
                     }
 
                     utxoBuilder.Mint(tx, chainedBlock);
 
                     foreach (var output in tx.Outputs)
-                        txOutputQueue.Add(Tuple.Create<int, TxOutput>(+1, output));
+                        txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(+1, new ChainPosition(0, 0, 0, 0), output));
                 }
 
                 // wait for scanner to finish
                 txInputQueue.CompleteAdding();
                 txOutputQueue.CompleteAdding();
-                
+
                 validateScriptsTask.Wait();
                 scannerTask.Wait();
 
@@ -289,24 +289,30 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        private void ScanTransactions(ProducerConsumer<Tuple<int, TxOutput>> txOutputQueue, ITransactionMonitor[] txMonitors)
+        private void ScanTransactions(ProducerConsumer<Tuple<int, ChainPosition, TxOutput>> txOutputQueue, ITransactionMonitor[] txMonitors)
         {
+                var sha256 = new SHA256Managed();
             //TODO for this to remain parallel, i'll need to be able to handle the case of a new watch address being generated from one of the iterations
             //TODO there will also need to be an ordering step, so i'll have to evaluate if parallel is best here
-            Parallel.ForEach(
-                txOutputQueue.GetConsumingEnumerable(),
-                new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
-                txOutput =>
+            //Parallel.ForEach(
+            //    txOutputQueue.GetConsumingEnumerable(),
+            //    new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
+            //    txOutput =>
+            foreach (var txOutput in txOutputQueue.GetConsumingEnumerable())
+            {
+                var outputScriptHash = new UInt256(sha256.ComputeHash(txOutput.Item3.ScriptPublicKey.ToArray()));
+
+                for (var i = 0; i < txMonitors.Length; i++)
                 {
-                    for (var i = 0; i < txMonitors.Length; i++)
-                    {
-                        var txMonitor = txMonitors[i];
-                        if (txOutput.Item1 < 0)
-                            txMonitor.SpendTxOutput(txOutput.Item2);
-                        else
-                            txMonitor.MintTxOutput(txOutput.Item2);
-                    }
-                });
+                    var txMonitor = txMonitors[i];
+                    if (txOutput.Item1 < 0)
+                        txMonitor.SpendTxOutput(txOutput.Item2, txOutput.Item3, outputScriptHash);
+                    else if (txOutput.Item1 > 0)
+                        txMonitor.ReceiveTxOutput(txOutput.Item2, txOutput.Item3, outputScriptHash);
+                    else
+                        txMonitor.MintTxOutput(txOutput.Item2, txOutput.Item3, outputScriptHash);
+                }
+            }//);
         }
 
         //TODO with the rollback information that's now being stored, rollback could be down without needing the block
