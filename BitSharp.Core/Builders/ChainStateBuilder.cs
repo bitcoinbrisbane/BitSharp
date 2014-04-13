@@ -315,6 +315,7 @@ namespace BitSharp.Core.Builders
             //TODO currently a MissingDataException will get thrown if the rollback information is missing
             //TODO rollback is still possible if any resurrecting transactions can be found
             //TODO the network does not allow arbitrary transaction lookup, but if the transactions can be retrieved then this code should allow it
+            //TODO this should be handle by a distinct worker that rebuilds rollback information
 
             var spentTransactions = new Dictionary<UInt256, SpentTx>();
             spentTransactions.AddRange(this.spentTransactionsCache[block.Hash]);
