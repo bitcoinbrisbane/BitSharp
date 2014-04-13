@@ -19,6 +19,6 @@ namespace BitSharp.Core.Wallet
         // current point in the blockchain
 
         // entries
-        private readonly List<object> entries;
+        private readonly List<WalletEntry> entries;
     }
 }
