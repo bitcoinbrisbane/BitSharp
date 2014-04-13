@@ -3,6 +3,7 @@
 //#define MEMORY
 //#define MONGODB
 //#define TRANSIENT_BLOCKS
+#define DUMMY_MONITOR
 
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Node;
@@ -30,6 +31,7 @@ using BitSharp.Core.Storage;
 using BitSharp.Core;
 using BitSharp.Esent;
 using BitSharp.Node.Storage;
+using BitSharp.Core.Wallet;
 
 namespace BitSharp.Client
 {
@@ -55,7 +57,7 @@ namespace BitSharp.Client
 
                 // add logging module
                 this.kernel.Load(new LoggingModule(LogLevel.Info));
-                
+
                 // log startup
                 this.logger = kernel.Get<Logger>();
                 this.logger.Info("Starting up: {0}".Format2(DateTime.Now));
@@ -72,7 +74,7 @@ namespace BitSharp.Client
 #elif TRANSIENT_BLOCKS
                 modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), transientBlockStorage: true));
 #else
-                modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: 500.MILLION()));
+                modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: int.MaxValue - 1));
 #endif
 
                 // add cache modules
@@ -94,6 +96,10 @@ namespace BitSharp.Client
                 // initialize the blockchain daemon
                 this.kernel.Bind<CoreDaemon>().ToSelf().InSingletonScope();
                 var blockchainDaemon = this.kernel.Get<CoreDaemon>();
+
+#if DUMMY_MONITOR
+                blockchainDaemon.RegistorMonitor(new DummyWalletMonitor());
+#endif
 
                 // setup view model
                 this.viewModel = new MainWindowViewModel(this.kernel);
@@ -180,5 +186,16 @@ namespace BitSharp.Client
         {
             this.viewModel.ViewBlockchainLast();
         }
+
+#if DUMMY_MONITOR
+        private sealed class DummyWalletMonitor : WalletMonitor
+        {
+            public DummyWalletMonitor()
+            {
+                for (var i = 0; i < 1.MILLION(); i++)
+                    this.AddAddress(new WalletAddress(i));
+            }
+        }
+#endif
     }
 }
