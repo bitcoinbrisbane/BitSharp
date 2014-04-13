@@ -291,6 +291,8 @@ namespace BitSharp.Core.Builders
 
         private void ScanTransactions(ProducerConsumer<Tuple<int, TxOutput>> txOutputQueue, ITransactionMonitor[] txMonitors)
         {
+            //TODO for this to remain parallel, i'll need to be able to handle the case of a new watch address being generated from one of the iterations
+            //TODO there will also need to be an ordering step, so i'll have to evaluate if parallel is best here
             Parallel.ForEach(
                 txOutputQueue.GetConsumingEnumerable(),
                 new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
