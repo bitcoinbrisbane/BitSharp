@@ -9,6 +9,7 @@ namespace BitSharp.Core.Wallet
 {
     public class WalletEntry
     {
+        private readonly WalletAddress address;
         private readonly EnumWalletEntryType type;
         private readonly UInt256 blockHash;
         private readonly UInt256 txHash;

@@ -147,7 +147,8 @@
     <Compile Include="Storage\StorageInterfaces.cs" />
     <Compile Include="Storage\UnboundedCache.cs" />
     <Compile Include="ValidationException.cs" />
-    <Compile Include="Wallet\WalletEntries.cs" />
+    <Compile Include="Wallet\WalletAddress.cs" />
+    <Compile Include="Wallet\Wallet.cs" />
     <Compile Include="Wallet\WalletEntry.cs" />
     <Compile Include="Workers\ChainingWorker.cs" />
     <Compile Include="Workers\ChainStateWorker.cs" />
