@@ -35,6 +35,7 @@ namespace BitSharp.Core.Wallet
         }
 
         //TODO thread safety
+        //TODO need to rescan utxo when addresses are added as well
         public void AddAddress(IWalletAddress address)
         {
             //TODO add to queue, cannot monitor address until chain position moves
