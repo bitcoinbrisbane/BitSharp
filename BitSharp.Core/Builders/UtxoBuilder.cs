@@ -1,5 +1,6 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
+using BitSharp.Core.Domain;
 using BitSharp.Core.Storage;
 using BitSharp.Domain;
 using Ninject;
@@ -14,7 +15,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Domain.Builders
+namespace BitSharp.Core.Builders
 {
     //TODO bundle Utxo and ChainState together into ChainState? make Chain persisted along with this change, and then cache it
     //TODO eventually the UtxoBuilder should have an open/close mechanism

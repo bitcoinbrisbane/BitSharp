@@ -90,11 +90,11 @@
     <Compile Include="DataEncoderExtensionMethods.cs" />
     <Compile Include="Domain\Block.cs" />
     <Compile Include="Domain\BlockchainPath.cs" />
-    <Compile Include="Domain\Builders\BlockchainPathBuilder.cs" />
+    <Compile Include="Builders\BlockchainPathBuilder.cs" />
     <Compile Include="Domain\BlockHeader.cs" />
-    <Compile Include="Domain\Builders\ChainBuilder.cs" />
-    <Compile Include="Domain\Builders\ChainStateBuilder.cs" />
-    <Compile Include="Domain\Builders\UtxoBuilder.cs" />
+    <Compile Include="Builders\ChainBuilder.cs" />
+    <Compile Include="Builders\ChainStateBuilder.cs" />
+    <Compile Include="Builders\UtxoBuilder.cs" />
     <Compile Include="Domain\Chain.cs" />
     <Compile Include="Domain\ChainedBlock.cs" />
     <Compile Include="Domain\ChainState.cs" />

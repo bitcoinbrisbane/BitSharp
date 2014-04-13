@@ -1,5 +1,5 @@
 ﻿using BitSharp.Common;
-using BitSharp.Core.Domain.Builders;
+using BitSharp.Core.Builders;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;

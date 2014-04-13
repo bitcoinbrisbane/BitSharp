@@ -18,8 +18,9 @@ using BitSharp.Core.Storage;
 using BitSharp.Core.Workers;
 using BitSharp.Core.Monitor;
 using System.Security.Cryptography;
+using BitSharp.Core.Domain;
 
-namespace BitSharp.Core.Domain.Builders
+namespace BitSharp.Core.Builders
 {
     public class ChainStateBuilder : IDisposable
     {

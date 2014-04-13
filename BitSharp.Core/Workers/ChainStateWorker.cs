@@ -1,7 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Domain;
-using BitSharp.Core.Domain.Builders;
+using BitSharp.Core.Builders;
 using BitSharp.Core.Monitor;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Storage;

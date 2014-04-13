@@ -1,6 +1,6 @@
 ﻿using BitSharp.Common;
 using BitSharp.Core.Domain;
-using BitSharp.Core.Domain.Builders;
+using BitSharp.Core.Builders;
 using BitSharp.Core.Storage;
 using BitSharp.Core.Storage.Memory;
 using BitSharp.Domain;
@@ -15,7 +15,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Test.Domain.Builders
+namespace BitSharp.Core.Test.Builders
 {
     [TestClass]
     public class UtxoBuilderTest
