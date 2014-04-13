@@ -13,6 +13,7 @@ namespace BitSharp.Core.Test.Script
     [TestClass]
     public class TransactionManagerTest
     {
+        //TODO this test occassionally generates an invalid public key and fails
         [TestMethod]
         public void TestCreateCoinbaseAndSpend()
         {
