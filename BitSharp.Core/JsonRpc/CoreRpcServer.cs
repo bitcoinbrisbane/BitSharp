@@ -1,5 +1,6 @@
 ﻿using AustinHarris.JsonRpc;
 using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core;
 using NLog;
 using System;
@@ -27,7 +28,7 @@ namespace BitSharp.Core.JsonRpc
         {
             this.logger = logger;
             this.coreDaemon = coreDaemon;
-            this.listener = new ListenerWorker(this.logger);
+            this.listener = new ListenerWorker(this, this.logger);
         }
 
         public void Dispose()
@@ -50,6 +51,12 @@ namespace BitSharp.Core.JsonRpc
         {
         }
 
+        [JsonRpcMethod("getblockcount")]
+        public int GetBlockCount()
+        {
+            return this.coreDaemon.CurrentBuilderHeight;
+        }
+
         [JsonRpcMethod("getreceivedbyaddress")]
         public void GetReceivedByAddress(string address, int minConf)
         {
@@ -58,46 +65,44 @@ namespace BitSharp.Core.JsonRpc
         private sealed class ListenerWorker : Worker
         {
             private readonly Logger logger;
-            private TcpListener server;
+            private readonly CoreRpcServer rpcServer;
+            private HttpListener httpListener;
 
-            public ListenerWorker(Logger logger)
+            public ListenerWorker(CoreRpcServer rpcServer, Logger logger)
                 : base("CoreRpcServer.ListenerWorker", initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.Zero, logger: logger)
             {
                 this.logger = logger;
+                this.rpcServer = rpcServer;
             }
 
             protected override void SubStart()
             {
-                if (this.server == null)
-                    this.server = new TcpListener(IPAddress.Parse("127.0.0.1"), 8332);
+                if (this.httpListener == null)
+                {
+                    this.httpListener = new HttpListener();
+                    this.httpListener.Prefixes.Add("http://localhost:8332/");
+                }
 
-                this.server.Start();
+                this.httpListener.Start();
             }
 
             protected override void SubStop()
             {
-                if (this.server != null)
-                    this.server.Stop();
+                if (this.httpListener != null)
+                    this.httpListener.Stop();
             }
 
             protected override void WorkAction()
             {
                 try
                 {
-                    using (var client = this.server.AcceptTcpClient())
-                    using (var stream = client.GetStream())
-                    {
-                        var reader = new StreamReader(stream, Encoding.UTF8);
-                        var writer = new StreamWriter(stream, new UTF8Encoding(false));
+                    var context = this.httpListener.GetContext();
 
-                        while (!reader.EndOfStream)
-                        {
-                            var line = reader.ReadLine();
-                            Debug.WriteLine(line);
-                            var async = new JsonRpcStateAsync(RpcResultHandler, writer) { JsonRpc = line };
-                            JsonRpcProcessor.Process(async, writer);
-                        }
-                    }
+                    var reader = new StreamReader(context.Request.InputStream, Encoding.UTF8);
+                    var line = reader.ReadToEnd();
+                    
+                    var async = new JsonRpcStateAsync(RpcResultHandler, context.Response) { JsonRpc = line };
+                    JsonRpcProcessor.Process(async, this.rpcServer);
                 }
                 finally
                 {
@@ -110,9 +115,17 @@ namespace BitSharp.Core.JsonRpc
             {
                 var async = ((JsonRpcStateAsync)state);
                 var result = async.Result;
-                var writer = ((StreamWriter)async.AsyncState);
+                var response = ((HttpListenerResponse)async.AsyncState);
 
-                writer.WriteLine(result);
+                Debug.WriteLine("result: {0}".Format2(result));
+
+                var resultBytes = Encoding.UTF8.GetBytes(result);
+
+                response.ContentType = "application/json";
+                response.ContentEncoding = Encoding.UTF8;
+
+                response.ContentLength64 = resultBytes.Length;
+                response.OutputStream.Write(resultBytes, 0, resultBytes.Length);
             }
         }
     }
