@@ -11,6 +11,6 @@ namespace BitSharp.Core.Wallet
         Mint,
         Receive,
         Spend
-        //TODO Unmint, Unspend, DoubleSpend
+        //TODO Unmint, Unspend, DoubleSpend, MutatedReceive, MutatedSpend
     }
 }
