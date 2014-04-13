@@ -94,6 +94,9 @@ namespace BitSharp.Common
                 {
                     if (!this.isDisposed)
                     {
+                        if (this.startedEvent.IsSet)
+                            this.SubStop();
+
                         this.SubDispose();
 
                         this.shutdownToken.Cancel();
