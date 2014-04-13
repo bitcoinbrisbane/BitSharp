@@ -110,15 +110,16 @@ namespace BitSharp.Node.Workers
 
                 DateTime ignore;
                 this.headersRequestsByPeer.TryRemove(remoteNode.RemoteEndPoint, out ignore);
-
-                this.NotifyWork();
             }
         }
 
         private void HandleBlockHeaders(RemoteNode remoteNode, IImmutableList<BlockHeader> blockHeaders)
         {
-            this.flushQueue.Enqueue(Tuple.Create(remoteNode, blockHeaders));
-            this.flushWorker.NotifyWork();
+            if (blockHeaders.Count > 0)
+            {
+                this.flushQueue.Enqueue(Tuple.Create(remoteNode, blockHeaders));
+                this.flushWorker.NotifyWork();
+            }
         }
 
         private void HandleTargetChainChanged(object sender, EventArgs e)
