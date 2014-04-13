@@ -6,17 +6,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Wallet
+namespace BitSharp.Core.Wallet.Address
 {
-    public class WalletAddress
+    public class OutputScriptHashAddress : IWalletAddress
     {
-        // point in the blockchain when monitoring started
-        private readonly ChainPosition startChainPosition;
-
         // address, in this case a single sha-256 of the output script
         private readonly UInt256 outputScriptHash;
 
-        public WalletAddress(UInt256 outputScriptHash)
+        public OutputScriptHashAddress(UInt256 outputScriptHash)
         {
             this.outputScriptHash = outputScriptHash;
         }
@@ -26,10 +23,11 @@ namespace BitSharp.Core.Wallet
             yield return outputScriptHash;
         }
 
-        // determine if a tx output matches this wallet address
+        public bool IsMatcher { get { return false; } }
+
         public bool MatchesTxOutput(TxOutput txOutput, UInt256 txOutputScriptHash)
         {
-            return this.outputScriptHash == txOutputScriptHash;
+            throw new NotSupportedException();
         }
     }
 }

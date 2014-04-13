@@ -1,0 +1,45 @@
+﻿using BitSharp.Common;
+using BitSharp.Core.Script;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace BitSharp.Core.Wallet.Address
+{
+    public class PublicKeyAddress : IWalletAddress
+    {
+        private ImmutableArray<byte> publicKeyBytes;
+        private UInt256 outputScript1Hash;
+        private UInt256 outputScript2Hash;
+
+        public PublicKeyAddress(ImmutableArray<byte> publicKeyBytes)
+        {
+            this.publicKeyBytes = publicKeyBytes;
+
+            var sha256 = new SHA256Managed();
+            var outputScript1 = new PayToPublicKeyBuilder().CreateOutput(publicKeyBytes.ToArray());
+            var outputScript2 = new PayToPublicKeyHashBuilder().CreateOutputFromPublicKey(publicKeyBytes.ToArray());
+            this.outputScript1Hash = new UInt256(sha256.ComputeHash(outputScript1));
+            this.outputScript2Hash = new UInt256(sha256.ComputeHash(outputScript2));
+        }
+
+        public IEnumerable<UInt256> GetOutputScriptHashes()
+        {
+            yield return this.outputScript1Hash;
+            yield return this.outputScript2Hash;
+        }
+
+        public bool IsMatcher
+        {
+            get { return false; }
+        }
+
+        public bool MatchesTxOutput(Domain.TxOutput txOutput, UInt256 txOutputScriptHash)
+        {
+            throw new NotSupportedException();
+        }
+    }
+}

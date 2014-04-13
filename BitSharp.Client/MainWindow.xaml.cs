@@ -32,6 +32,7 @@ using BitSharp.Core;
 using BitSharp.Esent;
 using BitSharp.Node.Storage;
 using BitSharp.Core.Wallet;
+using BitSharp.Core.Wallet.Address;
 
 namespace BitSharp.Client
 {
@@ -193,7 +194,7 @@ namespace BitSharp.Client
             public DummyWalletMonitor()
             {
                 for (var i = 0; i < 1.MILLION(); i++)
-                    this.AddAddress(new WalletAddress(i));
+                    this.AddAddress(new OutputScriptHashAddress(i));
             }
         }
 #endif

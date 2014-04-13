@@ -15,7 +15,7 @@ namespace BitSharp.Core.Wallet
     {
         // addresses
         private readonly Dictionary<UInt256, List<MonitoredWalletAddress>> addressesByOutputScriptHash;
-        private readonly List<MonitoredWalletAddress> scanAddresses;
+        private readonly List<MonitoredWalletAddress> matcherAddresses;
 
         // current point in the blockchain
 
@@ -25,7 +25,7 @@ namespace BitSharp.Core.Wallet
         public WalletMonitor()
         {
             this.addressesByOutputScriptHash = new Dictionary<UInt256, List<MonitoredWalletAddress>>();
-            this.scanAddresses = new List<MonitoredWalletAddress>();
+            this.matcherAddresses = new List<MonitoredWalletAddress>();
             this.entries = ImmutableList.CreateBuilder<WalletEntry>();
         }
 
@@ -35,7 +35,7 @@ namespace BitSharp.Core.Wallet
         }
 
         //TODO thread safety
-        public void AddAddress(WalletAddress address)
+        public void AddAddress(IWalletAddress address)
         {
             //TODO add to queue, cannot monitor address until chain position moves
             var startChainPosition = new ChainPosition(0, 0, 0, 0);
@@ -53,7 +53,10 @@ namespace BitSharp.Core.Wallet
                 addresses.Add(new MonitoredWalletAddress(address, monitoredRange));
             }
 
-            //TODO add scanning address
+            if (address.IsMatcher)
+            {
+                this.matcherAddresses.Add(new MonitoredWalletAddress(address, monitoredRange));
+            }
         }
 
         public void MintTxOutput(ChainPosition chainPosition, TxOutput txOutput, UInt256 outputScriptHash)
@@ -82,8 +85,8 @@ namespace BitSharp.Core.Wallet
                 matchingAddresses.AddRange(addresses);
             }
 
-            // test scan addresses
-            foreach (var address in this.scanAddresses)
+            // test matcher addresses
+            foreach (var address in this.matcherAddresses)
             {
                 if (address.Address.MatchesTxOutput(txOutput, outputScriptHash))
                     matchingAddresses.Add(address);

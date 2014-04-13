@@ -107,6 +107,7 @@
     <Compile Include="Domain\UnspentTx.cs" />
     <Compile Include="Domain\Utxo.cs" />
     <Compile Include="JsonRpc\CoreRpcServer.cs" />
+    <Compile Include="Wallet\Address\PublicKeyHashAddress.cs" />
     <Compile Include="Wallet\ChainPosition.cs" />
     <Compile Include="Wallet\EnumWalletEntryType.cs" />
     <Compile Include="Wallet\ITransactionMonitor.cs" />
@@ -149,7 +150,9 @@
     <Compile Include="Storage\UnboundedCache.cs" />
     <Compile Include="ValidationException.cs" />
     <Compile Include="Wallet\MonitoredWalletAddress.cs" />
-    <Compile Include="Wallet\WalletAddress.cs" />
+    <Compile Include="Wallet\IWalletAddress.cs" />
+    <Compile Include="Wallet\Address\PublicKeyAddress.cs" />
+    <Compile Include="Wallet\Address\OutputScriptHashAddress.cs" />
     <Compile Include="Wallet\WalletMonitor.cs" />
     <Compile Include="Wallet\WalletEntry.cs" />
     <Compile Include="Workers\ChainingWorker.cs" />

@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using Ninject;
 using NLog;
 using System.Collections.Concurrent;
+using BitSharp.Core.Wallet.Address;
 
 namespace BitSharp.Core.Test.Monitor
 {
@@ -35,16 +36,10 @@ namespace BitSharp.Core.Test.Monitor
 
             var publicKey =
                 "04f9804cfb86fb17441a6562b07c4ee8f012bdb2da5be022032e4b87100350ccc7c0f4d47078b06c9d22b0ec10bdce4c590e0d01aed618987a6caa8c94d74ee6dc"
-                .HexToByteArray();
-
-            var outputScript1 = new PayToPublicKeyBuilder().CreateOutput(publicKey);
-            var outputScript1Hash = new UInt256(sha256.ComputeHash(outputScript1));
-            var outputScript2 = new PayToPublicKeyHashBuilder().CreateOutputFromPublicKey(publicKey);
-            var outputScript2Hash = new UInt256(sha256.ComputeHash(outputScript2));
+                .HexToByteArray().ToImmutableArray();
 
             var walletMonitor = new WalletMonitor();
-            walletMonitor.AddAddress(new WalletAddress(outputScript1Hash));
-            walletMonitor.AddAddress(new WalletAddress(outputScript2Hash));
+            walletMonitor.AddAddress(new PublicKeyAddress(publicKey));
 
             using (var simulator = new MainnetSimulator())
             {
