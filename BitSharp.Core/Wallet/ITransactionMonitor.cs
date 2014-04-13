@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Monitor
+namespace BitSharp.Core.Wallet
 {
     public interface ITransactionMonitor
     {

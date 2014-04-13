@@ -107,7 +107,7 @@
     <Compile Include="Domain\UnspentTx.cs" />
     <Compile Include="Domain\Utxo.cs" />
     <Compile Include="JsonRpc\CoreRpcServer.cs" />
-    <Compile Include="Monitor\ITransactionMonitor.cs" />
+    <Compile Include="Wallet\ITransactionMonitor.cs" />
     <Compile Include="Rules\IBlockchainRules.cs" />
     <Compile Include="Rules\MainnetRules.cs" />
     <Compile Include="Rules\RulesModule.cs" />
