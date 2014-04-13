@@ -1,10 +1,12 @@
 @echo off
 
-for /d %%d in ("*") do rmdir /s /q "%%d\bin"
-for /d %%d in ("*") do rmdir /s /q "%%d\obj"
+for /d %%d in ("*") do (
+	if exist "%%d\bin" rmdir /s /q "%%d\bin"
+	if exist "%%d\obj" rmdir /s /q "%%d\obj"
+)
 
-del /q *.db
-del /q *.log
+if exist *.db del /q *.db
+if exist *.log del /q *.log
 
-rmdir /s /q "packages"
-rmdir /s /q "TestResults"
+if exist "packages" rmdir /s /q "packages"
+if exist "TestResults" rmdir /s /q "TestResults"
