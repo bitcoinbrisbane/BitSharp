@@ -1,6 +1,4 @@
-﻿//#define SIPA
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -17,7 +15,7 @@ using System.Collections.Immutable;
 using NLog;
 using BitSharp.Core.Domain;
 
-#if SIPA
+#if SECP256K1_DLL
 using Secp256k1;
 #endif
 
@@ -306,7 +304,7 @@ Verifying script for block {0}, transaction {1}, input {2}
             var sha256 = new SHA256Managed();
             txSignatureHash = sha256.ComputeDoubleHash(txSignature);
 
-#if SIPA
+#if SECP256K1_DLL
             // verify that signature is valid for pubKey and the simplified/signing transaction's hash
             return Signatures.Verify(txSignatureHash, sigDER, pubKey) == Signatures.VerifyResult.Verified;
 #else

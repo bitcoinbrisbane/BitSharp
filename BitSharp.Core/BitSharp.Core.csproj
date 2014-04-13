@@ -50,6 +50,9 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup Condition="Exists('Script\Secp256k1.NET.dll')">
+    <DefineConstants>SECP256K1_DLL</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="AustinHarris.JsonRpc">
       <HintPath>..\packages\AustinHarris.JsonRpc.1.0.3.0\lib\net40\AustinHarris.JsonRpc.dll</HintPath>
