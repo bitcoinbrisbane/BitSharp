@@ -33,7 +33,6 @@ namespace BitSharp.Core.Test
         private readonly ECPublicKeyParameters coinbasePublicKey;
         private readonly Miner miner;
         private readonly Block genesisBlock;
-        private readonly BlockHeaderCache blockHeaderCache;
         private readonly BlockCache blockCache;
         private readonly UnitTestRules rules;
         private readonly CoreDaemon blockchainDaemon;
@@ -71,11 +70,9 @@ namespace BitSharp.Core.Test
             this.kernel.Load(new CoreCacheModule());
 
             // initialize block view
-            this.blockHeaderCache = this.kernel.Get<BlockHeaderCache>();
             this.blockCache = this.kernel.Get<BlockCache>();
 
             // store genesis block
-            this.blockHeaderCache[this.genesisBlock.Hash] = this.genesisBlock.Header;
             this.blockCache[this.genesisBlock.Hash] = this.genesisBlock;
 
             // initialize unit test rules
@@ -117,8 +114,6 @@ namespace BitSharp.Core.Test
         public Miner Miner { get { return this.miner; } }
 
         public Block GenesisBlock { get { return this.genesisBlock; } }
-
-        public BlockHeaderCache BlockHeaderCache { get { return this.blockHeaderCache; } }
 
         public BlockCache BlockCache { get { return this.blockCache; } }
 
@@ -229,7 +224,6 @@ namespace BitSharp.Core.Test
 
         public void AddBlock(Block block)
         {
-            this.blockHeaderCache[block.Hash] = block.Header;
             this.blockCache[block.Hash] = block;
 
             //TODO ugly to loop like this

@@ -77,6 +77,7 @@ namespace BitSharp.Core
             this.txMonitors = new ConcurrentSetBuilder<ITransactionMonitor>();
 
             // write genesis block out to storage
+            this.blockHeaderCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock.Header;
             this.blockCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
             this.chainedBlockCache[this.rules.GenesisChainedBlock.BlockHash] = this.rules.GenesisChainedBlock;
 

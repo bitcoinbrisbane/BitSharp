@@ -147,7 +147,8 @@ namespace BitSharp.Core.Workers
 
         private void ChainBlock(UInt256 blockHash, Block block)
         {
-            this.blockHeaderCache.TryAdd(blockHash, block.Header);
+            if (block != null)
+                this.blockHeaderCache.TryAdd(blockHash, block.Header);
         }
     }
 }
