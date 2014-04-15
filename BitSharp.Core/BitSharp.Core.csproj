@@ -50,8 +50,11 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
-  <PropertyGroup Condition="Exists('Script\Secp256k1.NET.dll')">
-    <DefineConstants>SECP256K1_DLL</DefineConstants>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug' And Exists('Script\Secp256k1.NET.dll')">
+    <DefineConstants>DEBUG;TRACE;SECP256K1_DLL</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' And Exists('Script\Secp256k1.NET.dll')">
+    <DefineConstants>TRACE;SECP256K1_DLL</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="AustinHarris.JsonRpc">
@@ -156,6 +159,7 @@
     <Compile Include="Wallet\IWalletAddress.cs" />
     <Compile Include="Wallet\Address\PublicKeyAddress.cs" />
     <Compile Include="Wallet\Address\OutputScriptHashAddress.cs" />
+    <Compile Include="Wallet\Address\Top10000Address.cs" />
     <Compile Include="Wallet\WalletMonitor.cs" />
     <Compile Include="Wallet\WalletEntry.cs" />
     <Compile Include="Workers\ChainingWorker.cs" />
