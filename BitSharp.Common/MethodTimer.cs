@@ -6,18 +6,23 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using BitSharp.Common.ExtensionMethods;
+using NLog;
 
 namespace BitSharp.Common
 {
     public class MethodTimer
     {
-        public MethodTimer()
+        private readonly Logger logger;
+
+        public MethodTimer(Logger logger = null)
         {
+            this.logger = logger;
             this.IsEnabled = true;
         }
 
-        public MethodTimer(bool isEnabled)
+        public MethodTimer(bool isEnabled, Logger logger = null)
         {
+            this.logger = logger;
             this.IsEnabled = isEnabled;
         }
 
@@ -106,10 +111,28 @@ namespace BitSharp.Common
             if (IsEnabled)
             {
                 if (timerName != null)
-                    Debug.WriteLineIf(stopwatch.ElapsedMilliseconds > filterTime, "\t[TIMING] {0}:{1}:{2} took {3:#,##0.000000} s".Format2(timerName, memberName, lineNumber, stopwatch.ElapsedSecondsFloat()));
+                {
+                    LogIf(stopwatch.ElapsedMilliseconds > filterTime, "\t[TIMING] {0}:{1}:{2} took {3:#,##0.000000} s".Format2(timerName, memberName, lineNumber, stopwatch.ElapsedSecondsFloat()));
+                }
                 else
-                    Debug.WriteLineIf(stopwatch.ElapsedMilliseconds > filterTime, "\t[TIMING] {1}:{2} took {3:#,##0.000000} s".Format2(timerName, memberName, lineNumber, stopwatch.ElapsedSecondsFloat()));
+                {
+                    LogIf(stopwatch.ElapsedMilliseconds > filterTime, "\t[TIMING] {1}:{2} took {3:#,##0.000000} s".Format2(timerName, memberName, lineNumber, stopwatch.ElapsedSecondsFloat()));
+                }
             }
+        }
+
+        private void Log(string line)
+        {
+            if (this.logger != null)
+                logger.Info(line);
+            else
+                Debug.WriteLine(line);
+        }
+
+        private void LogIf(bool condition, string line)
+        {
+            if (condition)
+                Log(line);
         }
     }
 }
