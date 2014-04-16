@@ -293,9 +293,6 @@ namespace BitSharp.Core.Builders
                     }
                 });
 
-            if (chainedBlock.Height == 10000)
-                throw new AggregateException(new Exception());
-
             if (exceptions.Count > 0)
             {
                 if (!MainnetRules.IgnoreScriptErrors)
