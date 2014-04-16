@@ -162,7 +162,7 @@ namespace BitSharp.Core.Test
                 AssertMethods.AssertDaemonAtBlock(2, block2.Hash, daemon.BlockchainDaemon);
 
                 // add a simple block
-                var block3Good = daemon.MineAndAddEmptyBlock(block3Bad);
+                var block3Good = daemon.MineAndAddEmptyBlock(block2);
 
                 // check
                 AssertMethods.AssertDaemonAtBlock(3, block3Good.Hash, daemon.BlockchainDaemon);
