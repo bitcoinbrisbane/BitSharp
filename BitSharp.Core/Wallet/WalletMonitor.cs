@@ -1,10 +1,12 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Domain;
+using NLog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,6 +15,8 @@ namespace BitSharp.Core.Wallet
 {
     public class WalletMonitor : ITransactionMonitor
     {
+        private readonly Logger logger;
+
         // addresses
         private readonly Dictionary<UInt256, List<MonitoredWalletAddress>> addressesByOutputScriptHash;
         private readonly List<MonitoredWalletAddress> matcherAddresses;
@@ -22,8 +26,9 @@ namespace BitSharp.Core.Wallet
         // entries
         private readonly ImmutableList<WalletEntry>.Builder entries;
 
-        public WalletMonitor()
+        public WalletMonitor(Logger logger)
         {
+            this.logger = logger;
             this.addressesByOutputScriptHash = new Dictionary<UInt256, List<MonitoredWalletAddress>>();
             this.matcherAddresses = new List<MonitoredWalletAddress>();
             this.entries = ImmutableList.CreateBuilder<WalletEntry>();
@@ -95,6 +100,8 @@ namespace BitSharp.Core.Wallet
 
             if (matchingAddresses.Count > 0)
             {
+                this.logger.Info("{0,-10}   {1,20:#,##0.000_000_00} BTC, Entries: {2:#,##0}".Format2(walletEntryType.ToString() + ":", txOutput.Value / (decimal)(100.MILLION()), this.entries.Count));
+
                 var entry = new WalletEntry
                 (
                     addresses: matchingAddresses.ToImmutable(),

@@ -105,7 +105,7 @@ namespace BitSharp.Client
                 var blockchainDaemon = this.kernel.Get<CoreDaemon>();
 
 #if DUMMY_MONITOR
-                blockchainDaemon.RegistorMonitor(new DummyWalletMonitor());
+                blockchainDaemon.RegistorMonitor(new DummyMonitor(this.logger));
 #endif
 
                 // setup view model
@@ -195,12 +195,13 @@ namespace BitSharp.Client
         }
 
 #if DUMMY_MONITOR
-        private sealed class DummyWalletMonitor : WalletMonitor
+        private sealed class DummyMonitor : WalletMonitor
         {
-            public DummyWalletMonitor()
+            public DummyMonitor(Logger logger)
+                : base(logger)
             {
-                for (var i = 0; i < 1.MILLION(); i++)
-                    this.AddAddress(new OutputScriptHashAddress(i));
+                this.AddAddress(new First10000Address());
+                this.AddAddress(new Top10000Address());
             }
         }
 #endif

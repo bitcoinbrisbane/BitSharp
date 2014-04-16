@@ -1,0 +1,58 @@
+﻿using BitSharp.Common;
+using BitSharp.Core.Script;
+using BitSharp.Core.Wallet.Base58;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace BitSharp.Core.Wallet.Address
+{
+    public class Top10000Address : IWalletAddress
+    {
+        public IEnumerable<UInt256> GetOutputScriptHashes()
+        {
+            using (var stream = this.GetType().Assembly.GetManifestResourceStream("BitSharp.Core.Wallet.Address.Top10000.txt"))
+            using (var reader = new StreamReader(stream, Encoding.UTF8))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (line == "")
+                        continue;
+
+                    yield return AddressToOutputScriptHash(line);
+                }
+            }
+        }
+
+        public bool IsMatcher
+        {
+            get { return false; }
+        }
+
+        public bool MatchesTxOutput(Domain.TxOutput txOutput, Common.UInt256 txOutputScriptHash)
+        {
+            throw new NotSupportedException();
+        }
+
+        public IEnumerable<IWalletAddress> ToWalletAddresses()
+        {
+            foreach (var outputScriptHash in this.GetOutputScriptHashes())
+                yield return new OutputScriptHashAddress(outputScriptHash);
+        }
+
+        private UInt256 AddressToOutputScriptHash(string address)
+        {
+            var sha256 = new SHA256Managed();
+            var publicKeyHash = Base58Encoding.DecodeWithCheckSum(address);
+            var outputScript = new PayToPublicKeyHashBuilder().CreateOutputFromPublicKeyHash(publicKeyHash);
+            var outputScriptHash = new UInt256(sha256.ComputeHash(outputScript));
+
+            return outputScriptHash;
+        }
+    }
+}

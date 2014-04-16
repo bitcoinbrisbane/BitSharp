@@ -114,7 +114,12 @@
     <Compile Include="Domain\Utxo.cs" />
     <Compile Include="JsonRpc\CoreRpcServer.cs" />
     <Compile Include="Wallet\Address\PublicKeyHashAddress.cs" />
+    <Compile Include="Wallet\Address\First10000Address.cs" />
+    <Compile Include="Wallet\Address\Top10000Address.cs" />
+    <Compile Include="Wallet\Base58\ArrayHelpers.cs" />
     <Compile Include="Wallet\ChainPosition.cs" />
+    <Compile Include="Wallet\Base58\Base58Encoding.cs" />
+    <Compile Include="Wallet\Base58\Base58EncodingTests.cs" />
     <Compile Include="Wallet\EnumWalletEntryType.cs" />
     <Compile Include="Wallet\ITransactionMonitor.cs" />
     <Compile Include="Rules\IBlockchainRules.cs" />
@@ -178,6 +183,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Script\Secp256k1.NET.dll" />
+    <EmbeddedResource Include="Wallet\Address\Top10000.txt" />
+    <EmbeddedResource Include="Wallet\Address\First10000.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
