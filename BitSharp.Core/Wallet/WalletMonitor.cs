@@ -100,7 +100,7 @@ namespace BitSharp.Core.Wallet
 
             if (matchingAddresses.Count > 0)
             {
-                this.logger.Info("{0,-10}   {1,20:#,##0.000_000_00} BTC, Entries: {2:#,##0}".Format2(walletEntryType.ToString() + ":", txOutput.Value / (decimal)(100.MILLION()), this.entries.Count));
+                this.logger.Debug("{0,-10}   {1,20:#,##0.000_000_00} BTC, Entries: {2:#,##0}".Format2(walletEntryType.ToString() + ":", txOutput.Value / (decimal)(100.MILLION()), this.entries.Count));
 
                 var entry = new WalletEntry
                 (
