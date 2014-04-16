@@ -152,6 +152,12 @@ namespace BitSharp.Core.Workers
                     this.chainStateBuilder.CalculateBlockchainFromExisting(this.getTargetChain, this.getTxMonitors, cancelToken.Token,
                         (blockTime) =>
                         {
+                            if (this.ShutdownToken.IsCancellationRequested)
+                            {
+                                cancelToken.Cancel();
+                                return;
+                            }
+
                             this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;
                             this.blockTimes[this.blockTimesIndex] = blockTime;
 
