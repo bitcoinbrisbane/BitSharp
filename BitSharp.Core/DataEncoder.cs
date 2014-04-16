@@ -451,7 +451,7 @@ namespace BitSharp.Core
             }
         }
 
-        public static OutputStates DecodeOutputStates(UInt256 txHash, Stream stream)
+        public static OutputStates DecodeOutputStates(Stream stream)
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
@@ -463,11 +463,11 @@ namespace BitSharp.Core
             }
         }
 
-        public static OutputStates DecodeOutputStates(UInt256 txHash, byte[] bytes)
+        public static OutputStates DecodeOutputStates(byte[] bytes)
         {
             using (var stream = new MemoryStream(bytes))
             {
-                return DecodeOutputStates(txHash, stream);
+                return DecodeOutputStates(stream);
             }
         }
 

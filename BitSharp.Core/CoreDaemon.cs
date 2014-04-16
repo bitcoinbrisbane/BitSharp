@@ -99,11 +99,10 @@ namespace BitSharp.Core
               new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))));
 
             this.chainStateWorker = kernel.Get<ChainStateWorker>(
-                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromMinutes(5))),
+                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromSeconds(5))),
                 new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)),
                 new ConstructorArgument("getTxMonitors", (Func<IImmutableSet<ITransactionMonitor>>)(() => this.TxMonitors)),
-
-                new ConstructorArgument("maxBuilderTime", TimeSpan.FromMinutes(30)));
+                new ConstructorArgument("maxBuilderTime", TimeSpan.MaxValue));
 
             this.targetChainWorker.OnTargetBlockChanged +=
                 () =>

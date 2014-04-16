@@ -21,32 +21,88 @@ namespace BitSharp.Esent
     public class UtxoBuilderStorage : IUtxoBuilderStorage
     {
         private readonly Logger logger;
-        private readonly string directory;
-        private readonly PersistentByteDictionary unspentTransactions;
-        private readonly PersistentByteDictionary unspentOutputs;
         private bool closed = false;
+
+        private readonly string jetDirectory;
+        private readonly string jetDatabase;
+        private readonly Instance jetInstance;
+        private readonly Session jetSession;
+
+        private readonly JET_DBID utxoDbId;
+
+        private readonly JET_TABLEID unspentTxTableId;
+        private readonly JET_COLUMNID txHashColumnId;
+        private readonly JET_COLUMNID confirmedBlockHashColumnId;
+        private readonly JET_COLUMNID outputStatesColumnId;
+
+        private readonly JET_TABLEID unspentTxOutputsTableId;
+        private readonly JET_COLUMNID txOutputKeyColumnId;
+        private readonly JET_COLUMNID txOutputColumnId;
+
+        private int unspentTxCount;
+        private int unspentTxOutputsCount;
 
         public UtxoBuilderStorage(IUtxoStorage parentUtxo, Logger logger)
         {
             this.logger = logger;
-            this.directory = GetDirectory();
-            if (parentUtxo is UtxoStorage)
-            {
-                ((UtxoStorage)parentUtxo).Duplicate(this.directory);
-                this.unspentTransactions = new PersistentByteDictionary(this.directory + "_tx");
-                this.unspentOutputs = new PersistentByteDictionary(this.directory + "_output");
-            }
-            else
-            {
-                this.unspentTransactions = new PersistentByteDictionary(this.directory + "_tx");
-                this.unspentOutputs = new PersistentByteDictionary(this.directory + "_output");
+            this.jetDirectory = GetDirectory();
+            this.jetDatabase = Path.Combine(this.jetDirectory, "UTXO.edb");
 
-                foreach (var unspentTx in parentUtxo.UnspentTransactions())
-                    this.AddTransaction(unspentTx.Key, unspentTx.Value);
+            //TODO currently configured by PersistentDictionary
+            //SystemParameters.DatabasePageSize = 8192;
+            //var maxDbSizeInPages = 500.MILLION() / SystemParameters.DatabasePageSize;
 
-                foreach (var unspentOutput in parentUtxo.UnspentOutputs())
-                    this.AddOutput(unspentOutput.Key, unspentOutput.Value);
-            }
+            this.jetInstance = CreateInstance2(this.jetDirectory);
+            this.jetInstance.Init();
+
+            this.jetSession = new Session(this.jetInstance);
+
+            Api.JetCreateDatabase(this.jetSession, this.jetDatabase, "", out this.utxoDbId, CreateDatabaseGrbit.None);
+            //Api.JetAttachDatabase(this.jetSession, this.jetDatabase, AttachDatabaseGrbit.None);
+            //Api.JetOpenDatabase(this.jetSession, this.jetDatabase, "", out this.utxoDbId, OpenDatabaseGrbit.Exclusive);
+
+            Api.JetCreateTable(this.jetSession, this.utxoDbId, "unspentTx", 0, 0, out unspentTxTableId);
+
+            Api.JetAddColumn(this.jetSession, this.unspentTxTableId, "TxHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.txHashColumnId);
+            Api.JetAddColumn(this.jetSession, this.unspentTxTableId, "ConfirmedBlockHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.confirmedBlockHashColumnId);
+            Api.JetAddColumn(this.jetSession, this.unspentTxTableId, "OutputStates", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out this.outputStatesColumnId);
+
+            Api.JetCreateIndex2(this.jetSession, this.unspentTxTableId,
+                new JET_INDEXCREATE[]
+                {
+                    new JET_INDEXCREATE
+                    {
+                        cbKeyMost = 255,
+                        grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                        szIndexName = "IX_TxHash",
+                        szKey = "+TxHash\0\0",
+                        cbKey = "+TxHash\0\0".Length
+                    }
+                }, 1);
+
+            Api.JetCreateTable(this.jetSession, this.utxoDbId, "unspentTxOutputs", 0, 0, out unspentTxOutputsTableId);
+
+            Api.JetAddColumn(this.jetSession, this.unspentTxOutputsTableId, "TxOutputKey", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 36, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.txOutputKeyColumnId);
+            Api.JetAddColumn(this.jetSession, this.unspentTxOutputsTableId, "TxOutput", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out this.txOutputColumnId);
+
+            Api.JetCreateIndex2(this.jetSession, this.unspentTxOutputsTableId,
+                new JET_INDEXCREATE[]
+                {
+                    new JET_INDEXCREATE
+                    {
+                        cbKeyMost = 255,
+                        grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                        szIndexName = "IX_TxOutputKey",
+                        szKey = "+TxOutputKey\0\0",
+                        cbKey = "+TxOutputKey\0\0".Length
+                    }
+                }, 1);
+
+            foreach (var unspentTx in parentUtxo.UnspentTransactions())
+                this.AddTransaction(unspentTx.Key, unspentTx.Value);
+
+            foreach (var unspentOutput in parentUtxo.UnspentOutputs())
+                this.AddOutput(unspentOutput.Key, unspentOutput.Value);
         }
 
         ~UtxoBuilderStorage()
@@ -54,204 +110,363 @@ namespace BitSharp.Esent
             this.Dispose();
         }
 
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+
+            this.jetSession.Dispose();
+            this.jetInstance.Dispose();
+
+            if (!this.closed)
+            {
+                UtxoStorage.DeleteUtxoDirectory(this.jetDirectory);
+                this.closed = true;
+            }
+        }
+
         public int TransactionCount
         {
-            get { return this.unspentTransactions.Count; }
+            get
+            {
+                return this.unspentTxCount;
+            }
         }
 
         public bool ContainsTransaction(UInt256 txHash)
         {
-            return this.unspentTransactions.ContainsKey(txHash.ToByteArray());
+            //Api.JetSetCurrentIndex(this.jetSession, this.unspentTxTableId, "IX_TxHash");
+            Api.MakeKey(this.jetSession, this.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
+            return Api.TrySeek(this.jetSession, this.unspentTxTableId, SeekGrbit.SeekEQ);
         }
 
         public bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx)
         {
-            byte[] bytes;
-            if (this.unspentTransactions.TryGetValue(txHash.ToByteArray(), out bytes))
+            Api.JetBeginTransaction2(this.jetSession, BeginTransactionGrbit.ReadOnly);
+            try
             {
-                unspentTx = DataEncoder.DecodeUnspentTx(txHash, bytes);
-                return true;
+                //Api.JetSetCurrentIndex(this.jetSession, this.unspentTxTableId, "IX_TxHash");
+                Api.MakeKey(this.jetSession, this.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
+                if (Api.TrySeek(this.jetSession, this.unspentTxTableId, SeekGrbit.SeekEQ))
+                {
+                    var confirmedBlockHash = new UInt256(Api.RetrieveColumn(this.jetSession, this.unspentTxTableId, this.confirmedBlockHashColumnId));
+                    var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId));
+
+                    unspentTx = new UnspentTx(confirmedBlockHash, outputStates);
+                    return true;
+                }
+                else
+                {
+                    unspentTx = default(UnspentTx);
+                    return false;
+                }
             }
-            else
+            finally
             {
-                unspentTx = default(UnspentTx);
-                return false;
+                Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
             }
         }
 
         public void AddTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
-            this.unspentTransactions.Add(txHash.ToByteArray(), DataEncoder.EncodeUnspentTx(unspentTx));
+            Api.JetBeginTransaction(this.jetSession);
+            try
+            {
+                Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Insert);
+                try
+                {
+                    Api.SetColumn(this.jetSession, this.unspentTxTableId, this.txHashColumnId, txHash.ToByteArray());
+                    Api.SetColumn(this.jetSession, this.unspentTxTableId, this.confirmedBlockHashColumnId, unspentTx.ConfirmedBlockHash.ToByteArray());
+                    Api.SetColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
+
+                    Api.JetUpdate(this.jetSession, this.unspentTxTableId);
+                    Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+                    this.unspentTxCount++;
+                }
+                catch (Exception)
+                {
+                    Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Cancel);
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                Api.JetRollback(this.jetSession, RollbackTransactionGrbit.None);
+                throw;
+            }
         }
 
         public bool RemoveTransaction(UInt256 txHash)
         {
-            return this.unspentTransactions.Remove(txHash.ToByteArray());
+            Api.JetBeginTransaction(this.jetSession);
+            try
+            {
+                //Api.JetSetCurrentIndex(this.jetSession, this.unspentTxTableId, "IX_TxHash");
+                Api.MakeKey(this.jetSession, this.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
+                if (!Api.TrySeek(this.jetSession, this.unspentTxTableId, SeekGrbit.SeekEQ))
+                    throw new KeyNotFoundException();
+
+                Api.JetDelete(this.jetSession, this.unspentTxTableId);
+
+                Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+                this.unspentTxCount--;
+                return true;
+            }
+            catch (Exception)
+            {
+                Api.JetRollback(this.jetSession, RollbackTransactionGrbit.None);
+                throw;
+            }
         }
 
         public void UpdateTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
-            this.unspentTransactions[txHash.ToByteArray()] = DataEncoder.EncodeUnspentTx(unspentTx);
+            Api.JetBeginTransaction(this.jetSession);
+            try
+            {
+                //Api.JetSetCurrentIndex(this.jetSession, this.unspentTxTableId, "IX_TxHash");
+                Api.MakeKey(this.jetSession, this.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
+                if (!Api.TrySeek(this.jetSession, this.unspentTxTableId, SeekGrbit.SeekEQ))
+                    throw new KeyNotFoundException();
+
+                Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Replace);
+                try
+                {
+                    Api.SetColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
+
+                    Api.JetUpdate(this.jetSession, this.unspentTxTableId);
+                    Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+                }
+                catch (Exception)
+                {
+                    Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Cancel);
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                Api.JetRollback(this.jetSession, RollbackTransactionGrbit.None);
+                throw;
+            }
         }
 
         public IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions()
         {
-            return this.unspentTransactions.Select(keyPair =>
+            Api.JetBeginTransaction2(this.jetSession, BeginTransactionGrbit.ReadOnly);
+            try
             {
-                var txHash = new UInt256(keyPair.Key);
-                var unspentTx = DataEncoder.DecodeUnspentTx(txHash, keyPair.Value);
+                //Api.JetSetCurrentIndex(this.jetSession, this.unspentTxTableId, "IX_TxHash");
+                Api.MoveBeforeFirst(this.jetSession, this.unspentTxTableId);
+                while (Api.TryMoveNext(this.jetSession, this.unspentTxTableId))
+                {
+                    var txHash = new UInt256(Api.RetrieveColumn(this.jetSession, this.unspentTxTableId, this.txHashColumnId));
+                    var confirmedBlockHash = new UInt256(Api.RetrieveColumn(this.jetSession, this.unspentTxTableId, this.confirmedBlockHashColumnId));
+                    var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId));
 
-                return new KeyValuePair<UInt256, UnspentTx>(txHash, unspentTx);
-            });
+                    yield return new KeyValuePair<UInt256, UnspentTx>(txHash, new UnspentTx(confirmedBlockHash, outputStates));
+                }
+            }
+            finally
+            {
+                Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+            }
         }
 
         public int OutputCount
         {
-            get { return this.unspentOutputs.Count; }
+            get
+            {
+                return this.unspentTxOutputsCount;
+            }
         }
 
         public bool ContainsOutput(TxOutputKey txOutputKey)
         {
-            return this.unspentOutputs.ContainsKey(DataEncoder.EncodeTxOutputKey(txOutputKey));
+            //Api.JetSetCurrentIndex(this.jetSession, this.unspentTxTableId, "IX_TxHash");
+            Api.MakeKey(this.jetSession, this.unspentTxOutputsTableId, DataEncoder.EncodeTxOutputKey(txOutputKey), MakeKeyGrbit.NewKey);
+            return Api.TrySeek(this.jetSession, this.unspentTxOutputsTableId, SeekGrbit.SeekEQ);
         }
 
         public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
         {
-            byte[] bytes;
-            if (this.unspentOutputs.TryGetValue(DataEncoder.EncodeTxOutputKey(txOutputKey), out bytes))
+            Api.JetBeginTransaction2(this.jetSession, BeginTransactionGrbit.ReadOnly);
+            try
             {
-                txOutput = DataEncoder.DecodeTxOutput(bytes);
-                return true;
+                //Api.JetSetCurrentIndex(this.jetSession, this.unspentTxOutputsTableId, "IX_TxOutputKey");
+                Api.MakeKey(this.jetSession, this.unspentTxOutputsTableId, DataEncoder.EncodeTxOutputKey(txOutputKey), MakeKeyGrbit.NewKey);
+                if (Api.TrySeek(this.jetSession, this.unspentTxOutputsTableId, SeekGrbit.SeekEQ))
+                {
+                    txOutput = DataEncoder.DecodeTxOutput(Api.RetrieveColumn(this.jetSession, this.unspentTxOutputsTableId, this.txOutputColumnId));
+                    return true;
+                }
+                else
+                {
+                    txOutput = default(TxOutput);
+                    return false;
+                }
             }
-            else
+            finally
             {
-                txOutput = default(TxOutput);
-                return false;
+                Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
             }
         }
 
         public void AddOutput(TxOutputKey txOutputKey, TxOutput txOutput)
         {
-            this.unspentOutputs.Add(DataEncoder.EncodeTxOutputKey(txOutputKey), DataEncoder.EncodeTxOutput(txOutput));
+            Api.JetBeginTransaction(this.jetSession);
+            try
+            {
+                Api.JetPrepareUpdate(this.jetSession, this.unspentTxOutputsTableId, JET_prep.Insert);
+                try
+                {
+                    Api.SetColumn(this.jetSession, this.unspentTxOutputsTableId, this.txOutputKeyColumnId, DataEncoder.EncodeTxOutputKey(txOutputKey));
+                    Api.SetColumn(this.jetSession, this.unspentTxOutputsTableId, this.txOutputColumnId, DataEncoder.EncodeTxOutput(txOutput));
+
+                    Api.JetUpdate(this.jetSession, this.unspentTxOutputsTableId);
+                    Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+                    this.unspentTxOutputsCount++;
+                }
+                catch (Exception)
+                {
+                    Api.JetPrepareUpdate(this.jetSession, this.unspentTxOutputsTableId, JET_prep.Cancel);
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                Api.JetRollback(this.jetSession, RollbackTransactionGrbit.None);
+                throw;
+            }
         }
 
         public bool RemoveOutput(TxOutputKey txOutputKey)
         {
-            return this.unspentOutputs.Remove(DataEncoder.EncodeTxOutputKey(txOutputKey));
+            Api.JetBeginTransaction(this.jetSession);
+            try
+            {
+                //Api.JetSetCurrentIndex(this.jetSession, this.unspentTxOutputsTableId, "IX_TxOutputKey");
+                Api.MakeKey(this.jetSession, this.unspentTxOutputsTableId, DataEncoder.EncodeTxOutputKey(txOutputKey), MakeKeyGrbit.NewKey);
+                if (!Api.TrySeek(this.jetSession, this.unspentTxOutputsTableId, SeekGrbit.SeekEQ))
+                    throw new KeyNotFoundException();
+
+                Api.JetDelete(this.jetSession, this.unspentTxOutputsTableId);
+                Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+                this.unspentTxOutputsCount--;
+                return true;
+            }
+            catch (Exception)
+            {
+                Api.JetRollback(this.jetSession, RollbackTransactionGrbit.None);
+                throw;
+            }
         }
 
         public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs()
         {
-            return this.unspentOutputs.Select(keyPair =>
+            Api.JetBeginTransaction2(this.jetSession, BeginTransactionGrbit.ReadOnly);
+            try
             {
-                var txOutputKey = DataEncoder.DecodeTxOutputKey(keyPair.Key);
-                var txOutput = DataEncoder.DecodeTxOutput(keyPair.Value);
+                //Api.JetSetCurrentIndex(this.jetSession, this.unspentTxOutputsTableId, "IX_TxOutputKey");
+                Api.MoveBeforeFirst(this.jetSession, this.unspentTxOutputsTableId);
+                while (Api.TryMoveNext(this.jetSession, this.unspentTxOutputsTableId))
+                {
+                    var txOutputKey = DataEncoder.DecodeTxOutputKey(Api.RetrieveColumn(this.jetSession, this.unspentTxOutputsTableId, this.txOutputKeyColumnId));
+                    var txOutput = DataEncoder.DecodeTxOutput(Api.RetrieveColumn(this.jetSession, this.unspentTxOutputsTableId, this.txOutputColumnId));
 
-                return new KeyValuePair<TxOutputKey, TxOutput>(txOutputKey, txOutput);
-            });
+                    yield return new KeyValuePair<TxOutputKey, TxOutput>(txOutputKey, txOutput);
+                }
+            }
+            finally
+            {
+                Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+            }
         }
 
         public void Flush()
         {
-            this.unspentTransactions.Flush();
-            this.unspentOutputs.Flush();
+            throw new NotImplementedException();
         }
 
         public IUtxoStorage ToImmutable(UInt256 blockHash)
         {
-            //TODO see if JetOSSnapshotPrepare for taking snapshots here
+            throw new NotImplementedException();
 
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
+            ////TODO see if JetOSSnapshotPrepare for taking snapshots here
 
-            // prepare destination directory
-            var destPath = UtxoStorage.GetDirectory(blockHash);
-            UtxoStorage.DeleteUtxoDirectory(destPath);
-            Directory.CreateDirectory(destPath + "_tx");
-            Directory.CreateDirectory(destPath + "_output");
+            //var stopwatch = new Stopwatch();
+            //stopwatch.Start();
 
-            // get database instances
-            var instanceField = typeof(PersistentDictionary<string, string>)
-                .GetField("instance", BindingFlags.NonPublic | BindingFlags.Instance);
-            var unspentTransactionsInstance = (Instance)instanceField.GetValue(this.unspentTransactions.RawDictionary);
-            var unspentOutputsInstance = (Instance)instanceField.GetValue(this.unspentOutputs.RawDictionary);
+            //// prepare destination directory
+            //var destPath = UtxoStorage.GetDirectory(blockHash);
+            //UtxoStorage.DeleteUtxoDirectory(destPath);
+            //Directory.CreateDirectory(destPath + "_tx");
+            //Directory.CreateDirectory(destPath + "_output");
 
-            // backup to temporary directory
-            using (var session = new Session(unspentTransactionsInstance))
-                Api.JetBackupInstance(unspentTransactionsInstance, this.directory + "_tx_snapshot", BackupGrbit.Atomic, null);
-            using (var session = new Session(unspentOutputsInstance))
-                Api.JetBackupInstance(unspentOutputsInstance, this.directory + "_output_snapshot", BackupGrbit.Atomic, null);
+            //// get database instances
+            //var instanceField = typeof(PersistentDictionary<string, string>)
+            //    .GetField("instance", BindingFlags.NonPublic | BindingFlags.Instance);
+            //var unspentTransactionsInstance = (Instance)instanceField.GetValue(this.unspentTransactions.RawDictionary);
+            //var unspentOutputsInstance = (Instance)instanceField.GetValue(this.unspentOutputs.RawDictionary);
 
-            // restore to destination directory
-            using (var instance = CreateInstance(destPath + "_tx"))
-                Api.JetRestoreInstance(instance, this.directory + "_tx_snapshot", destPath + "_tx", null);
-            using (var instance = CreateInstance(destPath + "_output"))
-                Api.JetRestoreInstance(instance, this.directory + "_output_snapshot", destPath + "_output", null);
+            //// backup to temporary directory
+            //using (var session = new Session(unspentTransactionsInstance))
+            //    Api.JetBackupInstance(unspentTransactionsInstance, this.directory + "_tx_snapshot", BackupGrbit.Atomic, null);
+            //using (var session = new Session(unspentOutputsInstance))
+            //    Api.JetBackupInstance(unspentOutputsInstance, this.directory + "_output_snapshot", BackupGrbit.Atomic, null);
 
-            // cleanup temporary directory
-            try { Directory.Delete(this.directory + "_tx_snapshot", recursive: true); }
-            catch (Exception) { }
-            try { Directory.Delete(this.directory + "_output_snapshot", recursive: true); }
-            catch (Exception) { }
+            //// restore to destination directory
+            //using (var instance = CreateInstance(destPath + "_tx"))
+            //    Api.JetRestoreInstance(instance, this.directory + "_tx_snapshot", destPath + "_tx", null);
+            //using (var instance = CreateInstance(destPath + "_output"))
+            //    Api.JetRestoreInstance(instance, this.directory + "_output_snapshot", destPath + "_output", null);
 
-            // initialize saved utxo
-            var utxoStorage = new UtxoStorage(blockHash);
+            //// cleanup temporary directory
+            //try { Directory.Delete(this.directory + "_tx_snapshot", recursive: true); }
+            //catch (Exception) { }
+            //try { Directory.Delete(this.directory + "_output_snapshot", recursive: true); }
+            //catch (Exception) { }
 
-            // verify restore
-            if (utxoStorage.TransactionCount != this.TransactionCount)
-                throw new Exception("TODO");
-            if (utxoStorage.OutputCount != this.OutputCount)
-                throw new Exception("TODO");
+            //// initialize saved utxo
+            //var utxoStorage = new UtxoStorage(blockHash);
 
-            // log snapshot info
-            this.logger.Info("Saved UTXO snapshot for {0} in: {1}".Format2(blockHash, stopwatch.Elapsed));
+            //// verify restore
+            //if (utxoStorage.TransactionCount != this.TransactionCount)
+            //    throw new Exception("TODO");
+            //if (utxoStorage.OutputCount != this.OutputCount)
+            //    throw new Exception("TODO");
 
-            // return saved utxo
-            return utxoStorage;
+            //// log snapshot info
+            //this.logger.Info("Saved UTXO snapshot for {0} in: {1}".Format2(blockHash, stopwatch.Elapsed));
+
+            //// return saved utxo
+            //return utxoStorage;
         }
 
         public IUtxoStorage Close(UInt256 blockHash)
         {
-            // close builder
-            this.closed = true;
-            this.Dispose();
+            throw new NotImplementedException();
 
-            // prepare destination directory
-            var destPath = UtxoStorage.GetDirectory(blockHash);
-            UtxoStorage.DeleteUtxoDirectory(destPath);
-            Directory.CreateDirectory(destPath + "_tx");
-            Directory.CreateDirectory(destPath + "_output");
+            //// close builder
+            //this.closed = true;
+            //this.Dispose();
 
-            //TOOD can something with JetCompact be done here to save off optimized UTXO snapshots?
-            //TODO once the blockchain is synced, see if this can be used to shrink used space during normal operation
+            //// prepare destination directory
+            //var destPath = UtxoStorage.GetDirectory(blockHash);
+            //UtxoStorage.DeleteUtxoDirectory(destPath);
+            //Directory.CreateDirectory(destPath + "_tx");
+            //Directory.CreateDirectory(destPath + "_output");
 
-            // move utxo to new location
-            foreach (var srcFile in Directory.GetFiles(this.directory + "_tx", "*.edb"))
-                File.Move(srcFile, Path.Combine(destPath + "_tx", Path.GetFileName(srcFile)));
-            foreach (var srcFile in Directory.GetFiles(this.directory + "_output", "*.edb"))
-                File.Move(srcFile, Path.Combine(destPath + "_output", Path.GetFileName(srcFile)));
-            UtxoStorage.DeleteUtxoDirectory(this.directory);
+            ////TOOD can something with JetCompact be done here to save off optimized UTXO snapshots?
+            ////TODO once the blockchain is synced, see if this can be used to shrink used space during normal operation
 
-            // return saved utxo
-            return new UtxoStorage(blockHash);
-        }
+            //// move utxo to new location
+            //foreach (var srcFile in Directory.GetFiles(this.directory + "_tx", "*.edb"))
+            //    File.Move(srcFile, Path.Combine(destPath + "_tx", Path.GetFileName(srcFile)));
+            //foreach (var srcFile in Directory.GetFiles(this.directory + "_output", "*.edb"))
+            //    File.Move(srcFile, Path.Combine(destPath + "_output", Path.GetFileName(srcFile)));
+            //UtxoStorage.DeleteUtxoDirectory(this.directory);
 
-        public void Dispose()
-        {
-            if (!this.closed)
-            {
-                this.unspentTransactions.Dispose();
-                this.unspentOutputs.Dispose();
-
-                UtxoStorage.DeleteUtxoDirectory(this.directory);
-            }
-            else
-            {
-                this.unspentTransactions.Dispose();
-                this.unspentOutputs.Dispose();
-            }
-
-            GC.SuppressFinalize(this);
+            //// return saved utxo
+            //return new UtxoStorage(blockHash);
         }
 
         private string GetDirectory()
@@ -280,8 +495,48 @@ namespace BitSharp.Esent
             instance.Parameters.WaypointLatency = 1;
             instance.Parameters.MaxSessions = 256;
             instance.Parameters.MaxOpenTables = 256;
-            
+
             return instance;
+        }
+
+        private static Instance CreateInstance2(string directory)
+        {
+            var instance = new Instance(Guid.NewGuid().ToString());
+
+            instance.Parameters.SystemDirectory = directory;
+            instance.Parameters.LogFileDirectory = directory;
+            instance.Parameters.TempDirectory = directory;
+            instance.Parameters.AlternateDatabaseRecoveryDirectory = directory;
+            instance.Parameters.CreatePathIfNotExist = true;
+            instance.Parameters.BaseName = "epc";
+            instance.Parameters.EnableIndexChecking = false;
+            instance.Parameters.CircularLog = true;
+            instance.Parameters.CheckpointDepthMax = 64 * 1024 * 1024;
+            instance.Parameters.LogFileSize = 1024 * 32;
+            instance.Parameters.LogBuffers = 1024 * 32;
+            instance.Parameters.MaxTemporaryTables = 0;
+            instance.Parameters.MaxVerPages = 1024;
+            instance.Parameters.NoInformationEvent = true;
+            instance.Parameters.WaypointLatency = 1;
+            instance.Parameters.MaxSessions = 256;
+            instance.Parameters.MaxOpenTables = 256;
+
+            return instance;
+        }
+
+        public void BeginTransaction()
+        {
+            Api.JetBeginTransaction(this.jetSession);
+        }
+
+        public void CommitTransaction()
+        {
+            Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+        }
+
+        public void RollbackTransaction()
+        {
+            Api.JetRollback(this.jetSession, RollbackTransactionGrbit.None);
         }
     }
 }

@@ -14,6 +14,9 @@ namespace BitSharp.Core.Storage.Memory
         private ImmutableDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
         private ImmutableDictionary<TxOutputKey, TxOutput>.Builder unspentOutputs;
 
+        private ImmutableDictionary<UInt256, UnspentTx> savedUnspentTransactions;
+        private ImmutableDictionary<TxOutputKey, TxOutput> savedUnspentOutputs;
+
         public MemoryUtxoBuilderStorage(IUtxoStorage parentUtxo)
         {
             if (parentUtxo is MemoryUtxoStorage)
@@ -121,7 +124,7 @@ namespace BitSharp.Core.Storage.Memory
                 return new MemoryUtxoStorage(blockHash, compactUnspentTransactions.ToImmutable(), compactUnspentOutputs.ToImmutable());
             }
         }
-        
+
         public IUtxoStorage Close(UInt256 blockHash)
         {
             return this.ToImmutable(blockHash);
@@ -129,6 +132,35 @@ namespace BitSharp.Core.Storage.Memory
 
         public void Dispose()
         {
+        }
+
+        public void BeginTransaction()
+        {
+            if (this.savedUnspentTransactions != null || this.savedUnspentOutputs != null)
+                throw new InvalidOperationException();
+
+            this.savedUnspentTransactions = this.unspentTransactions.ToImmutable();
+            this.savedUnspentOutputs = this.unspentOutputs.ToImmutable();
+        }
+
+        public void CommitTransaction()
+        {
+            if (this.savedUnspentTransactions == null || this.savedUnspentOutputs == null)
+                throw new InvalidOperationException();
+
+            this.savedUnspentTransactions = null;
+            this.savedUnspentOutputs = null;
+        }
+
+        public void RollbackTransaction()
+        {
+            if (this.savedUnspentTransactions == null || this.savedUnspentOutputs == null)
+                throw new InvalidOperationException();
+
+            this.unspentTransactions = this.savedUnspentTransactions.ToBuilder();
+            this.unspentOutputs = this.savedUnspentOutputs.ToBuilder();
+            this.savedUnspentTransactions = null;
+            this.savedUnspentOutputs = null;
         }
     }
 }

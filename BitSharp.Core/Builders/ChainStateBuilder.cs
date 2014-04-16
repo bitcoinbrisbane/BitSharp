@@ -108,68 +108,79 @@ namespace BitSharp.Core.Builders
             this.IsConsistent = true;
             foreach (var pathElement in BlockLookAhead(this.Chain.NavigateTowards(getTargetChain), lookAhead: 1))
             {
+                //TODO remove IsConsistent once chain updates are in the same transaction as the utxo updates
                 this.IsConsistent = false;
-                var startTime = DateTime.UtcNow;
-
-                // cooperative loop
-                if (this.shutdownToken.IsCancellationRequested)
-                    break;
-                if (cancelToken.IsCancellationRequested)
-                    break;
-
-                // get block and metadata for next link in blockchain
-                var direction = pathElement.Item1;
-                var chainedBlock = pathElement.Item2;
-                var block = pathElement.Item3;
-
-                if (direction < 0)
+                this.utxo.BeginTransaction();
+                try
                 {
-                    this.RollbackUtxo(block);
+                    var startTime = DateTime.UtcNow;
 
-                    this.Chain.RemoveBlock(chainedBlock);
-                }
-                else if (direction > 0)
-                {
-                    // add the block to the current chain
-                    this.Chain.AddBlock(chainedBlock);
+                    // cooperative loop
+                    if (this.shutdownToken.IsCancellationRequested)
+                        break;
+                    if (cancelToken.IsCancellationRequested)
+                        break;
 
-                    // validate the block
-                    this.Stats.validateStopwatch.Start();
-                    new MethodTimer(false).Time("ValidateBlock", () =>
-                        this.rules.ValidateBlock(block, this));
-                    this.Stats.validateStopwatch.Stop();
+                    // get block and metadata for next link in blockchain
+                    var direction = pathElement.Item1;
+                    var chainedBlock = pathElement.Item2;
+                    var block = pathElement.Item3;
 
-                    // calculate the new block utxo, double spends will be checked for
-                    long txCount = 0, inputCount = 0;
-                    new MethodTimer(false).Time("CalculateUtxo", () =>
-                        CalculateUtxo(chainedBlock, block, this.Utxo, getTxMonitors, out txCount, out inputCount));
-
-                    // collect rollback informatino and store it
-                    this.Utxo.SaveRollbackInformation(chainedBlock.Height, block.Hash, this.spentTransactionsCache, this.spentOutputsCache);
-
-                    // flush utxo progress
-                    //this.Utxo.Flush();
-
-                    // create the next link in the new blockchain
-                    if (onProgress != null)
-                        onProgress(DateTime.UtcNow - startTime);
-
-                    // blockchain processing statistics
-                    this.Stats.blockCount++;
-                    this.Stats.txCount += txCount;
-                    this.Stats.inputCount += inputCount;
-
-                    var txInterval = TimeSpan.FromSeconds(15);
-                    if (DateTime.UtcNow - this.Stats.lastLogTime >= txInterval)
+                    if (direction < 0)
                     {
-                        this.LogBlockchainProgress();
-                        this.Stats.lastLogTime = DateTime.UtcNow;
-                    }
-                }
-                else
-                    throw new InvalidOperationException();
+                        this.RollbackUtxo(block);
 
-                this.IsConsistent = true;
+                        this.Chain.RemoveBlock(chainedBlock);
+                    }
+                    else if (direction > 0)
+                    {
+                        // add the block to the current chain
+                        this.Chain.AddBlock(chainedBlock);
+
+                        // validate the block
+                        this.Stats.validateStopwatch.Start();
+                        new MethodTimer(false).Time("ValidateBlock", () =>
+                            this.rules.ValidateBlock(block, this));
+                        this.Stats.validateStopwatch.Stop();
+
+                        // calculate the new block utxo, double spends will be checked for
+                        long txCount = 0, inputCount = 0;
+                        new MethodTimer(false).Time("CalculateUtxo", () =>
+                            CalculateUtxo(chainedBlock, block, this.Utxo, getTxMonitors, out txCount, out inputCount));
+
+                        // collect rollback informatino and store it
+                        this.Utxo.SaveRollbackInformation(chainedBlock.Height, block.Hash, this.spentTransactionsCache, this.spentOutputsCache);
+
+                        // flush utxo progress
+                        //this.Utxo.Flush();
+
+                        // create the next link in the new blockchain
+                        if (onProgress != null)
+                            onProgress(DateTime.UtcNow - startTime);
+
+                        // blockchain processing statistics
+                        this.Stats.blockCount++;
+                        this.Stats.txCount += txCount;
+                        this.Stats.inputCount += inputCount;
+
+                        var txInterval = TimeSpan.FromSeconds(15);
+                        if (DateTime.UtcNow - this.Stats.lastLogTime >= txInterval)
+                        {
+                            this.LogBlockchainProgress();
+                            this.Stats.lastLogTime = DateTime.UtcNow;
+                        }
+                    }
+                    else
+                        throw new InvalidOperationException();
+
+                    this.utxo.CommitTransaction();
+                    this.IsConsistent = true;
+                }
+                catch (Exception)
+                {
+                    this.utxo.RollbackTransaction();
+                    throw;
+                }
             }
         }
 
@@ -207,59 +218,61 @@ namespace BitSharp.Core.Builders
 
             var txMonitors = getTxMonitors().ToArray();
             using (var txInputQueue = new ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>>())
-            using (var validateScriptsTask = Task.Factory.StartNew(() => this.ValidateTransactionScripts(block, txInputQueue)))
+            using (var validateScriptsTask = Task.Factory.StartNew(() => this.ValidateTransactionScripts(chainedBlock, block, txInputQueue)))
             using (var txOutputQueue = new ProducerConsumer<Tuple<int, ChainPosition, TxOutput>>())
             using (var scannerTask = Task.Factory.StartNew(() => this.ScanTransactions(txOutputQueue, txMonitors)))
             {
-                // don't include genesis block coinbase in utxo
-                if (chainedBlock.Height > 0)
+                try
                 {
-                    //TODO apply real coinbase rule
-                    // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
-                    var coinbaseTx = block.Transactions[0];
-
-                    utxoBuilder.Mint(coinbaseTx, chainedBlock);
-
-                    foreach (var output in coinbaseTx.Outputs)
-                        txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(0, new ChainPosition(0, 0, 0, 0), output));
-                }
-
-                // check for double spends
-                for (var txIndex = 1; txIndex < block.Transactions.Count; txIndex++)
-                {
-                    var tx = block.Transactions[txIndex];
-                    txCount++;
-
-                    for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
+                    // don't include genesis block coinbase in utxo
+                    if (chainedBlock.Height > 0)
                     {
-                        var input = tx.Inputs[inputIndex];
-                        inputCount++;
+                        //TODO apply real coinbase rule
+                        // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
+                        var coinbaseTx = block.Transactions[0];
 
-                        var spentOutput = utxoBuilder.Spend(input, chainedBlock);
+                        utxoBuilder.Mint(coinbaseTx, chainedBlock);
 
-                        txInputQueue.Add(Tuple.Create<Transaction, int, TxInput, int, TxOutput>(tx, txIndex, input, inputIndex, spentOutput));
-                        txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(-1, new ChainPosition(0, 0, 0, 0), spentOutput));
+                        foreach (var output in coinbaseTx.Outputs)
+                            txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(0, new ChainPosition(0, 0, 0, 0), output));
                     }
 
-                    utxoBuilder.Mint(tx, chainedBlock);
+                    // check for double spends
+                    for (var txIndex = 1; txIndex < block.Transactions.Count; txIndex++)
+                    {
+                        var tx = block.Transactions[txIndex];
+                        txCount++;
 
-                    foreach (var output in tx.Outputs)
-                        txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(+1, new ChainPosition(0, 0, 0, 0), output));
+                        for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
+                        {
+                            var input = tx.Inputs[inputIndex];
+                            inputCount++;
+
+                            var spentOutput = utxoBuilder.Spend(input, chainedBlock);
+
+                            txInputQueue.Add(Tuple.Create<Transaction, int, TxInput, int, TxOutput>(tx, txIndex, input, inputIndex, spentOutput));
+                            txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(-1, new ChainPosition(0, 0, 0, 0), spentOutput));
+                        }
+
+                        utxoBuilder.Mint(tx, chainedBlock);
+
+                        foreach (var output in tx.Outputs)
+                            txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(+1, new ChainPosition(0, 0, 0, 0), output));
+                    }
                 }
-
-                // wait for scanner to finish
-                txInputQueue.CompleteAdding();
-                txOutputQueue.CompleteAdding();
-
-                validateScriptsTask.Wait();
-                scannerTask.Wait();
-
-                Debug.Assert(txInputQueue.IsCompleted);
-                Debug.Assert(txOutputQueue.IsCompleted);
+                finally
+                {
+                    // ensure that started tasks always complete using a finally block
+                    // any exceptions will be propagated by Task.WaitAll()
+                    //TODO unwrap aggregation exception into something more specific
+                    txInputQueue.CompleteAdding();
+                    txOutputQueue.CompleteAdding();
+                    Task.WaitAll(validateScriptsTask, scannerTask);
+                }
             }
         }
 
-        private void ValidateTransactionScripts(Block block, ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>> txInputQueue)
+        private void ValidateTransactionScripts(ChainedBlock chainedBlock, Block block, ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>> txInputQueue)
         {
             var exceptions = new ConcurrentBag<Exception>();
 
@@ -280,6 +293,9 @@ namespace BitSharp.Core.Builders
                     }
                 });
 
+            if (chainedBlock.Height == 10000)
+                throw new AggregateException(new Exception());
+
             if (exceptions.Count > 0)
             {
                 if (!MainnetRules.IgnoreScriptErrors)
@@ -291,7 +307,7 @@ namespace BitSharp.Core.Builders
 
         private void ScanTransactions(ProducerConsumer<Tuple<int, ChainPosition, TxOutput>> txOutputQueue, ITransactionMonitor[] txMonitors)
         {
-                var sha256 = new SHA256Managed();
+            var sha256 = new SHA256Managed();
             //TODO for this to remain parallel, i'll need to be able to handle the case of a new watch address being generated from one of the iterations
             //TODO there will also need to be an ordering step, so i'll have to evaluate if parallel is best here
             //Parallel.ForEach(
@@ -442,7 +458,7 @@ namespace BitSharp.Core.Builders
                         }
                         catch (MissingDataException e)
                         {
-                            this.logger.Debug("Stalled, MissingDataException: {0}".Format2(e.Key));
+                            this.logger.Info("Stalled, MissingDataException: {0}".Format2(e.Key));
                             throw;
                         }
                     })

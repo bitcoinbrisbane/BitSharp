@@ -10,6 +10,10 @@ namespace BitSharp.Core.Storage
 {
     public interface IUtxoBuilderStorage : IDisposable
     {
+        void BeginTransaction();
+        void CommitTransaction();
+        void RollbackTransaction();
+
         int TransactionCount { get; }
                 
         bool ContainsTransaction(UInt256 txHash);

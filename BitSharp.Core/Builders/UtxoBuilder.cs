@@ -46,7 +46,8 @@ namespace BitSharp.Core.Builders
 
         public void Dispose()
         {
-            this.utxoBuilderStorage.Dispose();
+            if (this.utxoBuilderStorage != null)
+                this.utxoBuilderStorage.Dispose();
             GC.SuppressFinalize(this);
         }
 
@@ -275,6 +276,21 @@ namespace BitSharp.Core.Builders
         public Utxo Close(UInt256 blockHash)
         {
             return new Utxo(utxoBuilderStorage.Close(blockHash));
+        }
+
+        public void BeginTransaction()
+        {
+            this.utxoBuilderStorage.BeginTransaction();
+        }
+
+        public void CommitTransaction()
+        {
+            this.utxoBuilderStorage.CommitTransaction();
+        }
+
+        public void RollbackTransaction()
+        {
+            this.utxoBuilderStorage.RollbackTransaction();
         }
     }
 }
