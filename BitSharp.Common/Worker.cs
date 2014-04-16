@@ -94,17 +94,25 @@ namespace BitSharp.Common
                 {
                     if (!this.isDisposed)
                     {
-                        if (this.startedEvent.IsSet)
-                            this.SubStop();
-
-                        this.SubDispose();
-
                         this.shutdownToken.Cancel();
                         this.notifyEvent.Set();
                         this.forceNotifyEvent.Set();
 
+                        if (this.startedEvent.IsSet)
+                        {
+                            this.SubStop();
+                        }
+                        this.SubDispose();
+
+                        // wait for worker thread
                         if (this.workerThread.IsAlive)
-                            this.workerThread.Join(5000);
+                        {
+                            this.workerThread.Join(TimeSpan.FromSeconds(1));
+
+                            // terminate if still alive
+                            if (this.workerThread.IsAlive)
+                                this.workerThread.Abort();
+                        }
 
                         this.shutdownToken.Dispose();
                         this.notifyEvent.Dispose();
@@ -181,11 +189,9 @@ namespace BitSharp.Common
 
                     totalTime.Start();
 
-                    while (true)
+                    // cooperative loop
+                    while (!this.shutdownToken.IsCancellationRequested)
                     {
-                        // cooperative loop
-                        this.shutdownToken.Token.ThrowIfCancellationRequested();
-
                         // notify worker is idle
                         this.idleEvent.Set();
 
