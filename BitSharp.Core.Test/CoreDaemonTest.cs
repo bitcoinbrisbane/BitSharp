@@ -136,6 +136,40 @@ namespace BitSharp.Core.Test
         }
 
         [TestMethod]
+        public void TestInsufficientBalance()
+        {
+            using (var daemon = new TestDaemon())
+            {
+                // create a new keypair to spend to
+                var toKeyPair = daemon.TxManager.CreateKeyPair();
+                var toPrivateKey = toKeyPair.Item1;
+                var toPublicKey = toKeyPair.Item2;
+
+                // add some simple blocks
+                var block1 = daemon.MineAndAddEmptyBlock(daemon.GenesisBlock);
+                var block2 = daemon.MineAndAddEmptyBlock(block1);
+
+                // check
+                AssertMethods.AssertDaemonAtBlock(2, block2.Hash, daemon.BlockchainDaemon);
+
+                // attempt to spend block 2's coinbase in block 3, using twice its value
+                var spendTx = daemon.TxManager.CreateSpendTransaction(block2.Transactions[0], 0, (byte)ScriptHashType.SIGHASH_ALL, 100 * SATOSHI_PER_BTC, daemon.CoinbasePrivateKey, daemon.CoinbasePublicKey, toPublicKey);
+                var block3BadUnmined = daemon.CreateEmptyBlock(block2)
+                    .WithAddedTransactions(spendTx);
+                var block3Bad = daemon.MineAndAddBlock(block3BadUnmined);
+
+                // check that bad block wasn't added
+                AssertMethods.AssertDaemonAtBlock(2, block2.Hash, daemon.BlockchainDaemon);
+
+                // add a simple block
+                var block3Good = daemon.MineAndAddEmptyBlock(block3Bad);
+
+                // check
+                AssertMethods.AssertDaemonAtBlock(3, block3Good.Hash, daemon.BlockchainDaemon);
+            }
+        }
+
+        [TestMethod]
         public void TestSimpleBlockchainSplit()
         {
             using (var daemon1 = new TestDaemon())
