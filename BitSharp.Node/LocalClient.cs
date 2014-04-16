@@ -362,7 +362,6 @@ namespace BitSharp.Node
                     addSeed("69.64.34.118");
                     addSeed("79.160.221.140");
                     addSeed("netzbasis.de");
-                    addSeed("btc.turboadmin.com");
                     addSeed("fallback.bitcoin.zhoutong.com");
                     addSeed("bauhaus.csail.mit.edu");
                     addSeed("jun.dashjr.org");
