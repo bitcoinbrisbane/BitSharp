@@ -50,6 +50,12 @@ namespace BitSharp.Client
             try
             {
                 //TODO
+                var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo");
+                try { Directory.Delete(path, recursive: true); }
+                catch (Exception) { }
+                Directory.CreateDirectory(path);
+
+                //TODO
                 //MainnetRules.BypassValidation = true;
                 MainnetRules.IgnoreScriptErrors = true;
 
