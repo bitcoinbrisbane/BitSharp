@@ -83,6 +83,7 @@ namespace BitSharp.Client
 #else
                 modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: int.MaxValue - 1));
 #endif
+                UtxoBuilderStorage.IndexOutputs = true;
 
                 // add cache modules
                 modules.Add(new CoreCacheModule());

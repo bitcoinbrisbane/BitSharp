@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,6 +21,9 @@ namespace BitSharp.Esent
     //TODO this should eventually be written directly against the Jet API so that everything can be tuned specifically to the UTXO
     public class UtxoBuilderStorage : IUtxoBuilderStorage
     {
+        //TODO
+        public static bool IndexOutputs { get; set; }
+
         private readonly Logger logger;
         private bool closed = false;
 
@@ -38,6 +42,7 @@ namespace BitSharp.Esent
         private readonly JET_TABLEID unspentTxOutputsTableId;
         private readonly JET_COLUMNID txOutputKeyColumnId;
         private readonly JET_COLUMNID txOutputColumnId;
+        private readonly JET_COLUMNID outputScriptHashColumnId;
 
         private int unspentTxCount;
         private int unspentTxOutputsCount;
@@ -84,6 +89,7 @@ namespace BitSharp.Esent
 
             Api.JetAddColumn(this.jetSession, this.unspentTxOutputsTableId, "TxOutputKey", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 36, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.txOutputKeyColumnId);
             Api.JetAddColumn(this.jetSession, this.unspentTxOutputsTableId, "TxOutput", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out this.txOutputColumnId);
+            Api.JetAddColumn(this.jetSession, this.unspentTxOutputsTableId, "OutputScriptHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32 }, null, 0, out this.outputScriptHashColumnId);
 
             Api.JetCreateIndex2(this.jetSession, this.unspentTxOutputsTableId,
                 new JET_INDEXCREATE[]
@@ -95,6 +101,19 @@ namespace BitSharp.Esent
                         szIndexName = "IX_TxOutputKey",
                         szKey = "+TxOutputKey\0\0",
                         cbKey = "+TxOutputKey\0\0".Length
+                    }
+                }, 1);
+
+            Api.JetCreateIndex2(this.jetSession, this.unspentTxOutputsTableId,
+                new JET_INDEXCREATE[]
+                {
+                    new JET_INDEXCREATE
+                    {
+                        cbKeyMost = 255,
+                        grbit = CreateIndexGrbit.IndexIgnoreNull,
+                        szIndexName = "IX_OutputScriptHash",
+                        szKey = "+OutputScriptHash\0\0",
+                        cbKey = "+OutputScriptHash\0\0".Length
                     }
                 }, 1);
 
@@ -320,6 +339,12 @@ namespace BitSharp.Esent
                 {
                     Api.SetColumn(this.jetSession, this.unspentTxOutputsTableId, this.txOutputKeyColumnId, DataEncoder.EncodeTxOutputKey(txOutputKey));
                     Api.SetColumn(this.jetSession, this.unspentTxOutputsTableId, this.txOutputColumnId, DataEncoder.EncodeTxOutput(txOutput));
+
+                    if (IndexOutputs)
+                    {
+                        var sha256 = new SHA256Managed();
+                        Api.SetColumn(this.jetSession, this.unspentTxOutputsTableId, this.outputScriptHashColumnId, sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
+                    }
 
                     Api.JetUpdate(this.jetSession, this.unspentTxOutputsTableId);
                     Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
