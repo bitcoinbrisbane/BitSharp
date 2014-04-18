@@ -185,11 +185,8 @@ namespace BitSharp.Core.Workers
                     this.logger.WarnException("ChainStateWorker exception", e);
                 }
 
-                if (this.chainStateBuilder != null && !this.chainStateBuilder.IsConsistent)
+                if (this.chainStateBuilder != null)
                 {
-                    this.chainStateBuilder.Dispose();
-                    this.chainStateBuilder = null;
-
                     var builderHandler = this.OnChainStateBuilderChanged;
                     if (builderHandler != null)
                         builderHandler();

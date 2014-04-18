@@ -39,13 +39,15 @@ namespace BitSharp.Core.Builders
         private readonly SpentTransactionsCache spentTransactionsCache;
         private readonly SpentOutputsCache spentOutputsCache;
 
-        private readonly ChainBuilder chain;
-        private readonly BuilderStats stats;
-
+        private ChainBuilder chain;
+        private Chain savedChain;
         private readonly IChainStateBuilderStorage utxoBuilderStorage;
+
         //TODO when written more directly against Esent, these can be streamed out so an entire list doesn't need to be held in memory
         private readonly ImmutableList<KeyValuePair<UInt256, SpentTx>>.Builder spentTransactions;
         private readonly ImmutableList<KeyValuePair<TxOutputKey, TxOutput>>.Builder spentOutputs;
+
+        private readonly BuilderStats stats;
 
         public ChainStateBuilder(Func<Chain> getTargetChain, Func<IImmutableSet<IChainStateMonitor>> getMonitors, ChainBuilder chain, Utxo parentUtxo, CancellationToken shutdownToken, Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
         {
@@ -60,15 +62,13 @@ namespace BitSharp.Core.Builders
             this.spentOutputsCache = spentOutputsCache;
 
             this.chain = chain;
-            this.stats = new BuilderStats();
-            this.stats.durationStopwatch.Start();
-
             this.utxoBuilderStorage = kernel.Get<IChainStateBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo.Storage));
 
             this.spentTransactions = ImmutableList.CreateBuilder<KeyValuePair<UInt256, SpentTx>>();
             this.spentOutputs = ImmutableList.CreateBuilder<KeyValuePair<TxOutputKey, TxOutput>>();
 
-            this.IsConsistent = true;
+            this.stats = new BuilderStats();
+            this.stats.durationStopwatch.Start();
         }
 
         ~ChainStateBuilder()
@@ -83,8 +83,6 @@ namespace BitSharp.Core.Builders
             if (this.utxoBuilderStorage != null)
                 this.utxoBuilderStorage.Dispose();
         }
-
-        public bool IsConsistent { get; private set; }
 
         public ChainBuilder Chain { get { return this.chain; } }
 
@@ -122,27 +120,24 @@ namespace BitSharp.Core.Builders
             //this.Stats.currentRateStopwatch.Start();
 
             // calculate the new blockchain along the target path
-            this.IsConsistent = true;
             foreach (var pathElement in BlockLookAhead(this.Chain.NavigateTowards(this.getTargetChain), lookAhead: 1))
             {
-                //TODO remove IsConsistent once chain updates are in the same transaction as the utxo updates
-                this.IsConsistent = false;
-                this.utxoBuilderStorage.BeginTransaction();
+                var startTime = DateTime.UtcNow;
+
+                // cooperative loop
+                if (this.shutdownToken.IsCancellationRequested)
+                    break;
+                if (cancelToken.IsCancellationRequested)
+                    break;
+
+                // get block and metadata for next link in blockchain
+                var direction = pathElement.Item1;
+                var chainedHeader = pathElement.Item2;
+                var block = pathElement.Item3;
+
+                this.BeginTransaction();
                 try
                 {
-                    var startTime = DateTime.UtcNow;
-
-                    // cooperative loop
-                    if (this.shutdownToken.IsCancellationRequested)
-                        break;
-                    if (cancelToken.IsCancellationRequested)
-                        break;
-
-                    // get block and metadata for next link in blockchain
-                    var direction = pathElement.Item1;
-                    var chainedHeader = pathElement.Item2;
-                    var block = pathElement.Item3;
-
                     // store block hash
                     this.utxoBuilderStorage.BlockHash = block.Hash;
 
@@ -194,7 +189,6 @@ namespace BitSharp.Core.Builders
                         throw new InvalidOperationException();
 
                     this.CommitTransaction();
-                    this.IsConsistent = true;
                 }
                 catch (Exception)
                 {
@@ -612,16 +606,19 @@ namespace BitSharp.Core.Builders
         private void BeginTransaction()
         {
             this.utxoBuilderStorage.BeginTransaction();
+            this.savedChain = this.chain.ToImmutable();
         }
 
         private void CommitTransaction()
         {
             this.utxoBuilderStorage.CommitTransaction();
+            this.savedChain = null;
         }
 
         private void RollbackTransaction()
         {
             this.utxoBuilderStorage.RollbackTransaction();
+            this.chain = this.savedChain.ToBuilder();
         }
 
         private void RevalidateBlockchain(Chain blockchain, Block genesisBlock)
