@@ -71,11 +71,6 @@ namespace BitSharp.Esent
             return this.storage.UnspentOutputs();
         }
 
-        public void DisposeDelete()
-        {
-            this.Dispose();
-        }
-
         public void Dispose()
         {
             this.storage.Dispose();

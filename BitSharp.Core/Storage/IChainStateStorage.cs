@@ -29,8 +29,5 @@ namespace BitSharp.Core.Storage
         bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput);
 
         IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs();
-        
-        
-        void DisposeDelete();
     }
 }

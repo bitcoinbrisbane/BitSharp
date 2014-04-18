@@ -74,11 +74,6 @@ namespace BitSharp.Domain
             return this.chainStateStorage.UnspentOutputs();
         }
 
-        public void DisposeDelete()
-        {
-            this.chainStateStorage.DisposeDelete();
-        }
-
         public static Utxo CreateForGenesisBlock(UInt256 blockHash)
         {
             return new Utxo(new GenesisChainStateStorage(blockHash));

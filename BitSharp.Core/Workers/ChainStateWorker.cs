@@ -222,9 +222,9 @@ namespace BitSharp.Core.Workers
 
                 this.chainState = newChainState;
 
-                //TODO stop gap
+                //TODO if a chain state was handed off, it should not be disposed until all references to it have been disposed
                 if (oldChainState != null)
-                    oldChainState.Utxo.DisposeDelete();
+                    oldChainState.Utxo.Dispose();
             }
             finally
             {

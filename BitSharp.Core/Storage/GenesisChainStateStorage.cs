@@ -66,10 +66,6 @@ namespace BitSharp.Core.Storage
             return Enumerable.Empty<KeyValuePair<TxOutputKey, TxOutput>>();
         }
 
-        public void DisposeDelete()
-        {
-        }
-
         public void Dispose()
         {
         }

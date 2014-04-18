@@ -71,14 +71,6 @@ namespace BitSharp.Core.Storage.Memory
             return this.unspentOutputs;
         }
 
-        public void DisposeDelete()
-        {
-            this.unspentTransactions = null;
-            this.unspentOutputs = null;
-            
-            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: false);
-        }
-
         public void Dispose()
         {
         }
