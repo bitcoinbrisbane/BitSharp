@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Wallet
 {
-    public class WalletMonitor : ITransactionMonitor
+    public class WalletMonitor : IChainStateMonitor
     {
         private readonly Logger logger;
 

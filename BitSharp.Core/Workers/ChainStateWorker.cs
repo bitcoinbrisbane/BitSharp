@@ -26,7 +26,7 @@ namespace BitSharp.Core.Workers
 
         private readonly Logger logger;
         private readonly Func<Chain> getTargetChain;
-        private readonly Func<IImmutableSet<ITransactionMonitor>> getTxMonitors;
+        private readonly Func<IImmutableSet<IChainStateMonitor>> getMonitors;
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
         private readonly TransactionCache transactionCache;
@@ -44,12 +44,12 @@ namespace BitSharp.Core.Workers
 
         private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, Func<IImmutableSet<ITransactionMonitor>> getTxMonitors, TimeSpan maxBuilderTime, Logger logger, IKernel kernel, IBlockchainRules rules, TransactionCache transactionCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
+        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, Func<IImmutableSet<IChainStateMonitor>> getMonitors, TimeSpan maxBuilderTime, Logger logger, IKernel kernel, IBlockchainRules rules, TransactionCache transactionCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.getTargetChain = getTargetChain;
-            this.getTxMonitors = getTxMonitors;
+            this.getMonitors = getMonitors;
             this.MaxBuilderTime = maxBuilderTime;
             this.kernel = kernel;
             this.rules = rules;
@@ -149,7 +149,7 @@ namespace BitSharp.Core.Workers
                 // try to advance the blockchain with the new winning block
                 using (var cancelToken = new CancellationTokenSource())
                 {
-                    this.chainStateBuilder.CalculateBlockchainFromExisting(this.getTargetChain, this.getTxMonitors, cancelToken.Token,
+                    this.chainStateBuilder.CalculateBlockchainFromExisting(this.getTargetChain, this.getMonitors, cancelToken.Token,
                         (blockTime) =>
                         {
                             if (this.ShutdownToken.IsCancellationRequested)

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Wallet
 {
-    public interface ITransactionMonitor
+    public interface IChainStateMonitor
     {
         void MintTxOutput(ChainPosition chainPosition, TxOutput txOutput, UInt256 outputScriptHash);
         void ReceiveTxOutput(ChainPosition chainPosition, TxOutput txOutput, UInt256 outputScriptHash);

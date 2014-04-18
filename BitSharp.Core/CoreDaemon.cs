@@ -59,7 +59,7 @@ namespace BitSharp.Core
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
 
-        private readonly ConcurrentSetBuilder<ITransactionMonitor> txMonitors;
+        private readonly ConcurrentSetBuilder<IChainStateMonitor> chainStateMonitors;
 
         public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockCache blockCache)
         {
@@ -74,7 +74,7 @@ namespace BitSharp.Core
             this.transactionCache = transactionCache;
             this.blockCache = blockCache;
 
-            this.txMonitors = new ConcurrentSetBuilder<ITransactionMonitor>();
+            this.chainStateMonitors = new ConcurrentSetBuilder<IChainStateMonitor>();
 
             // write genesis block out to storage
             this.blockHeaderCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock.Header;
@@ -101,7 +101,7 @@ namespace BitSharp.Core
             this.chainStateWorker = kernel.Get<ChainStateWorker>(
                 new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromSeconds(5))),
                 new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)),
-                new ConstructorArgument("getTxMonitors", (Func<IImmutableSet<ITransactionMonitor>>)(() => this.TxMonitors)),
+                new ConstructorArgument("getMonitors", (Func<IImmutableSet<IChainStateMonitor>>)(() => this.ChainStateMonitors)),
                 new ConstructorArgument("maxBuilderTime", TimeSpan.MaxValue));
 
             this.targetChainWorker.OnTargetBlockChanged +=
@@ -250,9 +250,9 @@ namespace BitSharp.Core
             get { return this.chainStateWorker; }
         }
 
-        internal ImmutableHashSet<ITransactionMonitor> TxMonitors
+        internal ImmutableHashSet<IChainStateMonitor> ChainStateMonitors
         {
-            get { return this.txMonitors.ToImmutable(); }
+            get { return this.chainStateMonitors.ToImmutable(); }
         }
 
         public void Start()
@@ -310,14 +310,14 @@ namespace BitSharp.Core
             this.chainStateWorker.ForceWorkAndWait();
         }
 
-        public void RegistorMonitor(ITransactionMonitor txMonitor)
+        public void RegistorMonitor(IChainStateMonitor txMonitor)
         {
-            this.txMonitors.Add(txMonitor);
+            this.chainStateMonitors.Add(txMonitor);
         }
 
-        public void UnegistorMonitor(ITransactionMonitor txMonitor)
+        public void UnegistorMonitor(IChainStateMonitor txMonitor)
         {
-            this.txMonitors.Remove(txMonitor);
+            this.chainStateMonitors.Remove(txMonitor);
         }
 
         private void OnBlockHeaderAddition(UInt256 blockHash, BlockHeader blockHeader)

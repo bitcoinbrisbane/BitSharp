@@ -99,7 +99,7 @@ namespace BitSharp.Core.Builders
 
         public BuilderStats Stats { get { return this.stats; } }
 
-        public void CalculateBlockchainFromExisting(Func<Chain> getTargetChain, Func<IImmutableSet<ITransactionMonitor>> getTxMonitors, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
+        public void CalculateBlockchainFromExisting(Func<Chain> getTargetChain, Func<IImmutableSet<IChainStateMonitor>> getMonitors, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
         {
             //this.Stats.totalStopwatch.Start();
             //this.Stats.currentRateStopwatch.Start();
@@ -146,7 +146,7 @@ namespace BitSharp.Core.Builders
                         // calculate the new block utxo, double spends will be checked for
                         long txCount = 0, inputCount = 0;
                         new MethodTimer(false).Time("CalculateUtxo", () =>
-                            CalculateUtxo(chainedBlock, block, this.Utxo, getTxMonitors, out txCount, out inputCount));
+                            CalculateUtxo(chainedBlock, block, this.Utxo, getMonitors, out txCount, out inputCount));
 
                         // collect rollback informatino and store it
                         this.Utxo.SaveRollbackInformation(chainedBlock.Height, block.Hash, this.spentTransactionsCache, this.spentOutputsCache);
@@ -211,16 +211,16 @@ namespace BitSharp.Core.Builders
                 ));
         }
 
-        private void CalculateUtxo(ChainedBlock chainedBlock, Block block, UtxoBuilder utxoBuilder, Func<IImmutableSet<ITransactionMonitor>> getTxMonitors, out long txCount, out long inputCount)
+        private void CalculateUtxo(ChainedBlock chainedBlock, Block block, UtxoBuilder utxoBuilder, Func<IImmutableSet<IChainStateMonitor>> getMonitors, out long txCount, out long inputCount)
         {
             txCount = 1;
             inputCount = 0;
 
-            var txMonitors = getTxMonitors().ToArray();
+            var monitors = getMonitors().ToArray();
             using (var txInputQueue = new ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>>())
             using (var validateScriptsTask = Task.Factory.StartNew(() => this.ValidateTransactionScripts(chainedBlock, block, txInputQueue)))
             using (var txOutputQueue = new ProducerConsumer<Tuple<int, ChainPosition, TxOutput>>())
-            using (var scannerTask = Task.Factory.StartNew(() => this.ScanTransactions(txOutputQueue, txMonitors)))
+            using (var scannerTask = Task.Factory.StartNew(() => this.ScanTransactions(txOutputQueue, monitors)))
             {
                 try
                 {
@@ -302,7 +302,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        private void ScanTransactions(ProducerConsumer<Tuple<int, ChainPosition, TxOutput>> txOutputQueue, ITransactionMonitor[] txMonitors)
+        private void ScanTransactions(ProducerConsumer<Tuple<int, ChainPosition, TxOutput>> txOutputQueue, IChainStateMonitor[] monitors)
         {
             var sha256 = new SHA256Managed();
             //TODO for this to remain parallel, i'll need to be able to handle the case of a new watch address being generated from one of the iterations
@@ -315,9 +315,9 @@ namespace BitSharp.Core.Builders
             {
                 var outputScriptHash = new UInt256(sha256.ComputeHash(txOutput.Item3.ScriptPublicKey.ToArray()));
 
-                for (var i = 0; i < txMonitors.Length; i++)
+                for (var i = 0; i < monitors.Length; i++)
                 {
-                    var txMonitor = txMonitors[i];
+                    var txMonitor = monitors[i];
                     if (txOutput.Item1 < 0)
                         txMonitor.SpendTxOutput(txOutput.Item2, txOutput.Item3, outputScriptHash);
                     else if (txOutput.Item1 > 0)
