@@ -22,6 +22,8 @@ namespace BitSharp.Core.Builders
 
         public ChainedHeader LastBlock { get { return this.blocks.Last(); } }
 
+        public UInt256 LastBlockHash { get { return this.LastBlock.Hash; } }
+
         public int Height { get { return this.blocks.Count() - 1; } }
 
         public ImmutableList<ChainedHeader> Blocks { get { return this.blocks.ToImmutable(); } }

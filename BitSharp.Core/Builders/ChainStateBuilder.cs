@@ -28,7 +28,6 @@ namespace BitSharp.Core.Builders
 {
     public class ChainStateBuilder : IDisposable
     {
-        private readonly Func<Chain> getTargetChain;
         private readonly Func<IImmutableSet<IChainStateMonitor>> getMonitors;
 
         private readonly Logger logger;
@@ -49,9 +48,8 @@ namespace BitSharp.Core.Builders
 
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(Func<Chain> getTargetChain, Func<IImmutableSet<IChainStateMonitor>> getMonitors, ChainBuilder chain, Utxo parentUtxo, CancellationToken shutdownToken, Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
+        public ChainStateBuilder(Func<IImmutableSet<IChainStateMonitor>> getMonitors, ChainBuilder chain, Utxo parentUtxo, CancellationToken shutdownToken, Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
         {
-            this.getTargetChain = getTargetChain;
             this.getMonitors = getMonitors;
             this.logger = logger;
             this.shutdownToken = shutdownToken;
@@ -114,86 +112,76 @@ namespace BitSharp.Core.Builders
 
         public BuilderStats Stats { get { return this.stats; } }
 
-        public void CalculateBlockchainFromExisting(CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
+        public void AddBlock(ChainedBlock chainedBlock)
         {
-            //this.Stats.totalStopwatch.Start();
-            //this.Stats.currentRateStopwatch.Start();
-
-            // calculate the new blockchain along the target path
-            foreach (var pathElement in BlockLookAhead(this.Chain.NavigateTowards(this.getTargetChain), lookAhead: 1))
+            this.BeginTransaction();
+            try
             {
-                var startTime = DateTime.UtcNow;
+                // add the block to the chain
+                this.Chain.AddBlock(chainedBlock.ChainedHeader);
 
-                // cooperative loop
-                if (this.shutdownToken.IsCancellationRequested)
-                    break;
-                if (cancelToken.IsCancellationRequested)
-                    break;
+                // store block hash
+                this.chainStateBuilderStorage.BlockHash = chainedBlock.Hash;
 
-                // get block and metadata for next link in blockchain
-                var direction = pathElement.Item1;
-                var chainedBlock = pathElement.Item2;
+                // validate the block
+                this.Stats.validateStopwatch.Start();
+                new MethodTimer(false).Time("ValidateBlock", () =>
+                    this.rules.ValidateBlock(chainedBlock, this));
+                this.Stats.validateStopwatch.Stop();
 
-                this.BeginTransaction();
-                try
+                // calculate the new block utxo, double spends will be checked for
+                long txCount = 0, inputCount = 0;
+                new MethodTimer(false).Time("CalculateUtxo", () =>
+                    this.CalculateUtxo(chainedBlock, out txCount, out inputCount));
+
+                // collect rollback informatino and store it
+                this.SaveRollbackInformation(chainedBlock.Hash, this.spentTransactionsCache, this.spentOutputsCache);
+
+                // flush utxo progress
+                //this.Utxo.Flush();
+
+                // blockchain processing statistics
+                this.Stats.blockCount++;
+                this.Stats.txCount += txCount;
+                this.Stats.inputCount += inputCount;
+
+                var txInterval = TimeSpan.FromSeconds(15);
+                if (DateTime.UtcNow - this.Stats.lastLogTime >= txInterval)
                 {
-                    // store block hash
-                    this.chainStateBuilderStorage.BlockHash = chainedBlock.Hash;
-
-                    if (direction < 0)
-                    {
-                        this.RollbackUtxo(chainedBlock);
-
-                        this.Chain.RemoveBlock(chainedBlock.ChainedHeader);
-                    }
-                    else if (direction > 0)
-                    {
-                        // add the block to the current chain
-                        this.Chain.AddBlock(chainedBlock.ChainedHeader);
-
-                        // validate the block
-                        this.Stats.validateStopwatch.Start();
-                        new MethodTimer(false).Time("ValidateBlock", () =>
-                            this.rules.ValidateBlock(chainedBlock, this));
-                        this.Stats.validateStopwatch.Stop();
-
-                        // calculate the new block utxo, double spends will be checked for
-                        long txCount = 0, inputCount = 0;
-                        new MethodTimer(false).Time("CalculateUtxo", () =>
-                            this.CalculateUtxo(chainedBlock, out txCount, out inputCount));
-
-                        // collect rollback informatino and store it
-                        this.SaveRollbackInformation(chainedBlock.Hash, this.spentTransactionsCache, this.spentOutputsCache);
-
-                        // flush utxo progress
-                        //this.Utxo.Flush();
-
-                        // create the next link in the new blockchain
-                        if (onProgress != null)
-                            onProgress(DateTime.UtcNow - startTime);
-
-                        // blockchain processing statistics
-                        this.Stats.blockCount++;
-                        this.Stats.txCount += txCount;
-                        this.Stats.inputCount += inputCount;
-
-                        var txInterval = TimeSpan.FromSeconds(15);
-                        if (DateTime.UtcNow - this.Stats.lastLogTime >= txInterval)
-                        {
-                            this.LogBlockchainProgress();
-                            this.Stats.lastLogTime = DateTime.UtcNow;
-                        }
-                    }
-                    else
-                        throw new InvalidOperationException();
-
-                    this.CommitTransaction();
+                    this.LogBlockchainProgress();
+                    this.Stats.lastLogTime = DateTime.UtcNow;
                 }
-                catch (Exception)
-                {
-                    this.RollbackTransaction();
-                    throw;
-                }
+
+                this.CommitTransaction();
+            }
+            catch (Exception)
+            {
+                this.RollbackTransaction();
+                throw;
+            }
+        }
+
+        public void RollbackBlock(ChainedBlock chainedBlock)
+        {
+            this.BeginTransaction();
+            try
+            {
+                // remove the block from the chain
+                this.Chain.RemoveBlock(chainedBlock.ChainedHeader);
+
+                // store the block hash
+                this.chainStateBuilderStorage.BlockHash = this.Chain.LastBlockHash;
+
+                // rollback the utxo
+                this.RollbackUtxo(chainedBlock);
+
+                // commit
+                this.CommitTransaction();
+            }
+            catch (Exception)
+            {
+                this.RollbackTransaction();
+                throw;
             }
         }
 
@@ -688,33 +676,6 @@ namespace BitSharp.Core.Builders
                 stopwatch.Stop();
                 this.logger.Info("Blockchain revalidation: {0:#,##0.000000}s".Format2(stopwatch.ElapsedSecondsFloat()));
             }
-        }
-
-        private IEnumerable<Tuple<int, ChainedBlock>> BlockLookAhead(IEnumerable<Tuple<int, ChainedHeader>> chain, int lookAhead)
-        {
-            return chain
-                .Select(
-                    chainedHeaderTuple =>
-                    {
-                        try
-                        {
-                            var direction = chainedHeaderTuple.Item1;
-                            
-                            var chainedHeader = chainedHeaderTuple.Item2;
-                            var block = new MethodTimer(false).Time("GetBlock", () =>
-                                this.blockCache[chainedHeader.Hash]);
-
-                            var chainedBlock = new ChainedBlock(chainedHeader, block);
-
-                            return Tuple.Create(direction, chainedBlock);
-                        }
-                        catch (MissingDataException e)
-                        {
-                            this.logger.Info("Stalled, MissingDataException: {0}".Format2(e.Key));
-                            throw;
-                        }
-                    })
-                .LookAhead(lookAhead, this.shutdownToken);
         }
 
         public sealed class BuilderStats

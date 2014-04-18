@@ -30,7 +30,7 @@ namespace BitSharp.Core.Workers
         private readonly Func<IImmutableSet<IChainStateMonitor>> getMonitors;
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
-        private readonly TransactionCache transactionCache;
+        private readonly BlockCache blockCache;
         private readonly SpentTransactionsCache spentTransactionsCache;
         private readonly InvalidBlockCache invalidBlockCache;
 
@@ -45,7 +45,7 @@ namespace BitSharp.Core.Workers
 
         private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, Func<IImmutableSet<IChainStateMonitor>> getMonitors, TimeSpan maxBuilderTime, Logger logger, IKernel kernel, IBlockchainRules rules, TransactionCache transactionCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
+        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, Func<IImmutableSet<IChainStateMonitor>> getMonitors, TimeSpan maxBuilderTime, Logger logger, IKernel kernel, IBlockchainRules rules, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
@@ -54,7 +54,7 @@ namespace BitSharp.Core.Workers
             this.MaxBuilderTime = maxBuilderTime;
             this.kernel = kernel;
             this.rules = rules;
-            this.transactionCache = transactionCache;
+            this.blockCache = blockCache;
             this.spentTransactionsCache = spentTransactionsCache;
             this.invalidBlockCache = invalidBlockCache;
 
@@ -142,40 +142,53 @@ namespace BitSharp.Core.Workers
                     this.chainStateBuilderTime = DateTime.UtcNow;
                     this.chainStateBuilder =
                         this.kernel.Get<ChainStateBuilder>(
-                        new ConstructorArgument("getTargetChain", this.getTargetChain),
                         new ConstructorArgument("getMonitors", this.getMonitors),
                         new ConstructorArgument("chain", chainStateLocal.Chain.ToBuilder()),
                         new ConstructorArgument("parentUtxo", chainStateLocal.Utxo),
                         new ConstructorArgument("shutdownToken", this.ShutdownToken.Token));
                 }
 
-                // try to advance the blockchain with the new winning block
-                using (var cancelToken = new CancellationTokenSource())
+                // calculate the new blockchain along the target path
+                foreach (var pathElement in ChainedBlockLookAhead(this.chainStateBuilder.Chain.NavigateTowards(this.getTargetChain), lookAhead: 1))
                 {
-                    this.chainStateBuilder.CalculateBlockchainFromExisting(cancelToken.Token,
-                        (blockTime) =>
-                        {
-                            if (this.ShutdownToken.IsCancellationRequested)
-                            {
-                                cancelToken.Cancel();
-                                return;
-                            }
+                    // cooperative loop
+                    if (this.ShutdownToken.IsCancellationRequested)
+                        break;
 
-                            this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;
-                            this.blockTimes[this.blockTimesIndex] = blockTime;
+                    // get block and metadata for next link in blockchain
+                    var direction = pathElement.Item1;
+                    var chainedBlock = pathElement.Item2;
 
-                            this.pruningWorker.NotifyWork();
+                    var stopwatch = new Stopwatch().Started();
+                    if (direction > 0)
+                    {
+                        this.chainStateBuilder.AddBlock(chainedBlock);
+                    }
+                    else if (direction < 0)
+                    {
+                        this.chainStateBuilder.RollbackBlock(chainedBlock);
+                    }
+                    else
+                    {
+                        Debugger.Break();
+                        throw new InvalidOperationException();
+                    }
+                    stopwatch.Stop();
 
-                            var handler = this.OnChainStateBuilderChanged;
-                            if (handler != null)
-                                handler();
+                    this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;
+                    this.blockTimes[this.blockTimesIndex] = stopwatch.Elapsed;
 
-                            if (DateTime.UtcNow - this.chainStateBuilderTime > this.MaxBuilderTime)
-                            {
-                                this.NotifyWork();
-                                cancelToken.Cancel();
-                            }
-                        });
+                    this.pruningWorker.NotifyWork();
+
+                    var handler = this.OnChainStateBuilderChanged;
+                    if (handler != null)
+                        handler();
+
+                    if (DateTime.UtcNow - this.chainStateBuilderTime > this.MaxBuilderTime)
+                    {
+                        this.NotifyWork();
+                        break;
+                    }
                 }
             }
             catch (Exception e)
@@ -221,6 +234,33 @@ namespace BitSharp.Core.Workers
             var handler = this.OnChainStateChanged;
             if (handler != null)
                 handler();
+        }
+
+        private IEnumerable<Tuple<int, ChainedBlock>> ChainedBlockLookAhead(IEnumerable<Tuple<int, ChainedHeader>> chain, int lookAhead)
+        {
+            return chain
+                .Select(
+                    chainedHeaderTuple =>
+                    {
+                        try
+                        {
+                            var direction = chainedHeaderTuple.Item1;
+
+                            var chainedHeader = chainedHeaderTuple.Item2;
+                            var block = new MethodTimer(false).Time("GetBlock", () =>
+                                this.blockCache[chainedHeader.Hash]);
+
+                            var chainedBlock = new ChainedBlock(chainedHeader, block);
+
+                            return Tuple.Create(direction, chainedBlock);
+                        }
+                        catch (MissingDataException e)
+                        {
+                            this.logger.Info("Stalled, MissingDataException: {0}".Format2(e.Key));
+                            throw;
+                        }
+                    })
+                .LookAhead(lookAhead, this.ShutdownToken.Token);
         }
     }
 }
