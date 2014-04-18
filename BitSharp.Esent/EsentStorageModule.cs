@@ -76,7 +76,7 @@ namespace BitSharp.Esent
             this.Bind<IInvalidBlockStorage>().ToMethod(x => this.Kernel.Get<InvalidBlockStorage>()).InSingletonScope();
             this.Bind<INetworkPeerStorage>().ToMethod(x => this.Kernel.Get<NetworkPeerStorage>()).InSingletonScope();
 
-            this.Bind<IUtxoBuilderStorage>().To<UtxoBuilderStorage>();
+            this.Bind<IChainStateBuilderStorage>().To<ChainStateBuilderStorage>();
         }
     }
 }

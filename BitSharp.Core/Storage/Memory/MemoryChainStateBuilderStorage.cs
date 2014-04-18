@@ -9,15 +9,17 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Storage.Memory
 {
-    public class MemoryUtxoBuilderStorage : IUtxoBuilderStorage
+    public class MemoryChainStateBuilderStorage : IChainStateBuilderStorage
     {
+        private UInt256 blockHash;
         private ImmutableDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
         private ImmutableDictionary<TxOutputKey, TxOutput>.Builder unspentOutputs;
 
+        private UInt256? savedBlockHash;
         private ImmutableDictionary<UInt256, UnspentTx> savedUnspentTransactions;
         private ImmutableDictionary<TxOutputKey, TxOutput> savedUnspentOutputs;
 
-        public MemoryUtxoBuilderStorage(IUtxoStorage parentUtxo)
+        public MemoryChainStateBuilderStorage(IUtxoStorage parentUtxo)
         {
             if (parentUtxo is MemoryUtxoStorage)
             {
@@ -34,6 +36,12 @@ namespace BitSharp.Core.Storage.Memory
         public ImmutableDictionary<UInt256, UnspentTx>.Builder UnspentTransactionsDictionary { get { return this.unspentTransactions; } }
 
         public ImmutableDictionary<TxOutputKey, TxOutput>.Builder UnspentOutputsDictionary { get { return this.unspentOutputs; } }
+
+        public UInt256 BlockHash
+        {
+            get { return this.blockHash; }
+            set { this.blockHash = value; }
+        }
 
         public int TransactionCount
         {
@@ -65,7 +73,7 @@ namespace BitSharp.Core.Storage.Memory
             this.unspentTransactions[txHash] = unspentTx;
         }
 
-        IEnumerable<KeyValuePair<UInt256, UnspentTx>> IUtxoBuilderStorage.UnspentTransactions()
+        IEnumerable<KeyValuePair<UInt256, UnspentTx>> IChainStateBuilderStorage.UnspentTransactions()
         {
             return this.unspentTransactions;
         }
@@ -95,7 +103,7 @@ namespace BitSharp.Core.Storage.Memory
             return this.unspentOutputs.Remove(txOutputKey);
         }
 
-        IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> IUtxoBuilderStorage.UnspentOutputs()
+        IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> IChainStateBuilderStorage.UnspentOutputs()
         {
             return this.unspentOutputs;
         }
@@ -136,31 +144,36 @@ namespace BitSharp.Core.Storage.Memory
 
         public void BeginTransaction()
         {
-            if (this.savedUnspentTransactions != null || this.savedUnspentOutputs != null)
+            if (this.savedUnspentTransactions != null || this.savedUnspentOutputs != null || this.savedBlockHash != null)
                 throw new InvalidOperationException();
 
             this.savedUnspentTransactions = this.unspentTransactions.ToImmutable();
             this.savedUnspentOutputs = this.unspentOutputs.ToImmutable();
+            this.savedBlockHash = this.blockHash;
         }
 
         public void CommitTransaction()
         {
-            if (this.savedUnspentTransactions == null || this.savedUnspentOutputs == null)
+            if (this.savedUnspentTransactions == null || this.savedUnspentOutputs == null || this.savedBlockHash == null)
                 throw new InvalidOperationException();
 
             this.savedUnspentTransactions = null;
             this.savedUnspentOutputs = null;
+            this.savedBlockHash = null;
         }
 
         public void RollbackTransaction()
         {
-            if (this.savedUnspentTransactions == null || this.savedUnspentOutputs == null)
+            if (this.savedUnspentTransactions == null || this.savedUnspentOutputs == null || this.savedBlockHash == null)
                 throw new InvalidOperationException();
 
             this.unspentTransactions = this.savedUnspentTransactions.ToBuilder();
             this.unspentOutputs = this.savedUnspentOutputs.ToBuilder();
+            this.blockHash = this.savedBlockHash.Value;
+
             this.savedUnspentTransactions = null;
             this.savedUnspentOutputs = null;
+            this.savedBlockHash = null;
         }
     }
 }

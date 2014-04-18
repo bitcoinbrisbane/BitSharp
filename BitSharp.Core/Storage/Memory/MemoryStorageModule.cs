@@ -35,7 +35,7 @@ namespace BitSharp.Core.Storage.Memory
             this.Bind<ISpentOutputsStorage>().ToMethod(x => this.Kernel.Get<MemorySpentOutputsStorage>()).InSingletonScope();
             this.Bind<IInvalidBlockStorage>().ToMethod(x => this.Kernel.Get<MemoryInvalidBlockStorage>()).InSingletonScope();
 
-            this.Bind<IUtxoBuilderStorage>().To<MemoryUtxoBuilderStorage>();
+            this.Bind<IChainStateBuilderStorage>().To<MemoryChainStateBuilderStorage>();
         }
     }
 }

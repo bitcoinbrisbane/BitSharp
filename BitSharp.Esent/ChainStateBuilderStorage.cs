@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 namespace BitSharp.Esent
 {
     //TODO this should eventually be written directly against the Jet API so that everything can be tuned specifically to the UTXO
-    public class UtxoBuilderStorage : IUtxoBuilderStorage
+    public class ChainStateBuilderStorage : IChainStateBuilderStorage
     {
         //TODO
         public static bool IndexOutputs { get; set; }
@@ -34,6 +34,9 @@ namespace BitSharp.Esent
 
         private readonly JET_DBID utxoDbId;
 
+        private readonly JET_TABLEID globalTableId;
+        private readonly JET_COLUMNID blockHashColumnId;
+
         private readonly JET_TABLEID unspentTxTableId;
         private readonly JET_COLUMNID txHashColumnId;
         private readonly JET_COLUMNID confirmedBlockHashColumnId;
@@ -47,7 +50,7 @@ namespace BitSharp.Esent
         private int unspentTxCount;
         private int unspentTxOutputsCount;
 
-        public UtxoBuilderStorage(IUtxoStorage parentUtxo, Logger logger)
+        public ChainStateBuilderStorage(IUtxoStorage parentUtxo, Logger logger)
         {
             this.logger = logger;
             this.jetDirectory = GetDirectory();
@@ -66,7 +69,11 @@ namespace BitSharp.Esent
             //Api.JetAttachDatabase(this.jetSession, this.jetDatabase, AttachDatabaseGrbit.None);
             //Api.JetOpenDatabase(this.jetSession, this.jetDatabase, "", out this.utxoDbId, OpenDatabaseGrbit.Exclusive);
 
-            Api.JetCreateTable(this.jetSession, this.utxoDbId, "unspentTx", 0, 0, out unspentTxTableId);
+            Api.JetCreateTable(this.jetSession, this.utxoDbId, "global", 0, 0, out this.globalTableId);
+
+            Api.JetAddColumn(this.jetSession, this.globalTableId, "BlockHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.txHashColumnId);
+
+            Api.JetCreateTable(this.jetSession, this.utxoDbId, "unspentTx", 0, 0, out this.unspentTxTableId);
 
             Api.JetAddColumn(this.jetSession, this.unspentTxTableId, "TxHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.txHashColumnId);
             Api.JetAddColumn(this.jetSession, this.unspentTxTableId, "ConfirmedBlockHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.confirmedBlockHashColumnId);
@@ -117,6 +124,8 @@ namespace BitSharp.Esent
                     }
                 }, 1);
 
+            this.BlockHash = parentUtxo.BlockHash;
+
             foreach (var unspentTx in parentUtxo.UnspentTransactions())
                 this.AddTransaction(unspentTx.Key, unspentTx.Value);
 
@@ -124,7 +133,7 @@ namespace BitSharp.Esent
                 this.AddOutput(unspentOutput.Key, unspentOutput.Value);
         }
 
-        ~UtxoBuilderStorage()
+        ~ChainStateBuilderStorage()
         {
             this.Dispose();
         }
@@ -140,6 +149,40 @@ namespace BitSharp.Esent
             {
                 UtxoStorage.DeleteUtxoDirectory(this.jetDirectory);
                 this.closed = true;
+            }
+        }
+
+        public UInt256 BlockHash
+        {
+            get
+            {
+                Api.JetBeginTransaction2(this.jetSession, BeginTransactionGrbit.ReadOnly);
+                try
+                {
+                    if (!Api.TryMoveFirst(this.jetSession, this.globalTableId))
+                        throw new Exception();
+
+                    return new UInt256(Api.RetrieveColumn(this.jetSession, this.globalTableId, this.blockHashColumnId));
+                }
+                finally
+                {
+                    Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+                }
+            }
+            set
+            {
+                Api.TryMoveFirst(this.jetSession, this.globalTableId);
+                Api.JetPrepareUpdate(this.jetSession, this.globalTableId, JET_prep.Replace);
+                try
+                {
+                    Api.SetColumn(this.jetSession, this.globalTableId, this.blockHashColumnId, value.ToByteArray());
+                    Api.JetUpdate(this.jetSession, this.globalTableId);
+                }
+                catch (Exception)
+                {
+                    Api.JetPrepareUpdate(this.jetSession, this.globalTableId, JET_prep.Cancel);
+                    throw;
+                }
             }
         }
 

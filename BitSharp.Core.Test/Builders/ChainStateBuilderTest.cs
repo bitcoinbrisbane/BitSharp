@@ -14,17 +14,19 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace BitSharp.Core.Test.Builders
 {
     [TestClass]
-    public class UtxoBuilderTest
+    public class ChainStateBuilderTest
     {
         [TestMethod]
         public void TestSimpleSpend()
         {
             // prepare test kernel
             var kernel = new StandardKernel(new MemoryStorageModule());
+            var shutdownToken = new CancellationTokenSource();
 
             // prepare block
             var fakeHeaders = new FakeHeaders();
@@ -48,11 +50,11 @@ namespace BitSharp.Core.Test.Builders
             var parentUtxo = new Utxo(mockParentUtxoStorage.Object);
 
             // initialize memory utxo builder storage
-            var memoryUtxoBuilderStorage = new MemoryUtxoBuilderStorage(mockParentUtxoStorage.Object);
-            kernel.Rebind<IUtxoBuilderStorage>().ToConstant(memoryUtxoBuilderStorage);
+            var memoryUtxoBuilderStorage = new MemoryChainStateBuilderStorage(mockParentUtxoStorage.Object);
+            kernel.Rebind<IChainStateBuilderStorage>().ToConstant(memoryUtxoBuilderStorage);
 
             // initialize utxo builder
-            var utxoBuilder = new UtxoBuilder(parentUtxo, LogManager.CreateNullLogger(), kernel, transactionCache: null);
+            var utxoBuilder = new ChainStateBuilder(null, null, null, parentUtxo, shutdownToken.Token, LogManager.CreateNullLogger(), kernel, null, null, null, null, null);
 
             // create an input to spend the unspent transaction's first output
             var input1 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
@@ -96,6 +98,7 @@ namespace BitSharp.Core.Test.Builders
         {
             // prepare test kernel
             var kernel = new StandardKernel(new MemoryStorageModule());
+            var shutdownToken = new CancellationTokenSource();
 
             // prepare block
             var fakeHeaders = new FakeHeaders();
@@ -112,11 +115,11 @@ namespace BitSharp.Core.Test.Builders
             var parentUtxo = new Utxo(mockParentUtxoStorage.Object);
 
             // initialize memory utxo builder storage
-            var memoryUtxoBuilderStorage = new MemoryUtxoBuilderStorage(mockParentUtxoStorage.Object);
-            kernel.Rebind<IUtxoBuilderStorage>().ToConstant(memoryUtxoBuilderStorage);
+            var memoryUtxoBuilderStorage = new MemoryChainStateBuilderStorage(mockParentUtxoStorage.Object);
+            kernel.Rebind<IChainStateBuilderStorage>().ToConstant(memoryUtxoBuilderStorage);
 
             // initialize utxo builder
-            var utxoBuilder = new UtxoBuilder(parentUtxo, LogManager.CreateNullLogger(), kernel, transactionCache: null);
+            var utxoBuilder = new ChainStateBuilder(null, null, null, parentUtxo, shutdownToken.Token, LogManager.CreateNullLogger(), kernel, null, null, null, null, null);
 
             // create an input to spend the unspent transaction
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);

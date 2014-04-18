@@ -126,7 +126,7 @@ namespace BitSharp.Core.Workers
                     //TODO once caught up, it should switch over to quickly returning committed utxo's as new blocks come in
                     //TODO should be configurable, as doing this requires keeping two copies of the utxo on disk at all times
                     var newChain = this.chainStateBuilder.Chain.ToImmutable();
-                    var newUtxo = this.chainStateBuilder.Utxo.ToImmutable(newChain.LastBlock.Hash);
+                    var newUtxo = this.chainStateBuilder.ToImmutable(newChain.LastBlock.Hash);
                     //this.chainStateBuilder.Dispose();
                     //this.chainStateBuilder = null;
                     this.chainStateBuilderTime = DateTime.UtcNow;
@@ -142,15 +142,17 @@ namespace BitSharp.Core.Workers
                     this.chainStateBuilderTime = DateTime.UtcNow;
                     this.chainStateBuilder =
                         this.kernel.Get<ChainStateBuilder>(
+                        new ConstructorArgument("getTargetChain", this.getTargetChain),
+                        new ConstructorArgument("getMonitors", this.getMonitors),
                         new ConstructorArgument("chain", chainStateLocal.Chain.ToBuilder()),
-                        new ConstructorArgument("utxo", new UtxoBuilder(chainStateLocal.Utxo, this.logger, this.kernel, this.transactionCache)),
+                        new ConstructorArgument("parentUtxo", chainStateLocal.Utxo),
                         new ConstructorArgument("shutdownToken", this.ShutdownToken.Token));
                 }
 
                 // try to advance the blockchain with the new winning block
                 using (var cancelToken = new CancellationTokenSource())
                 {
-                    this.chainStateBuilder.CalculateBlockchainFromExisting(this.getTargetChain, this.getMonitors, cancelToken.Token,
+                    this.chainStateBuilder.CalculateBlockchainFromExisting(cancelToken.Token,
                         (blockTime) =>
                         {
                             if (this.ShutdownToken.IsCancellationRequested)

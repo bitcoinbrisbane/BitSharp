@@ -249,7 +249,7 @@ namespace BitSharp.Core.Rules
                 var tx = block.Transactions[txIndex];
 
                 long txUnspentValue;
-                ValidateTransaction(chainStateBuilder.Height, block, tx, txIndex, chainStateBuilder.Utxo, out txUnspentValue, blockTxIndices);
+                ValidateTransaction(chainStateBuilder.Height, block, tx, txIndex, chainStateBuilder, out txUnspentValue, blockTxIndices);
 
                 blockUnspentValue += txUnspentValue;
             }
@@ -275,7 +275,7 @@ namespace BitSharp.Core.Rules
         }
 
         //TODO utxo needs to be as-at transaction, with regards to a transaction being fully spent and added back in in the same block
-        public virtual void ValidateTransaction(int blockHeight, Block block, Transaction tx, int txIndex, UtxoBuilder utxoBuilder, out long unspentValue, Dictionary<UInt256, int> blockTxIndices)
+        public virtual void ValidateTransaction(int blockHeight, Block block, Transaction tx, int txIndex, ChainStateBuilder chainStateBuilder, out long unspentValue, Dictionary<UInt256, int> blockTxIndices)
         {
             unspentValue = -1;
 
@@ -286,7 +286,7 @@ namespace BitSharp.Core.Rules
             for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
             {
                 var input = tx.Inputs[inputIndex];
-                var prevOutput = LookupPreviousOutput(input.PreviousTxOutputKey, block, blockTxIndices, utxoBuilder);
+                var prevOutput = LookupPreviousOutput(input.PreviousTxOutputKey, block, blockTxIndices, chainStateBuilder);
 
                 // add transactions previous value to unspent amount (used to calculate allowed coinbase reward)
                 txInputValue += prevOutput.Value;
@@ -330,10 +330,10 @@ namespace BitSharp.Core.Rules
             }
         }
 
-        private TxOutput LookupPreviousOutput(TxOutputKey txOutputKey, Block block, Dictionary<UInt256, int> blockTxIndices, UtxoBuilder utxoBuilder)
+        private TxOutput LookupPreviousOutput(TxOutputKey txOutputKey, Block block, Dictionary<UInt256, int> blockTxIndices, ChainStateBuilder chainStateBuilder)
         {
             TxOutput prevOutput;
-            if (utxoBuilder.TryGetOutput(txOutputKey, out prevOutput))
+            if (chainStateBuilder.TryGetOutput(txOutputKey, out prevOutput))
             {
                 return prevOutput;
             }

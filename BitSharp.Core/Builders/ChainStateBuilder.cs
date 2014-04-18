@@ -20,11 +20,17 @@ using BitSharp.Core.Wallet;
 using System.Security.Cryptography;
 using BitSharp.Core.Domain;
 using BitSharp.Core.Monitor;
+using BitSharp.Domain;
+using Ninject;
+using Ninject.Parameters;
 
 namespace BitSharp.Core.Builders
 {
     public class ChainStateBuilder : IDisposable
     {
+        private readonly Func<Chain> getTargetChain;
+        private readonly Func<IImmutableSet<IChainStateMonitor>> getMonitors;
+
         private readonly Logger logger;
         private readonly CancellationToken shutdownToken;
         private readonly IBlockchainRules rules;
@@ -34,11 +40,17 @@ namespace BitSharp.Core.Builders
         private readonly SpentOutputsCache spentOutputsCache;
 
         private readonly ChainBuilder chain;
-        private readonly UtxoBuilder utxo;
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(ChainBuilder chain, UtxoBuilder utxo, CancellationToken shutdownToken, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
+        private readonly IChainStateBuilderStorage utxoBuilderStorage;
+        //TODO when written more directly against Esent, these can be streamed out so an entire list doesn't need to be held in memory
+        private readonly ImmutableList<KeyValuePair<UInt256, SpentTx>>.Builder spentTransactions;
+        private readonly ImmutableList<KeyValuePair<TxOutputKey, TxOutput>>.Builder spentOutputs;
+
+        public ChainStateBuilder(Func<Chain> getTargetChain, Func<IImmutableSet<IChainStateMonitor>> getMonitors, ChainBuilder chain, Utxo parentUtxo, CancellationToken shutdownToken, Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
         {
+            this.getTargetChain = getTargetChain;
+            this.getMonitors = getMonitors;
             this.logger = logger;
             this.shutdownToken = shutdownToken;
             this.rules = rules;
@@ -48,9 +60,13 @@ namespace BitSharp.Core.Builders
             this.spentOutputsCache = spentOutputsCache;
 
             this.chain = chain;
-            this.utxo = utxo;
             this.stats = new BuilderStats();
             this.stats.durationStopwatch.Start();
+
+            this.utxoBuilderStorage = kernel.Get<IChainStateBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo.Storage));
+
+            this.spentTransactions = ImmutableList.CreateBuilder<KeyValuePair<UInt256, SpentTx>>();
+            this.spentOutputs = ImmutableList.CreateBuilder<KeyValuePair<TxOutputKey, TxOutput>>();
 
             this.IsConsistent = true;
         }
@@ -62,15 +78,15 @@ namespace BitSharp.Core.Builders
 
         public void Dispose()
         {
-            this.utxo.Dispose();
             GC.SuppressFinalize(this);
+
+            if (this.utxoBuilderStorage != null)
+                this.utxoBuilderStorage.Dispose();
         }
 
         public bool IsConsistent { get; private set; }
 
         public ChainBuilder Chain { get { return this.chain; } }
-
-        public UtxoBuilder Utxo { get { return this.utxo; } }
 
         public ChainedHeader LastBlock { get { return this.chain.LastBlock; } }
 
@@ -100,18 +116,18 @@ namespace BitSharp.Core.Builders
 
         public BuilderStats Stats { get { return this.stats; } }
 
-        public void CalculateBlockchainFromExisting(Func<Chain> getTargetChain, Func<IImmutableSet<IChainStateMonitor>> getMonitors, CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
+        public void CalculateBlockchainFromExisting(CancellationToken cancelToken, Action<TimeSpan> onProgress = null)
         {
             //this.Stats.totalStopwatch.Start();
             //this.Stats.currentRateStopwatch.Start();
 
             // calculate the new blockchain along the target path
             this.IsConsistent = true;
-            foreach (var pathElement in BlockLookAhead(this.Chain.NavigateTowards(getTargetChain), lookAhead: 1))
+            foreach (var pathElement in BlockLookAhead(this.Chain.NavigateTowards(this.getTargetChain), lookAhead: 1))
             {
                 //TODO remove IsConsistent once chain updates are in the same transaction as the utxo updates
                 this.IsConsistent = false;
-                this.utxo.BeginTransaction();
+                this.utxoBuilderStorage.BeginTransaction();
                 try
                 {
                     var startTime = DateTime.UtcNow;
@@ -126,6 +142,9 @@ namespace BitSharp.Core.Builders
                     var direction = pathElement.Item1;
                     var chainedHeader = pathElement.Item2;
                     var block = pathElement.Item3;
+
+                    // store block hash
+                    this.utxoBuilderStorage.BlockHash = block.Hash;
 
                     if (direction < 0)
                     {
@@ -147,10 +166,10 @@ namespace BitSharp.Core.Builders
                         // calculate the new block utxo, double spends will be checked for
                         long txCount = 0, inputCount = 0;
                         new MethodTimer(false).Time("CalculateUtxo", () =>
-                            CalculateUtxo(chainedHeader, block, this.Utxo, getMonitors, out txCount, out inputCount));
+                            this.CalculateUtxo(chainedHeader, block, out txCount, out inputCount));
 
                         // collect rollback informatino and store it
-                        this.Utxo.SaveRollbackInformation(chainedHeader.Height, block.Hash, this.spentTransactionsCache, this.spentOutputsCache);
+                        this.SaveRollbackInformation(chainedHeader.Height, block.Hash, this.spentTransactionsCache, this.spentOutputsCache);
 
                         // flush utxo progress
                         //this.Utxo.Flush();
@@ -174,12 +193,12 @@ namespace BitSharp.Core.Builders
                     else
                         throw new InvalidOperationException();
 
-                    this.utxo.CommitTransaction();
+                    this.CommitTransaction();
                     this.IsConsistent = true;
                 }
                 catch (Exception)
                 {
-                    this.utxo.RollbackTransaction();
+                    this.RollbackTransaction();
                     throw;
                 }
             }
@@ -208,16 +227,16 @@ namespace BitSharp.Core.Builders
                 /*5*/ inputRate.ToString("#,##0"),
                 /*6*/ this.Stats.txCount.ToString("#,##0"),
                 /*7*/ this.Stats.inputCount.ToString("#,##0"),
-                /*8*/ this.Utxo.OutputCount.ToString("#,##0")
+                /*8*/ this.OutputCount.ToString("#,##0")
                 ));
         }
 
-        private void CalculateUtxo(ChainedHeader chainedHeader, Block block, UtxoBuilder utxoBuilder, Func<IImmutableSet<IChainStateMonitor>> getMonitors, out long txCount, out long inputCount)
+        private void CalculateUtxo(ChainedHeader chainedHeader, Block block, out long txCount, out long inputCount)
         {
             txCount = 1;
             inputCount = 0;
 
-            var monitors = getMonitors().ToArray();
+            var monitors = this.getMonitors().ToArray();
             using (var txInputQueue = new ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>>())
             using (var validateScriptsTask = Task.Factory.StartNew(() => this.ValidateTransactionScripts(chainedHeader, block, txInputQueue)))
             using (var txOutputQueue = new ProducerConsumer<Tuple<int, ChainPosition, TxOutput>>())
@@ -232,7 +251,7 @@ namespace BitSharp.Core.Builders
                         // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
                         var coinbaseTx = block.Transactions[0];
 
-                        utxoBuilder.Mint(coinbaseTx, chainedHeader);
+                        this.Mint(coinbaseTx, chainedHeader);
 
                         foreach (var output in coinbaseTx.Outputs)
                             txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(0, new ChainPosition(0, 0, 0, 0), output));
@@ -249,13 +268,13 @@ namespace BitSharp.Core.Builders
                             var input = tx.Inputs[inputIndex];
                             inputCount++;
 
-                            var spentOutput = utxoBuilder.Spend(input, chainedHeader);
+                            var spentOutput = this.Spend(input, chainedHeader);
 
                             txInputQueue.Add(Tuple.Create<Transaction, int, TxInput, int, TxOutput>(tx, txIndex, input, inputIndex, spentOutput));
                             txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(-1, new ChainPosition(0, 0, 0, 0), spentOutput));
                         }
 
-                        utxoBuilder.Mint(tx, chainedHeader);
+                        this.Mint(tx, chainedHeader);
 
                         foreach (var output in tx.Outputs)
                             txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(+1, new ChainPosition(0, 0, 0, 0), output));
@@ -348,19 +367,261 @@ namespace BitSharp.Core.Builders
                 var tx = block.Transactions[txIndex];
 
                 // remove outputs
-                this.Utxo.Unmint(tx, this.LastBlock);
+                this.Unmint(tx, this.LastBlock);
 
                 // remove inputs in reverse order
                 for (var inputIndex = tx.Inputs.Count - 1; inputIndex >= 0; inputIndex--)
                 {
                     var input = tx.Inputs[inputIndex];
-                    this.Utxo.Unspend(input, this.LastBlock, spentTransactions, spentOutputs);
+                    this.Unspend(input, this.LastBlock, spentTransactions, spentOutputs);
                 }
             }
 
             // remove coinbase outputs
             var coinbaseTx = block.Transactions[0];
-            this.Utxo.Unmint(coinbaseTx, this.LastBlock);
+            this.Unmint(coinbaseTx, this.LastBlock);
+        }
+
+        public int TransactionCount
+        {
+            get { return this.utxoBuilderStorage.TransactionCount; }
+        }
+
+        public int OutputCount
+        {
+            get { return this.utxoBuilderStorage.OutputCount; }
+        }
+
+        public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
+        {
+            return this.utxoBuilderStorage.TryGetOutput(txOutputKey, out txOutput);
+        }
+
+        public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> GetUnspentOutputs()
+        {
+            return this.utxoBuilderStorage.UnspentOutputs();
+        }
+
+        public void Mint(Transaction tx, ChainedHeader chainedHeader)
+        {
+            // verify transaction does not already exist in utxo
+            if (this.utxoBuilderStorage.ContainsTransaction(tx.Hash))
+            {
+                // two specific duplicates are allowed, from before duplicates were disallowed
+                if ((chainedHeader.Height == 91842 && tx.Hash == UInt256.Parse("d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599", NumberStyles.HexNumber))
+                    || (chainedHeader.Height == 91880 && tx.Hash == UInt256.Parse("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468", NumberStyles.HexNumber)))
+                {
+                    UnspentTx unspentTx;
+                    if (!this.utxoBuilderStorage.TryGetTransaction(tx.Hash, out unspentTx))
+                        throw new Exception("TODO");
+
+                    //TODO the inverse needs to be special cased in RollbackUtxo as well
+                    for (var i = 0; i < unspentTx.OutputStates.Length; i++)
+                    {
+                        if (unspentTx.OutputStates[i] == OutputState.Unspent)
+                        {
+                            var txOutputKey = new TxOutputKey(tx.Hash, (UInt32)i);
+
+                            TxOutput prevOutput;
+                            if (!this.utxoBuilderStorage.TryGetOutput(txOutputKey, out prevOutput))
+                                throw new Exception("TODO");
+
+                            this.utxoBuilderStorage.RemoveOutput(txOutputKey);
+
+                            // store rollback information, the output will need to be added back during rollback
+                            this.spentOutputs.Add(new KeyValuePair<TxOutputKey, TxOutput>(txOutputKey, prevOutput));
+                        }
+                    }
+                    this.utxoBuilderStorage.RemoveTransaction(tx.Hash);
+
+                    // store rollback information, the block containing the previous transaction will need to be known during rollback
+                    this.spentTransactions.Add(new KeyValuePair<UInt256, SpentTx>(tx.Hash, unspentTx.ToSpent()));
+                }
+                else
+                {
+                    // duplicate transaction output
+                    this.logger.Warn("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(chainedHeader.Height, chainedHeader.Hash.ToHexNumberString()));
+                    throw new ValidationException(chainedHeader.Hash);
+                }
+            }
+
+            // add transaction to the utxo
+            this.utxoBuilderStorage.AddTransaction(tx.Hash, new UnspentTx(chainedHeader.Hash, tx.Outputs.Count, OutputState.Unspent));
+
+            // add transaction outputs to the utxo
+            foreach (var output in tx.Outputs.Select((x, i) => new KeyValuePair<TxOutputKey, TxOutput>(new TxOutputKey(tx.Hash, (UInt32)i), x)))
+                this.utxoBuilderStorage.AddOutput(output.Key, output.Value);
+        }
+
+        public TxOutput Spend(TxInput input, ChainedHeader chainedHeader)
+        {
+            UnspentTx unspentTx;
+            if (!this.utxoBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx)
+                || !this.utxoBuilderStorage.ContainsOutput(input.PreviousTxOutputKey))
+            {
+                // output wasn't present in utxo, invalid block
+                throw new ValidationException(chainedHeader.Hash);
+            }
+
+            var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
+
+            if (outputIndex < 0 || outputIndex >= unspentTx.OutputStates.Length)
+            {
+                // output was out of bounds
+                throw new ValidationException(chainedHeader.Hash);
+            }
+
+            if (unspentTx.OutputStates[outputIndex] == OutputState.Spent)
+            {
+                // output was already spent
+                throw new ValidationException(chainedHeader.Hash);
+            }
+
+            // update output states
+            unspentTx = unspentTx.SetOutputState(outputIndex, OutputState.Spent);
+
+            //TODO don't remove data immediately, needs to stick around for rollback
+
+            // update partially spent transaction in the utxo
+            if (unspentTx.OutputStates.Any(x => x == OutputState.Unspent))
+            {
+                this.utxoBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
+            }
+            // remove fully spent transaction from the utxo
+            else
+            {
+                this.utxoBuilderStorage.RemoveTransaction(input.PreviousTxOutputKey.TxHash);
+
+                // store rollback information, the block containing the previous transaction will need to be known during rollback
+                this.spentTransactions.Add(new KeyValuePair<UInt256, SpentTx>(input.PreviousTxOutputKey.TxHash, unspentTx.ToSpent()));
+            }
+
+            // retrieve previous output
+            TxOutput prevOutput;
+            if (!this.utxoBuilderStorage.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
+                throw new Exception("TODO - corruption");
+
+            // store rollback information, the output will need to be added back during rollback
+            this.spentOutputs.Add(new KeyValuePair<TxOutputKey, TxOutput>(input.PreviousTxOutputKey, prevOutput));
+
+            // remove the output from the utxo
+            this.utxoBuilderStorage.RemoveOutput(input.PreviousTxOutputKey);
+
+            return prevOutput;
+        }
+
+        public void Unmint(Transaction tx, ChainedHeader chainedHeader)
+        {
+            // check that transaction exists
+            UnspentTx unspentTx;
+            if (!this.utxoBuilderStorage.TryGetTransaction(tx.Hash, out unspentTx))
+            {
+                // missing transaction output
+                this.logger.Warn("Missing transaction at block {0:#,##0}, {1}, tx {2}".Format2(chainedHeader.Height, chainedHeader.Hash.ToHexNumberString(), tx.Hash));
+                throw new ValidationException(chainedHeader.Hash);
+            }
+
+            //TODO verify blockheight
+
+            // verify all outputs are unspent before unminting
+            if (!unspentTx.OutputStates.All(x => x == OutputState.Unspent))
+            {
+                throw new ValidationException(chainedHeader.Hash);
+            }
+
+            // remove the transaction
+            this.utxoBuilderStorage.RemoveTransaction(tx.Hash);
+
+            // remove the transaction outputs
+            for (var outputIndex = 0U; outputIndex < tx.Outputs.Count; outputIndex++)
+                this.utxoBuilderStorage.RemoveOutput(new TxOutputKey(tx.Hash, outputIndex));
+        }
+
+        public void Unspend(TxInput input, ChainedHeader chainedHeader, Dictionary<UInt256, SpentTx> spentTransactions, Dictionary<TxOutputKey, TxOutput> spentOutputs)
+        {
+            //TODO currently a MissingDataException will get thrown if the rollback information is missing
+            //TODO rollback is still possible if any resurrecting transactions can be found
+            //TODO the network does not allow arbitrary transaction lookup, but if the transactions can be retrieved then this code should allow it
+
+            //// retrieve rollback information
+            //UInt256 prevTxBlockHash;
+            //if (!spentTransactions.TryGetValue(input.PreviousTxOutputKey.TxHash, out prevTxBlockHash))
+            //{
+            //    //TODO throw should indicate rollback info is missing
+            //    throw new MissingDataException(null);
+            //}
+
+            // retrieve previous output
+            TxOutput prevTxOutput;
+            if (!spentOutputs.TryGetValue(input.PreviousTxOutputKey, out prevTxOutput))
+                throw new Exception("TODO - corruption");
+
+            // retrieve transaction output states, if not found then a fully spent transaction is being resurrected
+            UnspentTx unspentTx;
+            if (!this.utxoBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
+            {
+                // retrieve spent transaction
+                SpentTx prevSpentTx;
+                if (!spentTransactions.TryGetValue(input.PreviousTxOutputKey.TxHash, out prevSpentTx))
+                    throw new Exception("TODO - corruption");
+
+                // create fully spent transaction output state
+                unspentTx = new UnspentTx(prevSpentTx.ConfirmedBlockHash, prevSpentTx.OutputCount, OutputState.Spent);
+            }
+
+            // retrieve previous output index
+            var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
+            if (outputIndex < 0 || outputIndex >= unspentTx.OutputStates.Length)
+                throw new Exception("TODO - corruption");
+
+            // check that output isn't already considered unspent
+            if (unspentTx.OutputStates[outputIndex] == OutputState.Unspent)
+                throw new ValidationException(chainedHeader.Hash);
+
+            // mark output as unspent
+            this.utxoBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx.SetOutputState(outputIndex, OutputState.Unspent));
+
+            // add transaction output back to utxo
+            this.utxoBuilderStorage.AddOutput(input.PreviousTxOutputKey, prevTxOutput);
+        }
+
+        private void SaveRollbackInformation(int height, UInt256 blockHash, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
+        {
+            spentTransactionsCache[blockHash] = this.spentTransactions.ToImmutable();
+            this.spentTransactions.Clear();
+
+            spentOutputsCache[blockHash] = this.spentOutputs.ToImmutable();
+            this.spentOutputs.Clear();
+        }
+
+        public void Flush()
+        {
+            this.utxoBuilderStorage.Flush();
+        }
+
+        public Utxo ToImmutable(UInt256 blockHash)
+        {
+            return new Utxo(utxoBuilderStorage.ToImmutable(blockHash));
+        }
+
+        public Utxo Close(UInt256 blockHash)
+        {
+            return new Utxo(utxoBuilderStorage.Close(blockHash));
+        }
+
+        private void BeginTransaction()
+        {
+            this.utxoBuilderStorage.BeginTransaction();
+        }
+
+        private void CommitTransaction()
+        {
+            this.utxoBuilderStorage.CommitTransaction();
+        }
+
+        private void RollbackTransaction()
+        {
+            this.utxoBuilderStorage.RollbackTransaction();
         }
 
         private void RevalidateBlockchain(Chain blockchain, Block genesisBlock)

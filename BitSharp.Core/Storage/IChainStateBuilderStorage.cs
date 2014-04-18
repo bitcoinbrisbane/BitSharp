@@ -8,14 +8,18 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Storage
 {
-    public interface IUtxoBuilderStorage : IDisposable
+    public interface IChainStateBuilderStorage : IDisposable
     {
         void BeginTransaction();
         void CommitTransaction();
         void RollbackTransaction();
 
+        
+        UInt256 BlockHash { get; set; }
+
+        
         int TransactionCount { get; }
-                
+
         bool ContainsTransaction(UInt256 txHash);
 
         bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx);
@@ -28,7 +32,7 @@ namespace BitSharp.Core.Storage
 
         IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions();
 
-        
+
         int OutputCount { get; }
 
         bool ContainsOutput(TxOutputKey txOutputKey);
@@ -38,10 +42,10 @@ namespace BitSharp.Core.Storage
         void AddOutput(TxOutputKey txOutputKey, TxOutput txOutput);
 
         bool RemoveOutput(TxOutputKey txOutputKey);
-        
+
         IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs();
-                
-        
+
+
         void Flush();
 
         IUtxoStorage ToImmutable(UInt256 blockHash);
