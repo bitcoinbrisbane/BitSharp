@@ -113,6 +113,7 @@
     <Compile Include="Domain\UnspentTx.cs" />
     <Compile Include="Domain\Utxo.cs" />
     <Compile Include="JsonRpc\CoreRpcServer.cs" />
+    <Compile Include="Monitor\ChainStateMonitor.cs" />
     <Compile Include="Wallet\Address\PublicKeyHashAddress.cs" />
     <Compile Include="Wallet\Address\First10000Address.cs" />
     <Compile Include="Wallet\Address\Top10000Address.cs" />
