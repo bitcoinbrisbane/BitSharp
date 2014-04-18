@@ -20,7 +20,6 @@ namespace BitSharp.Core.Workers
 {
     public class PruningWorker : Worker
     {
-        private readonly Func<ChainState> getChainState;
         private readonly Func<ChainStateBuilder> getChainStateBuilder;
         private readonly IBlockchainRules rules;
         private readonly BlockTxHashesCache blockTxHashesCache;
@@ -28,10 +27,9 @@ namespace BitSharp.Core.Workers
         private readonly SpentTransactionsCache spentTransactionsCache;
         private readonly SpentOutputsCache spentOutputsCache;
 
-        public PruningWorker(WorkerConfig workerConfig, Func<ChainState> getChainState, Func<ChainStateBuilder> getChainStateBuilder, Logger logger, IBlockchainRules rules, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
+        public PruningWorker(WorkerConfig workerConfig, Func<ChainStateBuilder> getChainStateBuilder, Logger logger, IBlockchainRules rules, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
             : base("PruningWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
-            this.getChainState = getChainState;
             this.getChainStateBuilder = getChainStateBuilder;
             this.rules = rules;
             this.blockTxHashesCache = blockTxHashesCache;
@@ -46,24 +44,13 @@ namespace BitSharp.Core.Workers
 
         protected override void WorkAction()
         {
-            var chainState = this.getChainState();
-            if (chainState == null)
-                return;
             var chainStateBuilder = this.getChainStateBuilder();
-
-            // prune committed chain
-            var committedChain = chainState.Chain;
-            PruneChain(committedChain);
 
             // prune builder chain
             if (chainStateBuilder != null)
             {
-                try
-                {
-                    var builderChain = chainStateBuilder.Chain.ToImmutable();
-                    PruneChain(builderChain, minHeight: committedChain.Height + 1);
-                }
-                catch (ObjectDisposedException) {/*chainStateBuilder may have been disposed after we grabbed a reference to it*/}
+                var builderChain = chainStateBuilder.Chain.ToImmutable();
+                PruneChain(builderChain);
             }
 
             this.transactionCache.Flush();
@@ -124,7 +111,6 @@ namespace BitSharp.Core.Workers
                                 this.transactionCache.TryRemove(txHash);
                         }
                     }
-                    break;
 
                     for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
                     {
@@ -134,6 +120,7 @@ namespace BitSharp.Core.Workers
                         this.spentTransactionsCache.TryRemove(block.Hash);
                         this.spentOutputsCache.TryRemove(block.Hash);
                     }
+                    break;
             }
         }
     }

@@ -43,13 +43,12 @@ namespace BitSharp.Core.Test.Monitor
 
             using (var simulator = new MainnetSimulator())
             {
-                simulator.CoreDaemon.RegistorMonitor(walletMonitor);
+                simulator.CoreDaemon.SubscribeChainStateVisitor(walletMonitor);
 
                 var block9999 = simulator.BlockProvider.GetBlock(9999);
 
                 simulator.AddBlockRange(0, 9999);
                 simulator.WaitForDaemon();
-                simulator.CloseChainStateBuiler();
                 AssertMethods.AssertDaemonAtBlock(9999, block9999.Hash, simulator.CoreDaemon);
 
                 var minedTxOutputs = walletMonitor.Entries.Where(x => x.Type == EnumWalletEntryType.Mine).ToList();

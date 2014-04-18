@@ -104,7 +104,7 @@ namespace BitSharp.Client
                 var blockchainDaemon = this.kernel.Get<CoreDaemon>();
 
 #if DUMMY_MONITOR
-                blockchainDaemon.RegistorMonitor(new DummyMonitor(this.logger));
+                blockchainDaemon.SubscribeChainStateVisitor(new DummyMonitor(this.logger));
 #endif
 
                 // setup view model

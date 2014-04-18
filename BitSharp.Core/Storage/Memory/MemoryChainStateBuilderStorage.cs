@@ -112,12 +112,12 @@ namespace BitSharp.Core.Storage.Memory
         {
         }
 
-        public IChainStateStorage ToImmutable(UInt256 blockHash)
+        public IChainStateStorage ToImmutable()
         {
             //TODO figure out if creating clean dictionaries actually has any benefits
             if (true)
             {
-                return new MemoryChainStateStorage(blockHash, this.unspentTransactions.ToImmutable(), this.unspentOutputs.ToImmutable());
+                return new MemoryChainStateStorage(this.blockHash, this.unspentTransactions.ToImmutable(), this.unspentOutputs.ToImmutable());
             }
             else
             {
@@ -129,7 +129,7 @@ namespace BitSharp.Core.Storage.Memory
                 foreach (var unspentOutput in this.unspentOutputs)
                     compactUnspentOutputs.Add(unspentOutput);
 
-                return new MemoryChainStateStorage(blockHash, compactUnspentTransactions.ToImmutable(), compactUnspentOutputs.ToImmutable());
+                return new MemoryChainStateStorage(this.blockHash, compactUnspentTransactions.ToImmutable(), compactUnspentOutputs.ToImmutable());
             }
         }
 

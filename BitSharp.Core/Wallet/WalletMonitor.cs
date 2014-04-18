@@ -45,7 +45,7 @@ namespace BitSharp.Core.Wallet
         public void AddAddress(IWalletAddress address)
         {
             //TODO add to queue, cannot monitor address until chain position moves
-            var startChainPosition = new ChainPosition(0, 0, 0, 0);
+            var startChainPosition = ChainPosition.Fake();
             var monitoredRange = new[] { Tuple.Create(startChainPosition, startChainPosition) }.ToList();
 
             foreach (var outputScriptHash in address.GetOutputScriptHashes())

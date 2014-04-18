@@ -424,7 +424,7 @@ namespace BitSharp.Esent
             throw new NotImplementedException();
         }
 
-        public IChainStateStorage ToImmutable(UInt256 blockHash)
+        public IChainStateStorage ToImmutable()
         {
             if (this.inTransaction)
                 throw new InvalidOperationException();

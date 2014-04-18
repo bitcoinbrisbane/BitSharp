@@ -66,7 +66,6 @@ namespace BitSharp.Node.Workers
 
             this.localClient.OnBlock += HandleBlock;
             this.blockchainDaemon.OnChainStateChanged += HandleChainStateChanged;
-            this.blockchainDaemon.OnChainStateBuilderChanged += HandleChainStateChanged;
             this.blockchainDaemon.OnTargetChainChanged += HandleTargetChainChanged;
             this.blockCache.OnMissing += HandleBlockMissing;
 
@@ -85,7 +84,6 @@ namespace BitSharp.Node.Workers
         {
             this.localClient.OnBlock -= HandleBlock;
             this.blockchainDaemon.OnChainStateChanged -= HandleChainStateChanged;
-            this.blockchainDaemon.OnChainStateBuilderChanged -= HandleChainStateChanged;
             this.blockchainDaemon.OnTargetChainChanged -= HandleTargetChainChanged;
             this.blockCache.OnMissing -= HandleBlockMissing;
 
@@ -160,7 +158,7 @@ namespace BitSharp.Node.Workers
 
         private void UpdateMissingBlockQueue()
         {
-            var currentChainLocal = this.blockchainDaemon.CurrentBuilderChain;
+            var currentChainLocal = this.blockchainDaemon.CurrentChain;
             var targetChainLocal = this.blockchainDaemon.TargetChain;
 
             // remove any blocks that are no longer missing
@@ -197,7 +195,7 @@ namespace BitSharp.Node.Workers
 
         private void UpdateTargetChainQueue()
         {
-            var currentChainLocal = this.blockchainDaemon.CurrentBuilderChain;
+            var currentChainLocal = this.blockchainDaemon.CurrentChain;
             var targetChainLocal = this.blockchainDaemon.TargetChain;
 
             // update the target chain queue at most once per second

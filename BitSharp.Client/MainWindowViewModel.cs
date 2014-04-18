@@ -29,7 +29,7 @@ namespace BitSharp.Client
         private string runningTime;
         private readonly DispatcherTimer runningTimeTimer;
 
-        private ChainState viewChainState;
+        private Chain viewChain;
 
         private long _winningBlockchainHeight;
         private long _currentBlockchainHeight;
@@ -51,10 +51,10 @@ namespace BitSharp.Client
             runningTimeTimer.Interval = TimeSpan.FromMilliseconds(100);
             runningTimeTimer.Start();
 
-            this.viewChainState = this.blockchainDaemon.ChainState;
+            this.viewChain = this.blockchainDaemon.CurrentChain;
 
             this.WinningBlockchainHeight = this.blockchainDaemon.TargetBlockHeight;
-            this.CurrentBlockchainHeight = this.blockchainDaemon.CurrentBuilderHeight;
+            this.CurrentBlockchainHeight = this.blockchainDaemon.CurrentChain.Height;
             this.DownloadedBlockCount = this.blockCache.Count;
 
             this.blockCache.OnAddition +=
@@ -71,11 +71,7 @@ namespace BitSharp.Client
 
             this.blockchainDaemon.OnChainStateChanged +=
                 (sender, chainState) =>
-                    CurrentBlockchainHeight = this.blockchainDaemon.CurrentBuilderHeight;
-
-            this.blockchainDaemon.OnChainStateBuilderChanged +=
-                (sender, height) =>
-                    CurrentBlockchainHeight = this.blockchainDaemon.CurrentBuilderHeight;
+                    CurrentBlockchainHeight = this.blockchainDaemon.CurrentChain.Height;
         }
 
         public string RunningTime
@@ -106,17 +102,17 @@ namespace BitSharp.Client
         {
             get
             {
-                return this.viewChainState.Height;
+                return this.viewChain.Height;
             }
             set
             {
-                var chainStateLocal = this.blockchainDaemon.ChainState;
+                var chainLocal = this.blockchainDaemon.CurrentChain;
 
                 var height = value;
-                if (height > chainStateLocal.Height)
-                    height = chainStateLocal.Height;
+                if (height > chainLocal.Height)
+                    height = chainLocal.Height;
 
-                var targetBlock = chainStateLocal.LastBlock;
+                var targetBlock = chainLocal.LastBlock;
                 SetViewBlockchain(targetBlock);
             }
         }
@@ -127,45 +123,45 @@ namespace BitSharp.Client
 
         public void ViewBlockchainFirst()
         {
-            var chainStateLocal = this.blockchainDaemon.ChainState;
-            if (chainStateLocal.Chain.Blocks.Count == 0)
+            var chainLocal = this.blockchainDaemon.CurrentChain;
+            if (chainLocal.Blocks.Count == 0)
                 return;
 
-            var targetBlock = chainStateLocal.Chain.Blocks.First();
+            var targetBlock = chainLocal.Blocks.First();
             SetViewBlockchain(targetBlock);
         }
 
         public void ViewBlockchainPrevious()
         {
-            var chainStateLocal = this.blockchainDaemon.ChainState;
-            if (chainStateLocal.Chain.Blocks.Count == 0)
+            var chainLocal = this.blockchainDaemon.CurrentChain;
+            if (chainLocal.Blocks.Count == 0)
                 return;
 
-            var height = this.viewChainState.Height - 1;
-            if (height > chainStateLocal.Height)
-                height = chainStateLocal.Height;
+            var height = this.viewChain.Height - 1;
+            if (height > chainLocal.Height)
+                height = chainLocal.Height;
 
-            var targetBlock = chainStateLocal.LastBlock;
+            var targetBlock = chainLocal.LastBlock;
             SetViewBlockchain(targetBlock);
         }
 
         public void ViewBlockchainNext()
         {
-            var chainStateLocal = this.blockchainDaemon.ChainState;
-            if (chainStateLocal.Chain.Blocks.Count == 0)
+            var chainLocal = this.blockchainDaemon.CurrentChain;
+            if (chainLocal.Blocks.Count == 0)
                 return;
 
-            var height = this.viewChainState.Height + 1;
-            if (height > chainStateLocal.Height)
-                height = chainStateLocal.Height;
+            var height = this.viewChain.Height + 1;
+            if (height > chainLocal.Height)
+                height = chainLocal.Height;
 
-            var targetBlock = chainStateLocal.LastBlock;
+            var targetBlock = chainLocal.LastBlock;
             SetViewBlockchain(targetBlock);
         }
 
         public void ViewBlockchainLast()
         {
-            SetViewBlockchain(this.blockchainDaemon.ChainState);
+            SetViewBlockchain(this.blockchainDaemon.CurrentChain);
         }
 
         private void SetViewBlockchain(ChainedHeader targetBlock)
@@ -191,15 +187,15 @@ namespace BitSharp.Client
             }
         }
 
-        private void SetViewBlockchain(ChainState chainState)
+        private void SetViewBlockchain(Chain chain)
         {
-            this.viewChainState = chainState;
+            this.viewChain = chain;
 
             try
             {
-                if (chainState.Height > 0)
+                if (chain.Height > 0)
                 {
-                    var block = this.blockCache[this.viewChainState.LastBlockHash];
+                    var block = this.blockCache[this.viewChain.LastBlockHash];
                     // TODO this is abusing rollback a bit just to get the transactions that exist in a target block that's already known
                     // TODO make a better api for get the net output of a block
                     //List<TxOutputKey> spendOutputs, receiveOutputs;

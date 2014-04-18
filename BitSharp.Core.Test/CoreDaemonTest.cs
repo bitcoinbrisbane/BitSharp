@@ -219,16 +219,20 @@ namespace BitSharp.Core.Test
                     AssertMethods.AssertDaemonAtBlock(6, block6b.Hash, daemon2.BlockchainDaemon);
 
                     // verify that re-organized blockchain matches winning-only blockchain
-                    var expectedUtxo = daemon2.BlockchainDaemon.ChainState.Utxo;
-                    var expectedUnspentTransactions = ImmutableDictionary.CreateRange<UInt256, UnspentTx>(expectedUtxo.GetUnspentTransactions());
-                    var expectedUnspentOutputs = ImmutableDictionary.CreateRange<TxOutputKey, TxOutput>(expectedUtxo.GetUnspentOutputs());
+                    using (var expectedChainSate = daemon2.BlockchainDaemon.GetChainState())
+                    using (var actualChainSate = daemon1.BlockchainDaemon.GetChainState())
+                    {
+                        var expectedUtxo = expectedChainSate.Utxo;
+                        var expectedUnspentTransactions = ImmutableDictionary.CreateRange<UInt256, UnspentTx>(expectedUtxo.GetUnspentTransactions());
+                        var expectedUnspentOutputs = ImmutableDictionary.CreateRange<TxOutputKey, TxOutput>(expectedUtxo.GetUnspentOutputs());
 
-                    var actualUtxo = daemon1.BlockchainDaemon.ChainState.Utxo;
-                    var actualUnspentTransactions = ImmutableDictionary.CreateRange<UInt256, UnspentTx>(actualUtxo.GetUnspentTransactions());
-                    var actualUnspentOutputs = ImmutableDictionary.CreateRange<TxOutputKey, TxOutput>(actualUtxo.GetUnspentOutputs());
+                        var actualUtxo = actualChainSate.Utxo;
+                        var actualUnspentTransactions = ImmutableDictionary.CreateRange<UInt256, UnspentTx>(actualUtxo.GetUnspentTransactions());
+                        var actualUnspentOutputs = ImmutableDictionary.CreateRange<TxOutputKey, TxOutput>(actualUtxo.GetUnspentOutputs());
 
-                    CollectionAssert.AreEquivalent(expectedUnspentTransactions, actualUnspentTransactions);
-                    CollectionAssert.AreEquivalent(expectedUnspentOutputs, actualUnspentOutputs);
+                        CollectionAssert.AreEquivalent(expectedUnspentTransactions, actualUnspentTransactions);
+                        CollectionAssert.AreEquivalent(expectedUnspentOutputs, actualUnspentOutputs);
+                    }
                 }
             }
         }

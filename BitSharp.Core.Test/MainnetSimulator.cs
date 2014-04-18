@@ -120,7 +120,6 @@ namespace BitSharp.Core.Test
             this.coreDaemon.OnTargetBlockChanged += onEvent;
             this.coreDaemon.OnTargetChainChanged += onEvent;
             this.coreDaemon.OnChainStateChanged += onEvent;
-            this.coreDaemon.OnChainStateBuilderChanged += onEvent;
             try
             {
                 while (firedEvent.WaitOne(500)) { }
@@ -130,21 +129,6 @@ namespace BitSharp.Core.Test
                 this.coreDaemon.OnTargetBlockChanged -= onEvent;
                 this.coreDaemon.OnTargetChainChanged -= onEvent;
                 this.coreDaemon.OnChainStateChanged -= onEvent;
-                this.coreDaemon.OnChainStateBuilderChanged -= onEvent;
-            }
-        }
-
-        public void CloseChainStateBuiler()
-        {
-            var original = this.coreDaemon.MaxBuilderTime;
-            try
-            {
-                this.coreDaemon.MaxBuilderTime = TimeSpan.Zero;
-                this.coreDaemon.ForceWorkAndWait();
-            }
-            finally
-            {
-                this.coreDaemon.MaxBuilderTime = original;
             }
         }
     }

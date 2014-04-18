@@ -41,7 +41,6 @@ namespace BitSharp.Core.Test.JsonRpc
 
                     simulator.AddBlockRange(0, 9);
                     simulator.WaitForDaemon();
-                    simulator.CloseChainStateBuiler();
                     AssertMethods.AssertDaemonAtBlock(9, block9.Hash, simulator.CoreDaemon);
 
                     var jsonRequestId = Guid.NewGuid().ToString();

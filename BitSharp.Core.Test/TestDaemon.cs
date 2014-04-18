@@ -87,7 +87,6 @@ namespace BitSharp.Core.Test
 
             // start the blockchain daemon
             this.blockchainDaemon.Start();
-            this.blockchainDaemon.MaxBuilderTime = TimeSpan.Zero;
 
             // wait for initial work
             this.blockchainDaemon.ForceWorkAndWait();
@@ -95,7 +94,7 @@ namespace BitSharp.Core.Test
             // verify initial state
             Assert.AreEqual(0, this.blockchainDaemon.TargetBlock.Height);
             Assert.AreEqual(this.genesisBlock.Hash, this.blockchainDaemon.TargetChain.LastBlock.Hash);
-            Assert.AreEqual(this.genesisBlock.Hash, this.blockchainDaemon.ChainState.LastBlockHash);
+            Assert.AreEqual(this.genesisBlock.Hash, this.blockchainDaemon.CurrentChain.LastBlockHash);
         }
 
         public void Dispose()

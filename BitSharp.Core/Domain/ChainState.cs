@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Domain
 {
-    public class ChainState
+    public class ChainState : IDisposable
     {
         private readonly Chain chain;
         private readonly Utxo utxo;
@@ -18,6 +18,17 @@ namespace BitSharp.Core.Domain
         {
             this.chain = chain;
             this.utxo = utxo;
+        }
+
+        ~ChainState()
+        {
+            this.Dispose();
+        }
+
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+            this.utxo.Dispose();
         }
 
         public Chain Chain { get { return this.chain; } }

@@ -29,5 +29,11 @@ namespace BitSharp.Core.Monitor
         public int InputIndex { get { return this.inputIndex; } }
 
         public int OutputIndex { get { return this.outputIndex; } }
+
+        //TODO
+        public static ChainPosition Fake()
+        {
+            return new ChainPosition(0, 0, 0, 0);
+        }
     }
 }

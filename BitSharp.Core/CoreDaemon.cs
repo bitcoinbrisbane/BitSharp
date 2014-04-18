@@ -21,6 +21,8 @@ using BitSharp.Core.Rules;
 using BitSharp.Core.Wallet;
 using System.Security.Cryptography;
 using BitSharp.Core.Monitor;
+using BitSharp.Core.Builders;
+using BitSharp.Domain;
 
 namespace BitSharp.Core
 {
@@ -41,7 +43,6 @@ namespace BitSharp.Core
         public event EventHandler OnTargetBlockChanged;
         public event EventHandler OnTargetChainChanged;
         public event EventHandler OnChainStateChanged;
-        public event EventHandler OnChainStateBuilderChanged;
 
         private readonly Logger logger;
         private readonly IKernel kernel;
@@ -54,13 +55,16 @@ namespace BitSharp.Core
 
         private readonly CancellationTokenSource shutdownToken;
 
+        private readonly ChainStateBuilder chainStateBuilder;
+        private ChainState prevChainState;
+        private ChainState chainState;
+        private readonly ReaderWriterLockSlim chainStateLock;
+
         private readonly ChainingWorker chainingWorker;
         private readonly TargetChainWorker targetChainWorker;
         private readonly ChainStateWorker chainStateWorker;
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
-
-        private readonly ConcurrentSetBuilder<IChainStateVisitor> chainStateMonitors;
 
         public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockCache blockCache)
         {
@@ -74,8 +78,6 @@ namespace BitSharp.Core
             this.blockTxHashesCache = blockTxHashesCache;
             this.transactionCache = transactionCache;
             this.blockCache = blockCache;
-
-            this.chainStateMonitors = new ConcurrentSetBuilder<IChainStateVisitor>();
 
             // write genesis block out to storage
             this.blockHeaderCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock.Header;
@@ -92,6 +94,14 @@ namespace BitSharp.Core
             this.chainedHeaderCache.OnAddition += OnChainedHeaderAddition;
             this.chainedHeaderCache.OnModification += OnChainedHeaderModification;
 
+            // create chain state builder
+            this.chainStateBuilder =
+                this.kernel.Get<ChainStateBuilder>(
+                new ConstructorArgument("chain", Chain.CreateForGenesisBlock(this.rules.GenesisChainedHeader).ToBuilder()),
+                new ConstructorArgument("parentUtxo", Utxo.CreateForGenesisBlock(this.rules.GenesisBlock.Hash)));
+
+            this.chainStateLock = new ReaderWriterLockSlim();
+
             // create workers
             this.chainingWorker = kernel.Get<ChainingWorker>(
                 new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))));
@@ -102,8 +112,7 @@ namespace BitSharp.Core
             this.chainStateWorker = kernel.Get<ChainStateWorker>(
                 new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromSeconds(5))),
                 new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)),
-                new ConstructorArgument("getMonitors", (Func<IImmutableSet<IChainStateVisitor>>)(() => this.ChainStateMonitors)),
-                new ConstructorArgument("maxBuilderTime", TimeSpan.MaxValue));
+                new ConstructorArgument("chainStateBuilder", this.chainStateBuilder));
 
             this.targetChainWorker.OnTargetBlockChanged +=
                 () =>
@@ -126,18 +135,12 @@ namespace BitSharp.Core
             this.chainStateWorker.OnChainStateChanged +=
                 () =>
                 {
-                    //this.pruningWorker.NotifyWork();
                     this.utxoScanWorker.NotifyWork();
 
-                    var handler = this.OnChainStateChanged;
-                    if (handler != null)
-                        handler(this, EventArgs.Empty);
-                };
+                    this.chainStateLock.DoWrite(() =>
+                        this.chainState = null);
 
-            this.chainStateWorker.OnChainStateBuilderChanged +=
-                () =>
-                {
-                    var handler = this.OnChainStateBuilderChanged;
+                    var handler = this.OnChainStateChanged;
                     if (handler != null)
                         handler(this, EventArgs.Empty);
                 };
@@ -162,7 +165,7 @@ namespace BitSharp.Core
             this.utxoScanWorker = new WorkerMethod("UTXO Scan Worker",
                 () =>
                 {
-                    var chainStateLocal = this.ChainState;
+                    var chainStateLocal = this.GetChainState();
                     if (chainStateLocal == null)
                         return;
 
@@ -195,65 +198,16 @@ namespace BitSharp.Core
 
         public Chain TargetChain { get { return this.targetChainWorker.TargetChain; } }
 
-        public ChainState ChainState { get { return this.chainStateWorker.ChainState; } }
+        //public ChainState ChainState { get { return this.chainStateBuilder.ToImmutable(); } }
 
-        public Chain CurrentBuilderChain
+        public Chain CurrentChain
         {
-            get
-            {
-                var chainStateLocal = this.chainStateWorker.ChainState;
-                var chainStateBuilderLocal = this.chainStateWorker.ChainStateBuilder;
-
-                if (chainStateBuilderLocal != null)
-                    return chainStateBuilderLocal.Chain.ToImmutable();
-                else
-                    return chainStateLocal.Chain;
-            }
-        }
-
-        public int CurrentBuilderHeight
-        {
-            get
-            {
-                var chainStateLocal = this.chainStateWorker.ChainState;
-                var chainStateBuilderLocal = this.chainStateWorker.ChainStateBuilder;
-
-                if (chainStateBuilderLocal != null)
-                    return chainStateBuilderLocal.Height;
-                else
-                    return chainStateLocal.Height;
-            }
-        }
-
-        public TimeSpan MaxBuilderTime
-        {
-            get { return this.chainStateWorker.MaxBuilderTime; }
-            set { this.chainStateWorker.MaxBuilderTime = value; }
+            get { return this.chainStateWorker.CurrentChain; }
         }
 
         public TimeSpan AverageBlockProcessingTime()
         {
             return this.chainStateWorker.AverageBlockProcessingTime();
-        }
-
-        internal ChainingWorker ChainingWorker
-        {
-            get { return this.chainingWorker; }
-        }
-
-        internal TargetChainWorker TargetChainWorker
-        {
-            get { return this.targetChainWorker; }
-        }
-
-        internal ChainStateWorker ChainStateWorker
-        {
-            get { return this.chainStateWorker; }
-        }
-
-        internal ImmutableHashSet<IChainStateVisitor> ChainStateMonitors
-        {
-            get { return this.chainStateMonitors.ToImmutable(); }
         }
 
         public void Start()
@@ -299,6 +253,8 @@ namespace BitSharp.Core
             // cleanup workers
             new IDisposable[]
             {
+                this.prevChainState,
+                this.chainState,
                 this.chainingWorker,
                 this.targetChainWorker,
                 this.chainStateWorker,
@@ -315,14 +271,42 @@ namespace BitSharp.Core
             this.chainStateWorker.ForceWorkAndWait();
         }
 
-        public void RegistorMonitor(IChainStateVisitor txMonitor)
+        public ChainState GetChainState()
         {
-            this.chainStateMonitors.Add(txMonitor);
+            this.chainStateLock.EnterUpgradeableReadLock();
+            try
+            {
+                if (this.chainState == null)
+                {
+                    this.chainStateLock.EnterWriteLock();
+                    try
+                    {
+                        if (this.chainState == null)
+                        {
+                            if (this.prevChainState != null)
+                                this.prevChainState.Dispose();
+
+                            this.chainState = this.chainStateBuilder.ToImmutable();
+                            this.prevChainState = this.chainState;
+                        }
+                    }
+                    finally
+                    {
+                        this.chainStateLock.ExitWriteLock();
+                    }
+                }
+
+                return this.chainState;
+            }
+            finally
+            {
+                this.chainStateLock.ExitUpgradeableReadLock();
+            }
         }
 
-        public void UnegistorMonitor(IChainStateVisitor txMonitor)
+        public IDisposable SubscribeChainStateVisitor(IChainStateVisitor visitor)
         {
-            this.chainStateMonitors.Remove(txMonitor);
+            return this.chainStateBuilder.Subscribe(visitor);
         }
 
         private void OnBlockHeaderAddition(UInt256 blockHash, BlockHeader blockHeader)

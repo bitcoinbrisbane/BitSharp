@@ -54,7 +54,7 @@ namespace BitSharp.Core.JsonRpc
         [JsonRpcMethod("getblockcount")]
         public int GetBlockCount()
         {
-            return this.coreDaemon.CurrentBuilderHeight;
+            return this.coreDaemon.CurrentChain.Height;
         }
 
         [JsonRpcMethod("getreceivedbyaddress")]
