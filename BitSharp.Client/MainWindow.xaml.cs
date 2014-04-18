@@ -1,7 +1,6 @@
 ﻿//#define TEST_TOOL
 //#define TESTNET3
 //#define MEMORY
-//#define MONGODB
 //#define TRANSIENT_BLOCKS
 #define DUMMY_MONITOR
 
@@ -76,14 +75,13 @@ namespace BitSharp.Client
                 modules.Add(new MemoryStorageModule());
 #elif MEMORY
                 modules.Add(new MemoryStorageModule());
-#elif MONGODB
-                modules.Add(new MongoStorageModule());
 #elif TRANSIENT_BLOCKS
                 modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "Data"), transientBlockStorage: true));
+                //ChainStateBuilderStorage.IndexOutputs = true;
 #else
                 modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "Data"), cacheSizeMaxBytes: int.MaxValue - 1));
+                //ChainStateBuilderStorage.IndexOutputs = true;
 #endif
-                ChainStateBuilderStorage.IndexOutputs = true;
 
                 // add cache modules
                 modules.Add(new CoreCacheModule());
