@@ -18,7 +18,6 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Esent
 {
-    //TODO this should eventually be written directly against the Jet API so that everything can be tuned specifically to the UTXO
     public class ChainStateBuilderStorage : IChainStateBuilderStorage
     {
         //TODO
