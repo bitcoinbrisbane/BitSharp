@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Wallet
+namespace BitSharp.Core.Monitor
 {
     public class ChainPosition
     {

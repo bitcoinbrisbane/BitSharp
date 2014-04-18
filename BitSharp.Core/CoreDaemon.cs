@@ -20,6 +20,7 @@ using BitSharp.Core.Workers;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Wallet;
 using System.Security.Cryptography;
+using BitSharp.Core.Monitor;
 
 namespace BitSharp.Core
 {

@@ -8,9 +8,9 @@ namespace BitSharp.Core.Wallet
 {
     public enum EnumWalletEntryType
     {
-        Mint,
+        Mine,
         Receive,
         Spend
-        //TODO Unmint, Unspend, DoubleSpend, MutatedReceive, MutatedSpend
+        //TODO Unmine, Unspend, DoubleSpend, MutatedReceive, MutatedSpend
     }
 }

@@ -1,6 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Domain;
+using BitSharp.Core.Monitor;
 using NLog;
 using System;
 using System.Collections.Concurrent;
@@ -13,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Wallet
 {
-    public class WalletMonitor : IChainStateMonitor
+    public class WalletMonitor : ChainStateMonitorBase
     {
         private readonly Logger logger;
 
@@ -65,17 +66,12 @@ namespace BitSharp.Core.Wallet
             }
         }
 
-        public void MintTxOutput(ChainPosition chainPosition, TxOutput txOutput, UInt256 outputScriptHash)
+        public override void MintTxOutput(ChainPosition chainPosition, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash, bool isCoinbase)
         {
-            this.ScanForEntry(chainPosition, EnumWalletEntryType.Mint, txOutput, outputScriptHash);
+            this.ScanForEntry(chainPosition, isCoinbase ? EnumWalletEntryType.Mine : EnumWalletEntryType.Receive, txOutput, outputScriptHash);
         }
 
-        public void ReceiveTxOutput(ChainPosition chainPosition, TxOutput txOutput, UInt256 outputScriptHash)
-        {
-            this.ScanForEntry(chainPosition, EnumWalletEntryType.Receive, txOutput, outputScriptHash);
-        }
-
-        public void SpendTxOutput(ChainPosition chainPosition, TxOutput txOutput, UInt256 outputScriptHash)
+        public override void SpendTxOutput(ChainPosition chainPosition, TxInput txInput, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash)
         {
             this.ScanForEntry(chainPosition, EnumWalletEntryType.Spend, txOutput, outputScriptHash);
         }

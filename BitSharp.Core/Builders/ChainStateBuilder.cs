@@ -19,6 +19,7 @@ using BitSharp.Core.Workers;
 using BitSharp.Core.Wallet;
 using System.Security.Cryptography;
 using BitSharp.Core.Domain;
+using BitSharp.Core.Monitor;
 
 namespace BitSharp.Core.Builders
 {
@@ -319,11 +320,11 @@ namespace BitSharp.Core.Builders
                 {
                     var txMonitor = monitors[i];
                     if (txOutput.Item1 < 0)
-                        txMonitor.SpendTxOutput(txOutput.Item2, txOutput.Item3, outputScriptHash);
+                        txMonitor.SpendTxOutput(txOutput.Item2, null /*TODO txInput*/, null /*TODO txOutputKey*/, txOutput.Item3, outputScriptHash);
                     else if (txOutput.Item1 > 0)
-                        txMonitor.ReceiveTxOutput(txOutput.Item2, txOutput.Item3, outputScriptHash);
+                        txMonitor.MintTxOutput(txOutput.Item2, null /*TODO txOutputKey*/, txOutput.Item3, outputScriptHash, isCoinbase: false);
                     else
-                        txMonitor.MintTxOutput(txOutput.Item2, txOutput.Item3, outputScriptHash);
+                        txMonitor.MintTxOutput(txOutput.Item2, null /*TODO txOutputKey*/, txOutput.Item3, outputScriptHash, isCoinbase: true);
                 }
             }//);
         }

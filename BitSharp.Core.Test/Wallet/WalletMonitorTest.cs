@@ -52,18 +52,18 @@ namespace BitSharp.Core.Test.Monitor
                 simulator.CloseChainStateBuiler();
                 AssertMethods.AssertDaemonAtBlock(9999, block9999.Hash, simulator.CoreDaemon);
 
-                var mintedTxOutputs = walletMonitor.Entries.Where(x => x.Type == EnumWalletEntryType.Mint).ToList();
+                var minedTxOutputs = walletMonitor.Entries.Where(x => x.Type == EnumWalletEntryType.Mine).ToList();
                 var receivedTxOutputs = walletMonitor.Entries.Where(x => x.Type == EnumWalletEntryType.Receive).ToList();
                 var spentTxOutputs = walletMonitor.Entries.Where(x => x.Type == EnumWalletEntryType.Spend).ToList();
 
-                var actualMintedBtc = mintedTxOutputs.Sum(x => (decimal)x.Value) / 100.MILLION();
+                var actualMinedBtc = minedTxOutputs.Sum(x => (decimal)x.Value) / 100.MILLION();
                 var actualReceivedBtc = receivedTxOutputs.Sum(x => (decimal)x.Value) / 100.MILLION();
                 var actualSpentBtc = spentTxOutputs.Sum(x => (decimal)x.Value) / 100.MILLION();
 
-                Assert.AreEqual(0, mintedTxOutputs.Count);
+                Assert.AreEqual(0, minedTxOutputs.Count);
                 Assert.AreEqual(16, receivedTxOutputs.Count);
                 Assert.AreEqual(14, spentTxOutputs.Count);
-                Assert.AreEqual(0M, actualMintedBtc);
+                Assert.AreEqual(0M, actualMinedBtc);
                 Assert.AreEqual(569.44M, actualReceivedBtc);
                 Assert.AreEqual(536.52M, actualSpentBtc);
             }

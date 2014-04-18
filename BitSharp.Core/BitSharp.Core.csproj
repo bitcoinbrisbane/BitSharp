@@ -117,11 +117,12 @@
     <Compile Include="Wallet\Address\First10000Address.cs" />
     <Compile Include="Wallet\Address\Top10000Address.cs" />
     <Compile Include="Wallet\Base58\ArrayHelpers.cs" />
-    <Compile Include="Wallet\ChainPosition.cs" />
+    <Compile Include="Monitor\ChainPosition.cs" />
     <Compile Include="Wallet\Base58\Base58Encoding.cs" />
     <Compile Include="Wallet\Base58\Base58EncodingTests.cs" />
+    <Compile Include="Monitor\ChainStateMonitorBase.cs" />
     <Compile Include="Wallet\EnumWalletEntryType.cs" />
-    <Compile Include="Wallet\IChainStateMonitor.cs" />
+    <Compile Include="Monitor\IChainStateMonitor.cs" />
     <Compile Include="Rules\IBlockchainRules.cs" />
     <Compile Include="Rules\MainnetRules.cs" />
     <Compile Include="Rules\RulesModule.cs" />
