@@ -153,3 +153,5 @@ $RECYCLE.BIN/
 
 # Exception for SQLite .dll file
 !SQLite.Interop.dll
+packages/
+Packages.dgml
