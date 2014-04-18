@@ -142,7 +142,7 @@
     <Compile Include="Storage\CoreCacheModule.cs" />
     <Compile Include="Storage\CoreStorageInstance.cs" />
     <Compile Include="Storage\ExtensionMethods.cs" />
-    <Compile Include="Storage\GenesisUtxoStorage.cs" />
+    <Compile Include="Storage\GenesisChainStateStorage.cs" />
     <Compile Include="Storage\IBoundedCache.cs" />
     <Compile Include="Storage\IBoundedStorage.cs" />
     <Compile Include="Storage\ICoreStorage.cs" />
@@ -150,11 +150,11 @@
     <Compile Include="Storage\IUnboundedCache.cs" />
     <Compile Include="Storage\IUnboundedStorage.cs" />
     <Compile Include="Storage\IChainStateBuilderStorage.cs" />
-    <Compile Include="Storage\IUtxoStorage.cs" />
+    <Compile Include="Storage\IChainStateStorage.cs" />
     <Compile Include="Storage\Memory\MemoryStorage.cs" />
     <Compile Include="Storage\Memory\MemoryStorageModule.cs" />
     <Compile Include="Storage\Memory\MemoryChainStateBuilderStorage.cs" />
-    <Compile Include="Storage\Memory\MemoryUtxoStorage.cs" />
+    <Compile Include="Storage\Memory\MemoryChainStateStorage.cs" />
     <Compile Include="MissingDataException.cs" />
     <Compile Include="Storage\PassthroughBoundedCache.cs" />
     <Compile Include="Storage\PassthroughUnboundedCache.cs" />

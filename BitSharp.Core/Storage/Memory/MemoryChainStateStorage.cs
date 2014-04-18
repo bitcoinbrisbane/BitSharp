@@ -9,13 +9,13 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Storage.Memory
 {
-    public class MemoryUtxoStorage : IUtxoStorage
+    public class MemoryChainStateStorage : IChainStateStorage
     {
         private UInt256 blockHash;
         private ImmutableDictionary<UInt256, UnspentTx> unspentTransactions;
         private ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs;
 
-        public MemoryUtxoStorage(UInt256 blockHash, ImmutableDictionary<UInt256, UnspentTx> unspentTransactions, ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs)
+        public MemoryChainStateStorage(UInt256 blockHash, ImmutableDictionary<UInt256, UnspentTx> unspentTransactions, ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs)
         {
             this.blockHash = blockHash;
             this.unspentTransactions = unspentTransactions;
@@ -46,7 +46,7 @@ namespace BitSharp.Core.Storage.Memory
             return this.unspentTransactions.TryGetValue(txHash, out unspentTx);
         }
 
-        IEnumerable<KeyValuePair<UInt256, UnspentTx>> IUtxoStorage.UnspentTransactions()
+        IEnumerable<KeyValuePair<UInt256, UnspentTx>> IChainStateStorage.UnspentTransactions()
         {
             return this.unspentTransactions;
         }
@@ -66,7 +66,7 @@ namespace BitSharp.Core.Storage.Memory
             return this.unspentOutputs.TryGetValue(txOutputKey, out txOutput);
         }
 
-        IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> IUtxoStorage.UnspentOutputs()
+        IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> IChainStateStorage.UnspentOutputs()
         {
             return this.unspentOutputs;
         }

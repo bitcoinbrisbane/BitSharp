@@ -19,12 +19,12 @@ namespace BitSharp.Core.Storage.Memory
         private ImmutableDictionary<UInt256, UnspentTx> savedUnspentTransactions;
         private ImmutableDictionary<TxOutputKey, TxOutput> savedUnspentOutputs;
 
-        public MemoryChainStateBuilderStorage(IUtxoStorage parentUtxo)
+        public MemoryChainStateBuilderStorage(IChainStateStorage parentUtxo)
         {
-            if (parentUtxo is MemoryUtxoStorage)
+            if (parentUtxo is MemoryChainStateStorage)
             {
-                this.unspentTransactions = ((MemoryUtxoStorage)parentUtxo).UnspentTransactions.ToBuilder();
-                this.unspentOutputs = ((MemoryUtxoStorage)parentUtxo).UnspentOutputs.ToBuilder();
+                this.unspentTransactions = ((MemoryChainStateStorage)parentUtxo).UnspentTransactions.ToBuilder();
+                this.unspentOutputs = ((MemoryChainStateStorage)parentUtxo).UnspentOutputs.ToBuilder();
             }
             else
             {
@@ -112,12 +112,12 @@ namespace BitSharp.Core.Storage.Memory
         {
         }
 
-        public IUtxoStorage ToImmutable(UInt256 blockHash)
+        public IChainStateStorage ToImmutable(UInt256 blockHash)
         {
             //TODO figure out if creating clean dictionaries actually has any benefits
             if (true)
             {
-                return new MemoryUtxoStorage(blockHash, this.unspentTransactions.ToImmutable(), this.unspentOutputs.ToImmutable());
+                return new MemoryChainStateStorage(blockHash, this.unspentTransactions.ToImmutable(), this.unspentOutputs.ToImmutable());
             }
             else
             {
@@ -129,11 +129,11 @@ namespace BitSharp.Core.Storage.Memory
                 foreach (var unspentOutput in this.unspentOutputs)
                     compactUnspentOutputs.Add(unspentOutput);
 
-                return new MemoryUtxoStorage(blockHash, compactUnspentTransactions.ToImmutable(), compactUnspentOutputs.ToImmutable());
+                return new MemoryChainStateStorage(blockHash, compactUnspentTransactions.ToImmutable(), compactUnspentOutputs.ToImmutable());
             }
         }
 
-        public IUtxoStorage Close(UInt256 blockHash)
+        public IChainStateStorage Close(UInt256 blockHash)
         {
             return this.ToImmutable(blockHash);
         }

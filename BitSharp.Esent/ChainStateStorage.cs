@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Esent
 {
-    public class UtxoStorage : IUtxoStorage
+    public class ChainStateStorage : IChainStateStorage
     {
         private readonly UInt256 blockHash;
         private readonly string directory;
@@ -23,7 +23,7 @@ namespace BitSharp.Esent
         private PersistentByteDictionary unspentOutputs;
         private readonly ReaderWriterLockSlim utxoLock;
 
-        internal UtxoStorage(UInt256 blockHash)
+        internal ChainStateStorage(UInt256 blockHash)
         {
             this.blockHash = blockHash;
             this.directory = GetDirectory(blockHash);

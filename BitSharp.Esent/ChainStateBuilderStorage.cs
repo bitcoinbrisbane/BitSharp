@@ -50,7 +50,7 @@ namespace BitSharp.Esent
         private int unspentTxCount;
         private int unspentTxOutputsCount;
 
-        public ChainStateBuilderStorage(IUtxoStorage parentUtxo, Logger logger)
+        public ChainStateBuilderStorage(IChainStateStorage parentUtxo, Logger logger)
         {
             this.logger = logger;
             this.jetDirectory = GetDirectory();
@@ -147,7 +147,7 @@ namespace BitSharp.Esent
 
             if (!this.closed)
             {
-                UtxoStorage.DeleteUtxoDirectory(this.jetDirectory);
+                ChainStateStorage.DeleteUtxoDirectory(this.jetDirectory);
                 this.closed = true;
             }
         }
@@ -456,7 +456,7 @@ namespace BitSharp.Esent
             throw new NotImplementedException();
         }
 
-        public IUtxoStorage ToImmutable(UInt256 blockHash)
+        public IChainStateStorage ToImmutable(UInt256 blockHash)
         {
             throw new NotImplementedException();
 
@@ -511,7 +511,7 @@ namespace BitSharp.Esent
             //return utxoStorage;
         }
 
-        public IUtxoStorage Close(UInt256 blockHash)
+        public IChainStateStorage Close(UInt256 blockHash)
         {
             throw new NotImplementedException();
 

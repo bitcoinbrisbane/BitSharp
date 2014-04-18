@@ -89,7 +89,7 @@
     <Compile Include="NetworkPeerStorage.cs" />
     <Compile Include="PersistentByteDictionary.cs" />
     <Compile Include="EsentStorageModule.cs" />
-    <Compile Include="UtxoStorage.cs" />
+    <Compile Include="ChainStateStorage.cs" />
     <Compile Include="ChainStateBuilderStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="EsentDataStorage.cs" />

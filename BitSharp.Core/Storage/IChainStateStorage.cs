@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Storage
 {
-    public interface IUtxoStorage : IDisposable
+    public interface IChainStateStorage : IDisposable
     {
         UInt256 BlockHash { get; }
 

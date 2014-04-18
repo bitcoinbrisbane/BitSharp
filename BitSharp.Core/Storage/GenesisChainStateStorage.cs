@@ -8,13 +8,13 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Storage
 {
-    public class GenesisUtxoStorage : IUtxoStorage
+    public class GenesisChainStateStorage : IChainStateStorage
     {
         // genesis block coinbase is not included in utxo, it is unspendable
 
         private readonly UInt256 blockHash;
 
-        public GenesisUtxoStorage(UInt256 blockHash)
+        public GenesisChainStateStorage(UInt256 blockHash)
         {
             this.blockHash = blockHash;
         }

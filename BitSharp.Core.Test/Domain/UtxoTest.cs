@@ -28,8 +28,8 @@ namespace BitSharp.Core.Test.Domain
             unspentOutputs.Add(new TxOutputKey(txHash, 0), new TxOutput(0, ImmutableArray.Create<byte>()));
 
             // prepare utxo
-            var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
-            var utxo = new Utxo(utxoStorage);
+            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
+            var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
             var prevTxOutput = new TxOutputKey(txHash, txOutputIndex: 0);
@@ -53,8 +53,8 @@ namespace BitSharp.Core.Test.Domain
             unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, length: 1, state: OutputState.Spent));
 
             // prepare utxo
-            var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
-            var utxo = new Utxo(utxoStorage);
+            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
+            var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
             var prevTxOutput = new TxOutputKey(txHash, txOutputIndex: 0);
@@ -74,8 +74,8 @@ namespace BitSharp.Core.Test.Domain
             var unspentOutputs = ImmutableDictionary.CreateBuilder<TxOutputKey, TxOutput>();
 
             // prepare utxo
-            var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
-            var utxo = new Utxo(utxoStorage);
+            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
+            var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
             var prevTxOutput = new TxOutputKey(txHash: 0, txOutputIndex: 0);
@@ -100,8 +100,8 @@ namespace BitSharp.Core.Test.Domain
             unspentOutputs.Add(new TxOutputKey(txHash, UInt32.MaxValue), new TxOutput(0, ImmutableArray.Create<byte>()));
 
             // prepare utxo
-            var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
-            var utxo = new Utxo(utxoStorage);
+            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
+            var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
             var prevTxOutput = new TxOutputKey(txHash, txOutputIndex: UInt32.MaxValue);
@@ -126,8 +126,8 @@ namespace BitSharp.Core.Test.Domain
             unspentOutputs.Add(new TxOutputKey(txHash, 1), new TxOutput(0, ImmutableArray.Create<byte>()));
 
             // prepare utxo
-            var utxoStorage = new MemoryUtxoStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
-            var utxo = new Utxo(utxoStorage);
+            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
+            var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
             var prevTxOutput = new TxOutputKey(txHash, txOutputIndex: 1);

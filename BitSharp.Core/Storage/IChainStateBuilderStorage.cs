@@ -48,8 +48,8 @@ namespace BitSharp.Core.Storage
 
         void Flush();
 
-        IUtxoStorage ToImmutable(UInt256 blockHash);
+        IChainStateStorage ToImmutable(UInt256 blockHash);
 
-        IUtxoStorage Close(UInt256 blockHash);
+        IChainStateStorage Close(UInt256 blockHash);
     }
 }

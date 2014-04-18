@@ -11,36 +11,36 @@ namespace BitSharp.Domain
 {
     public class Utxo : IDisposable
     {
-        private readonly IUtxoStorage utxoStorage;
+        private readonly IChainStateStorage chainStateStorage;
 
-        internal Utxo(IUtxoStorage utxoStorage)
+        internal Utxo(IChainStateStorage chainStateStorage)
         {
-            this.utxoStorage = utxoStorage;
+            this.chainStateStorage = chainStateStorage;
         }
 
         public void Dispose()
         {
-            this.utxoStorage.Dispose();
+            this.chainStateStorage.Dispose();
         }
 
-        internal IUtxoStorage Storage
+        internal IChainStateStorage Storage
         {
-            get { return this.utxoStorage; }
+            get { return this.chainStateStorage; }
         }
 
         public UInt256 BlockHash
         {
-            get { return this.utxoStorage.BlockHash; }
+            get { return this.chainStateStorage.BlockHash; }
         }
 
         public int TransactionCount
         {
-            get { return this.utxoStorage.TransactionCount; }
+            get { return this.chainStateStorage.TransactionCount; }
         }
 
         public int OutputCount
         {
-            get { return this.utxoStorage.OutputCount; }
+            get { return this.chainStateStorage.OutputCount; }
         }
 
         public bool CanSpend(TxOutputKey txOutputKey)
@@ -49,7 +49,7 @@ namespace BitSharp.Domain
                 throw new ArgumentNullException("prevTxOutput");
 
             UnspentTx unspentTx;
-            if (this.utxoStorage.TryGetTransaction(txOutputKey.TxHash, out unspentTx))
+            if (this.chainStateStorage.TryGetTransaction(txOutputKey.TxHash, out unspentTx))
             {
                 var outputIndex = unchecked((int)txOutputKey.TxOutputIndex);
                 
@@ -66,22 +66,22 @@ namespace BitSharp.Domain
 
         public IEnumerable<KeyValuePair<UInt256, UnspentTx>> GetUnspentTransactions()
         {
-            return this.utxoStorage.UnspentTransactions();
+            return this.chainStateStorage.UnspentTransactions();
         }
 
         public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> GetUnspentOutputs()
         {
-            return this.utxoStorage.UnspentOutputs();
+            return this.chainStateStorage.UnspentOutputs();
         }
 
         public void DisposeDelete()
         {
-            this.utxoStorage.DisposeDelete();
+            this.chainStateStorage.DisposeDelete();
         }
 
         public static Utxo CreateForGenesisBlock(UInt256 blockHash)
         {
-            return new Utxo(new GenesisUtxoStorage(blockHash));
+            return new Utxo(new GenesisChainStateStorage(blockHash));
         }
     }
 }
