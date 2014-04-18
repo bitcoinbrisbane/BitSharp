@@ -71,7 +71,7 @@ namespace BitSharp.Esent
 
             Api.JetCreateTable(this.jetSession, this.utxoDbId, "global", 0, 0, out this.globalTableId);
 
-            Api.JetAddColumn(this.jetSession, this.globalTableId, "BlockHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.txHashColumnId);
+            Api.JetAddColumn(this.jetSession, this.globalTableId, "BlockHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.blockHashColumnId);
 
             Api.JetCreateTable(this.jetSession, this.utxoDbId, "unspentTx", 0, 0, out this.unspentTxTableId);
 
@@ -171,8 +171,10 @@ namespace BitSharp.Esent
             }
             set
             {
-                Api.TryMoveFirst(this.jetSession, this.globalTableId);
-                Api.JetPrepareUpdate(this.jetSession, this.globalTableId, JET_prep.Replace);
+                if (Api.TryMoveFirst(this.jetSession, this.globalTableId))
+                    Api.JetPrepareUpdate(this.jetSession, this.globalTableId, JET_prep.Replace);
+                else
+                    Api.JetPrepareUpdate(this.jetSession, this.globalTableId, JET_prep.Insert);
                 try
                 {
                     Api.SetColumn(this.jetSession, this.globalTableId, this.blockHashColumnId, value.ToByteArray());
