@@ -64,6 +64,11 @@ namespace BitSharp.Core.Domain
             return !(left == right);
         }
 
+        public static implicit operator BlockHeader(ChainedHeader chainedHeader)
+        {
+            return chainedHeader.BlockHeader;
+        }
+
         public static ChainedHeader CreateForGenesisBlock(BlockHeader genesisBlockHeader)
         {
             return new ChainedHeader

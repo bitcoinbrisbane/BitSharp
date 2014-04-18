@@ -200,7 +200,7 @@ namespace BitSharp.Core.Rules
             }
         }
 
-        public virtual void ValidateBlock(Block block, ChainStateBuilder chainStateBuilder)
+        public virtual void ValidateBlock(ChainedBlock chainedBlock, ChainStateBuilder chainStateBuilder)
         {
             //TODO
             if (BypassValidation)
@@ -210,54 +210,54 @@ namespace BitSharp.Core.Rules
             var requiredTarget = GetRequiredNextTarget(chainStateBuilder.Chain.ToImmutable());
 
             // validate block's target against the required target
-            var blockTarget = block.Header.CalculateTarget();
+            var blockTarget = chainedBlock.Header.CalculateTarget();
             if (blockTarget > requiredTarget)
             {
-                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Block target {2} did not match required target of {3}".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.Height, blockTarget.ToHexNumberString(), requiredTarget.ToHexNumberString()));
+                throw new ValidationException(chainedBlock.Hash, "Failing block {0} at height {1}: Block target {2} did not match required target of {3}".Format2(chainedBlock.Hash.ToHexNumberString(), chainedBlock.Height, blockTarget.ToHexNumberString(), requiredTarget.ToHexNumberString()));
             }
 
             // validate block's proof of work against its stated target
-            if (block.Hash > blockTarget || block.Hash > requiredTarget)
+            if (chainedBlock.Hash > blockTarget || chainedBlock.Hash > requiredTarget)
             {
-                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Block did not match its own target of {2}".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.Height, blockTarget.ToHexNumberString()));
+                throw new ValidationException(chainedBlock.Hash, "Failing block {0} at height {1}: Block did not match its own target of {2}".Format2(chainedBlock.Hash.ToHexNumberString(), chainedBlock.Height, blockTarget.ToHexNumberString()));
             }
 
             // ensure there is at least 1 transaction
-            if (block.Transactions.Count == 0)
+            if (chainedBlock.Transactions.Count == 0)
             {
-                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Zero transactions present".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.Height));
+                throw new ValidationException(chainedBlock.Hash, "Failing block {0} at height {1}: Zero transactions present".Format2(chainedBlock.Hash.ToHexNumberString(), chainedBlock.Height));
             }
 
             //TODO apply real coinbase rule
             // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
-            var coinbaseTx = block.Transactions[0];
+            var coinbaseTx = chainedBlock.Transactions[0];
 
             // check that coinbase has only one input
             if (coinbaseTx.Inputs.Count != 1)
             {
-                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Coinbase transaction does not have exactly one input".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.Height));
+                throw new ValidationException(chainedBlock.Hash, "Failing block {0} at height {1}: Coinbase transaction does not have exactly one input".Format2(chainedBlock.Hash.ToHexNumberString(), chainedBlock.Height));
             }
 
             var blockTxIndices = new Dictionary<UInt256, int>();
-            for (var i = 0; i < block.Transactions.Count; i++)
-                blockTxIndices.Add(block.Transactions[i].Hash, i);
+            for (var i = 0; i < chainedBlock.Transactions.Count; i++)
+                blockTxIndices.Add(chainedBlock.Transactions[i].Hash, i);
 
             // validate transactions
             long blockUnspentValue = 0L;
-            for (var txIndex = 1; txIndex < block.Transactions.Count; txIndex++)
+            for (var txIndex = 1; txIndex < chainedBlock.Transactions.Count; txIndex++)
             {
-                var tx = block.Transactions[txIndex];
+                var tx = chainedBlock.Transactions[txIndex];
 
                 long txUnspentValue;
-                ValidateTransaction(chainStateBuilder.Height, block, tx, txIndex, chainStateBuilder, out txUnspentValue, blockTxIndices);
+                ValidateTransaction(chainedBlock, tx, txIndex, chainStateBuilder, out txUnspentValue, blockTxIndices);
 
                 blockUnspentValue += txUnspentValue;
             }
 
             // calculate the expected reward in coinbase
             var expectedReward = (long)(50 * SATOSHI_PER_BTC);
-            if (chainStateBuilder.Height / 210000 <= 32)
-                expectedReward /= (long)Math.Pow(2, chainStateBuilder.Height / 210000);
+            if (chainedBlock.Height / 210000 <= 32)
+                expectedReward /= (long)Math.Pow(2, chainedBlock.Height / 210000);
             expectedReward += blockUnspentValue;
 
             // calculate the actual reward in coinbase
@@ -268,14 +268,14 @@ namespace BitSharp.Core.Rules
             // ensure coinbase has correct reward
             if (actualReward > expectedReward)
             {
-                throw new ValidationException(block.Hash, "Failing block {0} at height {1}: Coinbase value is greater than reward + fees".Format2(block.Hash.ToHexNumberString(), chainStateBuilder.Height));
+                throw new ValidationException(chainedBlock.Hash, "Failing block {0} at height {1}: Coinbase value is greater than reward + fees".Format2(chainedBlock.Hash.ToHexNumberString(), chainedBlock.Height));
             }
 
             // all validation has passed
         }
 
         //TODO utxo needs to be as-at transaction, with regards to a transaction being fully spent and added back in in the same block
-        public virtual void ValidateTransaction(int blockHeight, Block block, Transaction tx, int txIndex, ChainStateBuilder chainStateBuilder, out long unspentValue, Dictionary<UInt256, int> blockTxIndices)
+        public virtual void ValidateTransaction(ChainedBlock chainedBlock, Transaction tx, int txIndex, ChainStateBuilder chainStateBuilder, out long unspentValue, Dictionary<UInt256, int> blockTxIndices)
         {
             unspentValue = -1;
 
@@ -286,7 +286,7 @@ namespace BitSharp.Core.Rules
             for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
             {
                 var input = tx.Inputs[inputIndex];
-                var prevOutput = LookupPreviousOutput(input.PreviousTxOutputKey, block, blockTxIndices, chainStateBuilder);
+                var prevOutput = LookupPreviousOutput(input.PreviousTxOutputKey, chainedBlock, blockTxIndices, chainStateBuilder);
 
                 // add transactions previous value to unspent amount (used to calculate allowed coinbase reward)
                 txInputValue += prevOutput.Value;
@@ -302,7 +302,7 @@ namespace BitSharp.Core.Rules
             // ensure that amount being output from transaction isn't greater than amount being input
             if (txOutputValue > txInputValue)
             {
-                throw new ValidationException(block.Hash, "Failing tx {0}: Transaction output value is greater than input value".Format2(tx.Hash.ToHexNumberString()));
+                throw new ValidationException(chainedBlock.Hash, "Failing tx {0}: Transaction output value is greater than input value".Format2(tx.Hash.ToHexNumberString()));
             }
 
             // calculate unspent value
@@ -311,26 +311,26 @@ namespace BitSharp.Core.Rules
             // sanity check
             if (unspentValue < 0)
             {
-                throw new ValidationException(block.Hash);
+                throw new ValidationException(chainedBlock.Hash);
             }
 
             // all validation has passed
         }
 
-        public virtual void ValidationTransactionScript(Block block, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput)
+        public virtual void ValidationTransactionScript(ChainedBlock chainedBlock, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput)
         {
             var scriptEngine = new ScriptEngine(this.logger);
 
             // create the transaction script from the input and output
             var script = txInput.ScriptSignature.AddRange(prevTxOutput.ScriptPublicKey);
-            if (!scriptEngine.VerifyScript(block.Hash, txIndex, prevTxOutput.ScriptPublicKey.ToArray(), tx, txInputIndex, script.ToArray()))
+            if (!scriptEngine.VerifyScript(chainedBlock.Hash, txIndex, prevTxOutput.ScriptPublicKey.ToArray(), tx, txInputIndex, script.ToArray()))
             {
-                this.logger.Debug("Script did not pass in block: {0}, tx: {1}, {2}, input: {3}".Format2(block.Hash, txIndex, tx.Hash, txInputIndex));
-                throw new ValidationException(block.Hash);
+                this.logger.Debug("Script did not pass in block: {0}, tx: {1}, {2}, input: {3}".Format2(chainedBlock.Hash, txIndex, tx.Hash, txInputIndex));
+                throw new ValidationException(chainedBlock.Hash);
             }
         }
 
-        private TxOutput LookupPreviousOutput(TxOutputKey txOutputKey, Block block, Dictionary<UInt256, int> blockTxIndices, ChainStateBuilder chainStateBuilder)
+        private TxOutput LookupPreviousOutput(TxOutputKey txOutputKey, ChainedBlock chainedBlock, Dictionary<UInt256, int> blockTxIndices, ChainStateBuilder chainStateBuilder)
         {
             TxOutput prevOutput;
             if (chainStateBuilder.TryGetOutput(txOutputKey, out prevOutput))
@@ -343,18 +343,18 @@ namespace BitSharp.Core.Rules
                 int prevTxIndex;
                 if (blockTxIndices.TryGetValue(txOutputKey.TxHash, out prevTxIndex))
                 {
-                    Debug.Assert(prevTxIndex >= 0 && prevTxIndex < block.Transactions.Count);
-                    prevTx = block.Transactions[prevTxIndex];
+                    Debug.Assert(prevTxIndex >= 0 && prevTxIndex < chainedBlock.Transactions.Count);
+                    prevTx = chainedBlock.Transactions[prevTxIndex];
                     Debug.Assert(prevTx.Hash == txOutputKey.TxHash);
                 }
                 else
                 {
-                    throw new ValidationException(block.Hash);
+                    throw new ValidationException(chainedBlock.Hash);
                 }
 
                 var outputIndex = unchecked((int)txOutputKey.TxOutputIndex);
                 if (outputIndex < 0 || outputIndex >= prevTx.Outputs.Count)
-                    throw new ValidationException(block.Hash);
+                    throw new ValidationException(chainedBlock.Hash);
 
                 return prevTx.Outputs[outputIndex];
             }

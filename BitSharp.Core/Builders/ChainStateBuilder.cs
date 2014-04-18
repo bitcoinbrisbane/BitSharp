@@ -132,39 +132,38 @@ namespace BitSharp.Core.Builders
 
                 // get block and metadata for next link in blockchain
                 var direction = pathElement.Item1;
-                var chainedHeader = pathElement.Item2;
-                var block = pathElement.Item3;
+                var chainedBlock = pathElement.Item2;
 
                 this.BeginTransaction();
                 try
                 {
                     // store block hash
-                    this.utxoBuilderStorage.BlockHash = block.Hash;
+                    this.utxoBuilderStorage.BlockHash = chainedBlock.Hash;
 
                     if (direction < 0)
                     {
-                        this.RollbackUtxo(block);
+                        this.RollbackUtxo(chainedBlock);
 
-                        this.Chain.RemoveBlock(chainedHeader);
+                        this.Chain.RemoveBlock(chainedBlock.ChainedHeader);
                     }
                     else if (direction > 0)
                     {
                         // add the block to the current chain
-                        this.Chain.AddBlock(chainedHeader);
+                        this.Chain.AddBlock(chainedBlock.ChainedHeader);
 
                         // validate the block
                         this.Stats.validateStopwatch.Start();
                         new MethodTimer(false).Time("ValidateBlock", () =>
-                            this.rules.ValidateBlock(block, this));
+                            this.rules.ValidateBlock(chainedBlock, this));
                         this.Stats.validateStopwatch.Stop();
 
                         // calculate the new block utxo, double spends will be checked for
                         long txCount = 0, inputCount = 0;
                         new MethodTimer(false).Time("CalculateUtxo", () =>
-                            this.CalculateUtxo(chainedHeader, block, out txCount, out inputCount));
+                            this.CalculateUtxo(chainedBlock, out txCount, out inputCount));
 
                         // collect rollback informatino and store it
-                        this.SaveRollbackInformation(chainedHeader.Height, block.Hash, this.spentTransactionsCache, this.spentOutputsCache);
+                        this.SaveRollbackInformation(chainedBlock.Hash, this.spentTransactionsCache, this.spentOutputsCache);
 
                         // flush utxo progress
                         //this.Utxo.Flush();
@@ -225,36 +224,36 @@ namespace BitSharp.Core.Builders
                 ));
         }
 
-        private void CalculateUtxo(ChainedHeader chainedHeader, Block block, out long txCount, out long inputCount)
+        private void CalculateUtxo(ChainedBlock chainedBlock, out long txCount, out long inputCount)
         {
             txCount = 1;
             inputCount = 0;
 
             var monitors = this.getMonitors().ToArray();
             using (var txInputQueue = new ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>>())
-            using (var validateScriptsTask = Task.Factory.StartNew(() => this.ValidateTransactionScripts(chainedHeader, block, txInputQueue)))
+            using (var validateScriptsTask = Task.Factory.StartNew(() => this.ValidateTransactionScripts(chainedBlock, txInputQueue)))
             using (var txOutputQueue = new ProducerConsumer<Tuple<int, ChainPosition, TxOutput>>())
             using (var scannerTask = Task.Factory.StartNew(() => this.ScanTransactions(txOutputQueue, monitors)))
             {
                 try
                 {
                     // don't include genesis block coinbase in utxo
-                    if (chainedHeader.Height > 0)
+                    if (chainedBlock.Height > 0)
                     {
                         //TODO apply real coinbase rule
                         // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
-                        var coinbaseTx = block.Transactions[0];
+                        var coinbaseTx = chainedBlock.Transactions[0];
 
-                        this.Mint(coinbaseTx, chainedHeader);
+                        this.Mint(coinbaseTx, chainedBlock.ChainedHeader);
 
                         foreach (var output in coinbaseTx.Outputs)
                             txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(0, new ChainPosition(0, 0, 0, 0), output));
                     }
 
                     // check for double spends
-                    for (var txIndex = 1; txIndex < block.Transactions.Count; txIndex++)
+                    for (var txIndex = 1; txIndex < chainedBlock.Transactions.Count; txIndex++)
                     {
-                        var tx = block.Transactions[txIndex];
+                        var tx = chainedBlock.Transactions[txIndex];
                         txCount++;
 
                         for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
@@ -262,13 +261,13 @@ namespace BitSharp.Core.Builders
                             var input = tx.Inputs[inputIndex];
                             inputCount++;
 
-                            var spentOutput = this.Spend(input, chainedHeader);
+                            var spentOutput = this.Spend(input, chainedBlock.ChainedHeader);
 
                             txInputQueue.Add(Tuple.Create<Transaction, int, TxInput, int, TxOutput>(tx, txIndex, input, inputIndex, spentOutput));
                             txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(-1, new ChainPosition(0, 0, 0, 0), spentOutput));
                         }
 
-                        this.Mint(tx, chainedHeader);
+                        this.Mint(tx, chainedBlock.ChainedHeader);
 
                         foreach (var output in tx.Outputs)
                             txOutputQueue.Add(Tuple.Create<int, ChainPosition, TxOutput>(+1, new ChainPosition(0, 0, 0, 0), output));
@@ -286,7 +285,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        private void ValidateTransactionScripts(ChainedHeader chainedHeader, Block block, ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>> txInputQueue)
+        private void ValidateTransactionScripts(ChainedBlock chainedBlock, ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>> txInputQueue)
         {
             var exceptions = new ConcurrentBag<Exception>();
 
@@ -297,7 +296,7 @@ namespace BitSharp.Core.Builders
                 {
                     try
                     {
-                        this.rules.ValidationTransactionScript(block, tuple.Item1, tuple.Item2, tuple.Item3, tuple.Item4, tuple.Item5);
+                        this.rules.ValidationTransactionScript(chainedBlock, tuple.Item1, tuple.Item2, tuple.Item3, tuple.Item4, tuple.Item5);
                     }
                     catch (Exception e)
                     {
@@ -312,7 +311,7 @@ namespace BitSharp.Core.Builders
                 if (!MainnetRules.IgnoreScriptErrors)
                     throw new AggregateException(exceptions.ToArray());
                 else
-                    this.logger.Debug("Ignoring script error in block: {0}".Format2(block.Hash));
+                    this.logger.Debug("Ignoring script error in block: {0}".Format2(chainedBlock.Hash));
             }
         }
 
@@ -579,7 +578,7 @@ namespace BitSharp.Core.Builders
             this.utxoBuilderStorage.AddOutput(input.PreviousTxOutputKey, prevTxOutput);
         }
 
-        private void SaveRollbackInformation(int height, UInt256 blockHash, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
+        private void SaveRollbackInformation(UInt256 blockHash, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
         {
             spentTransactionsCache[blockHash] = this.spentTransactions.ToImmutable();
             this.spentTransactions.Clear();
@@ -696,7 +695,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        private IEnumerable<Tuple<int, ChainedHeader, Block>> BlockLookAhead(IEnumerable<Tuple<int, ChainedHeader>> chain, int lookAhead)
+        private IEnumerable<Tuple<int, ChainedBlock>> BlockLookAhead(IEnumerable<Tuple<int, ChainedHeader>> chain, int lookAhead)
         {
             return chain
                 .Select(
@@ -704,13 +703,15 @@ namespace BitSharp.Core.Builders
                     {
                         try
                         {
-                            var chainedHeaderDirection = chainedHeaderTuple.Item1;
+                            var direction = chainedHeaderTuple.Item1;
+                            
                             var chainedHeader = chainedHeaderTuple.Item2;
-
                             var block = new MethodTimer(false).Time("GetBlock", () =>
                                 this.blockCache[chainedHeader.Hash]);
 
-                            return Tuple.Create(chainedHeaderDirection, chainedHeader, block);
+                            var chainedBlock = new ChainedBlock(chainedHeader, block);
+
+                            return Tuple.Create(direction, chainedBlock);
                         }
                         catch (MissingDataException e)
                         {
