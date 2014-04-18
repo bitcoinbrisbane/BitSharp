@@ -540,7 +540,7 @@ namespace BitSharp.Esent
             instance.Parameters.LogFileSize = 1024 * 32;
             instance.Parameters.LogBuffers = 1024 * 32;
             instance.Parameters.MaxTemporaryTables = 0;
-            instance.Parameters.MaxVerPages = 1024;
+            instance.Parameters.MaxVerPages = 1024 * 256;
             instance.Parameters.NoInformationEvent = true;
             instance.Parameters.WaypointLatency = 1;
             instance.Parameters.MaxSessions = 256;
