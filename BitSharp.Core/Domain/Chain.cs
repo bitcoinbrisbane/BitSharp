@@ -11,9 +11,9 @@ namespace BitSharp.Core.Domain
 {
     public class Chain
     {
-        private readonly ImmutableList<ChainedBlock> blocks;
+        private readonly ImmutableList<ChainedHeader> blocks;
 
-        public Chain(ImmutableList<ChainedBlock> blocks)
+        public Chain(ImmutableList<ChainedHeader> blocks)
         {
             if (blocks == null)
                 throw new ArgumentNullException("blocks");
@@ -25,15 +25,15 @@ namespace BitSharp.Core.Domain
             this.blocks = blocks;
         }
 
-        public ChainedBlock GenesisBlock { get { return this.blocks.First(); } }
+        public ChainedHeader GenesisBlock { get { return this.blocks.First(); } }
 
-        public ChainedBlock LastBlock { get { return this.blocks.Last(); } }
+        public ChainedHeader LastBlock { get { return this.blocks.Last(); } }
 
         public int Height { get { return this.blocks.Count() - 1; } }
 
-        public ImmutableList<ChainedBlock> Blocks { get { return this.blocks; } }
+        public ImmutableList<ChainedHeader> Blocks { get { return this.blocks; } }
 
-        public IEnumerable<ChainedBlock> ReadFromGenesis()
+        public IEnumerable<ChainedHeader> ReadFromGenesis()
         {
             var expectedHeight = 0;
             var expectedPrevBlockHash = this.GenesisBlock.PreviousBlockHash;
@@ -49,12 +49,12 @@ namespace BitSharp.Core.Domain
             }
         }
 
-        public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(Chain targetChain)
+        public IEnumerable<Tuple<int, ChainedHeader>> NavigateTowards(Chain targetChain)
         {
             return this.NavigateTowards(() => targetChain);
         }
 
-        public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(Func<Chain> getTargetChain)
+        public IEnumerable<Tuple<int, ChainedHeader>> NavigateTowards(Func<Chain> getTargetChain)
         {
             var currentBlock = this.LastBlock;
             while (true)
@@ -112,9 +112,9 @@ namespace BitSharp.Core.Domain
             return new ChainBuilder(this);
         }
 
-        public static Chain CreateForGenesisBlock(ChainedBlock genesisBlock)
+        public static Chain CreateForGenesisBlock(ChainedHeader genesisBlock)
         {
-            return new Chain(ImmutableList.Create<ChainedBlock>(genesisBlock));
+            return new Chain(ImmutableList.Create<ChainedHeader>(genesisBlock));
         }
     }
 }

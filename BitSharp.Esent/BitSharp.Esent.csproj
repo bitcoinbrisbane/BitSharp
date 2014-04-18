@@ -85,7 +85,7 @@
     <Compile Include="SpentOutputsStorage.cs" />
     <Compile Include="SpentTransactionsStorage.cs" />
     <Compile Include="BlockTxHashesStorage.cs" />
-    <Compile Include="ChainedBlockStorage.cs" />
+    <Compile Include="ChainedHeaderStorage.cs" />
     <Compile Include="NetworkPeerStorage.cs" />
     <Compile Include="PersistentByteDictionary.cs" />
     <Compile Include="EsentStorageModule.cs" />

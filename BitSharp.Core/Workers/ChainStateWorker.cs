@@ -58,7 +58,7 @@ namespace BitSharp.Core.Workers
             this.spentTransactionsCache = spentTransactionsCache;
             this.invalidBlockCache = invalidBlockCache;
 
-            this.chainState = ChainState.CreateForGenesisBlock(this.rules.GenesisChainedBlock);
+            this.chainState = ChainState.CreateForGenesisBlock(this.rules.GenesisChainedHeader);
             this.chainStateLock = new ReaderWriterLockSlim();
 
             this.blockTimes = new TimeSpan[10000];
@@ -117,7 +117,7 @@ namespace BitSharp.Core.Workers
                     var pruneBuffer = blocksPerDay * 7;
                     foreach (var block in this.chainStateBuilder.Chain.Blocks.Reverse().Take(pruneBuffer))
                     {
-                        if (block.Height > 0 && !this.spentTransactionsCache.ContainsKey(block.BlockHash))
+                        if (block.Height > 0 && !this.spentTransactionsCache.ContainsKey(block.Hash))
                             throw new InvalidOperationException();
                     }
                     this.spentTransactionsCache.Flush();
@@ -126,7 +126,7 @@ namespace BitSharp.Core.Workers
                     //TODO once caught up, it should switch over to quickly returning committed utxo's as new blocks come in
                     //TODO should be configurable, as doing this requires keeping two copies of the utxo on disk at all times
                     var newChain = this.chainStateBuilder.Chain.ToImmutable();
-                    var newUtxo = this.chainStateBuilder.Utxo.ToImmutable(newChain.LastBlock.BlockHash);
+                    var newUtxo = this.chainStateBuilder.Utxo.ToImmutable(newChain.LastBlock.Hash);
                     //this.chainStateBuilder.Dispose();
                     //this.chainStateBuilder = null;
                     this.chainStateBuilderTime = DateTime.UtcNow;

@@ -127,7 +127,7 @@ namespace BitSharp.Node.Workers
             this.NotifyWork();
         }
 
-        private static ImmutableArray<UInt256> CalculateBlockLocatorHashes(IImmutableList<ChainedBlock> blockHashes)
+        private static ImmutableArray<UInt256> CalculateBlockLocatorHashes(IImmutableList<ChainedHeader> blockHashes)
         {
             var blockLocatorHashes = new List<UInt256>();
 
@@ -140,9 +140,9 @@ namespace BitSharp.Node.Workers
                     if (start >= 10)
                         step *= 2;
 
-                    blockLocatorHashes.Add(blockHashes[i].BlockHash);
+                    blockLocatorHashes.Add(blockHashes[i].Hash);
                 }
-                blockLocatorHashes.Add(blockHashes[0].BlockHash);
+                blockLocatorHashes.Add(blockHashes[0].Hash);
             }
 
             return blockLocatorHashes.ToImmutableArray();

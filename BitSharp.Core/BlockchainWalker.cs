@@ -14,26 +14,26 @@ namespace BitSharp.Core
 {
     public class BlockchainWalker
     {
-        public BlockchainPath GetBlockchainPath(ChainedBlock fromBlock, ChainedBlock toBlock, Func<UInt256, ChainedBlock> getChainedBlock, CancellationToken? cancelToken = null)
+        public BlockchainPath GetBlockchainPath(ChainedHeader fromBlock, ChainedHeader toBlock, Func<UInt256, ChainedHeader> getChainedHeader, CancellationToken? cancelToken = null)
         {
-            var rewindBlocks = ImmutableList.CreateBuilder<ChainedBlock>();
-            var advanceBlocks = ImmutableList.CreateBuilder<ChainedBlock>();
+            var rewindBlocks = ImmutableList.CreateBuilder<ChainedHeader>();
+            var advanceBlocks = ImmutableList.CreateBuilder<ChainedHeader>();
 
-            foreach (var pathElement in DiscoverPath(fromBlock, toBlock, getChainedBlock, cancelToken))
+            foreach (var pathElement in DiscoverPath(fromBlock, toBlock, getChainedHeader, cancelToken))
             {
                 switch (pathElement.Chain)
                 {
                     case PathChain.From:
-                        rewindBlocks.Add(pathElement.Block);
+                        rewindBlocks.Add(pathElement.ChainedHeader);
                         break;
 
                     case PathChain.To:
-                        advanceBlocks.Add(pathElement.Block);
+                        advanceBlocks.Add(pathElement.ChainedHeader);
                         break;
 
                     case PathChain.LastCommon:
                         advanceBlocks.Reverse();
-                        return new BlockchainPath(fromBlock, toBlock, pathElement.Block, rewindBlocks.ToImmutable(), advanceBlocks.ToImmutable());
+                        return new BlockchainPath(fromBlock, toBlock, pathElement.ChainedHeader, rewindBlocks.ToImmutable(), advanceBlocks.ToImmutable());
 
                     default:
                         throw new InvalidEnumArgumentException();
@@ -43,13 +43,13 @@ namespace BitSharp.Core
             throw new InvalidOperationException();
         }
 
-        public ChainedBlock FindLastCommonBlock(ChainedBlock fromBlock, ChainedBlock toBlock, Func<UInt256, ChainedBlock> getChainedBlock, CancellationToken? cancelToken = null)
+        public ChainedHeader FindLastCommonBlock(ChainedHeader fromBlock, ChainedHeader toBlock, Func<UInt256, ChainedHeader> getChainedHeader, CancellationToken? cancelToken = null)
         {
-            return DiscoverPath(fromBlock, toBlock, getChainedBlock, cancelToken)
-                .Last().Block;
+            return DiscoverPath(fromBlock, toBlock, getChainedHeader, cancelToken)
+                .Last().ChainedHeader;
         }
 
-        private IEnumerable<PathElement> DiscoverPath(ChainedBlock fromBlock, ChainedBlock toBlock, Func<UInt256, ChainedBlock> getChainedBlock, CancellationToken? cancelToken)
+        private IEnumerable<PathElement> DiscoverPath(ChainedHeader fromBlock, ChainedHeader toBlock, Func<UInt256, ChainedHeader> getChainedHeader, CancellationToken? cancelToken)
         {
             // find height difference between chains
             var heightDelta = toBlock.Height - fromBlock.Height;
@@ -57,7 +57,7 @@ namespace BitSharp.Core
             var currentFromBlock = fromBlock;
             var currentToBlock = toBlock;
 
-            while (currentFromBlock.BlockHash != currentToBlock.BlockHash)
+            while (currentFromBlock.Hash != currentToBlock.Hash)
             {
                 // cooperative loop
                 cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
@@ -70,7 +70,7 @@ namespace BitSharp.Core
                         throw new InvalidOperationException();
 
                     yield return new PathElement(PathChain.From, currentFromBlock);
-                    currentFromBlock = getChainedBlock(currentFromBlock.PreviousBlockHash);
+                    currentFromBlock = getChainedHeader(currentFromBlock.PreviousBlockHash);
                 }
                 // to chain is longer, rewind it
                 else if (currentToBlock.Height > currentFromBlock.Height)
@@ -80,14 +80,11 @@ namespace BitSharp.Core
                         throw new InvalidOperationException();
 
                     yield return new PathElement(PathChain.To, currentToBlock);
-                    currentToBlock = getChainedBlock(currentToBlock.PreviousBlockHash);
+                    currentToBlock = getChainedHeader(currentToBlock.PreviousBlockHash);
                 }
                 // chains are same height, rewind both
                 else
                 {
-                    if (currentFromBlock.Height != currentToBlock.Height)
-                        throw new InvalidOperationException();
-
                     // if no further rollback is possible, chain mismatch
                     if (currentFromBlock.Height == 0 || currentToBlock.Height == 0)
                         throw new InvalidOperationException();
@@ -95,8 +92,8 @@ namespace BitSharp.Core
                     yield return new PathElement(PathChain.From, currentFromBlock);
                     yield return new PathElement(PathChain.To, currentToBlock);
 
-                    currentFromBlock = getChainedBlock(currentFromBlock.PreviousBlockHash);
-                    currentToBlock = getChainedBlock(currentToBlock.PreviousBlockHash);
+                    currentFromBlock = getChainedHeader(currentFromBlock.PreviousBlockHash);
+                    currentToBlock = getChainedHeader(currentToBlock.PreviousBlockHash);
                 }
             }
 
@@ -107,17 +104,17 @@ namespace BitSharp.Core
         private class PathElement
         {
             private readonly PathChain chain;
-            private readonly ChainedBlock block;
+            private readonly ChainedHeader chainedHeader;
 
-            public PathElement(PathChain chain, ChainedBlock block)
+            public PathElement(PathChain chain, ChainedHeader chainedHeader)
             {
                 this.chain = chain;
-                this.block = block;
+                this.chainedHeader = chainedHeader;
             }
 
             public PathChain Chain { get { return this.chain; } }
 
-            public ChainedBlock Block { get { return this.block; } }
+            public ChainedHeader ChainedHeader { get { return this.chainedHeader; } }
         }
 
         private enum PathChain

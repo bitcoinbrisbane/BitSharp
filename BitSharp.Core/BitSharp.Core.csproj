@@ -102,7 +102,7 @@
     <Compile Include="Builders\ChainStateBuilder.cs" />
     <Compile Include="Builders\UtxoBuilder.cs" />
     <Compile Include="Domain\Chain.cs" />
-    <Compile Include="Domain\ChainedBlock.cs" />
+    <Compile Include="Domain\ChainedHeader.cs" />
     <Compile Include="Domain\ChainState.cs" />
     <Compile Include="Domain\OutputStates.cs" />
     <Compile Include="Domain\SpentTx.cs" />

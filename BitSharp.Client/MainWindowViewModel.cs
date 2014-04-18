@@ -168,7 +168,7 @@ namespace BitSharp.Client
             SetViewBlockchain(this.blockchainDaemon.ChainState);
         }
 
-        private void SetViewBlockchain(ChainedBlock targetBlock)
+        private void SetViewBlockchain(ChainedHeader targetBlock)
         {
             using (var cancelToken = new CancellationTokenSource())
             {

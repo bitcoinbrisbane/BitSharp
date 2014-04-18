@@ -47,7 +47,7 @@ namespace BitSharp.Core
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
         private readonly BlockHeaderCache blockHeaderCache;
-        private readonly ChainedBlockCache chainedBlockCache;
+        private readonly ChainedHeaderCache chainedHeaderCache;
         private readonly BlockTxHashesCache blockTxHashesCache;
         private readonly TransactionCache transactionCache;
         private readonly BlockCache blockCache;
@@ -62,7 +62,7 @@ namespace BitSharp.Core
 
         private readonly ConcurrentSetBuilder<IChainStateMonitor> chainStateMonitors;
 
-        public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockCache blockCache)
+        public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockCache blockCache)
         {
             this.logger = logger;
             this.shutdownToken = new CancellationTokenSource();
@@ -70,7 +70,7 @@ namespace BitSharp.Core
             this.kernel = kernel;
             this.rules = rules;
             this.blockHeaderCache = blockHeaderCache;
-            this.chainedBlockCache = chainedBlockCache;
+            this.chainedHeaderCache = chainedHeaderCache;
             this.blockTxHashesCache = blockTxHashesCache;
             this.transactionCache = transactionCache;
             this.blockCache = blockCache;
@@ -80,7 +80,7 @@ namespace BitSharp.Core
             // write genesis block out to storage
             this.blockHeaderCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock.Header;
             this.blockCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
-            this.chainedBlockCache[this.rules.GenesisChainedBlock.BlockHash] = this.rules.GenesisChainedBlock;
+            this.chainedHeaderCache[this.rules.GenesisChainedHeader.Hash] = this.rules.GenesisChainedHeader;
 
             // wire up cache events
             this.blockHeaderCache.OnAddition += OnBlockHeaderAddition;
@@ -89,8 +89,8 @@ namespace BitSharp.Core
             this.blockCache.OnModification += OnBlockModification;
             this.blockTxHashesCache.OnAddition += OnBlockTxHashesAddition;
             this.blockTxHashesCache.OnModification += OnBlockTxHashesModification;
-            this.chainedBlockCache.OnAddition += OnChainedBlockAddition;
-            this.chainedBlockCache.OnModification += OnChainedBlockModification;
+            this.chainedHeaderCache.OnAddition += OnChainedHeaderAddition;
+            this.chainedHeaderCache.OnModification += OnChainedHeaderModification;
 
             // create workers
             this.chainingWorker = kernel.Get<ChainingWorker>(
@@ -179,7 +179,7 @@ namespace BitSharp.Core
                 }, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
         }
 
-        public ChainedBlock TargetBlock { get { return this.targetChainWorker.TargetBlock; } }
+        public ChainedHeader TargetBlock { get { return this.targetChainWorker.TargetBlock; } }
 
         public int TargetBlockHeight
         {
@@ -286,8 +286,8 @@ namespace BitSharp.Core
             this.blockCache.OnModification -= OnBlockModification;
             this.blockTxHashesCache.OnAddition -= OnBlockTxHashesAddition;
             this.blockTxHashesCache.OnModification -= OnBlockTxHashesModification;
-            this.chainedBlockCache.OnAddition -= OnChainedBlockAddition;
-            this.chainedBlockCache.OnModification -= OnChainedBlockModification;
+            this.chainedHeaderCache.OnAddition -= OnChainedHeaderAddition;
+            this.chainedHeaderCache.OnModification -= OnChainedHeaderModification;
 
             // notify threads to begin shutting down
             this.shutdownToken.Cancel();
@@ -351,14 +351,14 @@ namespace BitSharp.Core
             OnBlockTxHashesAddition(blockHash, blockTxHashes);
         }
 
-        private void OnChainedBlockAddition(UInt256 blockHash, ChainedBlock chainedBlock)
+        private void OnChainedHeaderAddition(UInt256 blockHash, ChainedHeader chainedHeader)
         {
             this.chainStateWorker.NotifyWork();
         }
 
-        private void OnChainedBlockModification(UInt256 blockHash, ChainedBlock chainedBlock)
+        private void OnChainedHeaderModification(UInt256 blockHash, ChainedHeader chainedHeader)
         {
-            OnChainedBlockAddition(blockHash, chainedBlock);
+            OnChainedHeaderAddition(blockHash, chainedHeader);
         }
 
         private void LoadExistingState()

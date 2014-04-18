@@ -11,7 +11,7 @@ namespace BitSharp.Core
     {
         Block,
         BlockHeader,
-        ChainedBlock,
+        ChainedHeader,
         Transaction
     }
 

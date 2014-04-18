@@ -21,18 +21,18 @@ namespace BitSharp.Core.Workers
     {
         private readonly IBlockchainRules rules;
         private readonly BlockHeaderCache blockHeaderCache;
-        private readonly ChainedBlockCache chainedBlockCache;
+        private readonly ChainedHeaderCache chainedHeaderCache;
         private readonly BlockCache blockCache;
 
         private readonly ConcurrentQueue<BlockHeader> blockHeaders;
         private readonly Dictionary<UInt256, Dictionary<UInt256, BlockHeader>> unchainedByPrevious;
 
-        public ChainingWorker(WorkerConfig workerConfig, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, BlockCache blockCache)
+        public ChainingWorker(WorkerConfig workerConfig, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, BlockCache blockCache)
             : base("ChainingWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.rules = rules;
             this.blockHeaderCache = blockHeaderCache;
-            this.chainedBlockCache = chainedBlockCache;
+            this.chainedHeaderCache = chainedHeaderCache;
             this.blockCache = blockCache;
 
             this.blockHeaders = new ConcurrentQueue<BlockHeader>();
@@ -85,18 +85,17 @@ namespace BitSharp.Core.Workers
                 // cooperative loop
                 this.ShutdownToken.Token.ThrowIfCancellationRequested();
 
-                if (!this.chainedBlockCache.ContainsKey(blockHeader.Hash))
+                if (!this.chainedHeaderCache.ContainsKey(blockHeader.Hash))
                 {
-                    ChainedBlock prevChainedBlock;
-                    if (this.chainedBlockCache.TryGetValue(blockHeader.PreviousBlock, out prevChainedBlock))
+                    ChainedHeader prevChainedHeader;
+                    if (this.chainedHeaderCache.TryGetValue(blockHeader.PreviousBlock, out prevChainedHeader))
                     {
-                        this.chainedBlockCache[blockHeader.Hash] =
-                            new ChainedBlock
+                        this.chainedHeaderCache[blockHeader.Hash] =
+                            new ChainedHeader
                             (
-                                blockHash: blockHeader.Hash,
-                                previousBlockHash: blockHeader.PreviousBlock,
-                                height: prevChainedBlock.Height + 1,
-                                totalWork: prevChainedBlock.TotalWork + blockHeader.CalculateWork()
+                                blockHeader: blockHeader,
+                                height: prevChainedHeader.Height + 1,
+                                totalWork: prevChainedHeader.TotalWork + blockHeader.CalculateWork()
                             );
 
                         if (this.unchainedByPrevious.ContainsKey(blockHeader.Hash))
@@ -130,7 +129,7 @@ namespace BitSharp.Core.Workers
 
         private void ChainBlockHeader(UInt256 blockHash, BlockHeader blockHeader)
         {
-            if (!this.chainedBlockCache.ContainsKey(blockHeader.Hash))
+            if (!this.chainedHeaderCache.ContainsKey(blockHeader.Hash))
             {
                 try
                 {

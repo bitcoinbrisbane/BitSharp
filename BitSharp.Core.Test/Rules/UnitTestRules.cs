@@ -24,7 +24,7 @@ namespace BitSharp.Core.Test.Rules
 
         private UInt256 _highestTarget;
         private Block _genesisBlock;
-        private ChainedBlock _genesisChainedBlock;
+        private ChainedHeader _genesisChainedHeader;
 
         public UnitTestRules(Logger logger, BlockHeaderCache blockHeaderCache)
             : base(logger, blockHeaderCache)
@@ -36,12 +36,12 @@ namespace BitSharp.Core.Test.Rules
 
         public override Block GenesisBlock { get { return this._genesisBlock; } }
 
-        public override ChainedBlock GenesisChainedBlock { get { return this._genesisChainedBlock; } }
+        public override ChainedHeader GenesisChainedHeader { get { return this._genesisChainedHeader; } }
 
         public void SetGenesisBlock(Block genesisBlock)
         {
             this._genesisBlock = genesisBlock;
-            this._genesisChainedBlock = ChainedBlock.CreateForGenesisBlock(this._genesisBlock.Header);
+            this._genesisChainedHeader = ChainedHeader.CreateForGenesisBlock(this._genesisBlock.Header);
         }
 
         public void SetHighestTarget(UInt256 highestTarget)

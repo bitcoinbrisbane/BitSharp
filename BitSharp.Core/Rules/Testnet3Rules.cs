@@ -19,7 +19,7 @@ namespace BitSharp.Core.Rules
     public class Testnet3Rules : MainnetRules
     {
         private readonly Block _genesisBlock;
-        private readonly ChainedBlock _genesisChainedBlock;
+        private readonly ChainedHeader _genesisChainedHeader;
 
         public Testnet3Rules(Logger logger, BlockHeaderCache blockHeaderCache)
             : base(logger, blockHeaderCache)
@@ -83,11 +83,11 @@ namespace BitSharp.Core.Rules
 
             Debug.Assert(_genesisBlock.Hash == UInt256.Parse("000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943", NumberStyles.HexNumber));
 
-            this._genesisChainedBlock = ChainedBlock.CreateForGenesisBlock(this._genesisBlock.Header);
+            this._genesisChainedHeader = ChainedHeader.CreateForGenesisBlock(this._genesisBlock.Header);
         }
 
         public override Block GenesisBlock { get { return this._genesisBlock; } }
 
-        public override ChainedBlock GenesisChainedBlock { get { return this._genesisChainedBlock; } }
+        public override ChainedHeader GenesisChainedHeader { get { return this._genesisChainedHeader; } }
     }
 }

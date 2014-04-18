@@ -32,7 +32,7 @@ namespace BitSharp.Core.Rules
 
         private readonly UInt256 highestTarget;
         private readonly Block genesisBlock;
-        private readonly ChainedBlock genesisChainedBlock;
+        private readonly ChainedHeader genesisChainedHeader;
         private readonly int difficultyInternal = 2016;
         private readonly long difficultyTargetTimespan = 14 * 24 * 60 * 60;
 
@@ -100,14 +100,14 @@ namespace BitSharp.Core.Rules
                     )
                 );
 
-            this.genesisChainedBlock = ChainedBlock.CreateForGenesisBlock(this.genesisBlock.Header);
+            this.genesisChainedHeader = ChainedHeader.CreateForGenesisBlock(this.genesisBlock.Header);
         }
 
         public virtual UInt256 HighestTarget { get { return this.highestTarget; } }
 
         public virtual Block GenesisBlock { get { return this.genesisBlock; } }
 
-        public virtual ChainedBlock GenesisChainedBlock { get { return this.genesisChainedBlock; } }
+        public virtual ChainedHeader GenesisChainedHeader { get { return this.genesisChainedHeader; } }
 
         public virtual int DifficultyInternal { get { return this.difficultyInternal; } }
 
@@ -148,7 +148,7 @@ namespace BitSharp.Core.Rules
                 if (chain.Height == 0)
                 {
                     // lookup genesis block header
-                    var genesisBlockHeader = this.blockHeaderCache[chain.Blocks[0].BlockHash];
+                    var genesisBlockHeader = this.blockHeaderCache[chain.Blocks[0].Hash];
 
                     return genesisBlockHeader.CalculateTarget();
                 }
@@ -167,9 +167,9 @@ namespace BitSharp.Core.Rules
                     var prevBlockHeader = this.blockHeaderCache[chain.LastBlock.PreviousBlockHash];
 
                     // get the block difficultyInterval blocks ago
-                    var startChainedBlock = chain.Blocks.Reverse().Skip(DifficultyInternal).First();
-                    var startBlockHeader = this.blockHeaderCache[startChainedBlock.BlockHash];
-                    //Debug.Assert(startChainedBlock.Height == blockchain.Height - DifficultyInternal);
+                    var startChainedHeader = chain.Blocks.Reverse().Skip(DifficultyInternal).First();
+                    var startBlockHeader = this.blockHeaderCache[startChainedHeader.Hash];
+                    //Debug.Assert(startChainedHeader.Height == blockchain.Height - DifficultyInternal);
 
                     var actualTimespan = (long)prevBlockHeader.Time - (long)startBlockHeader.Time;
                     var targetTimespan = DifficultyTargetTimespan;
@@ -196,7 +196,7 @@ namespace BitSharp.Core.Rules
             {
                 // invalid bits
                 Debugger.Break();
-                throw new ValidationException(chain.LastBlock.BlockHash);
+                throw new ValidationException(chain.LastBlock.Hash);
             }
         }
 

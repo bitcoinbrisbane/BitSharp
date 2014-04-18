@@ -83,12 +83,11 @@ namespace BitSharp.Core.Test
             );
         }
 
-        public static ChainedBlock RandomChainedBlock()
+        public static ChainedHeader RandomChainedHeader(RandomDataOptions options = default(RandomDataOptions))
         {
-            return new ChainedBlock
+            return new ChainedHeader
             (
-                blockHash: random.NextUInt256(),
-                previousBlockHash: random.NextUInt256(),
+                blockHeader: RandomBlockHeader(options),
                 height: Math.Abs(random.Next()),
                 totalWork: random.NextUBigIntegerBytes(64)
             );

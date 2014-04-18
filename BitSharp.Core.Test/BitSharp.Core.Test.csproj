@@ -98,13 +98,14 @@
   <ItemGroup>
     <Compile Include="AssertMethods.cs" />
     <Compile Include="BlockchainWalkerTest.cs" />
+    <Compile Include="FakeHeaders.cs" />
     <Compile Include="MainnetTestData.cs" />
     <Compile Include="CoreDaemonTest.cs" />
     <Compile Include="DataCalculatorTest.cs" />
     <Compile Include="DataEncoderTest.cs" />
     <Compile Include="DataEncoderTest.Data.cs" />
     <Compile Include="Domain\BlockHeaderTest.cs" />
-    <Compile Include="Domain\ChainedBlockTest.cs" />
+    <Compile Include="Domain\ChainedHeaderTest.cs" />
     <Compile Include="JsonRpc\CoreRpcServerTest.cs" />
     <Compile Include="Wallet\WalletMonitorTest.cs" />
     <Compile Include="RandomData.cs" />

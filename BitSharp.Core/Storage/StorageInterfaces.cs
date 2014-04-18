@@ -12,8 +12,8 @@ namespace BitSharp.Core.Storage
     public interface IBlockHeaderStorage
         : IBoundedStorage<UInt256, BlockHeader> { }
 
-    public interface IChainedBlockStorage :
-        IBoundedStorage<UInt256, ChainedBlock> { }
+    public interface IChainedHeaderStorage :
+        IBoundedStorage<UInt256, ChainedHeader> { }
 
     public interface IBlockStorage :
         IBoundedStorage<UInt256, Block> { }
@@ -39,9 +39,9 @@ namespace BitSharp.Core.Storage
             : base(cache) { }
     }
 
-    public sealed class ChainedBlockCache : PassthroughBoundedCache<UInt256, ChainedBlock>
+    public sealed class ChainedHeaderCache : PassthroughBoundedCache<UInt256, ChainedHeader>
     {
-        public ChainedBlockCache(IBoundedCache<UInt256, ChainedBlock> cache)
+        public ChainedHeaderCache(IBoundedCache<UInt256, ChainedHeader> cache)
             : base(cache) { }
     }
 

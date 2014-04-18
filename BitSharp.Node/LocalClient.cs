@@ -47,7 +47,7 @@ namespace BitSharp.Node
         private readonly IBlockchainRules rules;
         private readonly CoreDaemon blockchainDaemon;
         private readonly BlockHeaderCache blockHeaderCache;
-        private readonly ChainedBlockCache chainedBlockCache;
+        private readonly ChainedHeaderCache chainedHeaderCache;
         private readonly TransactionCache transactionCache;
         private readonly BlockCache blockCache;
         private readonly NetworkPeerCache networkPeerCache;
@@ -71,7 +71,7 @@ namespace BitSharp.Node
 
         private Socket listenSocket;
 
-        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, CoreDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedBlockCache chainedBlockCache, TransactionCache transactionCache, BlockCache blockCache, NetworkPeerCache networkPeerCache)
+        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, CoreDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, TransactionCache transactionCache, BlockCache blockCache, NetworkPeerCache networkPeerCache)
         {
             this.shutdownToken = new CancellationTokenSource();
 
@@ -81,7 +81,7 @@ namespace BitSharp.Node
             this.rules = rules;
             this.blockchainDaemon = blockchainDaemon;
             this.blockHeaderCache = blockHeaderCache;
-            this.chainedBlockCache = chainedBlockCache;
+            this.chainedHeaderCache = chainedHeaderCache;
             this.transactionCache = transactionCache;
             this.blockCache = blockCache;
             this.networkPeerCache = networkPeerCache;
@@ -565,35 +565,35 @@ namespace BitSharp.Node
             if (targetChainLocal == null)
                 return;
 
-            ChainedBlock matchingChainedBlock = null;
+            ChainedHeader matchingChainedHeader = null;
             foreach (var blockHash in payload.BlockLocatorHashes)
             {
-                ChainedBlock chainedBlock;
-                if (this.chainedBlockCache.TryGetValue(blockHash, out chainedBlock))
+                ChainedHeader chainedHeader;
+                if (this.chainedHeaderCache.TryGetValue(blockHash, out chainedHeader))
                 {
-                    if (chainedBlock.Height < targetChainLocal.Blocks.Count
-                        && chainedBlock.BlockHash == targetChainLocal.Blocks[chainedBlock.Height].BlockHash)
+                    if (chainedHeader.Height < targetChainLocal.Blocks.Count
+                        && chainedHeader.Hash == targetChainLocal.Blocks[chainedHeader.Height].Hash)
                     {
-                        matchingChainedBlock = chainedBlock;
+                        matchingChainedHeader = chainedHeader;
                         break;
                     }
                 }
             }
 
-            if (matchingChainedBlock == null)
+            if (matchingChainedHeader == null)
             {
-                matchingChainedBlock = this.rules.GenesisChainedBlock;
+                matchingChainedHeader = this.rules.GenesisChainedHeader;
             }
 
             var count = 0;
             var limit = 500;
             var invVectors = new InventoryVector[limit];
-            for (var i = matchingChainedBlock.Height; i < targetChainLocal.Blocks.Count && count <= limit; i++, count++)
+            for (var i = matchingChainedHeader.Height; i < targetChainLocal.Blocks.Count && count <= limit; i++, count++)
             {
-                var chainedBlock = targetChainLocal.Blocks[i];
-                invVectors[count] = new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, chainedBlock.BlockHash);
+                var chainedHeader = targetChainLocal.Blocks[i];
+                invVectors[count] = new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, chainedHeader.Hash);
 
-                if (chainedBlock.BlockHash == payload.HashStop)
+                if (chainedHeader.Hash == payload.HashStop)
                     break;
             }
             Array.Resize(ref invVectors, count);
@@ -612,35 +612,35 @@ namespace BitSharp.Node
             if (targetChainLocal == null)
                 return;
 
-            ChainedBlock matchingChainedBlock = null;
+            ChainedHeader matchingChainedHeader = null;
             foreach (var blockHash in payload.BlockLocatorHashes)
             {
-                ChainedBlock chainedBlock;
-                if (this.chainedBlockCache.TryGetValue(blockHash, out chainedBlock))
+                ChainedHeader chainedHeader;
+                if (this.chainedHeaderCache.TryGetValue(blockHash, out chainedHeader))
                 {
-                    if (chainedBlock.Height < targetChainLocal.Blocks.Count
-                        && chainedBlock.BlockHash == targetChainLocal.Blocks[chainedBlock.Height].BlockHash)
+                    if (chainedHeader.Height < targetChainLocal.Blocks.Count
+                        && chainedHeader.Hash == targetChainLocal.Blocks[chainedHeader.Height].Hash)
                     {
-                        matchingChainedBlock = chainedBlock;
+                        matchingChainedHeader = chainedHeader;
                         break;
                     }
                 }
             }
 
-            if (matchingChainedBlock == null)
+            if (matchingChainedHeader == null)
             {
-                matchingChainedBlock = this.rules.GenesisChainedBlock;
+                matchingChainedHeader = this.rules.GenesisChainedHeader;
             }
 
             var count = 0;
             var limit = 500;
             var blockHeaders = new BlockHeader[limit];
-            for (var i = matchingChainedBlock.Height; i < targetChainLocal.Blocks.Count && count <= limit; i++, count++)
+            for (var i = matchingChainedHeader.Height; i < targetChainLocal.Blocks.Count && count <= limit; i++, count++)
             {
-                var chainedBlock = targetChainLocal.Blocks[i];
+                var chainedHeader = targetChainLocal.Blocks[i];
 
                 BlockHeader blockHeader;
-                if (this.blockHeaderCache.TryGetValue(targetChainLocal.Blocks[i].BlockHash, out blockHeader))
+                if (this.blockHeaderCache.TryGetValue(targetChainLocal.Blocks[i].Hash, out blockHeader))
                 {
                     blockHeaders[count] = blockHeader;
                 }
@@ -649,7 +649,7 @@ namespace BitSharp.Node
                     break;
                 }
 
-                if (chainedBlock.BlockHash == payload.HashStop)
+                if (chainedHeader.Hash == payload.HashStop)
                     break;
             }
             Array.Resize(ref blockHeaders, count);

@@ -23,11 +23,12 @@ namespace BitSharp.Core.Test.Workers
         {
             // prepare test kernel
             var kernel = new StandardKernel(new ConsoleLoggingModule(), new MemoryStorageModule(), new CoreCacheModule());
-            var chainedBlockCache = kernel.Get<ChainedBlockCache>();
+            var chainedHeaderCache = kernel.Get<ChainedHeaderCache>();
 
             // initialize data
-            var chainedBlock0 = new ChainedBlock(blockHash: 0, previousBlockHash: 9999, height: 0, totalWork: 0);
-            var chainedBlock1 = new ChainedBlock(blockHash: 1, previousBlockHash: chainedBlock0.BlockHash, height: 1, totalWork: 1);
+            var fakeHeaders = new FakeHeaders();
+            var chainedHeader0 = new ChainedHeader(fakeHeaders.Genesis(), height: 0, totalWork: 0);
+            var chainedHeader1 = new ChainedHeader(fakeHeaders.Next(), height: 1, totalWork: 1);
 
             // initialize the target block watcher
             using (var targetBlockWorker = kernel.Get<TargetBlockWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue))))
@@ -50,25 +51,25 @@ namespace BitSharp.Core.Test.Workers
                 Assert.IsNull(targetBlockWorker.TargetBlock);
 
                 // add block 0
-                chainedBlockCache[chainedBlock0.BlockHash] = chainedBlock0;
+                chainedHeaderCache[chainedHeader0.Hash] = chainedHeader0;
 
                 // wait for worker
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
                 // verify block 0
-                Assert.AreEqual(chainedBlock0, targetBlockWorker.TargetBlock);
+                Assert.AreEqual(chainedHeader0, targetBlockWorker.TargetBlock);
                 Assert.AreEqual(1, onTargetBlockChangedCount);
 
                 // add block 1
-                chainedBlockCache[chainedBlock1.BlockHash] = chainedBlock1;
+                chainedHeaderCache[chainedHeader1.Hash] = chainedHeader1;
 
                 // wait for worker
                 workNotifyEvent.WaitOne();
                 workStoppedEvent.WaitOne();
 
                 // verify block 1
-                Assert.AreEqual(chainedBlock1, targetBlockWorker.TargetBlock);
+                Assert.AreEqual(chainedHeader1, targetBlockWorker.TargetBlock);
                 Assert.AreEqual(2, onTargetBlockChangedCount);
 
                 // verify no other work was done

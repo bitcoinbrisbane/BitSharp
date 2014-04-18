@@ -26,16 +26,16 @@ namespace BitSharp.Node.Workers
         private readonly Logger logger;
         private readonly LocalClient localClient;
         private readonly CoreDaemon blockchainDaemon;
-        private readonly ChainedBlockCache chainedBlockCache;
+        private readonly ChainedHeaderCache chainedHeaderCache;
         private readonly BlockCache blockCache;
 
         private readonly ConcurrentDictionary<UInt256, DateTime> allBlockRequests;
         private readonly ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>> blockRequestsByPeer;
 
-        private SortedList<int, ChainedBlock> missingBlockQueue;
+        private SortedList<int, ChainedHeader> missingBlockQueue;
         private int missingBlockQueueIndex;
 
-        private List<ChainedBlock> targetChainQueue;
+        private List<ChainedHeader> targetChainQueue;
         private int targetChainQueueIndex;
         private DateTime targetChainQueueTime;
 
@@ -50,18 +50,18 @@ namespace BitSharp.Node.Workers
         private readonly WorkerMethod flushWorker;
         private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
 
-        public BlockRequestWorker(Logger logger, WorkerConfig workerConfig, LocalClient localClient, CoreDaemon blockchainDaemon, ChainedBlockCache chainedBlockCache, BlockCache blockCache)
+        public BlockRequestWorker(Logger logger, WorkerConfig workerConfig, LocalClient localClient, CoreDaemon blockchainDaemon, ChainedHeaderCache chainedHeaderCache, BlockCache blockCache)
             : base("BlockRequestWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.localClient = localClient;
             this.blockchainDaemon = blockchainDaemon;
-            this.chainedBlockCache = chainedBlockCache;
+            this.chainedHeaderCache = chainedHeaderCache;
             this.blockCache = blockCache;
 
             this.allBlockRequests = new ConcurrentDictionary<UInt256, DateTime>();
             this.blockRequestsByPeer = new ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>>();
-            this.missingBlockQueue = new SortedList<int, ChainedBlock>();
+            this.missingBlockQueue = new SortedList<int, ChainedHeader>();
             this.missingBlockQueueIndex = 0;
 
             this.localClient.OnBlock += HandleBlock;
@@ -164,7 +164,7 @@ namespace BitSharp.Node.Workers
             var targetChainLocal = this.blockchainDaemon.TargetChain;
 
             // remove any blocks that are no longer missing
-            this.missingBlockQueue.RemoveWhere(x => this.blockCache.ContainsKey(x.Value.BlockHash));
+            this.missingBlockQueue.RemoveWhere(x => this.blockCache.ContainsKey(x.Value.Hash));
 
             // remove old missing blocks
             this.missingBlockQueue.RemoveWhere(x => x.Value.Height < currentChainLocal.Height);
@@ -172,8 +172,8 @@ namespace BitSharp.Node.Workers
             // add any blocks that are currently missing
             foreach (var missingBlock in this.blockCache.MissingData)
             {
-                ChainedBlock missingBlockChained;
-                if (this.chainedBlockCache.TryGetValue(missingBlock, out missingBlockChained))
+                ChainedHeader missingBlockChained;
+                if (this.chainedHeaderCache.TryGetValue(missingBlock, out missingBlockChained))
                 {
                     this.missingBlockQueue[missingBlockChained.Height] = missingBlockChained;
                 }
@@ -188,7 +188,7 @@ namespace BitSharp.Node.Workers
                     .Take(this.criticalTargetChainLookAhead)
                     .Where(x =>
                         !this.missingBlockQueue.ContainsKey(x.Height)
-                        && !this.blockCache.ContainsKey(x.BlockHash)))
+                        && !this.blockCache.ContainsKey(x.Hash)))
                 {
                     this.missingBlockQueue[upcomingBlock.Height] = upcomingBlock;
                 }
@@ -213,7 +213,7 @@ namespace BitSharp.Node.Workers
                 this.targetChainQueue = currentChainLocal.NavigateTowards(targetChainLocal)
                     .Select(x => x.Item2)
                     .Take(this.targetChainLookAhead)
-                    .Where(x => !this.blockCache.ContainsKey(x.BlockHash))
+                    .Where(x => !this.blockCache.ContainsKey(x.Hash))
                     .ToList();
                 this.targetChainQueueIndex = 0;
             }
@@ -295,9 +295,9 @@ namespace BitSharp.Node.Workers
                 while (true)
                 {
                     var missingBlock = this.missingBlockQueue.Values[this.missingBlockQueueIndex];
-                    if (!peerBlockRequests.ContainsKey(missingBlock.BlockHash))
+                    if (!peerBlockRequests.ContainsKey(missingBlock.Hash))
                     {
-                        yield return missingBlock.BlockHash;
+                        yield return missingBlock.Hash;
 
                         currentCount++;
                         if (currentCount >= count)
@@ -316,7 +316,7 @@ namespace BitSharp.Node.Workers
             // iterate through the blocks on the target chain, each peer will request a separate chunk of blocks
             for (; this.targetChainQueueIndex < this.targetChainQueue.Count && currentCount < count; this.targetChainQueueIndex++)
             {
-                var requestBlock = this.targetChainQueue[this.targetChainQueueIndex].BlockHash;
+                var requestBlock = this.targetChainQueue[this.targetChainQueueIndex].Hash;
 
                 if (!peerBlockRequests.ContainsKey(requestBlock)
                     && !this.allBlockRequests.ContainsKey(requestBlock)
@@ -379,9 +379,9 @@ namespace BitSharp.Node.Workers
             this.NotifyWork();
         }
 
-        private sealed class HeightComparer : IComparer<ChainedBlock>
+        private sealed class HeightComparer : IComparer<ChainedHeader>
         {
-            public int Compare(ChainedBlock x, ChainedBlock y)
+            public int Compare(ChainedHeader x, ChainedHeader y)
             {
                 return x.Height - y.Height;
             }

@@ -14,7 +14,7 @@ namespace BitSharp.Core.Test
         {
             Assert.AreEqual(expectedHeight, daemon.TargetBlock.Height);
             Assert.AreEqual(expectedHeight, daemon.TargetChain.Height);
-            Assert.AreEqual(expectedBlockHash, daemon.TargetChain.LastBlock.BlockHash);
+            Assert.AreEqual(expectedBlockHash, daemon.TargetChain.LastBlock.Hash);
             Assert.AreEqual(expectedHeight, daemon.ChainState.Height);
             Assert.AreEqual(expectedBlockHash, daemon.ChainState.LastBlockHash);
         }

@@ -94,7 +94,7 @@ namespace BitSharp.Core.Test
 
             // verify initial state
             Assert.AreEqual(0, this.blockchainDaemon.TargetBlock.Height);
-            Assert.AreEqual(this.genesisBlock.Hash, this.blockchainDaemon.TargetChain.LastBlock.BlockHash);
+            Assert.AreEqual(this.genesisBlock.Hash, this.blockchainDaemon.TargetChain.LastBlock.Hash);
             Assert.AreEqual(this.genesisBlock.Hash, this.blockchainDaemon.ChainState.LastBlockHash);
         }
 

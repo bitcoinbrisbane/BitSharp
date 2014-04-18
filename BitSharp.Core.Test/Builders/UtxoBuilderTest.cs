@@ -27,11 +27,12 @@ namespace BitSharp.Core.Test.Builders
             var kernel = new StandardKernel(new MemoryStorageModule());
 
             // prepare block
-            var chainedBlock = new ChainedBlock(blockHash: 1, previousBlockHash: 0, height: 0, totalWork: 0);
+            var fakeHeaders = new FakeHeaders();
+            var chainedHeader = new ChainedHeader(fakeHeaders.Genesis(), height: 0, totalWork: 0);
 
             // prepare an unspent transaction
             var txHash = new UInt256(100);
-            var unspentTx = new UnspentTx(chainedBlock.BlockHash, 3, OutputState.Unspent);
+            var unspentTx = new UnspentTx(chainedHeader.Hash, 3, OutputState.Unspent);
 
             // prepare unspent output
             var unspentTransactions = ImmutableDictionary.Create<UInt256, UnspentTx>().Add(txHash, unspentTx);
@@ -57,7 +58,7 @@ namespace BitSharp.Core.Test.Builders
             var input1 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
 
             // spend the input
-            utxoBuilder.Spend(input1, chainedBlock);
+            utxoBuilder.Spend(input1, chainedHeader);
 
             // verify utxo storage
             Assert.IsTrue(memoryUtxoBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
@@ -70,7 +71,7 @@ namespace BitSharp.Core.Test.Builders
             var input2 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 1), ImmutableArray.Create<byte>(), 0);
 
             // spend the input
-            utxoBuilder.Spend(input2, chainedBlock);
+            utxoBuilder.Spend(input2, chainedHeader);
 
             // verify utxo storage
             Assert.IsTrue(memoryUtxoBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
@@ -83,7 +84,7 @@ namespace BitSharp.Core.Test.Builders
             var input3 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 2), ImmutableArray.Create<byte>(), 0);
 
             // spend the input
-            utxoBuilder.Spend(input3, chainedBlock);
+            utxoBuilder.Spend(input3, chainedHeader);
 
             // verify utxo storage
             Assert.IsFalse(memoryUtxoBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
@@ -97,11 +98,12 @@ namespace BitSharp.Core.Test.Builders
             var kernel = new StandardKernel(new MemoryStorageModule());
 
             // prepare block
-            var chainedBlock = new ChainedBlock(blockHash: 1, previousBlockHash: 0, height: 0, totalWork: 0);
+            var fakeHeaders = new FakeHeaders();
+            var chainedHeader = new ChainedHeader(fakeHeaders.Genesis(), height: 0, totalWork: 0);
 
             // prepare an unspent transaction
             var txHash = new UInt256(100);
-            var unspentTx = new UnspentTx(chainedBlock.BlockHash, 1, OutputState.Unspent);
+            var unspentTx = new UnspentTx(chainedHeader.Hash, 1, OutputState.Unspent);
 
             // mock a parent utxo containing the unspent transaction
             var unspentTransactions = ImmutableDictionary.Create<UInt256, UnspentTx>().Add(txHash, unspentTx);
@@ -120,13 +122,13 @@ namespace BitSharp.Core.Test.Builders
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
 
             // spend the input
-            utxoBuilder.Spend(input, chainedBlock);
+            utxoBuilder.Spend(input, chainedHeader);
 
             // verify utxo storage
             Assert.IsFalse(memoryUtxoBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
 
             // attempt to spend the input again
-            utxoBuilder.Spend(input, chainedBlock);
+            utxoBuilder.Spend(input, chainedHeader);
 
             // validation exception should be thrown
         }

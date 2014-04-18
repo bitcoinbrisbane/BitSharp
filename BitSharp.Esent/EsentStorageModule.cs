@@ -40,7 +40,7 @@ namespace BitSharp.Esent
 
             // bind concrete storage providers
             this.Bind<BlockHeaderStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-            this.Bind<ChainedBlockStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
+            this.Bind<ChainedHeaderStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<BlockStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             if (this.transientBlockStorage)
             {
@@ -59,7 +59,7 @@ namespace BitSharp.Esent
 
             // bind storage providers interfaces
             this.Bind<IBlockHeaderStorage>().ToMethod(x => this.Kernel.Get<BlockHeaderStorage>()).InSingletonScope();
-            this.Bind<IChainedBlockStorage>().ToMethod(x => this.Kernel.Get<ChainedBlockStorage>()).InSingletonScope();
+            this.Bind<IChainedHeaderStorage>().ToMethod(x => this.Kernel.Get<ChainedHeaderStorage>()).InSingletonScope();
             this.Bind<IBlockStorage>().ToMethod(x => this.Kernel.Get<BlockStorage>()).InSingletonScope();
             if (this.transientBlockStorage)
             {

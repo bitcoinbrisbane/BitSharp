@@ -17,7 +17,7 @@ namespace BitSharp.Core.Storage
             get { throw new NotImplementedException(); }
         }
 
-        public ChainedBlockCache ChainedBlockCache
+        public ChainedHeaderCache ChainedHeaderCache
         {
             get { throw new NotImplementedException(); }
         }

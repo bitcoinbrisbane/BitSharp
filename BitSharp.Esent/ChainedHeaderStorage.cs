@@ -14,12 +14,12 @@ using BitSharp.Core;
 
 namespace BitSharp.Esent
 {
-    public class ChainedBlockStorage : EsentDataStorage<ChainedBlock>, IChainedBlockStorage
+    public class ChainedHeaderStorage : EsentDataStorage<ChainedHeader>, IChainedHeaderStorage
     {
-        public ChainedBlockStorage(string baseDirectory)
-            : base(baseDirectory, "chainedBlocks",
-                chainedBlock => DataEncoder.EncodeChainedBlock(chainedBlock),
-                (blockHash, bytes) => DataEncoder.DecodeChainedBlock(bytes))
+        public ChainedHeaderStorage(string baseDirectory)
+            : base(baseDirectory, "chainedHeaders",
+                chainedHeader => DataEncoder.EncodeChainedHeader(chainedHeader),
+                (blockHash, bytes) => DataEncoder.DecodeChainedHeader(bytes))
         { }
     }
 }

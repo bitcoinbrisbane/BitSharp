@@ -10,13 +10,13 @@ namespace BitSharp.Core.Domain
 {
     public class BlockchainPath
     {
-        private readonly ChainedBlock fromBlock;
-        private readonly ChainedBlock toBlock;
-        private readonly ChainedBlock lastCommonBlock;
-        private readonly ImmutableList<ChainedBlock> rewindBlocks;
-        private readonly ImmutableList<ChainedBlock> advanceBlocks;
+        private readonly ChainedHeader fromBlock;
+        private readonly ChainedHeader toBlock;
+        private readonly ChainedHeader lastCommonBlock;
+        private readonly ImmutableList<ChainedHeader> rewindBlocks;
+        private readonly ImmutableList<ChainedHeader> advanceBlocks;
 
-        public BlockchainPath(ChainedBlock fromBlock, ChainedBlock toBlock, ChainedBlock lastCommonBlock, ImmutableList<ChainedBlock> rewindBlocks, ImmutableList<ChainedBlock> advanceBlocks)
+        public BlockchainPath(ChainedHeader fromBlock, ChainedHeader toBlock, ChainedHeader lastCommonBlock, ImmutableList<ChainedHeader> rewindBlocks, ImmutableList<ChainedHeader> advanceBlocks)
         {
             this.fromBlock = fromBlock;
             this.toBlock = toBlock;
@@ -25,19 +25,19 @@ namespace BitSharp.Core.Domain
             this.advanceBlocks = advanceBlocks;
         }
 
-        public ChainedBlock FromBlock { get { return this.fromBlock; } }
+        public ChainedHeader FromBlock { get { return this.fromBlock; } }
 
-        public ChainedBlock ToBlock { get { return this.toBlock; } }
+        public ChainedHeader ToBlock { get { return this.toBlock; } }
 
-        public ChainedBlock LastCommonBlock { get { return this.lastCommonBlock; } }
+        public ChainedHeader LastCommonBlock { get { return this.lastCommonBlock; } }
 
-        public ImmutableList<ChainedBlock> RewindBlocks { get { return this.rewindBlocks; } }
+        public ImmutableList<ChainedHeader> RewindBlocks { get { return this.rewindBlocks; } }
 
-        public ImmutableList<ChainedBlock> AdvanceBlocks { get { return this.advanceBlocks; } }
+        public ImmutableList<ChainedHeader> AdvanceBlocks { get { return this.advanceBlocks; } }
 
-        public static BlockchainPath CreateSingleBlockPath(ChainedBlock block)
+        public static BlockchainPath CreateSingleBlockPath(ChainedHeader chainedHeader)
         {
-            return new BlockchainPath(block, block, block, ImmutableList.Create<ChainedBlock>(), ImmutableList.Create<ChainedBlock>());
+            return new BlockchainPath(chainedHeader, chainedHeader, chainedHeader, ImmutableList.Create<ChainedHeader>(), ImmutableList.Create<ChainedHeader>());
         }
     }
 }

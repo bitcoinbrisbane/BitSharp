@@ -11,45 +11,45 @@ namespace BitSharp.Core.Builders
 {
     public class ChainBuilder
     {
-        private readonly ConcurrentListBuilder<ChainedBlock> blocks;
+        private readonly ConcurrentListBuilder<ChainedHeader> blocks;
 
         public ChainBuilder(Chain parentChain)
         {
-            this.blocks = new ConcurrentListBuilder<ChainedBlock>(parentChain.Blocks);
+            this.blocks = new ConcurrentListBuilder<ChainedHeader>(parentChain.Blocks);
         }
 
-        public ChainedBlock GenesisBlock { get { return this.blocks.First(); } }
+        public ChainedHeader GenesisBlock { get { return this.blocks.First(); } }
 
-        public ChainedBlock LastBlock { get { return this.blocks.Last(); } }
+        public ChainedHeader LastBlock { get { return this.blocks.Last(); } }
 
         public int Height { get { return this.blocks.Count() - 1; } }
 
-        public ImmutableList<ChainedBlock> Blocks { get { return this.blocks.ToImmutable(); } }
+        public ImmutableList<ChainedHeader> Blocks { get { return this.blocks.ToImmutable(); } }
 
-        public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(Chain targetChain)
+        public IEnumerable<Tuple<int, ChainedHeader>> NavigateTowards(Chain targetChain)
         {
             return this.NavigateTowards(() => targetChain);
         }
 
-        public IEnumerable<Tuple<int, ChainedBlock>> NavigateTowards(Func<Chain> getTargetChain)
+        public IEnumerable<Tuple<int, ChainedHeader>> NavigateTowards(Func<Chain> getTargetChain)
         {
             return this.ToImmutable().NavigateTowards(getTargetChain);
         }
 
-        public void AddBlock(ChainedBlock block)
+        public void AddBlock(ChainedHeader chainedHeader)
         {
             var lastBlock = this.LastBlock;
-            if (block.PreviousBlockHash != lastBlock.BlockHash
-                || block.Height != lastBlock.Height + 1)
+            if (chainedHeader.PreviousBlockHash != lastBlock.Hash
+                || chainedHeader.Height != lastBlock.Height + 1)
                 throw new InvalidOperationException();
 
-            this.blocks.Add(block);
+            this.blocks.Add(chainedHeader);
         }
 
-        public void RemoveBlock(ChainedBlock block)
+        public void RemoveBlock(ChainedHeader chainedHeader)
         {
             var lastBlock = this.LastBlock;
-            if (block != lastBlock
+            if (chainedHeader != lastBlock
                 || this.blocks.Count == 0)
                 throw new InvalidOperationException();
 

@@ -17,7 +17,7 @@ namespace BitSharp.Core.Storage.Memory
         {
             // bind concrete storage providers
             this.Bind<MemoryBlockHeaderStorage>().ToSelf().InSingletonScope();
-            this.Bind<MemoryChainedBlockStorage>().ToSelf().InSingletonScope();
+            this.Bind<MemoryChainedHeaderStorage>().ToSelf().InSingletonScope();
             this.Bind<MemoryBlockStorage>().ToSelf().InSingletonScope();
             this.Bind<MemoryBlockTxHashesStorage>().ToSelf().InSingletonScope();
             this.Bind<MemoryTransactionStorage>().ToSelf().InSingletonScope();
@@ -27,7 +27,7 @@ namespace BitSharp.Core.Storage.Memory
 
             // bind storage providers interfaces
             this.Bind<IBlockHeaderStorage>().ToMethod(x => this.Kernel.Get<MemoryBlockHeaderStorage>()).InSingletonScope();
-            this.Bind<IChainedBlockStorage>().ToMethod(x => this.Kernel.Get<MemoryChainedBlockStorage>()).InSingletonScope();
+            this.Bind<IChainedHeaderStorage>().ToMethod(x => this.Kernel.Get<MemoryChainedHeaderStorage>()).InSingletonScope();
             this.Bind<IBlockStorage>().ToMethod(x => this.Kernel.Get<MemoryBlockStorage>()).InSingletonScope();
             this.Bind<IBlockTxHashesStorage>().ToMethod(x => this.Kernel.Get<MemoryBlockTxHashesStorage>()).InSingletonScope();
             this.Bind<ITransactionStorage>().ToMethod(x => this.Kernel.Get<MemoryTransactionStorage>()).InSingletonScope();

@@ -17,7 +17,7 @@ namespace BitSharp.Core.Rules
 
         Block GenesisBlock { get; }
 
-        ChainedBlock GenesisChainedBlock { get; }
+        ChainedHeader GenesisChainedHeader { get; }
 
         void ValidateBlock(Block block, ChainStateBuilder chainStateBuilder);
 

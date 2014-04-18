@@ -192,44 +192,42 @@ namespace BitSharp.Core
             }
         }
 
-        public static ChainedBlock DecodeChainedBlock(Stream stream)
+        public static ChainedHeader DecodeChainedHeader(Stream stream)
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
-                return new ChainedBlock
+                return new ChainedHeader
                 (
-                    blockHash: reader.ReadUInt256(),
-                    previousBlockHash: reader.ReadUInt256(),
+                    blockHeader: DecodeBlockHeader(stream),
                     height: reader.ReadInt32(),
                     totalWork: new BigInteger(reader.ReadVarBytes())
                 );
             }
         }
 
-        public static ChainedBlock DecodeChainedBlock(byte[] bytes)
+        public static ChainedHeader DecodeChainedHeader(byte[] bytes)
         {
             using (var stream = new MemoryStream(bytes))
             {
-                return DecodeChainedBlock(stream);
+                return DecodeChainedHeader(stream);
             }
         }
 
-        public static void EncodeChainedBlock(Stream stream, ChainedBlock chainedBlock)
+        public static void EncodeChainedHeader(Stream stream, ChainedHeader chainedHeader)
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.WriteUInt256(chainedBlock.BlockHash);
-                writer.WriteUInt256(chainedBlock.PreviousBlockHash);
-                writer.WriteInt32(chainedBlock.Height);
-                writer.WriteVarBytes(chainedBlock.TotalWork.ToByteArray());
+                EncodeBlockHeader(stream, chainedHeader.BlockHeader);
+                writer.WriteInt32(chainedHeader.Height);
+                writer.WriteVarBytes(chainedHeader.TotalWork.ToByteArray());
             }
         }
 
-        public static byte[] EncodeChainedBlock(ChainedBlock chainedBlock)
+        public static byte[] EncodeChainedHeader(ChainedHeader chainedHeader)
         {
             using (var stream = new MemoryStream())
             {
-                EncodeChainedBlock(stream, chainedBlock);
+                EncodeChainedHeader(stream, chainedHeader);
                 return stream.ToArray();
             }
         }

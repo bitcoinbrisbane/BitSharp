@@ -392,7 +392,7 @@ namespace BitSharp.Common.ExtensionMethods
         public static UInt32 NextUInt32(this Random random)
         {
             // purposefully left unchecked to get full range of UInt32
-            return (UInt32)random.Next();
+            return unchecked((UInt32)random.Next());
         }
 
         public static UInt64 NextUInt64(this Random random)

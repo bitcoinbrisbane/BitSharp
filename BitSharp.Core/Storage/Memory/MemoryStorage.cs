@@ -85,7 +85,7 @@ namespace BitSharp.Core.Storage.Memory
 
     public sealed class MemoryBlockHeaderStorage : MemoryStorage<UInt256, BlockHeader>, IBlockHeaderStorage { }
 
-    public sealed class MemoryChainedBlockStorage : MemoryStorage<UInt256, ChainedBlock>, IChainedBlockStorage { }
+    public sealed class MemoryChainedHeaderStorage : MemoryStorage<UInt256, ChainedHeader>, IChainedHeaderStorage { }
 
     public sealed class MemoryBlockStorage : MemoryStorage<UInt256, Block>, IBlockStorage { }
 

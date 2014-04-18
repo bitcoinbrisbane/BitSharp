@@ -13,11 +13,11 @@ namespace BitSharp.Core.Builders
 {
     public class BlockchainPathBuilder
     {
-        private ChainedBlock fromBlock;
-        private ChainedBlock toBlock;
-        private ChainedBlock lastCommonBlock;
-        private readonly ImmutableList<ChainedBlock>.Builder rewindBlocks;
-        private readonly ImmutableList<ChainedBlock>.Builder advanceBlocks;
+        private ChainedHeader fromBlock;
+        private ChainedHeader toBlock;
+        private ChainedHeader lastCommonBlock;
+        private readonly ImmutableList<ChainedHeader>.Builder rewindBlocks;
+        private readonly ImmutableList<ChainedHeader>.Builder advanceBlocks;
 
         private readonly ReaderWriterLockSlim rwLock;
 
@@ -31,7 +31,7 @@ namespace BitSharp.Core.Builders
             this.rwLock = new ReaderWriterLockSlim();
         }
 
-        public ChainedBlock FromBlock
+        public ChainedHeader FromBlock
         {
             get
             {
@@ -40,7 +40,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        public ChainedBlock ToBlock
+        public ChainedHeader ToBlock
         {
             get
             {
@@ -49,7 +49,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        public ChainedBlock LastCommonBlock
+        public ChainedHeader LastCommonBlock
         {
             get
             {
@@ -58,7 +58,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        public ImmutableList<ChainedBlock> RewindBlocks
+        public ImmutableList<ChainedHeader> RewindBlocks
         {
             get
             {
@@ -67,7 +67,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        public ImmutableList<ChainedBlock> AdvanceBlocks
+        public ImmutableList<ChainedHeader> AdvanceBlocks
         {
             get
             {
@@ -82,12 +82,12 @@ namespace BitSharp.Core.Builders
                 new BlockchainPath(this.fromBlock, this.toBlock, this.lastCommonBlock, this.rewindBlocks.ToImmutable(), this.advanceBlocks.ToImmutable()));
         }
 
-        public Tuple<int, ChainedBlock> PeekFromBlock()
+        public Tuple<int, ChainedHeader> PeekFromBlock()
         {
             return this.rwLock.DoRead(() =>
             {
                 int direction;
-                ChainedBlock popBlock;
+                ChainedHeader popBlock;
                 if (this.rewindBlocks.Count > 0)
                 {
                     direction = -1;
@@ -106,12 +106,12 @@ namespace BitSharp.Core.Builders
         }
 
         //TODO don't use tuple
-        public Tuple<int, ChainedBlock> PopFromBlock()
+        public Tuple<int, ChainedHeader> PopFromBlock()
         {
             return this.rwLock.DoWrite(() =>
             {
                 int direction;
-                ChainedBlock popBlock;
+                ChainedHeader popBlock;
                 if (this.rewindBlocks.Count > 0)
                 {
                     direction = -1;
@@ -143,12 +143,12 @@ namespace BitSharp.Core.Builders
             });
         }
 
-        public Tuple<int, ChainedBlock> PeekToBlock()
+        public Tuple<int, ChainedHeader> PeekToBlock()
         {
             return this.rwLock.DoRead(() =>
             {
                 int direction;
-                ChainedBlock popBlock;
+                ChainedHeader popBlock;
                 if (this.advanceBlocks.Count > 0)
                 {
                     direction = -1;
@@ -166,12 +166,12 @@ namespace BitSharp.Core.Builders
             });
         }
 
-        public Tuple<int, ChainedBlock> PopToBlock()
+        public Tuple<int, ChainedHeader> PopToBlock()
         {
             return this.rwLock.DoWrite(() =>
             {
                 int direction;
-                ChainedBlock popBlock;
+                ChainedHeader popBlock;
                 if (this.advanceBlocks.Count > 0)
                 {
                     direction = -1;
@@ -203,53 +203,53 @@ namespace BitSharp.Core.Builders
             });
         }
 
-        public void AddFromBlock(ChainedBlock block)
+        public void AddFromBlock(ChainedHeader chainedHeader)
         {
             this.rwLock.DoWrite(() =>
             {
-                if (block.PreviousBlockHash != this.fromBlock.BlockHash)
+                if (chainedHeader.PreviousBlockHash != this.fromBlock.Hash)
                     throw new InvalidOperationException();
 
-                this.rewindBlocks.Add(block);
-                this.fromBlock = block;
+                this.rewindBlocks.Add(chainedHeader);
+                this.fromBlock = chainedHeader;
             });
         }
 
-        public void RemoveFromBlock(ChainedBlock block)
+        public void RemoveFromBlock(ChainedHeader chainedHeader)
         {
             this.rwLock.DoWrite(() =>
             {
-                if (block != this.fromBlock
+                if (chainedHeader != this.fromBlock
                     || this.rewindBlocks.Count == 0)
                     throw new InvalidOperationException();
 
                 this.rewindBlocks.RemoveAt(this.rewindBlocks.Count - 1);
-                this.fromBlock = block;
+                this.fromBlock = chainedHeader;
             });
         }
 
-        public void AddToBlock(ChainedBlock block)
+        public void AddToBlock(ChainedHeader chainedHeader)
         {
             this.rwLock.DoWrite(() =>
             {
-                if (block.PreviousBlockHash != this.toBlock.BlockHash)
+                if (chainedHeader.PreviousBlockHash != this.toBlock.Hash)
                     throw new InvalidOperationException();
 
-                this.advanceBlocks.Add(block);
-                this.toBlock = block;
+                this.advanceBlocks.Add(chainedHeader);
+                this.toBlock = chainedHeader;
             });
         }
 
-        public void RemoveToBlock(ChainedBlock block)
+        public void RemoveToBlock(ChainedHeader chainedHeader)
         {
             this.rwLock.DoWrite(() =>
             {
-                if (block != this.toBlock
+                if (chainedHeader != this.toBlock
                     || this.advanceBlocks.Count == 0)
                     throw new InvalidOperationException();
 
                 this.advanceBlocks.RemoveAt(this.advanceBlocks.Count - 1);
-                this.toBlock = block;
+                this.toBlock = chainedHeader;
             });
         }
     }

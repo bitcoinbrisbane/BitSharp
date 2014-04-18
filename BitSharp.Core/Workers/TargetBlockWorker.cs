@@ -17,41 +17,41 @@ namespace BitSharp.Core.Workers
     {
         public event Action OnTargetBlockChanged;
 
-        private readonly ChainedBlockCache chainedBlockCache;
+        private readonly ChainedHeaderCache chainedHeaderCache;
         private readonly InvalidBlockCache invalidBlockCache;
 
-        private ChainedBlock targetBlock;
+        private ChainedHeader targetBlock;
         private readonly ReaderWriterLockSlim targetBlockLock;
 
-        private readonly ConcurrentQueue<ChainedBlock> chainedBlockQueue;
+        private readonly ConcurrentQueue<ChainedHeader> chainedHeaderQueue;
 
         private readonly AutoResetEvent rescanEvent;
 
-        public TargetBlockWorker(WorkerConfig workerConfig, Logger logger, ChainedBlockCache chainedBlockCache, InvalidBlockCache invalidBlockCache)
+        public TargetBlockWorker(WorkerConfig workerConfig, Logger logger, ChainedHeaderCache chainedHeaderCache, InvalidBlockCache invalidBlockCache)
             : base("TargetBlockWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
-            this.chainedBlockCache = chainedBlockCache;
+            this.chainedHeaderCache = chainedHeaderCache;
             this.invalidBlockCache = invalidBlockCache;
 
             this.targetBlock = null;
             this.targetBlockLock = new ReaderWriterLockSlim();
 
-            this.chainedBlockQueue = new ConcurrentQueue<ChainedBlock>();
+            this.chainedHeaderQueue = new ConcurrentQueue<ChainedHeader>();
 
             this.rescanEvent = new AutoResetEvent(false);
 
             // wire up cache events
-            this.chainedBlockCache.OnAddition += CheckChainedBlock;
+            this.chainedHeaderCache.OnAddition += CheckChainedHeader;
 
             this.invalidBlockCache.OnAddition += HandleInvalidBlock;
         }
 
-        public ChainedBlock TargetBlock { get { return this.targetBlock; } }
+        public ChainedHeader TargetBlock { get { return this.targetBlock; } }
 
         protected override void SubDispose()
         {
             // cleanup events
-            this.chainedBlockCache.OnAddition -= CheckChainedBlock;
+            this.chainedHeaderCache.OnAddition -= CheckChainedHeader;
 
             this.invalidBlockCache.OnAddition -= HandleInvalidBlock;
 
@@ -64,16 +64,16 @@ namespace BitSharp.Core.Workers
             this.NotifyWork();
         }
 
-        private void CheckChainedBlock(UInt256 blockHash, ChainedBlock chainedBlock)
+        private void CheckChainedHeader(UInt256 blockHash, ChainedHeader chainedHeader)
         {
             try
             {
-                if (chainedBlock == null)
-                    chainedBlock = this.chainedBlockCache[blockHash];
+                if (chainedHeader == null)
+                    chainedHeader = this.chainedHeaderCache[blockHash];
             }
             catch (MissingDataException) { return; }
 
-            this.chainedBlockQueue.Enqueue(chainedBlock);
+            this.chainedHeaderQueue.Enqueue(chainedHeader);
 
             this.NotifyWork();
         }
@@ -85,19 +85,19 @@ namespace BitSharp.Core.Workers
             if (this.rescanEvent.WaitOne(0))
             {
                 currentTargetBlock = null;
-                this.chainedBlockQueue.EnqueueRange(this.chainedBlockCache.Values);
+                this.chainedHeaderQueue.EnqueueRange(this.chainedHeaderCache.Values);
             }
 
-            ChainedBlock chainedBlock;
-            while (this.chainedBlockQueue.TryDequeue(out chainedBlock))
+            ChainedHeader chainedHeader;
+            while (this.chainedHeaderQueue.TryDequeue(out chainedHeader))
             {
-                if (this.invalidBlockCache.ContainsKey(chainedBlock.BlockHash))
+                if (this.invalidBlockCache.ContainsKey(chainedHeader.Hash))
                     continue;
 
                 if (currentTargetBlock == null
-                    || chainedBlock.TotalWork > currentTargetBlock.TotalWork)
+                    || chainedHeader.TotalWork > currentTargetBlock.TotalWork)
                 {
-                    currentTargetBlock = chainedBlock;
+                    currentTargetBlock = chainedHeader;
                 }
             }
 

@@ -9,7 +9,7 @@ namespace BitSharp.Core.Storage
     public interface ICoreStorage
     {
         BlockHeaderCache BlockHeaderCache { get; }
-        ChainedBlockCache ChainedBlockCache { get; }
+        ChainedHeaderCache ChainedHeaderCache { get; }
         BlockCache BlockCache { get; }
         InvalidBlockCache InvalidBlockCache { get; }
 

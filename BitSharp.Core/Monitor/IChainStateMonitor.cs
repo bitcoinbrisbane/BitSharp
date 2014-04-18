@@ -10,7 +10,7 @@ namespace BitSharp.Core.Monitor
 {
     public interface IChainStateMonitor
     {
-        void BeginBlock(ChainedBlock block);
+        void BeginBlock(ChainedHeader chainedHeader);
 
 
         void BeforeAddTransaction(ChainPosition chainPosition, Transaction tx);
@@ -35,8 +35,8 @@ namespace BitSharp.Core.Monitor
         void AfterRemoveTransaction(ChainPosition chainPosition, Transaction tx);
 
 
-        void CommitBlock(ChainedBlock block);
+        void CommitBlock(ChainedHeader chainedHeader);
 
-        void RollbackBlock(ChainedBlock block);
+        void RollbackBlock(ChainedHeader chainedHeader);
     }
 }

@@ -85,7 +85,7 @@ namespace BitSharp.Core.Workers
                         var block = chain.Blocks[i];
 
                         IImmutableList<KeyValuePair<UInt256, SpentTx>> spentTransactions;
-                        if (this.spentTransactionsCache.TryGetValue(block.BlockHash, out spentTransactions))
+                        if (this.spentTransactionsCache.TryGetValue(block.Hash, out spentTransactions))
                         {
                             foreach (var keyPair in spentTransactions)
                                 this.transactionCache.TryRemove(keyPair.Key);
@@ -99,7 +99,7 @@ namespace BitSharp.Core.Workers
                         var block = chain.Blocks[i];
 
                         IImmutableList<UInt256> blockTxHashes;
-                        if (this.blockTxHashesCache.TryGetValue(block.BlockHash, out blockTxHashes))
+                        if (this.blockTxHashesCache.TryGetValue(block.Hash, out blockTxHashes))
                         {
                             foreach (var txHash in blockTxHashes)
                                 this.transactionCache.TryRemove(txHash);
@@ -112,9 +112,9 @@ namespace BitSharp.Core.Workers
             {
                 var block = chain.Blocks[i];
 
-                this.blockTxHashesCache.TryRemove(block.BlockHash);
-                this.spentTransactionsCache.TryRemove(block.BlockHash);
-                this.spentOutputsCache.TryRemove(block.BlockHash);
+                this.blockTxHashesCache.TryRemove(block.Hash);
+                this.spentTransactionsCache.TryRemove(block.Hash);
+                this.spentOutputsCache.TryRemove(block.Hash);
             }
         }
     }
