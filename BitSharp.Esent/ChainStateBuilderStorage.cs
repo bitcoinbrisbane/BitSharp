@@ -24,12 +24,13 @@ namespace BitSharp.Esent
         public static bool IndexOutputs { get; set; }
 
         private readonly Logger logger;
-        private bool closed = false;
 
+        private readonly bool isSnapshot;
         private readonly string jetDirectory;
         private readonly string jetDatabase;
         private readonly Instance jetInstance;
-        private readonly Session jetSession;
+        private Session jetSession;
+        private bool inTransaction;
 
         private readonly JET_DBID utxoDbId;
 
@@ -49,11 +50,12 @@ namespace BitSharp.Esent
         private int unspentTxCount;
         private int unspentTxOutputsCount;
 
-        public ChainStateBuilderStorage(IChainStateStorage parentUtxo, Logger logger)
+        public ChainStateBuilderStorage(string baseDirectory, IChainStateStorage parentUtxo, Logger logger)
         {
+            this.isSnapshot = false;
             this.logger = logger;
-            this.jetDirectory = GetDirectory();
-            this.jetDatabase = Path.Combine(this.jetDirectory, "UTXO.edb");
+            this.jetDirectory = Path.Combine(baseDirectory, "ChainState");
+            this.jetDatabase = Path.Combine(this.jetDirectory, "ChainState.edb");
 
             //TODO currently configured by PersistentDictionary
             //SystemParameters.DatabasePageSize = 8192;
@@ -62,66 +64,16 @@ namespace BitSharp.Esent
             this.jetInstance = CreateInstance2(this.jetDirectory);
             this.jetInstance.Init();
 
-            this.jetSession = new Session(this.jetInstance);
-
-            Api.JetCreateDatabase(this.jetSession, this.jetDatabase, "", out this.utxoDbId, CreateDatabaseGrbit.None);
-            //Api.JetAttachDatabase(this.jetSession, this.jetDatabase, AttachDatabaseGrbit.None);
-            //Api.JetOpenDatabase(this.jetSession, this.jetDatabase, "", out this.utxoDbId, OpenDatabaseGrbit.Exclusive);
-
-            Api.JetCreateTable(this.jetSession, this.utxoDbId, "global", 0, 0, out this.globalTableId);
-
-            Api.JetAddColumn(this.jetSession, this.globalTableId, "BlockHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.blockHashColumnId);
-
-            Api.JetCreateTable(this.jetSession, this.utxoDbId, "unspentTx", 0, 0, out this.unspentTxTableId);
-
-            Api.JetAddColumn(this.jetSession, this.unspentTxTableId, "TxHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.txHashColumnId);
-            Api.JetAddColumn(this.jetSession, this.unspentTxTableId, "ConfirmedBlockHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.confirmedBlockHashColumnId);
-            Api.JetAddColumn(this.jetSession, this.unspentTxTableId, "OutputStates", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out this.outputStatesColumnId);
-
-            Api.JetCreateIndex2(this.jetSession, this.unspentTxTableId,
-                new JET_INDEXCREATE[]
-                {
-                    new JET_INDEXCREATE
-                    {
-                        cbKeyMost = 255,
-                        grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
-                        szIndexName = "IX_TxHash",
-                        szKey = "+TxHash\0\0",
-                        cbKey = "+TxHash\0\0".Length
-                    }
-                }, 1);
-
-            Api.JetCreateTable(this.jetSession, this.utxoDbId, "unspentTxOutputs", 0, 0, out unspentTxOutputsTableId);
-
-            Api.JetAddColumn(this.jetSession, this.unspentTxOutputsTableId, "TxOutputKey", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 36, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out this.txOutputKeyColumnId);
-            Api.JetAddColumn(this.jetSession, this.unspentTxOutputsTableId, "TxOutput", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out this.txOutputColumnId);
-            Api.JetAddColumn(this.jetSession, this.unspentTxOutputsTableId, "OutputScriptHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32 }, null, 0, out this.outputScriptHashColumnId);
-
-            Api.JetCreateIndex2(this.jetSession, this.unspentTxOutputsTableId,
-                new JET_INDEXCREATE[]
-                {
-                    new JET_INDEXCREATE
-                    {
-                        cbKeyMost = 255,
-                        grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
-                        szIndexName = "IX_TxOutputKey",
-                        szKey = "+TxOutputKey\0\0",
-                        cbKey = "+TxOutputKey\0\0".Length
-                    }
-                }, 1);
-
-            Api.JetCreateIndex2(this.jetSession, this.unspentTxOutputsTableId,
-                new JET_INDEXCREATE[]
-                {
-                    new JET_INDEXCREATE
-                    {
-                        cbKeyMost = 255,
-                        grbit = CreateIndexGrbit.IndexIgnoreNull,
-                        szIndexName = "IX_OutputScriptHash",
-                        szKey = "+OutputScriptHash\0\0",
-                        cbKey = "+OutputScriptHash\0\0".Length
-                    }
-                }, 1);
+            CreateDatabase(this.jetDatabase, this.jetInstance);
+            OpenDatabase(this.jetDatabase, this.jetInstance, false /*readOnly*/,
+                out this.jetSession,
+                out this.utxoDbId,
+                out this.globalTableId,
+                    out this.blockHashColumnId,
+                out this.unspentTxTableId,
+                    out this.txHashColumnId, out this.confirmedBlockHashColumnId, out this.outputStatesColumnId,
+                out this.unspentTxOutputsTableId,
+                    out this.txOutputKeyColumnId, out this.txOutputColumnId, out this.outputScriptHashColumnId);
 
             this.BlockHash = parentUtxo.BlockHash;
 
@@ -130,6 +82,27 @@ namespace BitSharp.Esent
 
             foreach (var unspentOutput in parentUtxo.UnspentOutputs())
                 this.AddOutput(unspentOutput.Key, unspentOutput.Value);
+        }
+
+        public ChainStateBuilderStorage(ChainStateBuilderStorage parentStorage)
+        {
+            this.isSnapshot = true;
+            this.logger = parentStorage.logger;
+            this.jetDirectory = parentStorage.jetDirectory;
+            this.jetDatabase = parentStorage.jetDatabase;
+            this.jetInstance = parentStorage.jetInstance;
+
+            OpenDatabase(this.jetDatabase, this.jetInstance, true /*readOnly*/,
+                out this.jetSession,
+                out this.utxoDbId,
+                out this.globalTableId,
+                    out this.blockHashColumnId,
+                out this.unspentTxTableId,
+                    out this.txHashColumnId, out this.confirmedBlockHashColumnId, out this.outputStatesColumnId,
+                out this.unspentTxOutputsTableId,
+                    out this.txOutputKeyColumnId, out this.txOutputColumnId, out this.outputScriptHashColumnId);
+
+            Api.JetBeginTransaction2(this.jetSession, BeginTransactionGrbit.ReadOnly);
         }
 
         ~ChainStateBuilderStorage()
@@ -142,13 +115,9 @@ namespace BitSharp.Esent
             GC.SuppressFinalize(this);
 
             this.jetSession.Dispose();
-            this.jetInstance.Dispose();
 
-            if (!this.closed)
-            {
-                ChainStateStorage.DeleteUtxoDirectory(this.jetDirectory);
-                this.closed = true;
-            }
+            if (!this.isSnapshot)
+                this.jetInstance.Dispose();
         }
 
         public UInt256 BlockHash
@@ -457,90 +426,10 @@ namespace BitSharp.Esent
 
         public IChainStateStorage ToImmutable(UInt256 blockHash)
         {
-            throw new NotImplementedException();
+            if (this.inTransaction)
+                throw new InvalidOperationException();
 
-            ////TODO see if JetOSSnapshotPrepare for taking snapshots here
-
-            //var stopwatch = new Stopwatch();
-            //stopwatch.Start();
-
-            //// prepare destination directory
-            //var destPath = UtxoStorage.GetDirectory(blockHash);
-            //UtxoStorage.DeleteUtxoDirectory(destPath);
-            //Directory.CreateDirectory(destPath + "_tx");
-            //Directory.CreateDirectory(destPath + "_output");
-
-            //// get database instances
-            //var instanceField = typeof(PersistentDictionary<string, string>)
-            //    .GetField("instance", BindingFlags.NonPublic | BindingFlags.Instance);
-            //var unspentTransactionsInstance = (Instance)instanceField.GetValue(this.unspentTransactions.RawDictionary);
-            //var unspentOutputsInstance = (Instance)instanceField.GetValue(this.unspentOutputs.RawDictionary);
-
-            //// backup to temporary directory
-            //using (var session = new Session(unspentTransactionsInstance))
-            //    Api.JetBackupInstance(unspentTransactionsInstance, this.directory + "_tx_snapshot", BackupGrbit.Atomic, null);
-            //using (var session = new Session(unspentOutputsInstance))
-            //    Api.JetBackupInstance(unspentOutputsInstance, this.directory + "_output_snapshot", BackupGrbit.Atomic, null);
-
-            //// restore to destination directory
-            //using (var instance = CreateInstance(destPath + "_tx"))
-            //    Api.JetRestoreInstance(instance, this.directory + "_tx_snapshot", destPath + "_tx", null);
-            //using (var instance = CreateInstance(destPath + "_output"))
-            //    Api.JetRestoreInstance(instance, this.directory + "_output_snapshot", destPath + "_output", null);
-
-            //// cleanup temporary directory
-            //try { Directory.Delete(this.directory + "_tx_snapshot", recursive: true); }
-            //catch (Exception) { }
-            //try { Directory.Delete(this.directory + "_output_snapshot", recursive: true); }
-            //catch (Exception) { }
-
-            //// initialize saved utxo
-            //var utxoStorage = new UtxoStorage(blockHash);
-
-            //// verify restore
-            //if (utxoStorage.TransactionCount != this.TransactionCount)
-            //    throw new Exception("TODO");
-            //if (utxoStorage.OutputCount != this.OutputCount)
-            //    throw new Exception("TODO");
-
-            //// log snapshot info
-            //this.logger.Info("Saved UTXO snapshot for {0} in: {1}".Format2(blockHash, stopwatch.Elapsed));
-
-            //// return saved utxo
-            //return utxoStorage;
-        }
-
-        public IChainStateStorage Close(UInt256 blockHash)
-        {
-            throw new NotImplementedException();
-
-            //// close builder
-            //this.closed = true;
-            //this.Dispose();
-
-            //// prepare destination directory
-            //var destPath = UtxoStorage.GetDirectory(blockHash);
-            //UtxoStorage.DeleteUtxoDirectory(destPath);
-            //Directory.CreateDirectory(destPath + "_tx");
-            //Directory.CreateDirectory(destPath + "_output");
-
-            ////TOOD can something with JetCompact be done here to save off optimized UTXO snapshots?
-            ////TODO once the blockchain is synced, see if this can be used to shrink used space during normal operation
-
-            //// move utxo to new location
-            //foreach (var srcFile in Directory.GetFiles(this.directory + "_tx", "*.edb"))
-            //    File.Move(srcFile, Path.Combine(destPath + "_tx", Path.GetFileName(srcFile)));
-            //foreach (var srcFile in Directory.GetFiles(this.directory + "_output", "*.edb"))
-            //    File.Move(srcFile, Path.Combine(destPath + "_output", Path.GetFileName(srcFile)));
-            //UtxoStorage.DeleteUtxoDirectory(this.directory);
-
-            //// return saved utxo
-            //return new UtxoStorage(blockHash);
-        }
-
-        private string GetDirectory()
-        {
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo", Guid.NewGuid().ToString());
+            return new ChainStateStorage(this);
         }
 
         private static Instance CreateInstance(string directory)
@@ -595,17 +484,138 @@ namespace BitSharp.Esent
 
         public void BeginTransaction()
         {
+            if (this.inTransaction)
+                throw new InvalidOperationException();
+
             Api.JetBeginTransaction(this.jetSession);
+            this.inTransaction = true;
         }
 
         public void CommitTransaction()
         {
+            if (!this.inTransaction)
+                throw new InvalidOperationException();
+
             Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+            this.inTransaction = false;
         }
 
         public void RollbackTransaction()
         {
+            if (!this.inTransaction)
+                throw new InvalidOperationException();
+
             Api.JetRollback(this.jetSession, RollbackTransactionGrbit.None);
+            this.inTransaction = false;
+        }
+
+        private static void CreateDatabase(string jetDatabase, Instance jetInstance)
+        {
+            JET_DBID utxoDbId;
+            JET_TABLEID globalTableId;
+            JET_COLUMNID blockHashColumnId;
+            JET_TABLEID unspentTxTableId;
+            JET_COLUMNID txHashColumnId;
+            JET_COLUMNID confirmedBlockHashColumnId;
+            JET_COLUMNID outputStatesColumnId;
+            JET_TABLEID unspentTxOutputsTableId;
+            JET_COLUMNID txOutputKeyColumnId;
+            JET_COLUMNID txOutputColumnId;
+            JET_COLUMNID outputScriptHashColumnId;
+
+            using (var jetSession = new Session(jetInstance))
+            {
+                Api.JetCreateDatabase(jetSession, jetDatabase, "", out utxoDbId, CreateDatabaseGrbit.None);
+
+                Api.JetCreateTable(jetSession, utxoDbId, "global", 0, 0, out globalTableId);
+                Api.JetAddColumn(jetSession, globalTableId, "BlockHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out blockHashColumnId);
+
+                Api.JetCreateTable(jetSession, utxoDbId, "unspentTx", 0, 0, out unspentTxTableId);
+                Api.JetAddColumn(jetSession, unspentTxTableId, "TxHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out txHashColumnId);
+                Api.JetAddColumn(jetSession, unspentTxTableId, "ConfirmedBlockHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out confirmedBlockHashColumnId);
+                Api.JetAddColumn(jetSession, unspentTxTableId, "OutputStates", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out outputStatesColumnId);
+
+                Api.JetCreateIndex2(jetSession, unspentTxTableId,
+                    new JET_INDEXCREATE[]
+                    {
+                        new JET_INDEXCREATE
+                        {
+                            cbKeyMost = 255,
+                            grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                            szIndexName = "IX_TxHash",
+                            szKey = "+TxHash\0\0",
+                            cbKey = "+TxHash\0\0".Length
+                        }
+                    }, 1);
+
+                Api.JetCreateTable(jetSession, utxoDbId, "unspentTxOutputs", 0, 0, out unspentTxOutputsTableId);
+                Api.JetAddColumn(jetSession, unspentTxOutputsTableId, "TxOutputKey", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 36, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out txOutputKeyColumnId);
+                Api.JetAddColumn(jetSession, unspentTxOutputsTableId, "TxOutput", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out txOutputColumnId);
+                Api.JetAddColumn(jetSession, unspentTxOutputsTableId, "OutputScriptHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32 }, null, 0, out outputScriptHashColumnId);
+
+                Api.JetCreateIndex2(jetSession, unspentTxOutputsTableId,
+                    new JET_INDEXCREATE[]
+                    {
+                        new JET_INDEXCREATE
+                        {
+                            cbKeyMost = 255,
+                            grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                            szIndexName = "IX_TxOutputKey",
+                            szKey = "+TxOutputKey\0\0",
+                            cbKey = "+TxOutputKey\0\0".Length
+                        }
+                    }, 1);
+
+                Api.JetCreateIndex2(jetSession, unspentTxOutputsTableId,
+                    new JET_INDEXCREATE[]
+                    {
+                        new JET_INDEXCREATE
+                        {
+                            cbKeyMost = 255,
+                            grbit = CreateIndexGrbit.IndexIgnoreNull,
+                            szIndexName = "IX_OutputScriptHash",
+                            szKey = "+OutputScriptHash\0\0",
+                            cbKey = "+OutputScriptHash\0\0".Length
+                        }
+                    }, 1);
+
+                Api.JetCloseTable(jetSession, globalTableId);
+                Api.JetCloseTable(jetSession, unspentTxTableId);
+                Api.JetCloseTable(jetSession, unspentTxOutputsTableId);
+            }
+        }
+
+        private static void OpenDatabase(string jetDatabase, Instance jetInstance, bool readOnly,
+            out Session jetSession,
+            out JET_DBID utxoDbId,
+            out JET_TABLEID globalTableId,
+            out JET_COLUMNID blockHashColumnId,
+            out JET_TABLEID unspentTxTableId,
+            out JET_COLUMNID txHashColumnId,
+            out JET_COLUMNID confirmedBlockHashColumnId,
+            out JET_COLUMNID outputStatesColumnId,
+            out JET_TABLEID unspentTxOutputsTableId,
+            out JET_COLUMNID txOutputKeyColumnId,
+            out JET_COLUMNID txOutputColumnId,
+            out JET_COLUMNID outputScriptHashColumnId)
+        {
+            jetSession = new Session(jetInstance);
+
+            Api.JetAttachDatabase(jetSession, jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
+            Api.JetOpenDatabase(jetSession, jetDatabase, "", out utxoDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
+
+            Api.JetOpenTable(jetSession, utxoDbId, "global", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out globalTableId);
+            blockHashColumnId = Api.GetTableColumnid(jetSession, globalTableId, "BlockHash");
+
+            Api.JetOpenTable(jetSession, utxoDbId, "unspentTx", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out unspentTxTableId);
+            txHashColumnId = Api.GetTableColumnid(jetSession, unspentTxTableId, "TxHash");
+            confirmedBlockHashColumnId = Api.GetTableColumnid(jetSession, unspentTxTableId, "ConfirmedBlockHash");
+            outputStatesColumnId = Api.GetTableColumnid(jetSession, unspentTxTableId, "OutputStates");
+
+            Api.JetOpenTable(jetSession, utxoDbId, "unspentTxOutputs", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out unspentTxOutputsTableId);
+            txOutputKeyColumnId = Api.GetTableColumnid(jetSession, unspentTxOutputsTableId, "TxOutputKey");
+            txOutputColumnId = Api.GetTableColumnid(jetSession, unspentTxOutputsTableId, "TxOutput");
+            outputScriptHashColumnId = Api.GetTableColumnid(jetSession, unspentTxOutputsTableId, "OutputScriptHash");
         }
     }
 }

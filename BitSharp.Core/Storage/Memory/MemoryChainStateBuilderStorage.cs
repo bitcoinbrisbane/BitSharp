@@ -133,11 +133,6 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
-        public IChainStateStorage Close(UInt256 blockHash)
-        {
-            return this.ToImmutable(blockHash);
-        }
-
         public void Dispose()
         {
         }

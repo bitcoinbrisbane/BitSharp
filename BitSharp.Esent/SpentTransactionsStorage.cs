@@ -19,7 +19,7 @@ namespace BitSharp.Esent
     public class SpentTransactionsStorage : EsentDataStorage<IImmutableList<KeyValuePair<UInt256, SpentTx>>>, ISpentTransactionsStorage
     {
         public SpentTransactionsStorage(string baseDirectory)
-            : base(baseDirectory, "spentTransactions",
+            : base(baseDirectory, "SpentTransactions",
                 keyPairs =>
                 {
                     using (var stream = new MemoryStream())

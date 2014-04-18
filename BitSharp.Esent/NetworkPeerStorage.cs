@@ -24,8 +24,8 @@ namespace BitSharp.Esent
 
         public NetworkPeerStorage()
         {
-            this.name = "knownAddresses";
-            this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "peers", this.name);
+            this.name = "KnownAddresses";
+            this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "Peers", this.name);
             this.dict = new PersistentByteDictionary(this.directory);
         }
 

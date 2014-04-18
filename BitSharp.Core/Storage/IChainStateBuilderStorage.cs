@@ -49,7 +49,5 @@ namespace BitSharp.Core.Storage
         void Flush();
 
         IChainStateStorage ToImmutable(UInt256 blockHash);
-
-        IChainStateStorage Close(UInt256 blockHash);
     }
 }

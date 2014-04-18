@@ -17,7 +17,7 @@ namespace BitSharp.Esent
     public class ChainedHeaderStorage : EsentDataStorage<ChainedHeader>, IChainedHeaderStorage
     {
         public ChainedHeaderStorage(string baseDirectory)
-            : base(baseDirectory, "chainedHeaders",
+            : base(baseDirectory, "ChainedHeaders",
                 chainedHeader => DataEncoder.EncodeChainedHeader(chainedHeader),
                 (blockHash, bytes) => DataEncoder.DecodeChainedHeader(bytes))
         { }

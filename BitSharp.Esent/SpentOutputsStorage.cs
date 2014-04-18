@@ -19,7 +19,7 @@ namespace BitSharp.Esent
     public class SpentOutputsStorage : EsentDataStorage<IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>>, ISpentOutputsStorage
     {
         public SpentOutputsStorage(string baseDirectory)
-            : base(baseDirectory, "spentOutputs",
+            : base(baseDirectory, "SpentOutputs",
                 keyPairs =>
                 {
                     using (var stream = new MemoryStream())

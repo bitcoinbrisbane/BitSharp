@@ -17,7 +17,7 @@ namespace BitSharp.Esent
     public class BlockHeaderStorage : EsentDataStorage<BlockHeader>, IBlockHeaderStorage
     {
         public BlockHeaderStorage(string baseDirectory)
-            : base(baseDirectory, "blockHeaders",
+            : base(baseDirectory, "BlockHeaders",
                 blockHeader => DataEncoder.EncodeBlockHeader(blockHeader),
                 (blockHash, bytes) => DataEncoder.DecodeBlockHeader(bytes, blockHash))
         { }

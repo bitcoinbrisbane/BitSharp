@@ -17,7 +17,7 @@ namespace BitSharp.Esent
     public class BlockTxHashesStorage : EsentDataStorage<IImmutableList<UInt256>>, IBlockTxHashesStorage
     {
         public BlockTxHashesStorage(string baseDirectory)
-            : base(baseDirectory, "blockTxHashes",
+            : base(baseDirectory, "BlockTxHashes",
                 txHashes =>
                 {
                     var txHashesBytes = new byte[txHashes.Count * 32];

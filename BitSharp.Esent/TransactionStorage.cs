@@ -17,7 +17,7 @@ namespace BitSharp.Esent
     public class TransactionStorage : EsentDataStorage<Transaction>, ITransactionStorage
     {
         public TransactionStorage(string baseDirectory)
-            : base(baseDirectory, "transactions",
+            : base(baseDirectory, "Transactions",
                 tx => DataEncoder.EncodeTransaction(tx),
                 (txHash, bytes) => DataEncoder.DecodeTransaction(bytes, txHash))
         { }

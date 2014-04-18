@@ -50,7 +50,7 @@ namespace BitSharp.Client
             try
             {
                 //TODO
-                var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "utxo");
+                var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "Data", "ChainState");
                 try { Directory.Delete(path, recursive: true); }
                 catch (Exception) { }
                 Directory.CreateDirectory(path);
@@ -79,9 +79,9 @@ namespace BitSharp.Client
 #elif MONGODB
                 modules.Add(new MongoStorageModule());
 #elif TRANSIENT_BLOCKS
-                modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), transientBlockStorage: true));
+                modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "Data"), transientBlockStorage: true));
 #else
-                modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "data"), cacheSizeMaxBytes: int.MaxValue - 1));
+                modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "Data"), cacheSizeMaxBytes: int.MaxValue - 1));
 #endif
                 ChainStateBuilderStorage.IndexOutputs = true;
 

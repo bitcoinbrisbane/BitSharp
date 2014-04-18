@@ -597,11 +597,6 @@ namespace BitSharp.Core.Builders
             return new Utxo(chainStateBuilderStorage.ToImmutable(blockHash));
         }
 
-        public Utxo Close(UInt256 blockHash)
-        {
-            return new Utxo(chainStateBuilderStorage.Close(blockHash));
-        }
-
         private void BeginTransaction()
         {
             this.chainStateBuilderStorage.BeginTransaction();

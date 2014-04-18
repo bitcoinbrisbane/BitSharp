@@ -17,7 +17,7 @@ namespace BitSharp.Esent
     public class BlockStorage : EsentDataStorage<Block>, IBlockStorage
     {
         public BlockStorage(string baseDirectory)
-            : base(baseDirectory, "blocks",
+            : base(baseDirectory, "Blocks",
                 block => DataEncoder.EncodeBlock(block),
                 (blockHash, bytes) => DataEncoder.DecodeBlock(bytes))
         { }
