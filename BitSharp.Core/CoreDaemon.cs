@@ -258,27 +258,31 @@ namespace BitSharp.Core
 
         public void Start()
         {
-            try
-            {
-                // start loading the existing state from storage
-                //TODO LoadExistingState();
+            // start loading the existing state from storage
+            //TODO LoadExistingState();
 
-                // startup workers
-                this.chainingWorker.Start();
-                this.targetChainWorker.Start();
-                this.chainStateWorker.Start();
-                this.gcWorker.Start();
-                //this.utxoScanWorker.Start();
-            }
-            catch (Exception)
-            {
-                Dispose();
-                throw;
-            }
+            // startup workers
+            this.chainingWorker.Start();
+            this.targetChainWorker.Start();
+            this.chainStateWorker.Start();
+            this.gcWorker.Start();
+            //this.utxoScanWorker.Start();
+        }
+
+        public void Stop()
+        {
+            // startup workers
+            this.chainingWorker.Stop();
+            this.targetChainWorker.Stop();
+            this.chainStateWorker.Stop();
+            this.gcWorker.Stop();
+            //this.utxoScanWorker.Stop();
         }
 
         public void Dispose()
         {
+            this.Stop();
+
             // cleanup events
             this.blockHeaderCache.OnAddition -= OnBlockHeaderAddition;
             this.blockHeaderCache.OnModification -= OnBlockHeaderModification;

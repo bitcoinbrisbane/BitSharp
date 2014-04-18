@@ -144,15 +144,14 @@ namespace BitSharp.Core.Workers
                         this.kernel.Get<ChainStateBuilder>(
                         new ConstructorArgument("getMonitors", this.getMonitors),
                         new ConstructorArgument("chain", chainStateLocal.Chain.ToBuilder()),
-                        new ConstructorArgument("parentUtxo", chainStateLocal.Utxo),
-                        new ConstructorArgument("shutdownToken", this.ShutdownToken.Token));
+                        new ConstructorArgument("parentUtxo", chainStateLocal.Utxo));
                 }
 
                 // calculate the new blockchain along the target path
                 foreach (var pathElement in ChainedBlockLookAhead(this.chainStateBuilder.Chain.NavigateTowards(this.getTargetChain), lookAhead: 1))
                 {
                     // cooperative loop
-                    if (this.ShutdownToken.IsCancellationRequested)
+                    if (!this.IsStarted)
                         break;
 
                     // get block and metadata for next link in blockchain
@@ -244,6 +243,10 @@ namespace BitSharp.Core.Workers
                     {
                         try
                         {
+                            // cooperative loop
+                            if (!this.IsStarted)
+                                throw new OperationCanceledException();
+
                             var direction = chainedHeaderTuple.Item1;
 
                             var chainedHeader = chainedHeaderTuple.Item2;
@@ -260,7 +263,7 @@ namespace BitSharp.Core.Workers
                             throw;
                         }
                     })
-                .LookAhead(lookAhead, this.ShutdownToken.Token);
+                .LookAhead(lookAhead);
         }
     }
 }

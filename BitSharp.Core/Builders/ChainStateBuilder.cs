@@ -31,7 +31,6 @@ namespace BitSharp.Core.Builders
         private readonly Func<IImmutableSet<IChainStateMonitor>> getMonitors;
 
         private readonly Logger logger;
-        private readonly CancellationToken shutdownToken;
         private readonly IBlockchainRules rules;
         private readonly BlockHeaderCache blockHeaderCache;
         private readonly BlockCache blockCache;
@@ -48,11 +47,10 @@ namespace BitSharp.Core.Builders
 
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(Func<IImmutableSet<IChainStateMonitor>> getMonitors, ChainBuilder chain, Utxo parentUtxo, CancellationToken shutdownToken, Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
+        public ChainStateBuilder(Func<IImmutableSet<IChainStateMonitor>> getMonitors, ChainBuilder chain, Utxo parentUtxo, Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
         {
             this.getMonitors = getMonitors;
             this.logger = logger;
-            this.shutdownToken = shutdownToken;
             this.rules = rules;
             this.blockHeaderCache = blockHeaderCache;
             this.blockCache = blockCache;

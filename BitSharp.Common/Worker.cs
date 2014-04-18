@@ -17,15 +17,15 @@ namespace BitSharp.Common
         public event Action OnWorkStopped;
 
         private readonly Logger logger;
-        private readonly CancellationTokenSource shutdownToken;
 
         private readonly Thread workerThread;
         private readonly AutoResetEvent notifyEvent;
         private readonly AutoResetEvent forceNotifyEvent;
         private readonly ManualResetEventSlim idleEvent;
 
-        private SemaphoreSlim semaphore;
+        private readonly ReaderWriterLockSlim workerLock;
         private readonly ManualResetEventSlim startedEvent;
+        private bool isDisposing;
         private bool isDisposed;
 
         public Worker(string name, bool initialNotify, TimeSpan minIdleTime, TimeSpan maxIdleTime, Logger logger)
@@ -35,8 +35,6 @@ namespace BitSharp.Common
             this.MinIdleTime = minIdleTime;
             this.MaxIdleTime = maxIdleTime;
 
-            this.shutdownToken = new CancellationTokenSource();
-
             this.workerThread = new Thread(WorkerLoop);
             this.workerThread.Name = "Worker.{0}.WorkerLoop".Format2(name);
 
@@ -44,8 +42,9 @@ namespace BitSharp.Common
             this.forceNotifyEvent = new AutoResetEvent(initialNotify);
             this.idleEvent = new ManualResetEventSlim(false);
 
-            this.semaphore = new SemaphoreSlim(1);
+            this.workerLock = new ReaderWriterLockSlim();
             this.startedEvent = new ManualResetEventSlim(false);
+            this.isDisposing = false;
             this.isDisposed = false;
         }
 
@@ -55,11 +54,26 @@ namespace BitSharp.Common
 
         public TimeSpan MaxIdleTime { get; set; }
 
-        protected CancellationTokenSource ShutdownToken { get { return this.shutdownToken; } }
+        public bool IsStarted
+        {
+            get
+            {
+                if (this.isDisposed)
+                    throw new ObjectDisposedException("Worker");
+
+                return this.workerLock.DoRead(() =>
+                {
+                    return this.startedEvent.IsSet;
+                });
+            }
+        }
 
         public void Start()
         {
-            this.semaphore.Do(() =>
+            if (this.isDisposing || this.isDisposed)
+                throw new ObjectDisposedException("Worker");
+
+            this.workerLock.DoWrite(() =>
             {
                 if (!this.startedEvent.IsSet)
                 {
@@ -73,7 +87,10 @@ namespace BitSharp.Common
 
         public void Stop()
         {
-            this.semaphore.Do(() =>
+            if (this.isDisposing || this.isDisposed)
+                throw new ObjectDisposedException("Worker");
+
+            this.workerLock.DoWrite(() =>
             {
                 if (this.startedEvent.IsSet)
                 {
@@ -86,48 +103,47 @@ namespace BitSharp.Common
 
         public void Dispose()
         {
-            var semaphoreLocal = this.semaphore;
-            if (semaphoreLocal != null)
+            if (this.isDisposing || this.isDisposed)
+                throw new ObjectDisposedException("Worker");
+
+            lock (this.workerLock)
             {
-                var wasDisposed = false;
-                semaphoreLocal.Do(() =>
+                this.isDisposing = true;
+
+                while (
+                    this.workerLock.WaitingReadCount > 0 ||
+                    this.workerLock.WaitingUpgradeCount > 0 ||
+                    this.workerLock.WaitingWriteCount > 0)
                 {
-                    if (!this.isDisposed)
-                    {
-                        this.shutdownToken.Cancel();
-                        this.notifyEvent.Set();
-                        this.forceNotifyEvent.Set();
+                    this.workerLock.DoWrite(() => { });
+                }
 
-                        if (this.startedEvent.IsSet)
-                        {
-                            this.SubStop();
-                        }
-                        this.SubDispose();
+                if (this.startedEvent.IsSet)
+                {
+                    this.SubStop();
+                }
+                this.SubDispose();
 
-                        // wait for worker thread
-                        if (this.workerThread.IsAlive)
-                        {
-                            this.workerThread.Join(TimeSpan.FromSeconds(1));
+                this.startedEvent.Reset();
+                this.notifyEvent.Set();
+                this.forceNotifyEvent.Set();
 
-                            // terminate if still alive
-                            if (this.workerThread.IsAlive)
-                                this.workerThread.Abort();
-                        }
+                // wait for worker thread
+                if (this.workerThread.IsAlive)
+                {
+                    this.workerThread.Join(TimeSpan.FromSeconds(5));
 
-                        this.shutdownToken.Dispose();
-                        this.notifyEvent.Dispose();
-                        this.forceNotifyEvent.Dispose();
-                        this.idleEvent.Dispose();
-                        this.startedEvent.Dispose();
+                    // terminate if still alive
+                    if (this.workerThread.IsAlive)
+                        this.workerThread.Abort();
+                }
 
-                        this.semaphore = null;
-                        this.isDisposed = true;
-                        wasDisposed = true;
-                    }
-                });
-
-                if (wasDisposed)
-                    semaphoreLocal.Dispose();
+                this.isDisposed = true;
+                this.notifyEvent.Dispose();
+                this.forceNotifyEvent.Dispose();
+                this.idleEvent.Dispose();
+                this.startedEvent.Dispose();
+                this.workerLock.Dispose();
             }
         }
 
@@ -160,7 +176,7 @@ namespace BitSharp.Common
         {
             if (this.isDisposed)
                 return;
-            if (!this.startedEvent.IsSet)
+            if (!this.IsStarted)
                 return;
 
             // wait for worker to idle
@@ -190,7 +206,7 @@ namespace BitSharp.Common
                     totalTime.Start();
 
                     // cooperative loop
-                    while (!this.shutdownToken.IsCancellationRequested)
+                    while (this.IsStarted)
                     {
                         // notify worker is idle
                         this.idleEvent.Set();
@@ -208,7 +224,8 @@ namespace BitSharp.Common
                             this.notifyEvent.WaitOne(this.MaxIdleTime - this.MinIdleTime); // subtract time already spent waiting
 
                         // cooperative loop
-                        this.shutdownToken.Token.ThrowIfCancellationRequested();
+                        if (!this.IsStarted)
+                            break;
 
                         // notify that work is starting
                         this.idleEvent.Reset();

@@ -80,11 +80,9 @@ namespace BitSharp.Core.Workers
         protected override void WorkAction()
         {
             BlockHeader blockHeader;
-            while (this.blockHeaders.TryDequeue(out blockHeader))
+            // cooperative loop
+            while (this.IsStarted && this.blockHeaders.TryDequeue(out blockHeader))
             {
-                // cooperative loop
-                this.ShutdownToken.Token.ThrowIfCancellationRequested();
-
                 if (!this.chainedHeaderCache.ContainsKey(blockHeader.Hash))
                 {
                     ChainedHeader prevChainedHeader;

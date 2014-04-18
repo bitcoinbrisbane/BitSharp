@@ -68,7 +68,7 @@ namespace BitSharp.Core.Workers
                 for (var height = 0; height < blockchain.Blocks.Count; height++)
                 {
                     // cooperative loop
-                    if (this.ShutdownToken.IsCancellationRequested)
+                    if (!this.IsStarted)
                         break;
 
                     // get the current link in the chain
