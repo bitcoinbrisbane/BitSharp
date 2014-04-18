@@ -27,7 +27,7 @@ namespace BitSharp.Core.Workers
 
         private readonly Logger logger;
         private readonly Func<Chain> getTargetChain;
-        private readonly Func<IImmutableSet<IChainStateMonitor>> getMonitors;
+        private readonly Func<IImmutableSet<IChainStateVisitor>> getMonitors;
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
         private readonly BlockCache blockCache;
@@ -45,7 +45,7 @@ namespace BitSharp.Core.Workers
 
         private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, Func<IImmutableSet<IChainStateMonitor>> getMonitors, TimeSpan maxBuilderTime, Logger logger, IKernel kernel, IBlockchainRules rules, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
+        public ChainStateWorker(WorkerConfig workerConfig, Func<Chain> getTargetChain, Func<IImmutableSet<IChainStateVisitor>> getMonitors, TimeSpan maxBuilderTime, Logger logger, IKernel kernel, IBlockchainRules rules, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;

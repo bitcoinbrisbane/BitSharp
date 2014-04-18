@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Monitor
 {
-    public interface IChainStateMonitor
+    public interface IChainStateVisitor
     {
         void BeginBlock(ChainedHeader chainedHeader);
 

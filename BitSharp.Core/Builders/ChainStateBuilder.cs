@@ -28,7 +28,7 @@ namespace BitSharp.Core.Builders
 {
     public class ChainStateBuilder : IDisposable
     {
-        private readonly Func<IImmutableSet<IChainStateMonitor>> getMonitors;
+        private readonly Func<IImmutableSet<IChainStateVisitor>> getMonitors;
 
         private readonly Logger logger;
         private readonly IBlockchainRules rules;
@@ -47,7 +47,7 @@ namespace BitSharp.Core.Builders
 
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(Func<IImmutableSet<IChainStateMonitor>> getMonitors, ChainBuilder chain, Utxo parentUtxo, Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
+        public ChainStateBuilder(Func<IImmutableSet<IChainStateVisitor>> getMonitors, ChainBuilder chain, Utxo parentUtxo, Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
         {
             this.getMonitors = getMonitors;
             this.logger = logger;
@@ -538,7 +538,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        private void ScanTransactions(ProducerConsumer<Tuple<int, ChainPosition, TxOutput>> txOutputQueue, IChainStateMonitor[] monitors)
+        private void ScanTransactions(ProducerConsumer<Tuple<int, ChainPosition, TxOutput>> txOutputQueue, IChainStateVisitor[] monitors)
         {
             var sha256 = new SHA256Managed();
             //TODO for this to remain parallel, i'll need to be able to handle the case of a new watch address being generated from one of the iterations

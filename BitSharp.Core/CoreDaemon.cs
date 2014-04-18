@@ -60,7 +60,7 @@ namespace BitSharp.Core
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
 
-        private readonly ConcurrentSetBuilder<IChainStateMonitor> chainStateMonitors;
+        private readonly ConcurrentSetBuilder<IChainStateVisitor> chainStateMonitors;
 
         public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockCache blockCache)
         {
@@ -75,7 +75,7 @@ namespace BitSharp.Core
             this.transactionCache = transactionCache;
             this.blockCache = blockCache;
 
-            this.chainStateMonitors = new ConcurrentSetBuilder<IChainStateMonitor>();
+            this.chainStateMonitors = new ConcurrentSetBuilder<IChainStateVisitor>();
 
             // write genesis block out to storage
             this.blockHeaderCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock.Header;
@@ -102,7 +102,7 @@ namespace BitSharp.Core
             this.chainStateWorker = kernel.Get<ChainStateWorker>(
                 new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromSeconds(5))),
                 new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)),
-                new ConstructorArgument("getMonitors", (Func<IImmutableSet<IChainStateMonitor>>)(() => this.ChainStateMonitors)),
+                new ConstructorArgument("getMonitors", (Func<IImmutableSet<IChainStateVisitor>>)(() => this.ChainStateMonitors)),
                 new ConstructorArgument("maxBuilderTime", TimeSpan.MaxValue));
 
             this.targetChainWorker.OnTargetBlockChanged +=
@@ -251,7 +251,7 @@ namespace BitSharp.Core
             get { return this.chainStateWorker; }
         }
 
-        internal ImmutableHashSet<IChainStateMonitor> ChainStateMonitors
+        internal ImmutableHashSet<IChainStateVisitor> ChainStateMonitors
         {
             get { return this.chainStateMonitors.ToImmutable(); }
         }
@@ -315,12 +315,12 @@ namespace BitSharp.Core
             this.chainStateWorker.ForceWorkAndWait();
         }
 
-        public void RegistorMonitor(IChainStateMonitor txMonitor)
+        public void RegistorMonitor(IChainStateVisitor txMonitor)
         {
             this.chainStateMonitors.Add(txMonitor);
         }
 
-        public void UnegistorMonitor(IChainStateMonitor txMonitor)
+        public void UnegistorMonitor(IChainStateVisitor txMonitor)
         {
             this.chainStateMonitors.Remove(txMonitor);
         }

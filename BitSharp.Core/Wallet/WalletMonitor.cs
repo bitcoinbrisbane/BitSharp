@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Wallet
 {
-    public class WalletMonitor : ChainStateMonitorBase
+    public class WalletMonitor : ChainStateVisitorBase
     {
         private readonly Logger logger;
 

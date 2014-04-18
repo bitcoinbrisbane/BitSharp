@@ -120,9 +120,9 @@
     <Compile Include="Monitor\ChainPosition.cs" />
     <Compile Include="Wallet\Base58\Base58Encoding.cs" />
     <Compile Include="Wallet\Base58\Base58EncodingTests.cs" />
-    <Compile Include="Monitor\ChainStateMonitorBase.cs" />
+    <Compile Include="Monitor\ChainStateVisitorBase.cs" />
     <Compile Include="Wallet\EnumWalletEntryType.cs" />
-    <Compile Include="Monitor\IChainStateMonitor.cs" />
+    <Compile Include="Monitor\IChainStateVisitor.cs" />
     <Compile Include="Rules\IBlockchainRules.cs" />
     <Compile Include="Rules\MainnetRules.cs" />
     <Compile Include="Rules\RulesModule.cs" />
