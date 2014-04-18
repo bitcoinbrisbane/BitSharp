@@ -92,7 +92,7 @@ namespace BitSharp.Core.Workers
 
         protected override void SubStart()
         {
-            //this.pruningWorker.Start();
+            this.pruningWorker.Start();
         }
 
         protected override void SubStop()

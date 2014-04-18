@@ -39,7 +39,7 @@ namespace BitSharp.Core.Workers
             this.spentTransactionsCache = spentTransactionsCache;
             this.spentOutputsCache = spentOutputsCache;
 
-            this.Mode = PruningMode.Full;
+            this.Mode = PruningMode.SpentOnly;
         }
 
         public PruningMode Mode { get; set; }
@@ -91,6 +91,25 @@ namespace BitSharp.Core.Workers
                                 this.transactionCache.TryRemove(keyPair.Key);
                         }
                     }
+
+                    for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
+                    {
+                        var block = chain.Blocks[i];
+
+                        this.blockTxHashesCache.TryRemove(block.Hash);
+                        this.spentTransactionsCache.TryRemove(block.Hash);
+                        this.spentOutputsCache.TryRemove(block.Hash);
+                    }
+                    break;
+
+                case PruningMode.SpentOnly:
+                    for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
+                    {
+                        var block = chain.Blocks[i];
+
+                        this.spentTransactionsCache.TryRemove(block.Hash);
+                        this.spentOutputsCache.TryRemove(block.Hash);
+                    }
                     break;
 
                 case PruningMode.Full:
@@ -106,15 +125,15 @@ namespace BitSharp.Core.Workers
                         }
                     }
                     break;
-            }
 
-            for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
-            {
-                var block = chain.Blocks[i];
+                    for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
+                    {
+                        var block = chain.Blocks[i];
 
-                this.blockTxHashesCache.TryRemove(block.Hash);
-                this.spentTransactionsCache.TryRemove(block.Hash);
-                this.spentOutputsCache.TryRemove(block.Hash);
+                        this.blockTxHashesCache.TryRemove(block.Hash);
+                        this.spentTransactionsCache.TryRemove(block.Hash);
+                        this.spentOutputsCache.TryRemove(block.Hash);
+                    }
             }
         }
     }
@@ -122,6 +141,7 @@ namespace BitSharp.Core.Workers
     public enum PruningMode
     {
         PreserveUnspentTranscations,
+        SpentOnly,
         Full
     }
 }
