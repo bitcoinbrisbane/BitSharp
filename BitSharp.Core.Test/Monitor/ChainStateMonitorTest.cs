@@ -20,8 +20,8 @@ namespace BitSharp.Core.Test.Monitor
         {
             // initialize ChainStateMonitor
             using (var chainStateMonitor = new ChainStateMonitor(LogManager.CreateNullLogger()))
+            using (chainStateMonitor.Start())
             {
-                chainStateMonitor.Start();
                 try
                 {
                     // mock IChainStateVisitor
