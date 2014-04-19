@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Rules
 {
-    public class ScriptValidator : ProducerConsumerWorker<Tuple<ChainPosition, ChainedHeader, Transaction, TxInput, TxOutput>>, IChainStateVisitor
+    public class ScriptValidator : BlockingCollectionWorker<Tuple<ChainPosition, ChainedHeader, Transaction, TxInput, TxOutput>>, IChainStateVisitor
     {
         private readonly IBlockchainRules rules;
         private ConcurrentBag<Exception> validationExceptions;

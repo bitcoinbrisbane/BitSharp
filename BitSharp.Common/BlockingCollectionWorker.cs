@@ -1,20 +1,24 @@
 ﻿using NLog;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace BitSharp.Common
 {
-    public abstract class ProducerConsumerWorker<T> : IDisposable
+    public abstract class BlockingCollectionWorker<T> : IDisposable
     {
         private readonly string name;
         private readonly bool isConcurrent;
         private readonly WorkerMethod queueWorker;
-        private ProducerConsumer<T> queue;
 
-        public ProducerConsumerWorker(string name, bool isConcurrent, Logger logger)
+        private ManualResetEventSlim completedEvent;
+        private BlockingCollection<T> queue;
+
+        public BlockingCollectionWorker(string name, bool isConcurrent, Logger logger)
         {
             this.name = name;
             this.isConcurrent = isConcurrent;
@@ -37,7 +41,8 @@ namespace BitSharp.Common
 
             this.SubStart();
 
-            this.queue = new ProducerConsumer<T>();
+            this.completedEvent = new ManualResetEventSlim();
+            this.queue = new BlockingCollection<T>();
             this.queueWorker.NotifyWork();
 
             return new Stopper(this);
@@ -56,7 +61,7 @@ namespace BitSharp.Common
             if (this.queue == null)
                 throw new InvalidOperationException();
 
-            this.queue.WaitToComplete();
+            this.completedEvent.Wait();
         }
 
         public void Add(T value)
@@ -103,13 +108,15 @@ namespace BitSharp.Common
                 foreach (var value in this.queue.GetConsumingEnumerable())
                     ConsumeItem(value);
             }
+
+            this.completedEvent.Set();
         }
 
         private sealed class Stopper : IDisposable
         {
-            private readonly ProducerConsumerWorker<T> worker;
+            private readonly BlockingCollectionWorker<T> worker;
 
-            public Stopper(ProducerConsumerWorker<T> worker)
+            public Stopper(BlockingCollectionWorker<T> worker)
             {
                 this.worker = worker;
             }

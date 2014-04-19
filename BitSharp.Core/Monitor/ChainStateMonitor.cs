@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Monitor
 {
-    public class ChainStateMonitor : ProducerConsumerWorker<Action>, IChainStateVisitor
+    public class ChainStateMonitor : BlockingCollectionWorker<Action>, IChainStateVisitor
     {
         private readonly ConcurrentSet<IChainStateVisitor> visitors;
 
@@ -135,8 +135,8 @@ namespace BitSharp.Core.Monitor
             //TODO
             //this.Add(() =>
             //{
-                foreach (var visitor in this.visitors)
-                    visitor.CommitBlock(chainedHeader);
+            foreach (var visitor in this.visitors)
+                visitor.CommitBlock(chainedHeader);
             //});
         }
 
@@ -145,8 +145,8 @@ namespace BitSharp.Core.Monitor
             //TODO
             //this.Add(() =>
             //{
-                foreach (var visitor in this.visitors)
-                    visitor.RollbackBlock(chainedHeader);
+            foreach (var visitor in this.visitors)
+                visitor.RollbackBlock(chainedHeader);
             //});
         }
 
