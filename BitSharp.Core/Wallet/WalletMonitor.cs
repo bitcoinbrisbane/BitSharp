@@ -14,6 +14,11 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Wallet
 {
+    //TODO the wallet is currently intimately tied to the chain state
+    //TODO what do i do if the chain state commits before the wallet has had a chance to save its current state?
+    //TODO i could potentially use the saved blocks & stored rollback information to replay any blocks that the wallet is behind on
+    //TODO this would be useful to have in general, as wallets could then be turned off & on and then catch up properly
+
     public class WalletMonitor : ChainStateVisitorBase
     {
         private readonly Logger logger;
