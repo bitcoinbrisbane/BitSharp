@@ -32,6 +32,7 @@ namespace BitSharp.Core.Workers
         private readonly SpentTransactionsCache spentTransactionsCache;
         private readonly InvalidBlockCache invalidBlockCache;
 
+        private readonly TargetChainWorker targetChainWorker;
         private readonly ChainStateBuilder chainStateBuilder;
         private Chain currentChain;
 
@@ -40,7 +41,7 @@ namespace BitSharp.Core.Workers
 
         private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, WorkerConfig workerConfig, Logger logger, IKernel kernel, IBlockchainRules rules, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
+        public ChainStateWorker(TargetChainWorker targetChainWorker, ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, WorkerConfig workerConfig, Logger logger, IKernel kernel, IBlockchainRules rules, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
@@ -54,6 +55,7 @@ namespace BitSharp.Core.Workers
             this.blockTimes = new TimeSpan[10000];
             this.blockTimesIndex = -1;
 
+            this.targetChainWorker = targetChainWorker;
             this.chainStateBuilder = chainStateBuilder;
             this.currentChain = this.chainStateBuilder.Chain.ToImmutable();
 
@@ -150,6 +152,9 @@ namespace BitSharp.Core.Workers
                 {
                     var validationException = (ValidationException)e;
                     this.invalidBlockCache[validationException.BlockHash] = validationException.Message;
+
+                    // immediately update the target chain if there is a validation error
+                    this.targetChainWorker.ForceWorkAndWait();
                 }
             }
         }
@@ -182,7 +187,7 @@ namespace BitSharp.Core.Workers
                             throw;
                         }
                     })
-                .LookAhead();
+                .LookAhead(1);
         }
     }
 }
