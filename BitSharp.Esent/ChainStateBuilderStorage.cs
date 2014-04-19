@@ -61,7 +61,7 @@ namespace BitSharp.Esent
             //SystemParameters.DatabasePageSize = 8192;
             //var maxDbSizeInPages = 500.MILLION() / SystemParameters.DatabasePageSize;
 
-            this.jetInstance = CreateInstance2(this.jetDirectory);
+            this.jetInstance = CreateInstance(this.jetDirectory);
             this.jetInstance.Init();
 
             CreateDatabase(this.jetDatabase, this.jetInstance);
@@ -433,31 +433,6 @@ namespace BitSharp.Esent
         }
 
         private static Instance CreateInstance(string directory)
-        {
-            var instance = new Instance(Guid.NewGuid().ToString());
-
-            instance.Parameters.SystemDirectory = directory;
-            instance.Parameters.LogFileDirectory = directory;
-            instance.Parameters.TempDirectory = directory;
-            instance.Parameters.AlternateDatabaseRecoveryDirectory = directory;
-            instance.Parameters.CreatePathIfNotExist = true;
-            instance.Parameters.BaseName = "epc";
-            instance.Parameters.EnableIndexChecking = false;
-            instance.Parameters.CircularLog = true;
-            instance.Parameters.CheckpointDepthMax = 64 * 1024 * 1024;
-            instance.Parameters.LogFileSize = 1024;
-            instance.Parameters.LogBuffers = 1024;
-            instance.Parameters.MaxTemporaryTables = 0;
-            instance.Parameters.MaxVerPages = 1024;
-            instance.Parameters.NoInformationEvent = true;
-            instance.Parameters.WaypointLatency = 1;
-            instance.Parameters.MaxSessions = 256;
-            instance.Parameters.MaxOpenTables = 256;
-
-            return instance;
-        }
-
-        private static Instance CreateInstance2(string directory)
         {
             var instance = new Instance(Guid.NewGuid().ToString());
 
