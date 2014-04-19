@@ -64,17 +64,10 @@ namespace BitSharp.Core.Workers
 
         public void QueueAllBlockHeaders()
         {
-            var thread = new Thread(
-                () =>
-                {
-                    new MethodTimer().Time(() =>
-                        this.blockHeaders.EnqueueRange(this.blockHeaderCache.Values));
+            new MethodTimer().Time(() =>
+                this.blockHeaders.EnqueueRange(this.blockHeaderCache.Values));
 
-                    this.NotifyWork();
-                });
-
-            thread.Name = "{0}.QueueAllBlockHeaders".Format2(this.Name);
-            thread.Start();
+            this.NotifyWork();
         }
 
         protected override void WorkAction()
