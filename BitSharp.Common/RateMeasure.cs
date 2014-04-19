@@ -14,27 +14,32 @@ namespace BitSharp.Common
         private readonly ReaderWriterLockSlim rwLock;
 
         private bool isDisposed;
+        private readonly Stopwatch stopwatch;
         private List<Sample> samples;
         private int tickCount;
+        private Thread sampleThread;
 
-        public RateMeasure()
+        public RateMeasure(TimeSpan? sampleCutoff = null, TimeSpan? sampleResolution = null)
         {
             this.rwLock = new ReaderWriterLockSlim();
+            this.stopwatch = Stopwatch.StartNew();
             this.samples = new List<Sample>();
 
-            this.SampleTimeSpan = TimeSpan.FromSeconds(30);
-            this.Resolution = TimeSpan.FromSeconds(1);
+            this.SampleCutoff = sampleCutoff ?? TimeSpan.FromSeconds(30);
+            this.SampleResolution = sampleResolution ?? TimeSpan.FromSeconds(1);
 
-            new Thread(SampleThread).Start();
+            this.sampleThread = new Thread(SampleThread);
+            this.sampleThread.Start();
         }
 
-        public TimeSpan Resolution { get; set; }
+        public TimeSpan SampleCutoff { get; set; }
 
-        public TimeSpan SampleTimeSpan { get; set; }
+        public TimeSpan SampleResolution { get; set; }
 
         public void Dispose()
         {
             this.isDisposed = true;
+            this.sampleThread.Join();
         }
 
         public void Tick()
@@ -47,20 +52,20 @@ namespace BitSharp.Common
             return this.rwLock.DoRead(() =>
             {
                 if (this.samples.Count == 0)
-                    return float.NaN;
+                    return 0;
 
                 var start = this.samples[0].SampleStart;
-                var now = Stopwatch.GetTimestamp();
+                var now = stopwatch.Elapsed;
 
                 var duration = now - start;
-                if (duration <= 0)
-                    return float.NaN;
+                if (duration <= TimeSpan.Zero)
+                    return 0;
 
                 var totalTickCount = this.samples.Sum(x => x.TickCount) + this.tickCount;
 
-                var unitsOfTime = (float)duration / perUnitTime.Ticks;
+                var unitsOfTime = (double)duration.Ticks / perUnitTime.Ticks;
 
-                return totalTickCount / unitsOfTime;
+                return (float)(totalTickCount / unitsOfTime);
             });
         }
 
@@ -68,12 +73,12 @@ namespace BitSharp.Common
         {
             while (!this.isDisposed)
             {
-                var start = Stopwatch.GetTimestamp();
-                Thread.Sleep(this.Resolution);
+                var start = stopwatch.Elapsed;
+                Thread.Sleep(this.SampleResolution);
 
-                var now = Stopwatch.GetTimestamp();
+                var now = stopwatch.Elapsed;
                 var duration = now - start;
-                var cutoff = now - this.SampleTimeSpan.Ticks;
+                var cutoff = now - this.SampleCutoff;
 
                 this.rwLock.DoWrite(() =>
                 {
@@ -88,8 +93,8 @@ namespace BitSharp.Common
 
         private sealed class Sample
         {
-            public long SampleStart { get; set; }
-            public long SampleDuration { get; set; }
+            public TimeSpan SampleStart { get; set; }
+            public TimeSpan SampleDuration { get; set; }
             public int TickCount { get; set; }
         }
     }
