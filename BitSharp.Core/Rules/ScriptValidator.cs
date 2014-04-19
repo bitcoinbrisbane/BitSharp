@@ -15,19 +15,22 @@ namespace BitSharp.Core.Rules
     public class ScriptValidator : ProducerConsumerWorker<Tuple<ChainPosition, ChainedHeader, Transaction, TxInput, TxOutput>>, IChainStateVisitor
     {
         private readonly IBlockchainRules rules;
-        private readonly ConcurrentBag<Exception> validationExceptions;
+        private ConcurrentBag<Exception> validationExceptions;
 
         public ScriptValidator(Logger logger, IBlockchainRules rules)
             : base("ScriptValidator", isConcurrent: true, logger: logger)
         {
             this.rules = rules;
-            this.validationExceptions = new ConcurrentBag<Exception>();
-
         }
 
         public ConcurrentBag<Exception> ValidationExceptions
         {
             get { return this.validationExceptions; }
+        }
+
+        protected override void SubStart()
+        {
+            this.validationExceptions = new ConcurrentBag<Exception>();
         }
 
         protected override void ConsumeItem(Tuple<ChainPosition, ChainedHeader, Transaction, TxInput, TxOutput> value)

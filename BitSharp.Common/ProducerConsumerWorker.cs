@@ -35,6 +35,8 @@ namespace BitSharp.Common
             if (this.queue != null)
                 throw new InvalidOperationException();
 
+            this.SubStart();
+
             this.queue = new ProducerConsumer<T>();
             this.queueWorker.NotifyWork();
 
@@ -67,12 +69,18 @@ namespace BitSharp.Common
 
         protected virtual void SubDispose() { }
 
+        protected virtual void SubStart() { }
+
+        protected virtual void SubStop() { }
+
         protected abstract void ConsumeItem(T value);
 
         private void Stop()
         {
             if (this.queue == null || !this.queue.IsCompleted)
                 throw new InvalidOperationException();
+
+            this.SubStop();
 
             this.queue.Dispose();
             this.queue = null;
