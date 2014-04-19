@@ -64,11 +64,11 @@ namespace BitSharp.Common
                 if (duration == TimeSpan.Zero)
                     return TimeSpan.Zero;
 
-                var totalTickCount = this.samples.Sum(x => x.TickCount);
+                var totalTickCount = this.samples.Sum(x => x.TickCount) + this.tickCount;
                 if (totalTickCount == 0)
                     return TimeSpan.Zero;
 
-                var totalTickDuration = this.samples.Sum(x => x.TickDuration);
+                var totalTickDuration = this.samples.Sum(x => x.TickDuration) + this.tickDuration;
 
                 return new TimeSpan(totalTickDuration / totalTickCount);
             });
@@ -83,11 +83,12 @@ namespace BitSharp.Common
 
                 var now = this.getDateTime();
                 var cutoff = now - this.SampleTimeSpan;
-                var tickCountLocal = Interlocked.Exchange(ref this.tickCount, 0);
-                var tickDurationLocal = Interlocked.Exchange(ref this.tickDuration, 0);
 
                 this.rwLock.DoWrite(() =>
                 {
+                    var tickCountLocal = Interlocked.Exchange(ref this.tickCount, 0);
+                    var tickDurationLocal = Interlocked.Exchange(ref this.tickDuration, 0);
+                    
                     while (this.samples.Count > 0 && this.samples[0].Start < cutoff)
                         this.samples.RemoveAt(0);
                     this.samples.Add(new Sample { Start = now, Length = duration, TickCount = tickCountLocal, TickDuration = tickDurationLocal });

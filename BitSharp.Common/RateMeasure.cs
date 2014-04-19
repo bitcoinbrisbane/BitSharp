@@ -62,7 +62,7 @@ namespace BitSharp.Common
                 if (duration == TimeSpan.Zero)
                     return float.NaN;
 
-                var totalTickCount = this.samples.Sum(x => x.TickCount);
+                var totalTickCount = this.samples.Sum(x => x.TickCount) + this.tickCount;
 
                 var unitsOfTime = (float)duration.Ticks / perUnitTime.Ticks;
 
@@ -79,10 +79,11 @@ namespace BitSharp.Common
 
                 var now = this.getDateTime();
                 var cutoff = now - this.SampleTimeSpan;
-                var tickCountLocal = Interlocked.Exchange(ref this.tickCount, 0);
 
                 this.rwLock.DoWrite(() =>
                 {
+                    var tickCountLocal = Interlocked.Exchange(ref this.tickCount, 0);
+
                     while (this.samples.Count > 0 && this.samples[0].Start < cutoff)
                         this.samples.RemoveAt(0);
                     this.samples.Add(new Sample { Start = now, Length = duration, TickCount = tickCountLocal });
