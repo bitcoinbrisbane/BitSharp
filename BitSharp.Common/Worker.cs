@@ -167,6 +167,8 @@ namespace BitSharp.Common
             if (this.isDisposed)
                 return;
 
+            this.SubForceWork();
+
             this.forceNotifyEvent.Set();
             this.notifyEvent.Set();
 
@@ -299,6 +301,8 @@ namespace BitSharp.Common
         protected virtual void SubStart() { }
 
         protected virtual void SubStop() { }
+
+        protected virtual void SubForceWork() { }
     }
 
     public sealed class WorkerConfig
