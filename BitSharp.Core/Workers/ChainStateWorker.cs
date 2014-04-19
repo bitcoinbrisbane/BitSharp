@@ -108,7 +108,7 @@ namespace BitSharp.Core.Workers
                     var direction = pathElement.Item1;
                     var chainedBlock = pathElement.Item2;
 
-                    var stopwatch = new Stopwatch().Started();
+                    var blockStopwatch = new Stopwatch().Started();
                     if (direction > 0)
                     {
                         this.chainStateBuilder.AddBlock(chainedBlock);
@@ -122,10 +122,10 @@ namespace BitSharp.Core.Workers
                         Debugger.Break();
                         throw new InvalidOperationException();
                     }
-                    stopwatch.Stop();
+                    blockStopwatch.Stop();
 
                     this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;
-                    this.blockTimes[this.blockTimesIndex] = stopwatch.Elapsed;
+                    this.blockTimes[this.blockTimesIndex] = blockStopwatch.Elapsed;
 
                     this.pruningWorker.NotifyWork();
 
@@ -182,7 +182,7 @@ namespace BitSharp.Core.Workers
                             throw;
                         }
                     })
-                .LookAhead(lookAhead);
+                .LookAhead();
         }
     }
 }
