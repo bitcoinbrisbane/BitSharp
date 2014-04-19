@@ -151,6 +151,16 @@ namespace BitSharp.Node
             }.DisposeList();
         }
 
+        public float GetBlockDownloadRate(TimeSpan perUnitTime)
+        {
+            return this.blockRequestWorker.GetBlockDownloadRate(perUnitTime);
+        }
+
+        public float GetDuplicateBlockDownloadRate(TimeSpan perUnitTime)
+        {
+            return this.blockRequestWorker.GetDuplicateBlockDownloadRate(perUnitTime);
+        }
+
         private void ConnectWorker()
         {
             if (this.Type == RulesEnum.ComparisonToolTestNet)

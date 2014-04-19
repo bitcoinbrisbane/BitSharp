@@ -39,9 +39,9 @@ namespace BitSharp.Node.Workers
         private int targetChainQueueIndex;
         private DateTime targetChainQueueTime;
 
-        private readonly TimeSpan[] blockTimes;
-        private int blockTimesIndex;
-        private readonly ReaderWriterLockSlim blockTimesIndexLock;
+        private readonly DurationMeasure blockRequestDurationMeasure;
+        private readonly RateMeasure blockDownloadRateMeasure;
+        private readonly RateMeasure duplicateBlockDownloadRateMeasure;
 
         private int targetChainLookAhead;
         private int criticalTargetChainLookAhead;
@@ -69,9 +69,9 @@ namespace BitSharp.Node.Workers
             this.blockchainDaemon.OnTargetChainChanged += HandleTargetChainChanged;
             this.blockCache.OnMissing += HandleBlockMissing;
 
-            this.blockTimes = new TimeSpan[10000];
-            this.blockTimesIndex = -1;
-            this.blockTimesIndexLock = new ReaderWriterLockSlim();
+            this.blockRequestDurationMeasure = new DurationMeasure();
+            this.blockDownloadRateMeasure = new RateMeasure();
+            this.duplicateBlockDownloadRateMeasure = new RateMeasure();
 
             this.targetChainLookAhead = 1;
             this.criticalTargetChainLookAhead = 1;
@@ -80,12 +80,26 @@ namespace BitSharp.Node.Workers
             this.flushQueue = new ConcurrentQueue<Tuple<RemoteNode, Block>>();
         }
 
+        public float GetBlockDownloadRate(TimeSpan perUnitTime)
+        {
+            return this.blockDownloadRateMeasure.GetAverage(perUnitTime);
+        }
+
+        public float GetDuplicateBlockDownloadRate(TimeSpan perUnitTime)
+        {
+            return this.duplicateBlockDownloadRateMeasure.GetAverage(perUnitTime);
+        }
+
         protected override void SubDispose()
         {
             this.localClient.OnBlock -= HandleBlock;
             this.blockchainDaemon.OnChainStateChanged -= HandleChainStateChanged;
             this.blockchainDaemon.OnTargetChainChanged -= HandleTargetChainChanged;
             this.blockCache.OnMissing -= HandleBlockMissing;
+
+            this.blockRequestDurationMeasure.Dispose();
+            this.blockDownloadRateMeasure.Dispose();
+            this.duplicateBlockDownloadRateMeasure.Dispose();
 
             this.flushWorker.Dispose();
         }
@@ -135,7 +149,7 @@ namespace BitSharp.Node.Workers
                 return;
 
             // get average block request time
-            var avgBlockRequestTime = TimeSpan.FromTicks((long)(this.blockTimes.Where(x => x.Ticks > 0).AverageOrDefault(x => x.Ticks) ?? 0));
+            var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
 
             // determine target chain look ahead
             var lookAheadTime = avgBlockRequestTime + TimeSpan.FromSeconds(30);
@@ -334,16 +348,15 @@ namespace BitSharp.Node.Workers
                 var remoteNode = tuple.Item1;
                 var block = tuple.Item2;
 
-                this.blockCache.TryAdd(block.Hash, block);
+                if (this.blockCache.TryAdd(block.Hash, block))
+                    this.blockDownloadRateMeasure.Tick();
+                else
+                    this.duplicateBlockDownloadRateMeasure.Tick();
 
                 DateTime requestTime;
                 if (this.allBlockRequests.TryRemove(block.Hash, out requestTime))
                 {
-                    this.blockTimesIndexLock.DoWrite(() =>
-                    {
-                        this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;
-                        this.blockTimes[this.blockTimesIndex] = DateTime.UtcNow - requestTime;
-                    });
+                    this.blockRequestDurationMeasure.Tick(DateTime.UtcNow - requestTime);
                 }
 
                 ConcurrentDictionary<UInt256, DateTime> peerBlockRequests;

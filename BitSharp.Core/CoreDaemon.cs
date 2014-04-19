@@ -204,6 +204,21 @@ namespace BitSharp.Core
             get { return this.chainStateWorker.CurrentChain; }
         }
 
+        public float GetBlockRate(TimeSpan perUnitTime)
+        {
+            return this.chainStateBuilder.Stats.blockRateMeasure.GetAverage(perUnitTime);
+        }
+
+        public float GetTxRate(TimeSpan perUnitTime)
+        {
+            return this.chainStateBuilder.Stats.txRateMeasure.GetAverage(perUnitTime);
+        }
+
+        public float GetInputRate(TimeSpan perUnitTime)
+        {
+            return this.chainStateBuilder.Stats.inputRateMeasure.GetAverage(perUnitTime);
+        }
+
         public TimeSpan AverageBlockProcessingTime()
         {
             return this.chainStateWorker.AverageBlockProcessingTime();

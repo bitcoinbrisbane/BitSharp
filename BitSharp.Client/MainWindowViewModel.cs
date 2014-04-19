@@ -14,6 +14,7 @@ using Ninject;
 using BitSharp.Core;
 using BitSharp.Core.Storage;
 using BitSharp.Core.Domain;
+using BitSharp.Node;
 
 namespace BitSharp.Client
 {
@@ -23,11 +24,13 @@ namespace BitSharp.Client
 
         private readonly IKernel kernel;
         private readonly CoreDaemon blockchainDaemon;
+        private readonly LocalClient localClient;
         private readonly BlockCache blockCache;
 
         private readonly DateTime startTime;
         private string runningTime;
         private readonly DispatcherTimer runningTimeTimer;
+        private readonly DispatcherTimer ratesTimer;
 
         private Chain viewChain;
 
@@ -35,10 +38,17 @@ namespace BitSharp.Client
         private long _currentBlockchainHeight;
         private long _downloadedBlockCount;
 
+        private float blockRate;
+        private float transactionRate;
+        private float inputRate;
+        private float blockDownloadRate;
+        private float duplicateBlockDownloadRate;
+
         public MainWindowViewModel(IKernel kernel)
         {
             this.kernel = kernel;
             this.blockchainDaemon = kernel.Get<CoreDaemon>();
+            this.localClient = kernel.Get<LocalClient>();
             this.blockCache = kernel.Get<BlockCache>();
 
             this.startTime = DateTime.UtcNow;
@@ -50,6 +60,18 @@ namespace BitSharp.Client
             };
             runningTimeTimer.Interval = TimeSpan.FromMilliseconds(100);
             runningTimeTimer.Start();
+
+            this.ratesTimer = new DispatcherTimer();
+            ratesTimer.Tick += (sender, e) =>
+            {
+                this.BlockRate = this.blockchainDaemon.GetBlockRate(TimeSpan.FromSeconds(1));
+                this.TransactionRate = this.blockchainDaemon.GetTxRate(TimeSpan.FromSeconds(1));
+                this.InputRate = this.blockchainDaemon.GetInputRate(TimeSpan.FromSeconds(1));
+                this.BlockDownloadRate = this.localClient.GetBlockDownloadRate(TimeSpan.FromSeconds(1));
+                this.DuplicateBlockDownloadRate = this.localClient.GetDuplicateBlockDownloadRate(TimeSpan.FromSeconds(1));
+            };
+            ratesTimer.Interval = TimeSpan.FromMilliseconds(100);
+            ratesTimer.Start();
 
             this.viewChain = this.blockchainDaemon.CurrentChain;
 
@@ -96,6 +118,36 @@ namespace BitSharp.Client
         {
             get { return this._downloadedBlockCount; }
             set { SetValue(ref this._downloadedBlockCount, value); }
+        }
+
+        public float BlockRate
+        {
+            get { return this.blockRate; }
+            set { SetValue(ref this.blockRate, value); }
+        }
+
+        public float TransactionRate
+        {
+            get { return this.transactionRate; }
+            set { SetValue(ref this.transactionRate, value); }
+        }
+
+        public float InputRate
+        {
+            get { return this.inputRate; }
+            set { SetValue(ref this.inputRate, value); }
+        }
+
+        public float BlockDownloadRate
+        {
+            get { return this.blockDownloadRate; }
+            set { SetValue(ref this.blockDownloadRate, value); }
+        }
+
+        public float DuplicateBlockDownloadRate
+        {
+            get { return this.duplicateBlockDownloadRate; }
+            set { SetValue(ref this.duplicateBlockDownloadRate, value); }
         }
 
         public long ViewBlockchainHeight

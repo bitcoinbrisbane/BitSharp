@@ -107,6 +107,10 @@ namespace BitSharp.Client
                 blockchainDaemon.SubscribeChainStateVisitor(new DummyMonitor(this.logger));
 #endif
 
+                // initialize p2p client
+                this.kernel.Bind<LocalClient>().ToSelf().InSingletonScope();
+                var localClient = this.kernel.Get<LocalClient>();
+
                 // setup view model
                 this.viewModel = new MainWindowViewModel(this.kernel);
                 InitializeComponent();
@@ -116,8 +120,6 @@ namespace BitSharp.Client
                 blockchainDaemon.Start();
 
                 // start p2p client
-                this.kernel.Bind<LocalClient>().ToSelf().InSingletonScope();
-                var localClient = this.kernel.Get<LocalClient>();
                 var startThread = new Thread(() => localClient.Start());
                 startThread.Name = "LocalClient.Start";
                 startThread.Start();

@@ -32,12 +32,10 @@ namespace BitSharp.Core.Workers
         private readonly SpentTransactionsCache spentTransactionsCache;
         private readonly InvalidBlockCache invalidBlockCache;
 
+        private readonly DurationMeasure blockProcessingDurationMeasure;
         private readonly TargetChainWorker targetChainWorker;
         private readonly ChainStateBuilder chainStateBuilder;
         private Chain currentChain;
-
-        private readonly TimeSpan[] blockTimes;
-        private int blockTimesIndex;
 
         private readonly PruningWorker pruningWorker;
 
@@ -52,8 +50,7 @@ namespace BitSharp.Core.Workers
             this.spentTransactionsCache = spentTransactionsCache;
             this.invalidBlockCache = invalidBlockCache;
 
-            this.blockTimes = new TimeSpan[10000];
-            this.blockTimesIndex = -1;
+            this.blockProcessingDurationMeasure = new DurationMeasure();
 
             this.targetChainWorker = targetChainWorker;
             this.chainStateBuilder = chainStateBuilder;
@@ -66,7 +63,7 @@ namespace BitSharp.Core.Workers
 
         public TimeSpan AverageBlockProcessingTime()
         {
-            return TimeSpan.FromTicks((long)(this.blockTimes.Where(x => x.Ticks > 0).AverageOrDefault(x => x.Ticks) ?? 0));
+            return this.blockProcessingDurationMeasure.GetAverage();
         }
 
         public Chain CurrentChain
@@ -78,6 +75,7 @@ namespace BitSharp.Core.Workers
         {
             new IDisposable[]
             {
+                this.blockProcessingDurationMeasure,
                 this.chainStateBuilder,
                 this.pruningWorker,
             }.DisposeList();
@@ -125,9 +123,7 @@ namespace BitSharp.Core.Workers
                         throw new InvalidOperationException();
                     }
                     blockStopwatch.Stop();
-
-                    this.blockTimesIndex = (this.blockTimesIndex + 1) % this.blockTimes.Length;
-                    this.blockTimes[this.blockTimesIndex] = blockStopwatch.Elapsed;
+                    this.blockProcessingDurationMeasure.Tick(blockStopwatch.Elapsed);
 
                     this.pruningWorker.NotifyWork();
 

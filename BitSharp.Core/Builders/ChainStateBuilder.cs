@@ -88,6 +88,7 @@ namespace BitSharp.Core.Builders
             if (this.scriptValidator != null)
                 this.scriptValidator.Dispose();
 
+            this.stats.Dispose();
             this.chainStateBuilderStorage.Dispose();
         }
 
@@ -183,6 +184,9 @@ namespace BitSharp.Core.Builders
                     if (this.chainStateMonitor != null)
                         this.chainStateMonitor.CommitBlock(chainedBlock.ChainedHeader);
 
+                    // MEASURE: Block Rate
+                    this.stats.blockRateMeasure.Tick();
+
                     // blockchain processing statistics
                     this.Stats.blockCount++;
                     this.Stats.txCount += txCount;
@@ -263,9 +267,9 @@ namespace BitSharp.Core.Builders
         public void LogBlockchainProgress()
         {
             var elapsedSeconds = this.Stats.durationStopwatch.ElapsedSecondsFloat();
-            var blockRate = (float)this.Stats.blockCount / elapsedSeconds;
-            var txRate = (float)this.Stats.txCount / elapsedSeconds;
-            var inputRate = (float)this.Stats.inputCount / elapsedSeconds;
+            var blockRate = this.stats.blockRateMeasure.GetAverage(TimeSpan.FromSeconds(1));
+            var txRate = this.stats.txRateMeasure.GetAverage(TimeSpan.FromSeconds(1));
+            var inputRate = this.stats.inputRateMeasure.GetAverage(TimeSpan.FromSeconds(1));
 
             this.logger.Info(
                 string.Join("\n",
@@ -358,6 +362,9 @@ namespace BitSharp.Core.Builders
                     inputCount++;
 
                     this.Spend(txIndex, tx, inputIndex, input, chainedBlock.ChainedHeader);
+
+                    // MEASURE: Input Rate
+                    this.stats.inputRateMeasure.Tick();
                 }
 
                 this.Mint(tx, chainedBlock.ChainedHeader, isCoinbase: false);
@@ -365,6 +372,9 @@ namespace BitSharp.Core.Builders
                 // MONITOR: AfterAddTransaction
                 if (this.chainStateMonitor != null)
                     this.chainStateMonitor.AfterAddTransaction(ChainPosition.Fake(), tx);
+
+                // MEASURE: Transaction Rate
+                this.stats.txRateMeasure.Tick();
             }
 
             //}
@@ -698,7 +708,7 @@ namespace BitSharp.Core.Builders
             this.inTransaction = false;
         }
 
-        public sealed class BuilderStats
+        public sealed class BuilderStats : IDisposable
         {
             public Stopwatch durationStopwatch = new Stopwatch();
             public Stopwatch validateStopwatch = new Stopwatch();
@@ -707,9 +717,20 @@ namespace BitSharp.Core.Builders
             public long txCount;
             public long inputCount;
 
+            public readonly RateMeasure blockRateMeasure = new RateMeasure();
+            public readonly RateMeasure txRateMeasure = new RateMeasure();
+            public readonly RateMeasure inputRateMeasure = new RateMeasure();
+
             public DateTime lastLogTime = DateTime.UtcNow;
 
             internal BuilderStats() { }
+
+            public void Dispose()
+            {
+                this.blockRateMeasure.Dispose();
+                this.txRateMeasure.Dispose();
+                this.inputRateMeasure.Dispose();
+            }
         }
     }
 }
