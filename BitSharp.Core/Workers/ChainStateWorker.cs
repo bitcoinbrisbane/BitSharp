@@ -96,11 +96,13 @@ namespace BitSharp.Core.Workers
             try
             {
                 // calculate the new blockchain along the target path
+                var didWork = false;
                 foreach (var pathElement in ChainedBlockLookAhead(this.chainStateBuilder.Chain.NavigateTowards(this.getTargetChain), lookAhead: 1))
                 {
                     // cooperative loop
                     if (!this.IsStarted)
                         break;
+                    didWork = true;
 
                     // get block and metadata for next link in blockchain
                     var direction = pathElement.Item1;
@@ -134,7 +136,8 @@ namespace BitSharp.Core.Workers
                         handler();
                 }
 
-                this.chainStateBuilder.LogBlockchainProgress();
+                if (didWork)
+                    this.chainStateBuilder.LogBlockchainProgress();
             }
             catch (Exception e)
             {
