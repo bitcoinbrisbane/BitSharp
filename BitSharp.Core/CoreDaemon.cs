@@ -198,8 +198,6 @@ namespace BitSharp.Core
 
         public Chain TargetChain { get { return this.targetChainWorker.TargetChain; } }
 
-        //public ChainState ChainState { get { return this.chainStateBuilder.ToImmutable(); } }
-
         public Chain CurrentChain
         {
             get { return this.chainStateWorker.CurrentChain; }
