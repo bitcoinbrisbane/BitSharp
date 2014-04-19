@@ -112,6 +112,7 @@ namespace BitSharp.Core
             this.chainStateWorker = kernel.Get<ChainStateWorker>(
                 new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromSeconds(5))),
                 new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)),
+                new ConstructorArgument("targetChainWorker", this.targetChainWorker),
                 new ConstructorArgument("chainStateBuilder", this.chainStateBuilder));
 
             this.targetChainWorker.OnTargetBlockChanged +=
