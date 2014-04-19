@@ -16,10 +16,9 @@ namespace BitSharp.Common
         {
             using (var readValues = new BlockingCollection<T>(1 + lookAhead))
             using (var abortToken = new CancellationTokenSource())
-            {
-                Exception readException = null;
-
-                var thread = new Thread(() =>
+            using (var readTask =
+                Task.Factory.StartNew(
+                () =>
                 {
                     try
                     {
@@ -31,35 +30,29 @@ namespace BitSharp.Common
 
                             readValues.Add(value);
                         }
-
-                        readValues.CompleteAdding();
                     }
-                    catch (Exception e)
+                    finally
                     {
-                        readException = e;
                         try { readValues.CompleteAdding(); }
                         catch (ObjectDisposedException) { }
                     }
-                });
+                }))
+            {
+                foreach (var value in readValues.GetConsumingEnumerable())
+                {
+                    // cooperative loop
+                    cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
 
-                thread.Name = "LookAhead<{0}>".Format2(typeof(T).Name);
-                thread.Start();
+                    yield return value;
+                }
+
                 try
                 {
-                    foreach (var value in readValues.GetConsumingEnumerable())
-                    {
-                        // cooperative loop
-                        cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
-
-                        yield return value;
-                    }
-
-                    if (readException != null)
-                        throw readException;
+                    readTask.Wait();
                 }
-                finally
+                catch (AggregateException e)
                 {
-                    abortToken.Cancel();
+                    throw e.InnerExceptions.First();
                 }
             }
         }
