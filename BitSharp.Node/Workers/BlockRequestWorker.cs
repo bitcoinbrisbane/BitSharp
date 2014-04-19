@@ -329,7 +329,7 @@ namespace BitSharp.Node.Workers
         private void FlushWorkerMethod()
         {
             Tuple<RemoteNode, Block> tuple;
-            while (this.flushQueue.TryDequeue(out tuple))
+            while (this.flushWorker.IsStarted && this.flushQueue.TryDequeue(out tuple))
             {
                 var remoteNode = tuple.Item1;
                 var block = tuple.Item2;
