@@ -115,22 +115,7 @@ namespace BitSharp.Core.Test
 
         public void WaitForDaemon()
         {
-            var firedEvent = new AutoResetEvent(false);
-            EventHandler onEvent = (sender, e) => firedEvent.Set();
-
-            this.coreDaemon.OnTargetBlockChanged += onEvent;
-            this.coreDaemon.OnTargetChainChanged += onEvent;
-            this.coreDaemon.OnChainStateChanged += onEvent;
-            try
-            {
-                while (firedEvent.WaitOne(500)) { }
-            }
-            finally
-            {
-                this.coreDaemon.OnTargetBlockChanged -= onEvent;
-                this.coreDaemon.OnTargetChainChanged -= onEvent;
-                this.coreDaemon.OnChainStateChanged -= onEvent;
-            }
+            this.coreDaemon.ForceWorkAndWait();
         }
     }
 }
