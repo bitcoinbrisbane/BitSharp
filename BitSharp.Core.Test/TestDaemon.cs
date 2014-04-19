@@ -224,10 +224,8 @@ namespace BitSharp.Core.Test
         public void AddBlock(Block block)
         {
             this.blockCache[block.Hash] = block;
-
-            //TODO ugly to loop like this
-            for (var i = 0; i < 10; i++)
-                this.blockchainDaemon.ForceWorkAndWait();
+            
+            this.blockchainDaemon.ForceWorkAndWait();
         }
     }
 }
