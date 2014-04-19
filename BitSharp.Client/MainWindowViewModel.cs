@@ -70,7 +70,7 @@ namespace BitSharp.Client
                 this.BlockDownloadRate = this.localClient.GetBlockDownloadRate(TimeSpan.FromSeconds(1));
                 this.DuplicateBlockDownloadRate = this.localClient.GetDuplicateBlockDownloadRate(TimeSpan.FromSeconds(1));
             };
-            ratesTimer.Interval = TimeSpan.FromMilliseconds(100);
+            ratesTimer.Interval = TimeSpan.FromSeconds(1);
             ratesTimer.Start();
 
             this.viewChain = this.blockchainDaemon.CurrentChain;
