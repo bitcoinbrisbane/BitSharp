@@ -183,7 +183,7 @@ namespace BitSharp.Core.Workers
                         }
                         catch (MissingDataException e)
                         {
-                            this.logger.Info("Stalled, MissingDataException: {0}".Format2(e.Key));
+                            this.logger.Debug("Stalled, MissingDataException: {0}".Format2(e.Key));
                             throw;
                         }
                     })
