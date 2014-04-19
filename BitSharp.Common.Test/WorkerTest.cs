@@ -24,7 +24,7 @@ namespace BitSharp.Common.Test
                 // verify subDispose has not been called
                 Assert.AreEqual(0, callCount);
             }
-            
+
             // verify subDispose has been called after end of using
             Assert.AreEqual(1, callCount);
         }
@@ -41,10 +41,10 @@ namespace BitSharp.Common.Test
             {
                 // verify subStart has not been called
                 Assert.AreEqual(0, callCount);
-                
+
                 // start the worker
                 worker.Start();
-                
+
                 // verify subStart has been called
                 Assert.AreEqual(1, callCount);
             }
@@ -71,13 +71,13 @@ namespace BitSharp.Common.Test
 
                 // start the worker
                 worker.Start();
-                
+
                 // verify subStop has not been called
                 Assert.AreEqual(0, callCount);
 
                 // stop the worker
                 worker.Stop();
-                
+
                 // verify subStop has been called
                 Assert.AreEqual(1, callCount);
             }
@@ -93,10 +93,6 @@ namespace BitSharp.Common.Test
             // initialize worker
             using (var worker = new MockWorker(workAction))
             {
-                // wire worker startup event
-                var workStartedEvent = new AutoResetEvent(false);
-                worker.OnWorkStarted += () => workStartedEvent.Set();
-
                 // verify workAction has not been called
                 var wasCalled = callEvent.WaitOne(10);
                 Assert.IsFalse(wasCalled);
@@ -110,10 +106,9 @@ namespace BitSharp.Common.Test
 
                 // start worker, it has already been notified
                 worker.Start();
-                workStartedEvent.WaitOne();
 
                 // verify workAction has been called
-                wasCalled = callEvent.WaitOne(10);
+                wasCalled = callEvent.WaitOne(1000);
                 Assert.IsTrue(wasCalled);
 
                 // without notifying worker, verify workAction has not been called
@@ -133,6 +128,99 @@ namespace BitSharp.Common.Test
                 // verify workAction has not been called
                 wasCalled = callEvent.WaitOne(10);
                 Assert.IsFalse(wasCalled);
+            }
+        }
+
+        [TestMethod]
+        public void TestRestart()
+        {
+            // prepare workAction call tracking
+            var callEvent = new AutoResetEvent(false);
+            Action workAction = () => callEvent.Set();
+
+            // initialize worker
+            using (var worker = new MockWorker(workAction))
+            {
+                // start worker
+                worker.Start();
+
+                // verify workAction has not been called
+                var wasCalled = callEvent.WaitOne(1000);
+                Assert.IsFalse(wasCalled);
+
+                // notify worker
+                worker.NotifyWork();
+
+                // verify workAction has been called
+                wasCalled = callEvent.WaitOne(10);
+                Assert.IsTrue(wasCalled);
+
+                // stop worker
+                worker.Stop();
+
+                // wait for worker to idle
+                worker.WaitForIdle();
+
+                // verify workAction has not been called
+                wasCalled = callEvent.WaitOne(10);
+                Assert.IsFalse(wasCalled);
+
+                // start worker again
+                worker.Start();
+
+                // notify worker
+                worker.NotifyWork();
+
+                // verify workAction has been called
+                wasCalled = callEvent.WaitOne(10);
+                Assert.IsTrue(wasCalled);
+            }
+        }
+
+        [TestMethod]
+        public void TestRestartNotified()
+        {
+            // prepare workAction call tracking
+            var callEvent = new AutoResetEvent(false);
+            Action workAction = () => callEvent.Set();
+
+            // initialize worker
+            using (var worker = new MockWorker(workAction))
+            {
+                // start worker
+                worker.Start();
+
+                // verify workAction has not been called
+                var wasCalled = callEvent.WaitOne(10);
+                Assert.IsFalse(wasCalled);
+
+                // notify worker
+                worker.NotifyWork();
+
+                // verify workAction has been called
+                wasCalled = callEvent.WaitOne(10);
+                Assert.IsTrue(wasCalled);
+
+                // stop worker
+                worker.Stop();
+
+                // wait for worker to idle
+                worker.WaitForIdle();
+
+                // notify worker again
+                worker.NotifyWork();
+
+                //TODO calling callEvent.WaitOne(10) cancels the notify and fails the test, i'm not sure why
+                // verify workAction has not been called
+                wasCalled = callEvent.WaitOne(10);
+                Assert.IsFalse(wasCalled);
+
+                // start worker again, it has already been notified
+                worker.Start();
+
+                // verify workAction has been called
+                wasCalled = callEvent.WaitOne(1000);
+                Assert.IsTrue(wasCalled);
             }
         }
     }

@@ -46,6 +46,8 @@ namespace BitSharp.Common
             this.startedEvent = new ManualResetEventSlim(false);
             this.isDisposing = false;
             this.isDisposed = false;
+
+            this.workerThread.Start();
         }
 
         public string Name { get; protected set; }
@@ -60,6 +62,8 @@ namespace BitSharp.Common
             {
                 if (this.isDisposed)
                     throw new ObjectDisposedException("Worker");
+                else if (this.isDisposing)
+                    return false;
 
                 return this.workerLock.DoRead(() =>
                 {
@@ -79,7 +83,6 @@ namespace BitSharp.Common
                 {
                     this.SubStart();
 
-                    this.workerThread.Start();
                     this.startedEvent.Set();
                 }
             });
@@ -124,7 +127,7 @@ namespace BitSharp.Common
                 }
                 this.SubDispose();
 
-                this.startedEvent.Reset();
+                this.startedEvent.Set();
                 this.notifyEvent.Set();
                 this.forceNotifyEvent.Set();
 
@@ -172,6 +175,17 @@ namespace BitSharp.Common
                 handler();
         }
 
+        public void WaitForIdle()
+        {
+            if (this.isDisposed)
+                return;
+            if (!this.IsStarted)
+                return;
+
+            // wait for worker to idle
+            this.idleEvent.Wait();
+        }
+
         public void ForceWorkAndWait()
         {
             if (this.isDisposed)
@@ -205,14 +219,17 @@ namespace BitSharp.Common
 
                     totalTime.Start();
 
-                    // cooperative loop
-                    while (this.IsStarted)
+                    while (!this.isDisposing)
                     {
                         // notify worker is idle
                         this.idleEvent.Set();
 
                         // wait for execution to start
                         this.startedEvent.Wait();
+
+                        // cooperative loop
+                        if (!this.IsStarted)
+                            continue;
 
                         // delay for the requested wait time, unless forced
                         this.forceNotifyEvent.WaitOne(this.MinIdleTime);
@@ -225,7 +242,7 @@ namespace BitSharp.Common
 
                         // cooperative loop
                         if (!this.IsStarted)
-                            break;
+                            continue;
 
                         // notify that work is starting
                         this.idleEvent.Reset();

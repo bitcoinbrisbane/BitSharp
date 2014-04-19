@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace BitSharp.Core.Test.Monitor
@@ -21,38 +22,44 @@ namespace BitSharp.Core.Test.Monitor
             using (var chainStateMonitor = new ChainStateMonitor(LogManager.CreateNullLogger()))
             {
                 chainStateMonitor.Start();
-
-                // mock IChainStateVisitor
-                var visitor = new Mock<IChainStateVisitor>();
-
-                // keep track of BeginBlock calls
-                var visitCount = 0;
-                visitor.Setup(x => x.BeginBlock(It.IsAny<ChainedHeader>())).Callback(() => visitCount++);
-
-                // subscribe visitor
-                using (var subscription = chainStateMonitor.Subscribe(visitor.Object))
+                try
                 {
-                    // verify no BeginBlock calls
-                    Assert.AreEqual(0, visitCount);
+                    // mock IChainStateVisitor
+                    var visitor = new Mock<IChainStateVisitor>();
 
-                    // call BeginBlock
+                    // keep track of BeginBlock calls
+                    var wasVisited = false;
+                    var visitEvent = new AutoResetEvent(false);
+                    visitor.Setup(x => x.BeginBlock(It.IsAny<ChainedHeader>())).Callback(() => visitEvent.Set());
+
+                    // subscribe visitor
+                    using (var subscription = chainStateMonitor.Subscribe(visitor.Object))
+                    {
+                        // verify no BeginBlock calls
+                        wasVisited = visitEvent.WaitOne(10);
+                        Assert.IsFalse(wasVisited);
+
+                        // call BeginBlock
+                        chainStateMonitor.BeginBlock(null);
+
+                        // verify BeginBlock call
+                        wasVisited = visitEvent.WaitOne(100);
+                        Assert.IsTrue(wasVisited);
+                    }
+
+                    // call BeginBlock, after unsubscribe
                     chainStateMonitor.BeginBlock(null);
 
-                    // wait for worker
-                    chainStateMonitor.ForceWorkAndWait();
-
-                    // verify BeginBlock call
-                    Assert.AreEqual(1, visitCount);
+                    // verify no additional BeginBlock call
+                    wasVisited = visitEvent.WaitOne(10);
+                    Assert.IsFalse(wasVisited);
                 }
-
-                // call BeginBlock, after unsubscribe
-                chainStateMonitor.BeginBlock(null);
-
-                // wait for worker
-                chainStateMonitor.ForceWorkAndWait();
-
-                // verify no additional BeginBlock call
-                Assert.AreEqual(1, visitCount);
+                finally
+                {
+                    // wait for monitor
+                    chainStateMonitor.CompleteAdding();
+                    chainStateMonitor.WaitToComplete();
+                }
             }
         }
     }

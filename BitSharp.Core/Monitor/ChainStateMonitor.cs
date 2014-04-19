@@ -12,19 +12,36 @@ namespace BitSharp.Core.Monitor
 {
     public class ChainStateMonitor : Worker, IChainStateVisitor
     {
-        private readonly ConcurrentSetBuilder<IChainStateVisitor> visitors;
-        private readonly ConcurrentQueue<Action> actionQueue;
+        private readonly ConcurrentSet<IChainStateVisitor> visitors;
+        private ProducerConsumer<Action> actionQueue;
 
         public ChainStateMonitor(Logger logger)
             : base("ChainStateMonitor", initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: logger)
         {
-            this.visitors = new ConcurrentSetBuilder<IChainStateVisitor>();
-            this.actionQueue = new ConcurrentQueue<Action>();
+            this.visitors = new ConcurrentSet<IChainStateVisitor>();
         }
 
         protected override void SubDispose()
         {
             this.visitors.Clear();
+        }
+
+        protected override void SubStart()
+        {
+            if (this.actionQueue != null)
+                throw new InvalidOperationException();
+
+            this.actionQueue = new ProducerConsumer<Action>();
+            this.NotifyWork();
+        }
+
+        protected override void SubStop()
+        {
+            if (this.actionQueue == null || !this.actionQueue.IsCompleted)
+                throw new InvalidOperationException();
+
+            this.actionQueue.Dispose();
+            this.actionQueue = null;
         }
 
         public IDisposable Subscribe(IChainStateVisitor visitor)
@@ -33,149 +50,154 @@ namespace BitSharp.Core.Monitor
             return new Unsubscriber(this.visitors, visitor);
         }
 
+        public void CompleteAdding()
+        {
+            if (this.actionQueue == null)
+                throw new InvalidOperationException();
+
+            this.actionQueue.CompleteAdding();
+        }
+
+        public void WaitToComplete()
+        {
+            if (this.actionQueue == null)
+                throw new InvalidOperationException();
+
+            this.actionQueue.WaitToComplete();
+        }
+
         public void BeginBlock(ChainedHeader chainedHeader)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.BeginBlock(chainedHeader);
             });
-            this.NotifyWork();
         }
 
         public void BeforeAddTransaction(ChainPosition chainPosition, Transaction tx)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.BeforeAddTransaction(chainPosition, tx);
             });
-            this.NotifyWork();
         }
 
         public void CoinbaseInput(ChainPosition chainPosition, TxInput txInput)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.CoinbaseInput(chainPosition, txInput);
             });
-            this.NotifyWork();
         }
 
         public void MintTxOutput(ChainPosition chainPosition, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash, bool isCoinbase)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.MintTxOutput(chainPosition, txOutputKey, txOutput, outputScriptHash, isCoinbase);
             });
-            this.NotifyWork();
         }
 
         public void SpendTxOutput(ChainPosition chainPosition, TxInput txInput, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.SpendTxOutput(chainPosition, txInput, txOutputKey, txOutput, outputScriptHash);
             });
-            this.NotifyWork();
         }
 
         public void AfterAddTransaction(ChainPosition chainPosition, Transaction tx)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.AfterAddTransaction(chainPosition, tx);
             });
-            this.NotifyWork();
         }
 
         public void BeforeRemoveTransaction(ChainPosition chainPosition, Transaction tx)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.BeforeRemoveTransaction(chainPosition, tx);
             });
-            this.NotifyWork();
         }
 
         public void UnCoinbaseInput(ChainPosition chainPosition, TxInput txInput)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.UnCoinbaseInput(chainPosition, txInput);
             });
-            this.NotifyWork();
         }
 
         public void UnmintTxOutput(ChainPosition chainPosition, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash, bool isCoinbase)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.UnmintTxOutput(chainPosition, txOutputKey, txOutput, outputScriptHash, isCoinbase);
             });
-            this.NotifyWork();
         }
 
         public void UnspendTxOutput(ChainPosition chainPosition, TxInput txInput, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.UnspendTxOutput(chainPosition, txInput, txOutputKey, txOutput, outputScriptHash);
             });
-            this.NotifyWork();
         }
 
         public void AfterRemoveTransaction(ChainPosition chainPosition, Transaction tx)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.AfterRemoveTransaction(chainPosition, tx);
             });
-            this.NotifyWork();
         }
 
         public void CommitBlock(ChainedHeader chainedHeader)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.CommitBlock(chainedHeader);
             });
-            this.NotifyWork();
         }
 
         public void RollbackBlock(ChainedHeader chainedHeader)
         {
-            this.actionQueue.Enqueue(() =>
+            this.actionQueue.Add(() =>
             {
                 foreach (var visitor in this.visitors)
                     visitor.RollbackBlock(chainedHeader);
             });
-            this.NotifyWork();
         }
 
         protected override void WorkAction()
         {
-            Action action;
-            while (this.IsStarted && this.actionQueue.TryDequeue(out action))
+            if (this.actionQueue == null)
+                throw new InvalidOperationException();
+
+            foreach (var action in this.actionQueue.GetConsumingEnumerable())
                 action();
         }
 
         private sealed class Unsubscriber : IDisposable
         {
-            private readonly ConcurrentSetBuilder<IChainStateVisitor> visitors;
+            private readonly ConcurrentSet<IChainStateVisitor> visitors;
             private readonly IChainStateVisitor visitor;
 
-            public Unsubscriber(ConcurrentSetBuilder<IChainStateVisitor> visitors, IChainStateVisitor visitor)
+            public Unsubscriber(ConcurrentSet<IChainStateVisitor> visitors, IChainStateVisitor visitor)
             {
                 this.visitors = visitors;
                 this.visitor = visitor;
