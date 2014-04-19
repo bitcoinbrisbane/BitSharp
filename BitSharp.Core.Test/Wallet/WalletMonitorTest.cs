@@ -28,6 +28,9 @@ namespace BitSharp.Core.Test.Monitor
         [TestMethod]
         public void TestMonitorAddress()
         {
+            if (Debugger.IsAttached)
+                Assert.Inconclusive();
+
             var sha256 = new SHA256Managed();
 
             //var publicKey =

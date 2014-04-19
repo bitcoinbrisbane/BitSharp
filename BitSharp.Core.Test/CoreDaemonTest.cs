@@ -36,6 +36,9 @@ namespace BitSharp.Core.Test
         [TestMethod]
         public void TestLongBlockchain()
         {
+            if (Debugger.IsAttached)
+                Assert.Inconclusive();
+
             using (var daemon = new TestDaemon())
             {
                 var count = 1.THOUSAND();
