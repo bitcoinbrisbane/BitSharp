@@ -224,7 +224,10 @@ namespace BitSharp.Core.Test
         public void AddBlock(Block block)
         {
             this.blockCache[block.Hash] = block;
-            
+        }
+
+        public void WaitForDaemon()
+        {
             this.blockchainDaemon.ForceWorkAndWait();
         }
     }
