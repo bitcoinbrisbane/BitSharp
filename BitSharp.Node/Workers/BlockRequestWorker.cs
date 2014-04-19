@@ -22,6 +22,7 @@ namespace BitSharp.Node.Workers
     public class BlockRequestWorker : Worker
     {
         private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan MISSING_STALE_REQUEST_TIME = TimeSpan.FromSeconds(15);
 
         private readonly Logger logger;
         private readonly LocalClient localClient;
@@ -33,7 +34,6 @@ namespace BitSharp.Node.Workers
         private readonly ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>> blockRequestsByPeer;
 
         private SortedList<int, ChainedHeader> missingBlockQueue;
-        private int missingBlockQueueIndex;
 
         private List<ChainedHeader> targetChainQueue;
         private int targetChainQueueIndex;
@@ -62,7 +62,6 @@ namespace BitSharp.Node.Workers
             this.allBlockRequests = new ConcurrentDictionary<UInt256, DateTime>();
             this.blockRequestsByPeer = new ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>>();
             this.missingBlockQueue = new SortedList<int, ChainedHeader>();
-            this.missingBlockQueueIndex = 0;
 
             this.localClient.OnBlock += HandleBlock;
             this.blockchainDaemon.OnChainStateChanged += HandleChainStateChanged;
@@ -238,10 +237,13 @@ namespace BitSharp.Node.Workers
 
             var now = DateTime.UtcNow;
             var requestTasks = new List<Task>();
-            this.missingBlockQueueIndex = 0;
 
             // remove any stale requests from the global list of requests
             this.allBlockRequests.RemoveWhere(x => (now - x.Value) > STALE_REQUEST_TIME);
+
+            // remove any stale requests for missing blocks, using a shorter timeout
+            var missingBlockHashes = new HashSet<UInt256>(this.missingBlockQueue.Values.Select(x => x.Hash));
+            this.allBlockRequests.RemoveWhere(x => missingBlockHashes.Contains(x.Key) && (now - x.Value) > MISSING_STALE_REQUEST_TIME);
 
             var peerCount = this.localClient.ConnectedPeers.Count;
             if (peerCount == 0)
@@ -297,31 +299,15 @@ namespace BitSharp.Node.Workers
             // keep track of blocks iterated blocks for peer
             var currentCount = 0;
 
-            // iterate through any missing blocks, all peers will request the same missing blocks
-            if (this.missingBlockQueue.Count > 0)
+            // iterate through any missing blocks first, they have priority and requests go stale more quickly
+            foreach (var missingBlock in this.missingBlockQueue.Keys)
             {
-                if (this.missingBlockQueueIndex >= this.missingBlockQueue.Count)
-                    this.missingBlockQueueIndex = 0;
-
-                var startIndex = this.missingBlockQueueIndex;
-                while (true)
+                if (!peerBlockRequests.ContainsKey(missingBlock)
+                    && !this.allBlockRequests.ContainsKey(missingBlock)
+                    && !this.blockCache.ContainsKey(missingBlock))
                 {
-                    var missingBlock = this.missingBlockQueue.Values[this.missingBlockQueueIndex];
-                    if (!peerBlockRequests.ContainsKey(missingBlock.Hash))
-                    {
-                        yield return missingBlock.Hash;
-
-                        currentCount++;
-                        if (currentCount >= count)
-                            yield break;
-                    }
-
-                    this.missingBlockQueueIndex++;
-                    if (this.missingBlockQueueIndex >= this.missingBlockQueue.Count)
-                        this.missingBlockQueueIndex = 0;
-
-                    if (this.missingBlockQueueIndex == startIndex)
-                        break;
+                    yield return missingBlock;
+                    currentCount++;
                 }
             }
 
