@@ -124,9 +124,7 @@ namespace BitSharp.Core.Builders
 
         public void AddBlock(ChainedBlock chainedBlock)
         {
-            if (this.chainStateMonitor != null)
-                this.chainStateMonitor.Start();
-            try
+            using (this.chainStateMonitor != null ? this.chainStateMonitor.Start() : null)
             {
                 this.BeginTransaction();
                 try
@@ -141,11 +139,11 @@ namespace BitSharp.Core.Builders
                     // store block hash
                     this.chainStateBuilderStorage.BlockHash = chainedBlock.Hash;
 
-                    //// validate the block
-                    //this.Stats.validateStopwatch.Start();
-                    //new MethodTimer(false).Time("ValidateBlock", () =>
-                    //    this.rules.ValidateBlock(chainedBlock, this));
-                    //this.Stats.validateStopwatch.Stop();
+                    // validate the block
+                    this.Stats.validateStopwatch.Start();
+                    new MethodTimer(false).Time("ValidateBlock", () =>
+                        this.rules.ValidateBlock(chainedBlock, this));
+                    this.Stats.validateStopwatch.Stop();
 
                     // calculate the new block utxo, double spends will be checked for
                     long txCount = 0, inputCount = 0;
@@ -197,18 +195,11 @@ namespace BitSharp.Core.Builders
                     throw;
                 }
             }
-            finally
-            {
-                if (this.chainStateMonitor != null)
-                    this.chainStateMonitor.Stop();
-            }
         }
 
         public void RollbackBlock(ChainedBlock chainedBlock)
         {
-            if (this.chainStateMonitor != null)
-                this.chainStateMonitor.Start();
-            try
+            using (this.chainStateMonitor != null ? this.chainStateMonitor.Start() : null)
             {
                 this.BeginTransaction();
                 try
@@ -253,11 +244,6 @@ namespace BitSharp.Core.Builders
 
                     throw;
                 }
-            }
-            finally
-            {
-                if (this.chainStateMonitor != null)
-                    this.chainStateMonitor.Stop();
             }
         }
 

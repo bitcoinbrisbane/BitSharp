@@ -84,6 +84,7 @@
     <Compile Include="ConsoleLoggingModule.cs" />
     <Compile Include="LookAhead.cs" />
     <Compile Include="ProducerConsumer.cs" />
+    <Compile Include="ProducerConsumerWorker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MethodTimer.cs" />
     <Compile Include="ReadOnlyDictionaryOfDictionary.cs" />
