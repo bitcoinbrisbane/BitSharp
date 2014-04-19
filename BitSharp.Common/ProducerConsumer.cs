@@ -53,17 +53,21 @@ namespace BitSharp.Common
                 T value;
                 while (this.queue.TryDequeue(out value))
                 {
+                    if (this.queue.Count > 0)
+                        this.putEvent.Set();
+
                     yield return value;
                 }
 
                 if (this.completedAdding && this.queue.Count == 0)
                 {
                     this.completed = true;
+                    this.putEvent.Set();
                     this.completedEvent.Set();
                     yield break;
                 }
 
-                this.putEvent.WaitOne(1);
+                this.putEvent.WaitOne(1000);
             }
         }
 
