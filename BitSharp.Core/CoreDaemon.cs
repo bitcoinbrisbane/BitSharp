@@ -138,6 +138,8 @@ namespace BitSharp.Core
                 {
                     this.utxoScanWorker.NotifyWork();
 
+                    //TODO once fully synced, this should save off the immutable snapshot immediately
+                    //TODO this will allow there to always be an active chain state once synced
                     this.chainStateLock.DoWrite(() =>
                         this.chainState = null);
 
