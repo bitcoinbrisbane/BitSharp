@@ -46,5 +46,10 @@ namespace BitSharp.Core.Domain
             var other = (UnspentTx)obj;
             return other.confirmedBlockHash == this.confirmedBlockHash && other.outputStates.Equals(this.outputStates);
         }
+
+        public override int GetHashCode()
+        {
+            return this.confirmedBlockHash.GetHashCode() ^ this.outputStates.GetHashCode();
+        }
     }
 }

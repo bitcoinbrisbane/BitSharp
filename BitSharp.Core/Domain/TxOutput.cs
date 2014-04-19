@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Data.Linq;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -41,6 +42,11 @@ namespace BitSharp.Core.Domain
 
             var other = (TxOutput)obj;
             return other._value == this._value && other._scriptPublicKey.SequenceEqual(this._scriptPublicKey);
+        }
+
+        public override int GetHashCode()
+        {
+            return this._value.GetHashCode() ^ new Binary(_scriptPublicKey.ToArray()).GetHashCode();
         }
     }
 }

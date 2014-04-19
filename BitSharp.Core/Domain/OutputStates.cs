@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Data.Linq;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -82,6 +83,11 @@ namespace BitSharp.Core.Domain
 
             var other = (OutputStates)obj;
             return other.bitArray.SequenceEqual(this.bitArray);
+        }
+
+        public override int GetHashCode()
+        {
+            return this.bitArray.Length.GetHashCode() ^ new Binary(this.bitArray.ToByteArray()).GetHashCode();
         }
     }
 }
