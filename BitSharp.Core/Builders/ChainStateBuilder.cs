@@ -30,12 +30,14 @@ namespace BitSharp.Core.Builders
     {
         private readonly Logger logger;
         private readonly SHA256Managed sha256;
-        private readonly ChainStateMonitor chainStateMonitor;
         private readonly IBlockchainRules rules;
         private readonly BlockHeaderCache blockHeaderCache;
         private readonly BlockCache blockCache;
         private readonly SpentTransactionsCache spentTransactionsCache;
         private readonly SpentOutputsCache spentOutputsCache;
+
+        private readonly ChainStateMonitor chainStateMonitor;
+        private readonly ScriptValidator scriptValidator;
 
         private bool inTransaction;
         private ChainBuilder chain;
@@ -48,16 +50,19 @@ namespace BitSharp.Core.Builders
 
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(ChainBuilder chain, Utxo parentUtxo, ChainStateMonitor chainStateMonitor, Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
+        public ChainStateBuilder(ChainBuilder chain, Utxo parentUtxo, Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
         {
             this.logger = logger;
             this.sha256 = new SHA256Managed();
-            this.chainStateMonitor = chainStateMonitor;
             this.rules = rules;
             this.blockHeaderCache = blockHeaderCache;
             this.blockCache = blockCache;
             this.spentTransactionsCache = spentTransactionsCache;
             this.spentOutputsCache = spentOutputsCache;
+
+            this.chainStateMonitor = new ChainStateMonitor(this.logger);
+            this.scriptValidator = new ScriptValidator(this.logger, this.rules);
+            this.chainStateMonitor.Subscribe(this.scriptValidator);
 
             this.chain = chain;
             this.chainStateBuilderStorage = kernel.Get<IChainStateBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo.Storage));
@@ -124,7 +129,8 @@ namespace BitSharp.Core.Builders
 
         public void AddBlock(ChainedBlock chainedBlock)
         {
-            using (this.chainStateMonitor != null ? this.chainStateMonitor.Start() : null)
+            using (this.chainStateMonitor.Start())
+            using (this.scriptValidator.Start())
             {
                 this.BeginTransaction();
                 try
@@ -153,44 +159,52 @@ namespace BitSharp.Core.Builders
                     // collect rollback informatino and store it
                     this.SaveRollbackInformation(chainedBlock.Hash, this.spentTransactionsCache, this.spentOutputsCache);
 
-                    // flush utxo progress
-                    //this.Utxo.Flush();
+                    // wait for monitor events to finish
+                    this.chainStateMonitor.CompleteAdding();
+                    this.chainStateMonitor.WaitToComplete();
+
+                    // check script validation results
+                    this.scriptValidator.CompleteAdding();
+                    this.scriptValidator.WaitToComplete();
+                    if (this.scriptValidator.ValidationExceptions.Count > 0)
+                    {
+                        if (!MainnetRules.IgnoreScriptErrors)
+                            throw new AggregateException(this.scriptValidator.ValidationExceptions);
+                        else
+                            this.logger.Info("Ignoring script error in block: {0}".Format2(chainedBlock.Hash));
+                    }
+
+                    // commit the chain state
+                    this.CommitTransaction();
+
+                    // MONITOR: CommitBlock
+                    if (this.chainStateMonitor != null)
+                        this.chainStateMonitor.CommitBlock(chainedBlock.ChainedHeader);
 
                     // blockchain processing statistics
                     this.Stats.blockCount++;
                     this.Stats.txCount += txCount;
                     this.Stats.inputCount += inputCount;
 
-                    var txInterval = TimeSpan.FromSeconds(15);
-                    if (DateTime.UtcNow - this.Stats.lastLogTime >= txInterval)
+                    var logInterval = TimeSpan.FromSeconds(15);
+                    if (DateTime.UtcNow - this.Stats.lastLogTime >= logInterval)
                     {
                         this.LogBlockchainProgress();
                         this.Stats.lastLogTime = DateTime.UtcNow;
-                    }
-
-                    this.CommitTransaction();
-
-                    if (this.chainStateMonitor != null)
-                    {
-                        // MONITOR: CommitBlock
-                        this.chainStateMonitor.CommitBlock(chainedBlock.ChainedHeader);
-
-                        this.chainStateMonitor.CompleteAdding();
-                        this.chainStateMonitor.WaitToComplete();
                     }
                 }
                 catch (Exception)
                 {
                     this.RollbackTransaction();
 
+                    // MONITOR: RollbackBlock
                     if (this.chainStateMonitor != null)
-                    {
-                        // MONITOR: RollbackBlock
                         this.chainStateMonitor.RollbackBlock(chainedBlock.ChainedHeader);
 
-                        this.chainStateMonitor.CompleteAdding();
-                        this.chainStateMonitor.WaitToComplete();
-                    }
+                    this.chainStateMonitor.CompleteAdding();
+                    this.chainStateMonitor.WaitToComplete();
+                    this.scriptValidator.CompleteAdding();
+                    this.scriptValidator.WaitToComplete();
 
                     throw;
                 }
@@ -199,7 +213,7 @@ namespace BitSharp.Core.Builders
 
         public void RollbackBlock(ChainedBlock chainedBlock)
         {
-            using (this.chainStateMonitor != null ? this.chainStateMonitor.Start() : null)
+            using (this.chainStateMonitor.Start())
             {
                 this.BeginTransaction();
                 try
@@ -217,30 +231,27 @@ namespace BitSharp.Core.Builders
                     // rollback the utxo
                     this.RollbackUtxo(chainedBlock);
 
-                    // commit
+                    // wait for monitor events to finish
+                    this.chainStateMonitor.CompleteAdding();
+                    this.chainStateMonitor.WaitToComplete();
+
+                    // commit the chain state
                     this.CommitTransaction();
 
+                    // MONITOR: CommitBlock
                     if (this.chainStateMonitor != null)
-                    {
-                        // MONITOR: CommitBlock
                         this.chainStateMonitor.CommitBlock(chainedBlock.ChainedHeader);
-
-                        this.chainStateMonitor.CompleteAdding();
-                        this.chainStateMonitor.WaitToComplete();
-                    }
                 }
                 catch (Exception)
                 {
                     this.RollbackTransaction();
 
-                    if (this.chainStateMonitor != null)
-                    {
-                        // MONITOR: RollbackBlock
-                        this.chainStateMonitor.RollbackBlock(chainedBlock.ChainedHeader);
+                    this.chainStateMonitor.CompleteAdding();
+                    this.chainStateMonitor.WaitToComplete();
 
-                        this.chainStateMonitor.CompleteAdding();
-                        this.chainStateMonitor.WaitToComplete();
-                    }
+                    // MONITOR: RollbackBlock
+                    if (this.chainStateMonitor != null)
+                        this.chainStateMonitor.RollbackBlock(chainedBlock.ChainedHeader);
 
                     throw;
                 }
@@ -344,7 +355,7 @@ namespace BitSharp.Core.Builders
                     var input = tx.Inputs[inputIndex];
                     inputCount++;
 
-                    this.Spend(input, chainedBlock.ChainedHeader);
+                    this.Spend(txIndex, tx, inputIndex, input, chainedBlock.ChainedHeader);
                 }
 
                 this.Mint(tx, chainedBlock.ChainedHeader, isCoinbase: false);
@@ -423,7 +434,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        public void Spend(TxInput input, ChainedHeader chainedHeader)
+        public void Spend(int txIndex, Transaction tx, int inputIndex, TxInput input, ChainedHeader chainedHeader)
         {
             UnspentTx unspentTx;
             if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx)
@@ -479,7 +490,7 @@ namespace BitSharp.Core.Builders
 
             // MONITOR: SpendTxOutput
             if (this.chainStateMonitor != null)
-                this.chainStateMonitor.SpendTxOutput(ChainPosition.Fake(), input, input.PreviousTxOutputKey, prevOutput, GetOutputScripHash(prevOutput));
+                this.chainStateMonitor.SpendTxOutput(new ChainPosition(chainedHeader.Hash, txIndex, tx.Hash, inputIndex, -1), chainedHeader, tx, input, input.PreviousTxOutputKey, prevOutput, GetOutputScripHash(prevOutput));
         }
 
         //TODO with the rollback information that's now being stored, rollback could be down without needing the block
@@ -631,36 +642,6 @@ namespace BitSharp.Core.Builders
         private UInt256 GetOutputScripHash(TxOutput txOutput)
         {
             return new UInt256(this.sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
-        }
-
-        private void ValidateTransactionScripts(ChainedBlock chainedBlock, ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>> txInputQueue)
-        {
-            var exceptions = new ConcurrentBag<Exception>();
-
-            Parallel.ForEach(
-                txInputQueue.GetConsumingEnumerable(),
-                new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
-                (tuple, loopState) =>
-                {
-                    try
-                    {
-                        this.rules.ValidationTransactionScript(chainedBlock, tuple.Item1, tuple.Item2, tuple.Item3, tuple.Item4, tuple.Item5);
-                    }
-                    catch (Exception e)
-                    {
-                        exceptions.Add(e);
-                        if (!MainnetRules.IgnoreScriptErrors)
-                            loopState.Stop();
-                    }
-                });
-
-            if (exceptions.Count > 0)
-            {
-                if (!MainnetRules.IgnoreScriptErrors)
-                    throw new AggregateException(exceptions.ToArray());
-                else
-                    this.logger.Debug("Ignoring script error in block: {0}".Format2(chainedBlock.Hash));
-            }
         }
 
         private void SaveRollbackInformation(UInt256 blockHash, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)

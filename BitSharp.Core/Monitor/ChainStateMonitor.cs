@@ -15,7 +15,7 @@ namespace BitSharp.Core.Monitor
         private readonly ConcurrentSet<IChainStateVisitor> visitors;
 
         public ChainStateMonitor(Logger logger)
-            : base("ChainStateMonitor", logger: logger)
+            : base("ChainStateMonitor", isConcurrent: false, logger: logger)
         {
             this.visitors = new ConcurrentSet<IChainStateVisitor>();
         }
@@ -67,12 +67,12 @@ namespace BitSharp.Core.Monitor
             });
         }
 
-        public void SpendTxOutput(ChainPosition chainPosition, TxInput txInput, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash)
+        public void SpendTxOutput(ChainPosition chainPosition, ChainedHeader chainedHeader, Transaction tx, TxInput txInput, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash)
         {
             this.Add(() =>
             {
                 foreach (var visitor in this.visitors)
-                    visitor.SpendTxOutput(chainPosition, txInput, txOutputKey, txOutput, outputScriptHash);
+                    visitor.SpendTxOutput(chainPosition, chainedHeader, tx, txInput, txOutputKey, txOutput, outputScriptHash);
             });
         }
 
@@ -132,20 +132,22 @@ namespace BitSharp.Core.Monitor
 
         public void CommitBlock(ChainedHeader chainedHeader)
         {
-            this.Add(() =>
-            {
+            //TODO
+            //this.Add(() =>
+            //{
                 foreach (var visitor in this.visitors)
                     visitor.CommitBlock(chainedHeader);
-            });
+            //});
         }
 
         public void RollbackBlock(ChainedHeader chainedHeader)
         {
-            this.Add(() =>
-            {
+            //TODO
+            //this.Add(() =>
+            //{
                 foreach (var visitor in this.visitors)
                     visitor.RollbackBlock(chainedHeader);
-            });
+            //});
         }
 
         protected override void ConsumeItem(Action action)

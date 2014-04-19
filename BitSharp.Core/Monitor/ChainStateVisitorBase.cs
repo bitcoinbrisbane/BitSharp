@@ -19,7 +19,7 @@ namespace BitSharp.Core.Monitor
 
         public virtual void MintTxOutput(ChainPosition chainPosition, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash, bool isCoinbase) { }
 
-        public virtual void SpendTxOutput(ChainPosition chainPosition, TxInput txInput, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash) { }
+        public virtual void SpendTxOutput(ChainPosition chainPosition, ChainedHeader chainedHeader, Transaction tx, TxInput txInput, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash) { }
 
         public virtual void AfterAddTransaction(ChainPosition chainPosition, Transaction tx) { }
 

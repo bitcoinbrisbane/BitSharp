@@ -53,13 +53,14 @@ namespace BitSharp.Core.Test.Builders
             kernel.Rebind<IChainStateBuilderStorage>().ToConstant(memoryChainStateBuilderStorage);
 
             // initialize utxo builder
-            var chainStateBuilder = new ChainStateBuilder(null, parentUtxo, null, LogManager.CreateNullLogger(), kernel, null, null, null, null, null);
+            var chainStateBuilder = new ChainStateBuilder(null, parentUtxo, LogManager.CreateNullLogger(), kernel, null, null, null, null, null);
 
             // create an input to spend the unspent transaction's first output
-            var input1 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
+            var input0 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
+            var tx0 = new Transaction(0, ImmutableArray.Create(input0), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            chainStateBuilder.Spend(input1, chainedHeader);
+            chainStateBuilder.Spend(0, tx0, 0, input0, chainedHeader);
 
             // verify utxo storage
             Assert.IsTrue(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
@@ -69,10 +70,11 @@ namespace BitSharp.Core.Test.Builders
             Assert.IsTrue(memoryChainStateBuilderStorage.UnspentTransactionsDictionary[txHash].OutputStates[2] == OutputState.Unspent);
 
             // create an input to spend the unspent transaction's second output
-            var input2 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 1), ImmutableArray.Create<byte>(), 0);
+            var input1 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 1), ImmutableArray.Create<byte>(), 0);
+            var tx1 = new Transaction(0, ImmutableArray.Create(input1), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            chainStateBuilder.Spend(input2, chainedHeader);
+            chainStateBuilder.Spend(1, tx1, 1, input1, chainedHeader);
 
             // verify utxo storage
             Assert.IsTrue(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
@@ -82,10 +84,11 @@ namespace BitSharp.Core.Test.Builders
             Assert.IsTrue(memoryChainStateBuilderStorage.UnspentTransactionsDictionary[txHash].OutputStates[2] == OutputState.Unspent);
 
             // create an input to spend the unspent transaction's third output
-            var input3 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 2), ImmutableArray.Create<byte>(), 0);
+            var input2 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 2), ImmutableArray.Create<byte>(), 0);
+            var tx2 = new Transaction(0, ImmutableArray.Create(input2), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            chainStateBuilder.Spend(input3, chainedHeader);
+            chainStateBuilder.Spend(2, tx2, 2, input2, chainedHeader);
 
             // verify utxo storage
             Assert.IsFalse(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
@@ -117,19 +120,20 @@ namespace BitSharp.Core.Test.Builders
             kernel.Rebind<IChainStateBuilderStorage>().ToConstant(memoryChainStateBuilderStorage);
 
             // initialize utxo builder
-            var chainStateBuilder = new ChainStateBuilder(null, parentUtxo, null, LogManager.CreateNullLogger(), kernel, null, null, null, null, null);
+            var chainStateBuilder = new ChainStateBuilder(null, parentUtxo, LogManager.CreateNullLogger(), kernel, null, null, null, null, null);
 
             // create an input to spend the unspent transaction
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
+            var tx = new Transaction(0, ImmutableArray.Create(input), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            chainStateBuilder.Spend(input, chainedHeader);
+            chainStateBuilder.Spend(0, tx, 0, input, chainedHeader);
 
             // verify utxo storage
             Assert.IsFalse(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
 
             // attempt to spend the input again
-            chainStateBuilder.Spend(input, chainedHeader);
+            chainStateBuilder.Spend(0, tx, 0, input, chainedHeader);
 
             // validation exception should be thrown
         }

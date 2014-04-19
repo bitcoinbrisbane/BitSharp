@@ -71,7 +71,7 @@ namespace BitSharp.Core.Wallet
             this.ScanForEntry(chainPosition, isCoinbase ? EnumWalletEntryType.Mine : EnumWalletEntryType.Receive, txOutput, outputScriptHash);
         }
 
-        public override void SpendTxOutput(ChainPosition chainPosition, TxInput txInput, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash)
+        public override void SpendTxOutput(ChainPosition chainPosition, ChainedHeader chainedHeader, Transaction tx, TxInput txInput, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash)
         {
             this.ScanForEntry(chainPosition, EnumWalletEntryType.Spend, txOutput, outputScriptHash);
         }

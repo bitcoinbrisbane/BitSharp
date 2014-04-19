@@ -9,11 +9,15 @@ namespace BitSharp.Common
 {
     public abstract class ProducerConsumerWorker<T> : IDisposable
     {
-        private WorkerMethod queueWorker;
+        private readonly string name;
+        private readonly bool isConcurrent;
+        private readonly WorkerMethod queueWorker;
         private ProducerConsumer<T> queue;
 
-        public ProducerConsumerWorker(string name, Logger logger)
+        public ProducerConsumerWorker(string name, bool isConcurrent, Logger logger)
         {
+            this.name = name;
+            this.isConcurrent = isConcurrent;
             this.queueWorker = new WorkerMethod(name, WorkAction, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: logger);
             this.queueWorker.Start();
         }
@@ -23,6 +27,8 @@ namespace BitSharp.Common
             this.SubDispose();
             this.queueWorker.Dispose();
         }
+
+        public string Name { get { return this.name; } }
 
         public IDisposable Start()
         {
@@ -77,8 +83,18 @@ namespace BitSharp.Common
             if (this.queue == null)
                 throw new InvalidOperationException();
 
-            foreach (var value in this.queue.GetConsumingEnumerable())
-                ConsumeItem(value);
+            if (this.isConcurrent)
+            {
+                Parallel.ForEach(
+                    this.queue.GetConsumingEnumerable(),
+                    new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
+                    value => ConsumeItem(value));
+            }
+            else
+            {
+                foreach (var value in this.queue.GetConsumingEnumerable())
+                    ConsumeItem(value);
+            }
         }
 
         private sealed class Stopper : IDisposable

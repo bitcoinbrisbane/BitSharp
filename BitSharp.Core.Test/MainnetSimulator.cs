@@ -58,6 +58,7 @@ namespace BitSharp.Core.Test
 
             // add rules module
             this.kernel.Load(new RulesModule(RulesEnum.MainNet));
+            MainnetRules.IgnoreScriptErrors = true;
 
             // initialize the blockchain daemon
             this.kernel.Bind<CoreDaemon>().ToSelf().InSingletonScope();

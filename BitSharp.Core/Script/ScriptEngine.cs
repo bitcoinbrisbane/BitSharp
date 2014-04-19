@@ -272,7 +272,7 @@ Verifying script for block {0}, transaction {1}, input {2}
                             else
                             {
                                 var message = string.Format("Invalid operation in tx {0} input {1}: {2} {3}", tx.Hash.ToHexNumberString(), inputIndex, new[] { opByte }.ToHexNumberString(), OpName(opByte));
-                                this.logger.Warn(message);
+                                //this.logger.Warn(message);
                                 throw new Exception(message);
                             }
                             break;
