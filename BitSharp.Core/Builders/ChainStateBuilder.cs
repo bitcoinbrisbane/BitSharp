@@ -85,6 +85,8 @@ namespace BitSharp.Core.Builders
 
             if (this.chainStateMonitor != null)
                 this.chainStateMonitor.Dispose();
+            if (this.scriptValidator != null)
+                this.scriptValidator.Dispose();
 
             this.chainStateBuilderStorage.Dispose();
         }
