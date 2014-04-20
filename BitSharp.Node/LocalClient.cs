@@ -227,8 +227,7 @@ namespace BitSharp.Node
         private void Startup()
         {
             this.logger.Info("LocalClients starting up");
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
+            var stopwatch = Stopwatch.StartNew();
 
             // start listening for incoming peers
             StartListening();

@@ -108,7 +108,7 @@ namespace BitSharp.Core.Workers
                     var direction = pathElement.Item1;
                     var chainedBlock = pathElement.Item2;
 
-                    var blockStopwatch = new Stopwatch().Started();
+                    var blockStopwatch = Stopwatch.StartNew();
                     if (direction > 0)
                     {
                         this.chainStateBuilder.AddBlock(chainedBlock);

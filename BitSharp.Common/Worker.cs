@@ -199,11 +199,9 @@ namespace BitSharp.Common
                 var working = false;
                 try
                 {
-                    var totalTime = new Stopwatch();
+                    var totalTime = Stopwatch.StartNew();
                     var workerTime = new Stopwatch();
                     var lastReportTime = DateTime.Now;
-
-                    totalTime.Start();
 
                     while (!this.isDisposing)
                     {

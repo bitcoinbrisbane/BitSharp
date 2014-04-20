@@ -72,8 +72,7 @@ namespace BitSharp.Common
         {
             if (IsEnabled)
             {
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
+                var stopwatch = Stopwatch.StartNew();
 
                 action();
 
@@ -90,8 +89,7 @@ namespace BitSharp.Common
         {
             if (IsEnabled)
             {
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
+                var stopwatch = Stopwatch.StartNew();
 
                 var result = func();
 

@@ -51,8 +51,7 @@ namespace BitSharp.Core.Test
 
             this.logger.Debug("Starting mining: {0}".Format2(DateTime.Now.ToString("hh:mm:ss")));
 
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
+            var stopwatch = Stopwatch.StartNew();
 
             Parallel.For(
                 start, finish,

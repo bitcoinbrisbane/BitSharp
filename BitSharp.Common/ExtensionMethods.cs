@@ -487,11 +487,5 @@ namespace BitSharp.Common.ExtensionMethods
         {
             return sha256.ComputeHash(sha256.ComputeHash(buffer));
         }
-
-        public static Stopwatch Started(this Stopwatch stopwatch)
-        {
-            stopwatch.Start();
-            return stopwatch;
-        }
     }
 }

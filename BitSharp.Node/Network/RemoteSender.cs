@@ -159,8 +159,7 @@ namespace BitSharp.Node.Network
                 {
                     using (var stream = new NetworkStream(this.socket))
                     {
-                        var stopwatch = new Stopwatch();
-                        stopwatch.Start();
+                        var stopwatch = Stopwatch.StartNew();
 
                         using (var byteStream = new MemoryStream())
                         {

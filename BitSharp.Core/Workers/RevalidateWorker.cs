@@ -32,8 +32,7 @@ namespace BitSharp.Core.Workers
             Block genesisBlock = null;
             throw new NotImplementedException();
 
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
+            var stopwatch = Stopwatch.StartNew();
             try
             {
                 //TODO delete corrupted data? could get stuck in a fail-loop on the winning chain otherwise

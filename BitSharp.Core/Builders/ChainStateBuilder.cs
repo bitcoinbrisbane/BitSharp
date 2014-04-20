@@ -71,7 +71,6 @@ namespace BitSharp.Core.Builders
             this.spentOutputs = ImmutableList.CreateBuilder<KeyValuePair<TxOutputKey, TxOutput>>();
 
             this.stats = new BuilderStats();
-            this.stats.durationStopwatch.Start();
         }
 
         ~ChainStateBuilder()
@@ -710,7 +709,7 @@ namespace BitSharp.Core.Builders
 
         public sealed class BuilderStats : IDisposable
         {
-            public Stopwatch durationStopwatch = new Stopwatch();
+            public Stopwatch durationStopwatch = Stopwatch.StartNew();
             public Stopwatch validateStopwatch = new Stopwatch();
 
             public long blockCount;

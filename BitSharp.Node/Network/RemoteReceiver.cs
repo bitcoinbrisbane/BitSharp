@@ -112,8 +112,7 @@ namespace BitSharp.Node.Network
 
         private void HandleMessage(byte[] buffer, int bytesReceived)
         {
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
+            var stopwatch = Stopwatch.StartNew();
 
             if (bytesReceived == 0)
             {

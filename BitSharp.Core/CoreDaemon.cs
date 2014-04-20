@@ -369,8 +369,7 @@ namespace BitSharp.Core
         {
             throw new NotImplementedException();
 
-            //var stopwatch = new Stopwatch();
-            //stopwatch.Start();
+            //var stopwatch = Stopwatch.StartNew();
 
             ////TODO
             //Tuple<BlockchainKey, BlockchainMetadata> winner = null;
@@ -427,8 +426,7 @@ namespace BitSharp.Core
             //var chainStateLocal = this.chainState;
             //if (chainStateLocal != null && this.Rules.GenesisBlock != null)
             //{
-            //    var stopwatch = new Stopwatch();
-            //    stopwatch.Start();
+            //    var stopwatch = Stopwatch.StartNew();
 
             //    // revalidate current blockchain
             //    try
@@ -461,8 +459,7 @@ namespace BitSharp.Core
         {
             throw new NotImplementedException();
 
-            //var stopwatch = new Stopwatch();
-            //stopwatch.Start();
+            //var stopwatch = Stopwatch.StartNew();
 
             //// grab a snapshot
             //var chainStateLocal = this.chainState;
