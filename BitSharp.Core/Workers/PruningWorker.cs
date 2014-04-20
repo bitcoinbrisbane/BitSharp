@@ -69,6 +69,9 @@ namespace BitSharp.Core.Workers
                 case PruningMode.PreserveUnspentTranscations:
                     for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
                     {
+                        // cooperative loop
+                        this.ThrowIfCancelled();
+
                         var block = chain.Blocks[i];
 
                         IImmutableList<KeyValuePair<UInt256, SpentTx>> spentTransactions;
@@ -81,6 +84,9 @@ namespace BitSharp.Core.Workers
 
                     for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
                     {
+                        // cooperative loop
+                        this.ThrowIfCancelled();
+
                         var block = chain.Blocks[i];
 
                         this.blockTxHashesCache.TryRemove(block.Hash);
@@ -92,6 +98,9 @@ namespace BitSharp.Core.Workers
                 case PruningMode.SpentOnly:
                     for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
                     {
+                        // cooperative loop
+                        this.ThrowIfCancelled();
+                        
                         var block = chain.Blocks[i];
 
                         this.spentTransactionsCache.TryRemove(block.Hash);
@@ -102,6 +111,9 @@ namespace BitSharp.Core.Workers
                 case PruningMode.Full:
                     for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
                     {
+                        // cooperative loop
+                        this.ThrowIfCancelled();
+
                         var block = chain.Blocks[i];
 
                         IImmutableList<UInt256> blockTxHashes;
@@ -114,6 +126,9 @@ namespace BitSharp.Core.Workers
 
                     for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
                     {
+                        // cooperative loop
+                        this.ThrowIfCancelled();
+
                         var block = chain.Blocks[i];
 
                         this.blockTxHashesCache.TryRemove(block.Hash);

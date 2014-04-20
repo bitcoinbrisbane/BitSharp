@@ -58,10 +58,7 @@ namespace BitSharp.Common
 
         public TimeSpan MaxIdleTime { get; set; }
 
-        public bool IsStarted
-        {
-            get { return this.isStarted; }
-        }
+        public bool IsStarted { get { return this.isStarted; } }
 
         public void Start()
         {
@@ -181,6 +178,14 @@ namespace BitSharp.Common
             this.idleEvent.Wait();
         }
 
+        public void ThrowIfCancelled()
+        {
+            CheckDisposed();
+
+            if (!this.isStarted)
+                throw new OperationCanceledException();
+        }
+
         private void CheckDisposed()
         {
             if (this.isDisposing || this.isDisposed)
@@ -209,7 +214,7 @@ namespace BitSharp.Common
                         this.startEvent.Wait();
 
                         // cooperative loop
-                        if (!this.IsStarted)
+                        if (!this.isStarted)
                             continue;
 
                         // delay for the requested wait time, unless forced
@@ -222,7 +227,7 @@ namespace BitSharp.Common
                             this.notifyEvent.WaitOne(this.MaxIdleTime - this.MinIdleTime); // subtract time already spent waiting
 
                         // cooperative loop
-                        if (!this.IsStarted)
+                        if (!this.isStarted)
                             continue;
 
                         // notify that work is starting

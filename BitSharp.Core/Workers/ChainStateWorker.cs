@@ -100,8 +100,8 @@ namespace BitSharp.Core.Workers
                 foreach (var pathElement in ChainedBlockLookAhead(this.chainStateBuilder.Chain.NavigateTowards(this.getTargetChain), lookAhead: 1))
                 {
                     // cooperative loop
-                    if (!this.IsStarted)
-                        break;
+                    this.ThrowIfCancelled();
+
                     didWork = true;
 
                     // get block and metadata for next link in blockchain
@@ -164,8 +164,7 @@ namespace BitSharp.Core.Workers
                         try
                         {
                             // cooperative loop
-                            if (!this.IsStarted)
-                                throw new OperationCanceledException();
+                            this.ThrowIfCancelled();
 
                             var direction = chainedHeaderTuple.Item1;
 

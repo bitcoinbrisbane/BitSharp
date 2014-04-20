@@ -73,9 +73,11 @@ namespace BitSharp.Core.Workers
         protected override void WorkAction()
         {
             BlockHeader blockHeader;
-            // cooperative loop
-            while (this.IsStarted && this.blockHeaders.TryDequeue(out blockHeader))
+            while (this.blockHeaders.TryDequeue(out blockHeader))
             {
+                // cooperative loop
+                this.ThrowIfCancelled();
+
                 if (!this.chainedHeaderCache.ContainsKey(blockHeader.Hash))
                 {
                     ChainedHeader prevChainedHeader;

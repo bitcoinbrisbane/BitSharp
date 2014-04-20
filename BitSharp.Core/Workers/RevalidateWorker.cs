@@ -68,8 +68,7 @@ namespace BitSharp.Core.Workers
                 for (var height = 0; height < blockchain.Blocks.Count; height++)
                 {
                     // cooperative loop
-                    if (!this.IsStarted)
-                        break;
+                    this.ThrowIfCancelled();
 
                     // get the current link in the chain
                     var chainedHeader = blockchain.Blocks[height];
