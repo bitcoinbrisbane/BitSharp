@@ -22,7 +22,7 @@ namespace BitSharp.Node.Workers
     public class BlockRequestWorker : Worker
     {
         private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromMinutes(5);
-        private static readonly TimeSpan MISSING_STALE_REQUEST_TIME = TimeSpan.FromSeconds(15);
+        private static readonly TimeSpan MISSING_STALE_REQUEST_TIME = TimeSpan.FromSeconds(5);
 
         private readonly Logger logger;
         private readonly LocalClient localClient;
@@ -45,7 +45,6 @@ namespace BitSharp.Node.Workers
 
         private int targetChainLookAhead;
         private int criticalTargetChainLookAhead;
-        private DateTime targetChainLookAheadTime;
 
         private readonly WorkerMethod flushWorker;
         private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
@@ -136,11 +135,7 @@ namespace BitSharp.Node.Workers
 
         private void UpdateLookAhead()
         {
-            // update periodically
-            if (DateTime.UtcNow - this.targetChainLookAheadTime <= TimeSpan.FromSeconds(5))
-                return;
-            else
-                this.targetChainLookAheadTime = DateTime.UtcNow;
+            //TODO this needs to work properly when the internet connection is slower than blocks can be processed
 
             // get average block request time
             var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
