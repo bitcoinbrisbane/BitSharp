@@ -22,7 +22,7 @@ namespace BitSharp.Node.Workers
     public class BlockRequestWorker : Worker
     {
         private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromMinutes(5);
-        private static readonly TimeSpan MISSING_STALE_REQUEST_TIME = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan MISSING_STALE_REQUEST_TIME = TimeSpan.FromSeconds(15);
 
         private readonly Logger logger;
         private readonly LocalClient localClient;
@@ -136,25 +136,34 @@ namespace BitSharp.Node.Workers
         private void UpdateLookAhead()
         {
             //TODO this needs to work properly when the internet connection is slower than blocks can be processed
+            
+            var blockProcessingTime = this.blockchainDaemon.AverageBlockProcessingTime();
+            if (blockProcessingTime == TimeSpan.Zero)
+            {
+                this.targetChainLookAhead = 1;
+                this.criticalTargetChainLookAhead = 1;
+            }
+            else
+            {
+                // get average block request time
+                var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
 
-            // get average block request time
-            var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
+                // determine target chain look ahead
+                var lookAheadTime = avgBlockRequestTime + TimeSpan.FromSeconds(30);
+                this.targetChainLookAhead = 1 + (int)(lookAheadTime.TotalSeconds / blockProcessingTime.TotalSeconds);
 
-            // determine target chain look ahead
-            var lookAheadTime = avgBlockRequestTime + TimeSpan.FromSeconds(30);
-            this.targetChainLookAhead = 1 + (int)this.blockchainDaemon.GetBlockRate(lookAheadTime);
+                // determine critical target chain look ahead
+                var criticalLookAheadTime = TimeSpan.FromSeconds(5);
+                this.criticalTargetChainLookAhead = 1 + (int)(criticalLookAheadTime.TotalSeconds / blockProcessingTime.TotalSeconds);
 
-            // determine critical target chain look ahead
-            var criticalLookAheadTime = TimeSpan.FromSeconds(5);
-            this.criticalTargetChainLookAhead = 1 + (int)this.blockchainDaemon.GetBlockRate(criticalLookAheadTime);
-
-            this.logger.Debug(new string('-', 80));
-            this.logger.Debug("Block Request Time: {0}".Format2(avgBlockRequestTime));
-            this.logger.Debug("Look Ahead: {0:#,##0}".Format2(this.targetChainLookAhead));
-            this.logger.Debug("Critical Look Ahead: {0:#,##0}".Format2(this.criticalTargetChainLookAhead));
-            this.logger.Debug("Missing Block Queue Count: {0:#,##0}".Format2(this.missingBlockQueue.Count));
-            this.logger.Debug("Block Request Count: {0:#,##0}".Format2(this.allBlockRequests.Count));
-            this.logger.Debug(new string('-', 80));
+                this.logger.Debug(new string('-', 80));
+                this.logger.Debug("Block Request Time: {0}".Format2(avgBlockRequestTime));
+                this.logger.Debug("Look Ahead: {0:#,##0}".Format2(this.targetChainLookAhead));
+                this.logger.Debug("Critical Look Ahead: {0:#,##0}".Format2(this.criticalTargetChainLookAhead));
+                this.logger.Debug("Missing Block Queue Count: {0:#,##0}".Format2(this.missingBlockQueue.Count));
+                this.logger.Debug("Block Request Count: {0:#,##0}".Format2(this.allBlockRequests.Count));
+                this.logger.Debug(new string('-', 80));
+            }
         }
 
         private void UpdateMissingBlockQueue()
