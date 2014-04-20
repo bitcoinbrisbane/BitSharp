@@ -57,8 +57,7 @@ namespace BitSharp.Node
         private readonly BlockRequestWorker blockRequestWorker;
         private readonly WorkerMethod statsWorker;
 
-        private Stopwatch messageStopwatch = new Stopwatch();
-        private int messageCount;
+        private RateMeasure messageRateMeasure;
 
         private int incomingCount;
         private ConcurrentSet<CandidatePeer> unconnectedPeers = new ConcurrentSet<CandidatePeer>();
@@ -85,6 +84,8 @@ namespace BitSharp.Node
             this.transactionCache = transactionCache;
             this.blockCache = blockCache;
             this.networkPeerCache = networkPeerCache;
+
+            this.messageRateMeasure = new RateMeasure();
 
             this.connectWorker = new WorkerMethod("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), this.logger);
             this.headersRequestWorker = kernel.Get<HeadersRequestWorker>(
@@ -130,8 +131,6 @@ namespace BitSharp.Node
             }
             this.blockRequestWorker.Start();
 
-            this.messageStopwatch.Start();
-            this.messageCount = 0;
             this.statsWorker.Start();
         }
 
@@ -143,6 +142,7 @@ namespace BitSharp.Node
 
             new IDisposable[]
             {
+                this.messageRateMeasure,
                 this.headersRequestWorker,
                 this.blockRequestWorker,
                 this.connectWorker,
@@ -218,10 +218,14 @@ namespace BitSharp.Node
 
         private void StatsWorker()
         {
-            this.logger.Info(string.Format("UNCONNECTED: {0,3}, PENDING: {1,3}, CONNECTED: {2,3}, BAD: {3,3}, INCOMING: {4,3}, MESSAGES/SEC: {5,6}", this.unconnectedPeers.Count, this.pendingPeers.Count, this.connectedPeers.Count, this.badPeers.Count, this.incomingCount, ((float)this.messageCount / ((float)this.messageStopwatch.ElapsedMilliseconds / 1000)).ToString("0")));
-
-            this.messageStopwatch.Restart();
-            this.messageCount = 0;
+            this.logger.Info(
+                "UNCONNECTED: {0,3}, PENDING: {1,3}, CONNECTED: {2,3}, BAD: {3,3}, INCOMING: {4,3}, MESSAGES/SEC: {5,6:#,##0}".Format2(
+                /*0*/ this.unconnectedPeers.Count,
+                /*1*/ this.pendingPeers.Count,
+                /*2*/ this.connectedPeers.Count,
+                /*3*/ this.badPeers.Count,
+                /*4*/ this.incomingCount,
+                /*5*/ this.messageRateMeasure.GetAverage(TimeSpan.FromSeconds(1))));
         }
 
         private void Startup()
@@ -478,7 +482,7 @@ namespace BitSharp.Node
 
         private void OnMessage(Message message)
         {
-            Interlocked.Increment(ref this.messageCount);
+            this.messageRateMeasure.Tick();
         }
 
         private void OnInventoryVectors(ImmutableArray<InventoryVector> invVectors)
