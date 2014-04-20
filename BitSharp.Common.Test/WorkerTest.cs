@@ -84,7 +84,44 @@ namespace BitSharp.Common.Test
         }
 
         [TestMethod]
-        public void TestWorkAction()
+        public void TestNotifyWork()
+        {
+            // prepare workAction call tracking
+            var callEvent = new AutoResetEvent(false);
+            Action workAction = () => callEvent.Set();
+
+            // initialize worker
+            using (var worker = new MockWorker(workAction))
+            {
+                // verify workAction has not been called
+                var wasCalled = callEvent.WaitOne(10);
+                Assert.IsFalse(wasCalled);
+
+                // start worker
+                worker.Start();
+
+                // verify workAction has not been called
+                wasCalled = callEvent.WaitOne(10);
+                Assert.IsFalse(wasCalled);
+
+                // notify worker
+                worker.NotifyWork();
+
+                // verify workAction has been called
+                wasCalled = callEvent.WaitOne(10);
+                Assert.IsTrue(wasCalled);
+
+                // stop worker
+                worker.Stop();
+
+                // verify workAction has not been called
+                wasCalled = callEvent.WaitOne(10);
+                Assert.IsFalse(wasCalled);
+            }
+        }
+
+        [TestMethod]
+        public void TestStartNotified()
         {
             // prepare workAction call tracking
             var callEvent = new AutoResetEvent(false);
@@ -109,17 +146,6 @@ namespace BitSharp.Common.Test
 
                 // verify workAction has been called
                 wasCalled = callEvent.WaitOne(1000);
-                Assert.IsTrue(wasCalled);
-
-                // without notifying worker, verify workAction has not been called
-                wasCalled = callEvent.WaitOne(10);
-                Assert.IsFalse(wasCalled);
-
-                // notify worker again
-                worker.NotifyWork();
-
-                // verify workAction has been called
-                wasCalled = callEvent.WaitOne(10);
                 Assert.IsTrue(wasCalled);
 
                 // stop worker
