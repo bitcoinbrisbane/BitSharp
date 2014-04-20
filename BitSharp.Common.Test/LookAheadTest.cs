@@ -30,6 +30,28 @@ namespace BitSharp.Common.Test
         }
 
         [TestMethod]
+        public void TestConsumerException()
+        {
+            var expectedException = new Exception();
+            using (var waitEvent = new ManualResetEventSlim())
+            {
+                try
+                {
+                    foreach (var value in Enumerable.Range(0, 1).LookAhead(1))
+                    {
+                        throw expectedException;
+                    }
+
+                    Assert.Fail("Expected exeption.");
+                }
+                catch (Exception actualException)
+                {
+                    Assert.AreSame(expectedException, actualException);
+                }
+            }
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(OperationCanceledException))]
         public void TestCancelToken()
         {

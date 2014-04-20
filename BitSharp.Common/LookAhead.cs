@@ -28,7 +28,7 @@ namespace BitSharp.Common
                             cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
                             abortToken.Token.ThrowIfCancellationRequested();
 
-                            readValues.Add(value);
+                            readValues.Add(value, abortToken.Token);
                         }
                     }
                     finally
@@ -38,21 +38,27 @@ namespace BitSharp.Common
                     }
                 }))
             {
-                foreach (var value in readValues.GetConsumingEnumerable())
-                {
-                    // cooperative loop
-                    cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
-
-                    yield return value;
-                }
-
                 try
                 {
-                    readTask.Wait();
+                    foreach (var value in readValues.GetConsumingEnumerable())
+                    {
+                        // cooperative loop
+                        cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
+
+                        yield return value;
+                    }
                 }
-                catch (AggregateException e)
+                finally
                 {
-                    throw e.InnerExceptions.First();
+                    abortToken.Cancel();
+                    try
+                    {
+                        readTask.Wait();
+                    }
+                    catch (AggregateException e)
+                    {
+                        throw e.InnerExceptions.First();
+                    }
                 }
             }
         }
