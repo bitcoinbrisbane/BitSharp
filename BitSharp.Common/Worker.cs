@@ -12,6 +12,8 @@ namespace BitSharp.Common
 {
     public abstract class Worker : IDisposable
     {
+        private static readonly TimeSpan DEFAULT_STOP_TIMEOUT = TimeSpan.FromSeconds(1);
+
         public event Action OnNotifyWork;
         public event Action OnWorkStarted;
         public event Action OnWorkStopped;
@@ -19,12 +21,12 @@ namespace BitSharp.Common
         private readonly Logger logger;
 
         private readonly Thread workerThread;
+        private readonly ManualResetEventSlim startEvent;
         private readonly AutoResetEvent notifyEvent;
         private readonly AutoResetEvent forceNotifyEvent;
         private readonly ManualResetEventSlim idleEvent;
 
-        private readonly ReaderWriterLockSlim workerLock;
-        private readonly ManualResetEventSlim startedEvent;
+        private bool isStarted;
         private bool isDisposing;
         private bool isDisposed;
 
@@ -38,12 +40,12 @@ namespace BitSharp.Common
             this.workerThread = new Thread(WorkerLoop);
             this.workerThread.Name = "Worker.{0}.WorkerLoop".Format2(name);
 
+            this.startEvent = new ManualResetEventSlim(false);
             this.notifyEvent = new AutoResetEvent(initialNotify);
             this.forceNotifyEvent = new AutoResetEvent(initialNotify);
             this.idleEvent = new ManualResetEventSlim(false);
 
-            this.workerLock = new ReaderWriterLockSlim();
-            this.startedEvent = new ManualResetEventSlim(false);
+            this.isStarted = false;
             this.isDisposing = false;
             this.isDisposed = false;
 
@@ -58,100 +60,77 @@ namespace BitSharp.Common
 
         public bool IsStarted
         {
-            get
-            {
-                if (this.isDisposed || this.isDisposing)
-                    return false;
-
-                return this.workerLock.DoRead(() =>
-                {
-                    return this.startedEvent.IsSet;
-                });
-            }
+            get { return this.isStarted; }
         }
 
         public void Start()
         {
-            if (this.isDisposing || this.isDisposed)
-                throw new ObjectDisposedException("Worker");
+            CheckDisposed();
 
-            this.workerLock.DoWrite(() =>
+            if (!this.isStarted)
             {
-                if (!this.startedEvent.IsSet)
-                {
-                    this.SubStart();
+                this.SubStart();
 
-                    this.startedEvent.Set();
-                }
-            });
+                this.isStarted = true;
+                this.startEvent.Set();
+            }
         }
 
-        public void Stop()
+        public void Stop(TimeSpan? timeout = null)
         {
-            if (this.isDisposing || this.isDisposed)
-                throw new ObjectDisposedException("Worker");
+            CheckDisposed();
 
-            this.workerLock.DoWrite(() =>
+            if (this.isStarted)
             {
-                if (this.startedEvent.IsSet)
-                {
-                    this.SubStop();
+                this.SubStop();
 
-                    this.startedEvent.Reset();
-                }
-            });
+                this.isStarted = false;
+                this.startEvent.Reset();
+
+                this.idleEvent.Wait(timeout ?? DEFAULT_STOP_TIMEOUT);
+            }
         }
 
         public void Dispose()
         {
             if (this.isDisposing || this.isDisposed)
-                throw new ObjectDisposedException("Worker");
+                return;
 
-            lock (this.workerLock)
+            // stop worker
+            this.Stop();
+
+            this.isDisposing = true;
+
+            // subclass dispose
+            this.SubDispose();
+
+            // set events so that WorkerLoop() can unblock to discover it is being disposed
+            this.startEvent.Set();
+            this.notifyEvent.Set();
+            this.forceNotifyEvent.Set();
+
+            // wait for worker thread
+            if (this.workerThread.IsAlive)
             {
-                this.isDisposing = true;
+                this.workerThread.Join(DEFAULT_STOP_TIMEOUT);
 
-                while (
-                    this.workerLock.WaitingReadCount > 0 ||
-                    this.workerLock.WaitingUpgradeCount > 0 ||
-                    this.workerLock.WaitingWriteCount > 0)
-                {
-                    this.workerLock.DoWrite(() => { });
-                }
-
-                if (this.startedEvent.IsSet)
-                {
-                    this.SubStop();
-                }
-                this.SubDispose();
-
-                this.startedEvent.Set();
-                this.notifyEvent.Set();
-                this.forceNotifyEvent.Set();
-
-                // wait for worker thread
+                // terminate if still alive
                 if (this.workerThread.IsAlive)
-                {
-                    this.workerThread.Join(TimeSpan.FromSeconds(5));
-
-                    // terminate if still alive
-                    if (this.workerThread.IsAlive)
-                        this.workerThread.Abort();
-                }
-
-                this.isDisposed = true;
-                this.notifyEvent.Dispose();
-                this.forceNotifyEvent.Dispose();
-                this.idleEvent.Dispose();
-                this.startedEvent.Dispose();
-                this.workerLock.Dispose();
+                    this.workerThread.Abort();
             }
+
+            // dispose events
+            this.startEvent.Dispose();
+            this.notifyEvent.Dispose();
+            this.forceNotifyEvent.Dispose();
+            this.idleEvent.Dispose();
+
+            this.isDisposed = true;
         }
 
         public void NotifyWork()
         {
-            if (this.isDisposed)
-                return;
+            CheckDisposed();
 
             this.notifyEvent.Set();
 
@@ -162,8 +141,7 @@ namespace BitSharp.Common
 
         public void ForceWork()
         {
-            if (this.isDisposed)
-                return;
+            CheckDisposed();
 
             this.SubForceWork();
 
@@ -177,10 +155,7 @@ namespace BitSharp.Common
 
         public void WaitForIdle()
         {
-            if (this.isDisposed)
-                return;
-            if (!this.IsStarted)
-                return;
+            CheckDisposed();
 
             // wait for worker to idle
             this.idleEvent.Wait();
@@ -188,10 +163,10 @@ namespace BitSharp.Common
 
         public void ForceWorkAndWait()
         {
-            if (this.isDisposed)
-                return;
-            if (!this.IsStarted)
-                return;
+            CheckDisposed();
+
+            if (!this.isStarted)
+                throw new InvalidOperationException();
 
             // wait for worker to idle
             this.idleEvent.Wait();
@@ -204,6 +179,12 @@ namespace BitSharp.Common
 
             // wait for worker to be idle again
             this.idleEvent.Wait();
+        }
+
+        private void CheckDisposed()
+        {
+            if (this.isDisposing || this.isDisposed)
+                throw new ObjectDisposedException("Worker");
         }
 
         private void WorkerLoop()
@@ -225,7 +206,7 @@ namespace BitSharp.Common
                         this.idleEvent.Set();
 
                         // wait for execution to start
-                        this.startedEvent.Wait();
+                        this.startEvent.Wait();
 
                         // cooperative loop
                         if (!this.IsStarted)
