@@ -237,6 +237,7 @@ namespace BitSharp.Common.Test
                 worker.NotifyWork();
 
                 //TODO calling callEvent.WaitOne(10) cancels the notify and fails the test, i'm not sure why
+                //TODO calling Thread.Sleep(10) instead of callEvent.WaitOne has the same effect
                 // verify workAction has not been called
                 wasCalled = callEvent.WaitOne(10);
                 Assert.IsFalse(wasCalled);
