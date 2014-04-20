@@ -300,13 +300,13 @@ namespace BitSharp.Node.Workers
             var currentCount = 0;
 
             // iterate through any missing blocks first, they have priority and requests go stale more quickly
-            foreach (var missingBlock in this.missingBlockQueue.Keys)
+            foreach (var missingBlock in this.missingBlockQueue.Values)
             {
-                if (!peerBlockRequests.ContainsKey(missingBlock)
-                    && !this.allBlockRequests.ContainsKey(missingBlock)
-                    && !this.blockCache.ContainsKey(missingBlock))
+                if (!peerBlockRequests.ContainsKey(missingBlock.Hash)
+                    && !this.allBlockRequests.ContainsKey(missingBlock.Hash)
+                    && !this.blockCache.ContainsKey(missingBlock.Hash))
                 {
-                    yield return missingBlock;
+                    yield return missingBlock.Hash;
                     currentCount++;
                 }
             }
