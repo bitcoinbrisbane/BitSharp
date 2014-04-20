@@ -142,25 +142,18 @@ namespace BitSharp.Node.Workers
             else
                 this.targetChainLookAheadTime = DateTime.UtcNow;
 
-            // get average block processing time
-            var chainStateBlockProcessingTimeLocal = this.blockchainDaemon.AverageBlockProcessingTime();
-            if (chainStateBlockProcessingTimeLocal.Ticks == 0)
-                return;
-
             // get average block request time
             var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
 
             // determine target chain look ahead
             var lookAheadTime = avgBlockRequestTime + TimeSpan.FromSeconds(30);
-            this.targetChainLookAhead = (int)Math.Max(1, lookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
+            this.targetChainLookAhead = 1 + (int)this.blockchainDaemon.GetBlockRate(lookAheadTime);
 
             // determine critical target chain look ahead
-            var criticalLookAheadTime = /*avgBlockRequestTime +*/ TimeSpan.FromMilliseconds(500);
-            this.criticalTargetChainLookAhead = (int)Math.Max(1, criticalLookAheadTime.Ticks / chainStateBlockProcessingTimeLocal.Ticks);
+            var criticalLookAheadTime = TimeSpan.FromSeconds(5);
+            this.criticalTargetChainLookAhead = 1 + (int)this.blockchainDaemon.GetBlockRate(criticalLookAheadTime);
 
             this.logger.Debug(new string('-', 80));
-            this.logger.Debug("Block Processing Time: {0}".Format2(chainStateBlockProcessingTimeLocal));
-            this.logger.Debug("Block Processing Rate: {0:#,##0.000}/s".Format2(1 / chainStateBlockProcessingTimeLocal.TotalSeconds));
             this.logger.Debug("Block Request Time: {0}".Format2(avgBlockRequestTime));
             this.logger.Debug("Look Ahead: {0:#,##0}".Format2(this.targetChainLookAhead));
             this.logger.Debug("Critical Look Ahead: {0:#,##0}".Format2(this.criticalTargetChainLookAhead));
@@ -302,6 +295,9 @@ namespace BitSharp.Node.Workers
             // iterate through any missing blocks first, they have priority and requests go stale more quickly
             foreach (var missingBlock in this.missingBlockQueue.Values)
             {
+                if (currentCount >= count)
+                    break;
+
                 if (!peerBlockRequests.ContainsKey(missingBlock.Hash)
                     && !this.allBlockRequests.ContainsKey(missingBlock.Hash)
                     && !this.blockCache.ContainsKey(missingBlock.Hash))
