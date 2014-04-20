@@ -269,11 +269,11 @@ namespace BitSharp.Core
             // cleanup workers
             new IDisposable[]
             {
+                this.chainStateWorker,
                 this.prevChainState,
                 this.chainState,
-                this.chainingWorker,
                 this.targetChainWorker,
-                this.chainStateWorker,
+                this.chainingWorker,
                 this.gcWorker,
                 this.utxoScanWorker,
                 this.shutdownToken

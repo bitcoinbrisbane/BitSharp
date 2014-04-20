@@ -60,9 +60,7 @@ namespace BitSharp.Common
         {
             get
             {
-                if (this.isDisposed)
-                    throw new ObjectDisposedException("Worker");
-                else if (this.isDisposing)
+                if (this.isDisposed || this.isDisposing)
                     return false;
 
                 return this.workerLock.DoRead(() =>
