@@ -67,7 +67,7 @@ namespace BitSharp.Node.Workers
             this.blockchainDaemon.OnTargetChainChanged += HandleTargetChainChanged;
             this.blockCache.OnMissing += HandleBlockMissing;
 
-            this.blockRequestDurationMeasure = new DurationMeasure();
+            this.blockRequestDurationMeasure = new DurationMeasure(sampleCutoff: TimeSpan.FromMinutes(5));
             this.blockDownloadRateMeasure = new RateMeasure();
             this.duplicateBlockDownloadRateMeasure = new RateMeasure();
 
