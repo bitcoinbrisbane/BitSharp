@@ -13,7 +13,7 @@ namespace BitSharp.Common
     {
         private readonly ReaderWriterLockSlim rwLock;
 
-        private bool isDisposed;
+        private readonly ManualResetEventSlim stopToken;
         private readonly Stopwatch stopwatch;
         private List<Sample> samples;
         private int tickCount;
@@ -23,6 +23,7 @@ namespace BitSharp.Common
         public DurationMeasure(TimeSpan? sampleCutoff = null, TimeSpan? sampleResolution = null)
         {
             this.rwLock = new ReaderWriterLockSlim();
+            this.stopToken = new ManualResetEventSlim();
             this.stopwatch = Stopwatch.StartNew();
             this.samples = new List<Sample>();
 
@@ -39,8 +40,9 @@ namespace BitSharp.Common
 
         public void Dispose()
         {
-            this.isDisposed = true;
+            this.stopToken.Set();
             this.sampleThread.Join();
+            this.stopToken.Dispose();
         }
 
         public void Tick(TimeSpan duration)
@@ -75,10 +77,12 @@ namespace BitSharp.Common
 
         private void SampleThread()
         {
-            while (!this.isDisposed)
+            while (true)
             {
                 var start = stopwatch.Elapsed;
-                Thread.Sleep(this.SampleResolution);
+
+                if (this.stopToken.Wait(this.SampleResolution))
+                    return;
 
                 var now = stopwatch.Elapsed;
                 var duration = now - start;
