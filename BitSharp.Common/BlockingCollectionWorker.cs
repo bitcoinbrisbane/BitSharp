@@ -13,15 +13,20 @@ namespace BitSharp.Common
     {
         private readonly string name;
         private readonly bool isConcurrent;
+        private readonly Logger logger;
         private readonly WorkerMethod queueWorker;
 
+        private AutoResetEvent workEvent;
         private ManualResetEventSlim completedEvent;
-        private BlockingCollection<T> queue;
+        private ConcurrentQueue<T> queue;
+        private bool isCompleteAdding;
+        private bool isCompleted;
 
         public BlockingCollectionWorker(string name, bool isConcurrent, Logger logger)
         {
             this.name = name;
             this.isConcurrent = isConcurrent;
+            this.logger = logger;
             this.queueWorker = new WorkerMethod(name, WorkAction, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: logger);
             this.queueWorker.Start();
         }
@@ -41,10 +46,13 @@ namespace BitSharp.Common
 
             this.SubStart();
 
+            this.workEvent = new AutoResetEvent(false);
             this.completedEvent = new ManualResetEventSlim();
-            this.queue = new BlockingCollection<T>();
-            this.queueWorker.NotifyWork();
+            this.queue = new ConcurrentQueue<T>();
+            this.isCompleteAdding = false;
+            this.isCompleted = false;
 
+            this.queueWorker.NotifyWork();
             return new Stopper(this);
         }
 
@@ -53,7 +61,8 @@ namespace BitSharp.Common
             if (this.queue == null)
                 throw new InvalidOperationException();
 
-            this.queue.CompleteAdding();
+            this.isCompleteAdding = true;
+            this.workEvent.Set();
         }
 
         public void WaitToComplete()
@@ -61,15 +70,17 @@ namespace BitSharp.Common
             if (this.queue == null)
                 throw new InvalidOperationException();
 
-            this.completedEvent.Wait();
+            while (!this.isCompleted)
+                this.completedEvent.Wait(1);
         }
 
         public void Add(T value)
         {
-            if (this.queue == null)
+            if (this.queue == null || this.isCompleteAdding)
                 throw new InvalidOperationException();
 
-            this.queue.Add(value);
+            this.queue.Enqueue(value);
+            this.workEvent.Set();
         }
 
         protected virtual void SubDispose() { }
@@ -82,12 +93,13 @@ namespace BitSharp.Common
 
         private void Stop()
         {
-            if (this.queue == null || !this.queue.IsCompleted)
+            if (this.queue == null || !this.isCompleteAdding || !this.isCompleted)
                 throw new InvalidOperationException();
 
             this.SubStop();
 
-            this.queue.Dispose();
+            this.workEvent.Dispose();
+            this.completedEvent.Dispose();
             this.queue = null;
         }
 
@@ -99,17 +111,41 @@ namespace BitSharp.Common
             if (this.isConcurrent)
             {
                 Parallel.ForEach(
-                    this.queue.GetConsumingEnumerable(),
+                    this.GetConsumingEnumerable(),
                     new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
                     value => ConsumeItem(value));
             }
             else
             {
-                foreach (var value in this.queue.GetConsumingEnumerable())
+                foreach (var value in this.GetConsumingEnumerable())
                     ConsumeItem(value);
             }
 
+            this.isCompleted = true;
             this.completedEvent.Set();
+        }
+
+        private IEnumerable<T> GetConsumingEnumerable()
+        {
+            while (true)
+            {
+                T value;
+                while (this.queue.TryDequeue(out value))
+                {
+                    if (this.queue.Count > 0)
+                        this.workEvent.Set();
+
+                    yield return value;
+                }
+
+                if (this.isCompleteAdding && this.queue.Count == 0)
+                {
+                    this.workEvent.Set();
+                    yield break;
+                }
+
+                this.workEvent.WaitOne(1);
+            }
         }
 
         private sealed class Stopper : IDisposable
