@@ -229,9 +229,6 @@ namespace BitSharp.Node.Workers
 
         private void SendBlockRequests()
         {
-            if (this.targetChainQueue == null || this.targetChainQueueIndex >= this.targetChainQueue.Count)
-                return;
-
             var now = DateTime.UtcNow;
             var requestTasks = new List<Task>();
 
