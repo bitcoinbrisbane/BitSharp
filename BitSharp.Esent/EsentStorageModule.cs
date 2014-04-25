@@ -20,12 +20,14 @@ namespace BitSharp.Esent
     public class EsentStorageModule : NinjectModule
     {
         private readonly string baseDirectory;
-        private readonly long cacheSizeMaxBytes;
+        private readonly long? cacheSizeMinBytes;
+        private readonly long? cacheSizeMaxBytes;
         private readonly bool transientBlockStorage;
 
-        public EsentStorageModule(string baseDirectory, long cacheSizeMaxBytes = int.MaxValue, bool transientBlockStorage = false)
+        public EsentStorageModule(string baseDirectory, long? cacheSizeMinBytes = null, long? cacheSizeMaxBytes = null, bool transientBlockStorage = false)
         {
             this.baseDirectory = baseDirectory;
+            this.cacheSizeMinBytes = cacheSizeMinBytes;
             this.cacheSizeMaxBytes = cacheSizeMaxBytes;
             this.transientBlockStorage = transientBlockStorage;
         }
@@ -36,7 +38,10 @@ namespace BitSharp.Esent
             var type = esentAssembly.GetType("Microsoft.Isam.Esent.Collections.Generic.CollectionsSystemParameters");
             var method = type.GetMethod("Init");
             method.Invoke(null, null);
-            SystemParameters.CacheSizeMax = (cacheSizeMaxBytes / SystemParameters.DatabasePageSize).ToIntChecked();
+            if (this.cacheSizeMinBytes != null)
+                SystemParameters.CacheSizeMin = (this.cacheSizeMinBytes.Value / SystemParameters.DatabasePageSize).ToIntChecked();
+            if (this.cacheSizeMaxBytes != null)
+                SystemParameters.CacheSizeMax = (this.cacheSizeMaxBytes.Value / SystemParameters.DatabasePageSize).ToIntChecked();
 
             // bind concrete storage providers
             this.Bind<BlockHeaderStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
