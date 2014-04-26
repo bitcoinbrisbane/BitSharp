@@ -15,6 +15,8 @@ using BitSharp.Core;
 using BitSharp.Core.Storage;
 using BitSharp.Core.Domain;
 using BitSharp.Node;
+using System.Collections.ObjectModel;
+using BitSharp.Wallet;
 
 namespace BitSharp.Client
 {
@@ -44,8 +46,13 @@ namespace BitSharp.Client
         private float blockDownloadRate;
         private float duplicateBlockDownloadRate;
 
-        public MainWindowViewModel(IKernel kernel)
+        private readonly WalletMonitor walletMonitor;
+        private readonly Dispatcher dispatcher;
+
+        public MainWindowViewModel(IKernel kernel, WalletMonitor walletMonitor = null)
         {
+            this.dispatcher = Dispatcher.CurrentDispatcher;
+
             this.kernel = kernel;
             this.blockchainDaemon = kernel.Get<CoreDaemon>();
             this.localClient = kernel.Get<LocalClient>();
@@ -94,6 +101,13 @@ namespace BitSharp.Client
             this.blockchainDaemon.OnChainStateChanged +=
                 (sender, chainState) =>
                     CurrentBlockchainHeight = this.blockchainDaemon.CurrentChain.Height;
+
+            if (walletMonitor != null)
+            {
+                this.walletMonitor = walletMonitor;
+                this.WalletEntries = new ObservableCollection<WalletEntry>();
+                this.walletMonitor.OnEntryAdded += HandleOnWalletEntryAdded;
+            }
         }
 
         public string RunningTime
@@ -172,6 +186,8 @@ namespace BitSharp.Client
         public IList<TxOutputKey> ViewBlockchainSpendOutputs { get; protected set; }
 
         public IList<TxOutputKey> ViewBlockchainReceiveOutputs { get; protected set; }
+
+        public ObservableCollection<WalletEntry> WalletEntries { get; protected set; }
 
         public void ViewBlockchainFirst()
         {
@@ -281,6 +297,12 @@ namespace BitSharp.Client
                 handler(this, new PropertyChangedEventArgs("ViewBlockchainSpendOutputs"));
                 handler(this, new PropertyChangedEventArgs("ViewBlockchainReceiveOutputs"));
             }
+        }
+
+        private void HandleOnWalletEntryAdded(WalletEntry walletEntry)
+        {
+            this.dispatcher.BeginInvoke((Action)(() =>
+                this.WalletEntries.Insert(0, walletEntry)));
         }
 
         private void SetValue<T>(ref T currentValue, T newValue, [CallerMemberName] string propertyName = "") where T : IEquatable<T>

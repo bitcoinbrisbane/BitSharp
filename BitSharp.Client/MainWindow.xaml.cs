@@ -104,7 +104,8 @@ namespace BitSharp.Client
                 var blockchainDaemon = this.kernel.Get<CoreDaemon>();
 
 #if DUMMY_MONITOR
-                blockchainDaemon.SubscribeChainStateVisitor(new DummyMonitor(this.logger));
+                var dummyMonitor = new DummyMonitor(this.logger);
+                blockchainDaemon.SubscribeChainStateVisitor(dummyMonitor);
 #endif
 
                 // initialize p2p client
@@ -112,7 +113,11 @@ namespace BitSharp.Client
                 var localClient = this.kernel.Get<LocalClient>();
 
                 // setup view model
+#if DUMMY_MONITOR
+                this.viewModel = new MainWindowViewModel(this.kernel, dummyMonitor);
+#else
                 this.viewModel = new MainWindowViewModel(this.kernel);
+#endif
                 InitializeComponent();
                 this.viewModel.ViewBlockchainLast();
 
