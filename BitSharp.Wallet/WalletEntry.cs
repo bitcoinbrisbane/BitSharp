@@ -1,4 +1,5 @@
 ﻿using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Monitor;
 using System;
 using System.Collections.Generic;
@@ -31,5 +32,7 @@ namespace BitSharp.Wallet
         public ChainPosition ChainPosition { get { return this.chainPosition; } }
 
         public UInt64 Value { get { return this.value; } }
+
+        public decimal BtcValue { get { return this.value / (decimal)100.MILLION(); } }
     }
 }
