@@ -50,10 +50,10 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)' == 'Debug' And Exists('Script\Secp256k1.NET.dll')">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64' And Exists('Script\Secp256k1.NET.dll')">
     <DefineConstants>DEBUG;TRACE;SECP256K1_DLL</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)' == 'Release' And Exists('Script\Secp256k1.NET.dll')">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64' And Exists('Script\Secp256k1.NET.dll')">
     <DefineConstants>TRACE;SECP256K1_DLL</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
