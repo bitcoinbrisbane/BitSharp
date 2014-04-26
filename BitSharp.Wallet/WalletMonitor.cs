@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace BitSharp.Wallet
@@ -31,6 +32,7 @@ namespace BitSharp.Wallet
 
         // entries
         private readonly ImmutableList<WalletEntry>.Builder entries;
+        private readonly ReaderWriterLockSlim entriesLock;
 
         public WalletMonitor(Logger logger)
         {
@@ -38,11 +40,18 @@ namespace BitSharp.Wallet
             this.addressesByOutputScriptHash = new Dictionary<UInt256, List<MonitoredWalletAddress>>();
             this.matcherAddresses = new List<MonitoredWalletAddress>();
             this.entries = ImmutableList.CreateBuilder<WalletEntry>();
+            this.entriesLock = new ReaderWriterLockSlim();
         }
+
+        public event Action<WalletEntry> OnEntryAdded;
 
         public IImmutableList<WalletEntry> Entries
         {
-            get { return this.entries.ToImmutable(); }
+            get
+            {
+                return this.entriesLock.DoRead(() =>
+                    this.entries.ToImmutable());
+            }
         }
 
         //TODO thread safety
@@ -101,8 +110,6 @@ namespace BitSharp.Wallet
 
             if (matchingAddresses.Count > 0)
             {
-                this.logger.Debug("{0,-10}   {1,20:#,##0.000_000_00} BTC, Entries: {2:#,##0}".Format2(walletEntryType.ToString() + ":", txOutput.Value / (decimal)(100.MILLION()), this.entries.Count));
-
                 var entry = new WalletEntry
                 (
                     addresses: matchingAddresses.ToImmutable(),
@@ -111,7 +118,16 @@ namespace BitSharp.Wallet
                     value: txOutput.Value
                 );
 
-                this.entries.Add(entry);
+
+                this.entriesLock.DoWrite(() =>
+                {
+                    this.logger.Debug("{0,-10}   {1,20:#,##0.000_000_00} BTC, Entries: {2:#,##0}".Format2(walletEntryType.ToString() + ":", txOutput.Value / (decimal)(100.MILLION()), this.entries.Count));
+                    this.entries.Add(entry);
+                });
+
+                var handler = this.OnEntryAdded;
+                if (handler != null)
+                    handler(entry);
             }
         }
     }
