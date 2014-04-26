@@ -279,7 +279,7 @@ namespace BitSharp.Node.Workers
             }
 
             // notify for another loop of work when out of target chain queue to use, unless there is nothing left missing
-            if (this.targetChainQueueIndex >= this.targetChainQueue.Count && this.missingBlockQueue.Count > 0)
+            if (this.targetChainQueue != null && this.targetChainQueueIndex >= this.targetChainQueue.Count && this.missingBlockQueue.Count > 0)
                 this.ForceWork();
         }
 
