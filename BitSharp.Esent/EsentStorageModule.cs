@@ -34,6 +34,7 @@ namespace BitSharp.Esent
 
         public override void Load()
         {
+            //TODO remove reflection once PersistentDictionary is phased out
             var esentAssembly = typeof(PersistentDictionary<string, string>).Assembly;
             var type = esentAssembly.GetType("Microsoft.Isam.Esent.Collections.Generic.CollectionsSystemParameters");
             var method = type.GetMethod("Init");
