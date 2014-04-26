@@ -309,7 +309,7 @@ namespace BitSharp.Node.Workers
             }
 
             // iterate through the blocks on the target chain, each peer will request a separate chunk of blocks
-            for (; this.targetChainQueueIndex < this.targetChainQueue.Count && currentCount < count; this.targetChainQueueIndex++)
+            for (; this.targetChainQueue != null && this.targetChainQueueIndex < this.targetChainQueue.Count && currentCount < count; this.targetChainQueueIndex++)
             {
                 var requestBlock = this.targetChainQueue[this.targetChainQueueIndex].Hash;
 
