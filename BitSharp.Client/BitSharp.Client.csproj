@@ -148,6 +148,10 @@
       <Project>{6d4d2210-a54f-41f0-bca4-727b7ddb27c2}</Project>
       <Name>BitSharp.Esent</Name>
     </ProjectReference>
+    <ProjectReference Include="..\BitSharp.Wallet\BitSharp.Wallet.csproj">
+      <Project>{102f8bf7-b34c-47de-ada1-175266d7fbbd}</Project>
+      <Name>BitSharp.Wallet</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

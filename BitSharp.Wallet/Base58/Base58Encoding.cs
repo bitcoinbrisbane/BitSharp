@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 // public domain code from: https://gist.github.com/CodesInChaos/3175971
-namespace BitSharp.Core.Wallet.Base58
+namespace BitSharp.Wallet.Base58
 {
     // Implements https://en.bitcoin.it/wiki/Base58Check_encoding
     public static class Base58Encoding

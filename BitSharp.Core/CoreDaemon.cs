@@ -18,7 +18,6 @@ using BitSharp.Core.Domain;
 using BitSharp.Core.Storage;
 using BitSharp.Core.Workers;
 using BitSharp.Core.Rules;
-using BitSharp.Core.Wallet;
 using System.Security.Cryptography;
 using BitSharp.Core.Monitor;
 using BitSharp.Core.Builders;

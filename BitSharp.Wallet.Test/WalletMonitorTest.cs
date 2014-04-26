@@ -2,7 +2,7 @@
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Domain;
 using BitSharp.Core.JsonRpc;
-using BitSharp.Core.Wallet;
+using BitSharp.Wallet;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Script;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -18,9 +18,10 @@ using System.Threading.Tasks;
 using Ninject;
 using NLog;
 using System.Collections.Concurrent;
-using BitSharp.Core.Wallet.Address;
+using BitSharp.Wallet.Address;
+using BitSharp.Core.Test;
 
-namespace BitSharp.Core.Test.Monitor
+namespace BitSharp.Wallet.Test
 {
     [TestClass]
     public class WalletMonitorTest

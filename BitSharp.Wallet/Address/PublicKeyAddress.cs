@@ -1,4 +1,5 @@
 ﻿using BitSharp.Common;
+using BitSharp.Core.Domain;
 using BitSharp.Core.Script;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Wallet.Address
+namespace BitSharp.Wallet.Address
 {
     public class PublicKeyAddress : IWalletAddress
     {
@@ -37,7 +38,7 @@ namespace BitSharp.Core.Wallet.Address
             get { return false; }
         }
 
-        public bool MatchesTxOutput(Domain.TxOutput txOutput, UInt256 txOutputScriptHash)
+        public bool MatchesTxOutput(TxOutput txOutput, UInt256 txOutputScriptHash)
         {
             throw new NotSupportedException();
         }

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Wallet.Address
+namespace BitSharp.Wallet.Address
 {
     public class OutputScriptHashAddress : IWalletAddress
     {

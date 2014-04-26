@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Wallet
+namespace BitSharp.Wallet
 {
     //TODO the wallet is currently intimately tied to the chain state
     //TODO what do i do if the chain state commits before the wallet has had a chance to save its current state?

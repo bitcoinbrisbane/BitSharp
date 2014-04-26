@@ -30,8 +30,8 @@ using BitSharp.Core.Storage;
 using BitSharp.Core;
 using BitSharp.Esent;
 using BitSharp.Node.Storage;
-using BitSharp.Core.Wallet;
-using BitSharp.Core.Wallet.Address;
+using BitSharp.Wallet;
+using BitSharp.Wallet.Address;
 
 namespace BitSharp.Client
 {

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 // public domain code from: https://gist.github.com/CodesInChaos/3175971
-namespace BitSharp.Core.Wallet.Base58
+namespace BitSharp.Wallet.Base58
 {
     //[TestClass]
     //public class Base58EncodingTests
