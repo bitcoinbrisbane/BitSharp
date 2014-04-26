@@ -25,6 +25,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Core.Test", "BitSh
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Esent.Test", "BitSharp.Esent.Test\BitSharp.Esent.Test.csproj", "{B016A5BB-B387-4A0D-8DBA-6F670F25235F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Wallet", "BitSharp.Wallet\BitSharp.Wallet.csproj", "{102F8BF7-B34C-47DE-ADA1-175266D7FBBD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Wallet.Test", "BitSharp.Wallet.Test\BitSharp.Wallet.Test.csproj", "{4EE38933-1B70-4CE9-B412-F8C904CF4C32}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -121,6 +125,22 @@ Global
 		{B016A5BB-B387-4A0D-8DBA-6F670F25235F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B016A5BB-B387-4A0D-8DBA-6F670F25235F}.Release|x64.ActiveCfg = Release|x64
 		{B016A5BB-B387-4A0D-8DBA-6F670F25235F}.Release|x64.Build.0 = Release|x64
+		{102F8BF7-B34C-47DE-ADA1-175266D7FBBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{102F8BF7-B34C-47DE-ADA1-175266D7FBBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{102F8BF7-B34C-47DE-ADA1-175266D7FBBD}.Debug|x64.ActiveCfg = Debug|x64
+		{102F8BF7-B34C-47DE-ADA1-175266D7FBBD}.Debug|x64.Build.0 = Debug|x64
+		{102F8BF7-B34C-47DE-ADA1-175266D7FBBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{102F8BF7-B34C-47DE-ADA1-175266D7FBBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{102F8BF7-B34C-47DE-ADA1-175266D7FBBD}.Release|x64.ActiveCfg = Release|x64
+		{102F8BF7-B34C-47DE-ADA1-175266D7FBBD}.Release|x64.Build.0 = Release|x64
+		{4EE38933-1B70-4CE9-B412-F8C904CF4C32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4EE38933-1B70-4CE9-B412-F8C904CF4C32}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4EE38933-1B70-4CE9-B412-F8C904CF4C32}.Debug|x64.ActiveCfg = Debug|x64
+		{4EE38933-1B70-4CE9-B412-F8C904CF4C32}.Debug|x64.Build.0 = Debug|x64
+		{4EE38933-1B70-4CE9-B412-F8C904CF4C32}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4EE38933-1B70-4CE9-B412-F8C904CF4C32}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4EE38933-1B70-4CE9-B412-F8C904CF4C32}.Release|x64.ActiveCfg = Release|x64
+		{4EE38933-1B70-4CE9-B412-F8C904CF4C32}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
