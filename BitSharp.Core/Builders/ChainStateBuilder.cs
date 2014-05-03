@@ -27,6 +27,11 @@ namespace BitSharp.Core.Builders
 {
     public class ChainStateBuilder : IDisposable
     {
+        private static readonly int DUPE_COINBASE_1_HEIGHT = 91722;
+        private static readonly UInt256 DUPE_COINBASE_1_HASH = UInt256.Parse("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468", NumberStyles.HexNumber);
+        private static readonly int DUPE_COINBASE_2_HEIGHT = 91812;
+        private static readonly UInt256 DUPE_COINBASE_2_HASH = UInt256.Parse("d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599", NumberStyles.HexNumber);
+
         private readonly Logger logger;
         private readonly SHA256Managed sha256;
         private readonly IBlockchainRules rules;
@@ -389,45 +394,21 @@ namespace BitSharp.Core.Builders
 
         public void Mint(Transaction tx, ChainedHeader chainedHeader, bool isCoinbase)
         {
+            // there exist two duplicate coinbases in the blockchain, which the design assumes to be impossible
+            // ignore the first occurrences of these duplicates so that they do not need to later be deleted from the utxo, an unsupported operation
+            // no other duplicates will occur again, it is now disallowed
+            if ((chainedHeader.Height == DUPE_COINBASE_1_HEIGHT && tx.Hash == DUPE_COINBASE_1_HASH)
+                || (chainedHeader.Height == DUPE_COINBASE_2_HEIGHT && tx.Hash == DUPE_COINBASE_2_HASH))
+            {
+                return;
+            }
+
             // verify transaction does not already exist in utxo
             if (this.chainStateBuilderStorage.ContainsTransaction(tx.Hash))
             {
-                // two specific duplicates are allowed, from before duplicates were disallowed
-                if ((chainedHeader.Height == 91842 && tx.Hash == UInt256.Parse("d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599", NumberStyles.HexNumber))
-                    || (chainedHeader.Height == 91880 && tx.Hash == UInt256.Parse("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468", NumberStyles.HexNumber)))
-                {
-                    UnspentTx unspentTx;
-                    if (!this.chainStateBuilderStorage.TryGetTransaction(tx.Hash, out unspentTx))
-                        throw new Exception("TODO");
-
-                    //TODO the inverse needs to be special cased in RollbackUtxo as well
-                    for (var i = 0; i < unspentTx.OutputStates.Length; i++)
-                    {
-                        if (unspentTx.OutputStates[i] == OutputState.Unspent)
-                        {
-                            var txOutputKey = new TxOutputKey(tx.Hash, (UInt32)i);
-
-                            TxOutput prevOutput;
-                            if (!this.chainStateBuilderStorage.TryGetOutput(txOutputKey, out prevOutput))
-                                throw new Exception("TODO");
-
-                            this.chainStateBuilderStorage.RemoveOutput(txOutputKey);
-
-                            // store rollback information, the output will need to be added back during rollback
-                            this.spentOutputs.Add(new KeyValuePair<TxOutputKey, TxOutput>(txOutputKey, prevOutput));
-                        }
-                    }
-                    this.chainStateBuilderStorage.RemoveTransaction(tx.Hash);
-
-                    // store rollback information, the block containing the previous transaction will need to be known during rollback
-                    this.spentTransactions.Add(new KeyValuePair<UInt256, SpentTx>(tx.Hash, unspentTx.ToSpent()));
-                }
-                else
-                {
-                    // duplicate transaction output
-                    this.logger.Warn("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(chainedHeader.Height, chainedHeader.Hash.ToHexNumberString()));
-                    throw new ValidationException(chainedHeader.Hash);
-                }
+                // duplicate transaction output
+                this.logger.Warn("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(chainedHeader.Height, chainedHeader.Hash.ToHexNumberString()));
+                throw new ValidationException(chainedHeader.Hash);
             }
 
             // add transaction to the utxo
@@ -563,6 +544,13 @@ namespace BitSharp.Core.Builders
 
         public void Unmint(Transaction tx, ChainedHeader chainedHeader, bool isCoinbase)
         {
+            // ignore duplicate coinbases
+            if ((chainedHeader.Height == DUPE_COINBASE_1_HEIGHT && tx.Hash == DUPE_COINBASE_1_HASH)
+                || (chainedHeader.Height == DUPE_COINBASE_2_HEIGHT && tx.Hash == DUPE_COINBASE_2_HASH))
+            {
+                return;
+            }
+
             // check that transaction exists
             UnspentTx unspentTx;
             if (!this.chainStateBuilderStorage.TryGetTransaction(tx.Hash, out unspentTx))
