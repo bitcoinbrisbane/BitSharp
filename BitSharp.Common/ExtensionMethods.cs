@@ -315,6 +315,21 @@ namespace BitSharp.Common.ExtensionMethods
             return value * 1000 * 1000 * 1000;
         }
 
+        public static decimal THOUSAND(this decimal value)
+        {
+            return value * 1000;
+        }
+
+        public static decimal MILLION(this decimal value)
+        {
+            return value * 1000 * 1000;
+        }
+
+        public static decimal BILLION(this decimal value)
+        {
+            return value * 1000 * 1000 * 1000;
+        }
+
         public static float ElapsedSecondsFloat(this Stopwatch stopwatch)
         {
             return (float)stopwatch.ElapsedTicks / Stopwatch.Frequency;

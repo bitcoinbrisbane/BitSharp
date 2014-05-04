@@ -34,6 +34,8 @@ namespace BitSharp.Wallet
         private readonly ImmutableList<WalletEntry>.Builder entries;
         private readonly ReaderWriterLockSlim entriesLock;
 
+        private decimal bitBalance;
+
         public WalletMonitor(Logger logger)
         {
             this.logger = logger;
@@ -41,6 +43,7 @@ namespace BitSharp.Wallet
             this.matcherAddresses = new List<MonitoredWalletAddress>();
             this.entries = ImmutableList.CreateBuilder<WalletEntry>();
             this.entriesLock = new ReaderWriterLockSlim();
+            this.bitBalance = 0;
         }
 
         public event Action<WalletEntry> OnEntryAdded;
@@ -51,6 +54,15 @@ namespace BitSharp.Wallet
             {
                 return this.entriesLock.DoRead(() =>
                     this.entries.ToImmutable());
+            }
+        }
+
+        public decimal BitBalance
+        {
+            get
+            {
+                return this.entriesLock.DoRead(() =>
+                    this.bitBalance);
             }
         }
 
@@ -118,11 +130,15 @@ namespace BitSharp.Wallet
                     value: txOutput.Value
                 );
 
-
                 this.entriesLock.DoWrite(() =>
                 {
                     this.logger.Debug("{0,-10}   {1,20:#,##0.000_000_00} BTC, Entries: {2:#,##0}".Format2(walletEntryType.ToString() + ":", txOutput.Value / (decimal)(100.MILLION()), this.entries.Count));
+
                     this.entries.Add(entry);
+                    if (walletEntryType == EnumWalletEntryType.Spend)
+                        this.bitBalance -= entry.BitValue;
+                    else
+                        this.bitBalance += entry.BitValue;
                 });
 
                 var handler = this.OnEntryAdded;

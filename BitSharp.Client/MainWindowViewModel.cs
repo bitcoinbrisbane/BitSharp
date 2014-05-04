@@ -47,6 +47,7 @@ namespace BitSharp.Client
         private float duplicateBlockDownloadRate;
 
         private readonly WalletMonitor walletMonitor;
+        private decimal bitBalance;
         private readonly Dispatcher dispatcher;
 
         public MainWindowViewModel(IKernel kernel, WalletMonitor walletMonitor = null)
@@ -189,6 +190,12 @@ namespace BitSharp.Client
 
         public ObservableCollection<WalletEntry> WalletEntries { get; protected set; }
 
+        public decimal BitBalance
+        {
+            get { return this.bitBalance; }
+            set { SetValue(ref this.bitBalance, value); }
+        }
+
         public void ViewBlockchainFirst()
         {
             var chainLocal = this.blockchainDaemon.CurrentChain;
@@ -303,6 +310,8 @@ namespace BitSharp.Client
         {
             this.dispatcher.BeginInvoke((Action)(() =>
                 this.WalletEntries.Insert(0, walletEntry)));
+
+            this.BitBalance = this.walletMonitor.BitBalance;
         }
 
         private void SetValue<T>(ref T currentValue, T newValue, [CallerMemberName] string propertyName = "") where T : IEquatable<T>
