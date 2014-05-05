@@ -234,7 +234,7 @@ namespace BitSharp.Node
             var stopwatch = Stopwatch.StartNew();
 
             // start listening for incoming peers
-            StartListening();
+            //StartListening();
 
             // add seed peers
             AddSeedPeers();
