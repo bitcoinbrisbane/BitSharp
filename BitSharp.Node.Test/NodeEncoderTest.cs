@@ -141,14 +141,14 @@ namespace BitSharp.Node.Test
         [TestMethod]
         public void TestWireDecodeVersionPayloadWithoutRelay()
         {
-            var actual = NodeEncoder.EncodeVersionPayload(NodeEncoder.DecodeVersionPayload(VERSION_PAYLOAD_1_NO_RELAY_BYTES.ToArray(), VERSION_PAYLOAD_1_NO_RELAY_BYTES.Count), withRelay: false);
+            var actual = NodeEncoder.EncodeVersionPayload(NodeEncoder.DecodeVersionPayload(VERSION_PAYLOAD_1_NO_RELAY_BYTES.ToArray(), VERSION_PAYLOAD_1_NO_RELAY_BYTES.Length), withRelay: false);
             CollectionAssert.AreEqual(VERSION_PAYLOAD_1_NO_RELAY_BYTES.ToList(), actual.ToList());
         }
 
         [TestMethod]
         public void TestWireDecodeVersionPayloadWithRelay()
         {
-            var actual = NodeEncoder.EncodeVersionPayload(NodeEncoder.DecodeVersionPayload(VERSION_PAYLOAD_2_RELAY_BYTES.ToArray(), VERSION_PAYLOAD_2_RELAY_BYTES.Count), withRelay: true);
+            var actual = NodeEncoder.EncodeVersionPayload(NodeEncoder.DecodeVersionPayload(VERSION_PAYLOAD_2_RELAY_BYTES.ToArray(), VERSION_PAYLOAD_2_RELAY_BYTES.Length), withRelay: true);
             CollectionAssert.AreEqual(VERSION_PAYLOAD_2_RELAY_BYTES.ToList(), actual.ToList());
         }
     }

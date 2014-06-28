@@ -120,7 +120,7 @@ namespace BitSharp.Esent
                 try
                 {
                     AddBlockHeader(block.Header);
-                    for (var txIndex = 0; txIndex < block.Transactions.Count; txIndex++)
+                    for (var txIndex = 0; txIndex < block.Transactions.Length; txIndex++)
                     {
                         var tx = block.Transactions[txIndex];
                         AddTransaction(block.Hash, txIndex, tx.Hash, DataEncoder.EncodeTransaction(tx));

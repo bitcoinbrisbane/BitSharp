@@ -553,7 +553,7 @@ namespace BitSharp.Node
 
         private void OnReceivedAddresses(ImmutableArray<NetworkAddressWithTime> addresses)
         {
-            var ipEndpoints = new List<IPEndPoint>(addresses.Count);
+            var ipEndpoints = new List<IPEndPoint>(addresses.Length);
             foreach (var address in addresses)
             {
                 var ipEndpoint = address.NetworkAddress.ToIPEndPoint();
@@ -741,7 +741,7 @@ namespace BitSharp.Node
 
                 //TODO shouldn't have to decode again
                 var versionMessage = versionTask.Result;
-                var versionPayload = NodeEncoder.DecodeVersionPayload(versionMessage.Payload.ToArray(), versionMessage.Payload.Count);
+                var versionPayload = NodeEncoder.DecodeVersionPayload(versionMessage.Payload.ToArray(), versionMessage.Payload.Length);
 
                 var remoteAddressWithTime = new NetworkAddressWithTime
                 (

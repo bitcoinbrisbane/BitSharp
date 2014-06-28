@@ -374,7 +374,7 @@ namespace BitSharp.Core.Builders
                 this.chainStateMonitor.AfterAddTransaction(ChainPosition.Fake(), coinbaseTx);
 
             // check for double spends
-            for (var txIndex = 1; txIndex < chainedBlock.Transactions.Count; txIndex++)
+            for (var txIndex = 1; txIndex < chainedBlock.Transactions.Length; txIndex++)
             {
                 var tx = chainedBlock.Transactions[txIndex];
                 txCount++;
@@ -383,7 +383,7 @@ namespace BitSharp.Core.Builders
                 if (this.chainStateMonitor != null)
                     this.chainStateMonitor.BeforeAddTransaction(ChainPosition.Fake(), tx);
 
-                for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
+                for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
                 {
                     var input = tx.Inputs[inputIndex];
                     inputCount++;
@@ -436,7 +436,7 @@ namespace BitSharp.Core.Builders
             }
 
             // add transaction to the utxo
-            this.chainStateBuilderStorage.AddTransaction(tx.Hash, new UnspentTx(chainedHeader.Hash, txIndex, tx.Outputs.Count, OutputState.Unspent));
+            this.chainStateBuilderStorage.AddTransaction(tx.Hash, new UnspentTx(chainedHeader.Hash, txIndex, tx.Outputs.Length, OutputState.Unspent));
 
             //// add transaction outputs to the utxo
             //foreach (var output in tx.Outputs.Select((x, i) => new KeyValuePair<TxOutputKey, TxOutput>(new TxOutputKey(tx.Hash, (UInt32)i), x)))
@@ -596,7 +596,7 @@ namespace BitSharp.Core.Builders
             this.chainStateBuilderStorage.RemoveTransaction(tx.Hash);
 
             // remove the transaction outputs
-            for (var outputIndex = 0; outputIndex < tx.Outputs.Count; outputIndex++)
+            for (var outputIndex = 0; outputIndex < tx.Outputs.Length; outputIndex++)
             {
                 var txOutput = tx.Outputs[outputIndex];
                 var txOutputKey = new TxOutputKey(tx.Hash, (UInt32)outputIndex);

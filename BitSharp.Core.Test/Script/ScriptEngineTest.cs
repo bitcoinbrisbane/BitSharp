@@ -126,7 +126,7 @@ namespace BitSharp.Core.Test.Script
         private void TestTransactionSignature(byte[][] expectedSignatures, Transaction tx, IDictionary<UInt256, Transaction> txLookup)
         {
             var scriptEngine = new ScriptEngine(this.logger);
-            for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
+            for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
             {
                 var input = tx.Inputs[inputIndex];
                 var prevOutput = txLookup[input.PreviousTxOutputKey.TxHash].Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
@@ -142,7 +142,7 @@ namespace BitSharp.Core.Test.Script
         {
             var scriptEngine = new ScriptEngine(this.logger);
 
-            for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
+            for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
             {
                 var input = tx.Inputs[inputIndex];
                 var prevOutput = txLookup[input.PreviousTxOutputKey.TxHash].Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
@@ -165,7 +165,7 @@ namespace BitSharp.Core.Test.Script
         {
             var scriptEngine = new ScriptEngine(this.logger);
 
-            for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
+            for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
             {
                 var input = tx.Inputs[inputIndex];
                 var prevOutput = txLookup[input.PreviousTxOutputKey.TxHash].Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
@@ -192,14 +192,14 @@ namespace BitSharp.Core.Test.Script
 
         private static ImmutableArray<byte> GetPubKeyFromScripts(ImmutableArray<byte> scriptSig, ImmutableArray<byte> pubKey)
         {
-            if (scriptSig.Count > scriptSig[0] + 1)
+            if (scriptSig.Length > scriptSig[0] + 1)
             {
                 var result = scriptSig.Skip(1 + scriptSig[0] + 1).Take(scriptSig.Skip(1 + scriptSig[0]).First()).ToImmutableArray();
                 return result;
             }
             else
             {
-                return pubKey.Skip(1).Take(pubKey.Count - 2).ToImmutableArray();
+                return pubKey.Skip(1).Take(pubKey.Length - 2).ToImmutableArray();
             }
         }
 

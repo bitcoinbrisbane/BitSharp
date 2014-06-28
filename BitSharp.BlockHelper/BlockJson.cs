@@ -110,9 +110,9 @@ namespace BitSharp.BlockHelper
                 else
                 {
                     var pushBytes = HexStringToByteArray(x);
-                    if (pushBytes.Count >= (int)ScriptOp.OP_PUSHBYTES1 && pushBytes.Count <= (int)ScriptOp.OP_PUSHBYTES75)
+                    if (pushBytes.Length >= (int)ScriptOp.OP_PUSHBYTES1 && pushBytes.Length <= (int)ScriptOp.OP_PUSHBYTES75)
                     {
-                        bytes.Add((byte)pushBytes.Count);
+                        bytes.Add((byte)pushBytes.Length);
                         bytes.AddRange(pushBytes);
                     }
                     else

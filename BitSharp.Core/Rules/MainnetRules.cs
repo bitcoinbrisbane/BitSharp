@@ -223,7 +223,7 @@ namespace BitSharp.Core.Rules
             }
 
             // ensure there is at least 1 transaction
-            if (chainedBlock.Transactions.Count == 0)
+            if (chainedBlock.Transactions.Length == 0)
             {
                 throw new ValidationException(chainedBlock.Hash, "Failing block {0} at height {1}: Zero transactions present".Format2(chainedBlock.Hash.ToHexNumberString(), chainedBlock.Height));
             }
@@ -233,18 +233,18 @@ namespace BitSharp.Core.Rules
             var coinbaseTx = chainedBlock.Transactions[0];
 
             // check that coinbase has only one input
-            if (coinbaseTx.Inputs.Count != 1)
+            if (coinbaseTx.Inputs.Length != 1)
             {
                 throw new ValidationException(chainedBlock.Hash, "Failing block {0} at height {1}: Coinbase transaction does not have exactly one input".Format2(chainedBlock.Hash.ToHexNumberString(), chainedBlock.Height));
             }
 
             var blockTxIndices = new Dictionary<UInt256, int>();
-            for (var i = 0; i < chainedBlock.Transactions.Count; i++)
+            for (var i = 0; i < chainedBlock.Transactions.Length; i++)
                 blockTxIndices.Add(chainedBlock.Transactions[i].Hash, i);
 
             // validate transactions
             long blockUnspentValue = 0L;
-            for (var txIndex = 1; txIndex < chainedBlock.Transactions.Count; txIndex++)
+            for (var txIndex = 1; txIndex < chainedBlock.Transactions.Length; txIndex++)
             {
                 var tx = chainedBlock.Transactions[txIndex];
 
@@ -283,7 +283,7 @@ namespace BitSharp.Core.Rules
             var txInputValue = (UInt64)0;
             var txOutputValue = (UInt64)0;
 
-            for (var inputIndex = 0; inputIndex < tx.Inputs.Count; inputIndex++)
+            for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
             {
                 var input = tx.Inputs[inputIndex];
                 var prevOutput = LookupPreviousOutput(input.PreviousTxOutputKey, chainedBlock, blockTxIndices, chainStateBuilder);
@@ -292,7 +292,7 @@ namespace BitSharp.Core.Rules
                 txInputValue += prevOutput.Value;
             }
 
-            for (var outputIndex = 0; outputIndex < tx.Outputs.Count; outputIndex++)
+            for (var outputIndex = 0; outputIndex < tx.Outputs.Length; outputIndex++)
             {
                 // remove transactions spend value from unspent amount (used to calculate allowed coinbase reward)
                 var output = tx.Outputs[outputIndex];
@@ -343,7 +343,7 @@ namespace BitSharp.Core.Rules
                 int prevTxIndex;
                 if (blockTxIndices.TryGetValue(txOutputKey.TxHash, out prevTxIndex))
                 {
-                    Debug.Assert(prevTxIndex >= 0 && prevTxIndex < chainedBlock.Transactions.Count);
+                    Debug.Assert(prevTxIndex >= 0 && prevTxIndex < chainedBlock.Transactions.Length);
                     prevTx = chainedBlock.Transactions[prevTxIndex];
                     Debug.Assert(prevTx.Hash == txOutputKey.TxHash);
                 }
@@ -353,7 +353,7 @@ namespace BitSharp.Core.Rules
                 }
 
                 var outputIndex = unchecked((int)txOutputKey.TxOutputIndex);
-                if (outputIndex < 0 || outputIndex >= prevTx.Outputs.Count)
+                if (outputIndex < 0 || outputIndex >= prevTx.Outputs.Length)
                     throw new ValidationException(chainedBlock.Hash);
 
                 return prevTx.Outputs[outputIndex];
