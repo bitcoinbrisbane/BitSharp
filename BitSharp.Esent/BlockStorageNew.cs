@@ -40,8 +40,12 @@ namespace BitSharp.Esent
         private readonly JET_COLUMNID blockTxHashColumnId;
         private readonly JET_COLUMNID blockTxBytesColumnId;
 
+        private readonly ConcurrentSetBuilder<UInt256> missingData;
+
         public BlockStorageNew(string baseDirectory)
         {
+            this.missingData = new ConcurrentSetBuilder<UInt256>();
+
             this.semaphore = new SemaphoreSlim(1);
 
             this.jetDirectory = Path.Combine(baseDirectory, "BlocksNew");
@@ -54,7 +58,9 @@ namespace BitSharp.Esent
             this.jetInstance = CreateInstance(this.jetDirectory);
             this.jetInstance.Init();
 
-            //CreateDatabase(this.jetDatabase, this.jetInstance);
+            if (!File.Exists(this.jetDatabase))
+                CreateDatabase(this.jetDatabase, this.jetInstance);
+
             OpenDatabase(this.jetDatabase, this.jetInstance, false /*readOnly*/,
                 out this.jetSession,
                 out this.blockDbId,
@@ -74,6 +80,12 @@ namespace BitSharp.Esent
             this.jetInstance.Dispose();
             this.semaphore.Dispose();
         }
+
+        public event Action<UInt256, Block> OnAddition;
+
+        public event Action<UInt256, Block> OnModification;
+
+        public event Action<UInt256> OnRemoved;
 
         public bool ContainsBlock(UInt256 blockHash)
         {
@@ -134,6 +146,9 @@ namespace BitSharp.Esent
                     throw;
                 }
             });
+
+            this.missingData.Remove(block.Hash);
+            RaiseOnAddition(block.Hash, block);
         }
 
         private void AddBlockHeader(BlockHeader blockHeader)
@@ -239,6 +254,17 @@ namespace BitSharp.Esent
                 block = result;
             else
                 block = default(Block);
+
+            if (found)
+            {
+                if (this.missingData.Remove(blockHash))
+                    RaiseOnAddition(blockHash, block);
+            }
+            else
+            {
+                if (this.missingData.Add(blockHash))
+                    RaiseOnMissing(blockHash);
+            }
 
             return found;
         }
@@ -416,13 +442,6 @@ namespace BitSharp.Esent
             blockTxBytesColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxBytes");
         }
 
-
-        public event Action<UInt256, Block> OnAddition;
-
-        public event Action<UInt256, Block> OnModification;
-
-        public event Action<UInt256> OnRemoved;
-
         public int Count
         {
             get { return 0; }
@@ -447,7 +466,7 @@ namespace BitSharp.Esent
 
         public ImmutableHashSet<UInt256> MissingData
         {
-            get { return ImmutableHashSet.Create<UInt256>(); }
+            get { return this.missingData.ToImmutable(); }
         }
 
         public bool ContainsKey(UInt256 blockHash)
@@ -462,8 +481,15 @@ namespace BitSharp.Esent
 
         public bool TryAdd(UInt256 blockHash, Block block)
         {
-            AddBlock(block);
-            return true;
+            try
+            {
+                AddBlock(block);
+                return true;
+            }
+            catch (EsentKeyDuplicateException)
+            {
+                return false;
+            }
         }
 
         public bool TryRemove(UInt256 blockHash)
@@ -482,18 +508,49 @@ namespace BitSharp.Esent
                 }
                 else
                 {
-                    throw new KeyNotFoundException();
+                    if (this.missingData.Add(blockHash))
+                        RaiseOnMissing(blockHash);
+
+                    throw new MissingDataException(blockHash);
                 }
             }
             set
             {
-                AddBlock(value);
+                TryAdd(blockHash, value);
             }
         }
 
         public void Flush()
         {
             throw new NotImplementedException();
+        }
+
+        private void RaiseOnAddition(UInt256 blockHash, Block block)
+        {
+            var handler = this.OnAddition;
+            if (handler != null)
+                handler(blockHash, block);
+        }
+
+        private void RaiseOnModification(UInt256 blockHash, Block block)
+        {
+            var handler = this.OnModification;
+            if (handler != null)
+                handler(blockHash, block);
+        }
+
+        private void RaiseOnRemoved(UInt256 blockHash)
+        {
+            var handler = this.OnRemoved;
+            if (handler != null)
+                handler(blockHash);
+        }
+
+        private void RaiseOnMissing(UInt256 blockHash)
+        {
+            var handler = this.OnMissing;
+            if (handler != null)
+                handler(blockHash);
         }
     }
 }

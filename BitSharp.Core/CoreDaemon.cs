@@ -80,7 +80,7 @@ namespace BitSharp.Core
 
             // write genesis block out to storage
             this.blockHeaderCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock.Header;
-            //this.blockCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
+            this.blockCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
             this.chainedHeaderCache[this.rules.GenesisChainedHeader.Hash] = this.rules.GenesisChainedHeader;
 
             // wire up cache events
