@@ -87,6 +87,8 @@ namespace BitSharp.Esent
 
         public event Action<UInt256> OnRemoved;
 
+        public event Action<UInt256> OnMissing;
+
         public bool ContainsBlock(UInt256 blockHash)
         {
             return this.semaphore.Do(() =>
@@ -456,8 +458,6 @@ namespace BitSharp.Esent
         {
             get { throw new NotImplementedException(); }
         }
-
-        public event Action<UInt256> OnMissing;
 
         public string Name
         {
