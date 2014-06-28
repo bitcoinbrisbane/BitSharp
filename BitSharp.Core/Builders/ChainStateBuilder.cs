@@ -480,12 +480,12 @@ namespace BitSharp.Core.Builders
             if (!this.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
                 throw new Exception("TODO - corruption");
 
+            // update output states
+            unspentTx = unspentTx.SetOutputState(outputIndex, OutputState.Spent);
+
             // update partially spent transaction in the utxo
             if (unspentTx.OutputStates.Any(x => x == OutputState.Unspent))
             {
-                // update output states
-                unspentTx = unspentTx.SetOutputState(outputIndex, OutputState.Spent);
-                
                 this.chainStateBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
             }
             // remove fully spent transaction from the utxo
