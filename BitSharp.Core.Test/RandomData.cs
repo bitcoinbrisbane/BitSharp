@@ -98,6 +98,7 @@ namespace BitSharp.Core.Test
             return new UnspentTx
             (
                 confirmedBlockHash: random.NextUInt256(),
+                txIndex: random.Next(),
                 outputStates: new OutputStates(random.NextImmutableBitArray(random.Next((options != null ? options.TxOutputCount : null) ?? 100)))
             );
         }

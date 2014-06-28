@@ -50,7 +50,7 @@ namespace BitSharp.Core
         private readonly ChainedHeaderCache chainedHeaderCache;
         private readonly BlockTxHashesCache blockTxHashesCache;
         private readonly TransactionCache transactionCache;
-        private readonly BlockCache blockCache;
+        private readonly IBlockStorageNew blockCache;
 
         private readonly CancellationTokenSource shutdownToken;
 
@@ -65,7 +65,7 @@ namespace BitSharp.Core
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
 
-        public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockCache blockCache)
+        public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, IBlockStorageNew blockCache)
         {
             this.logger = logger;
             this.shutdownToken = new CancellationTokenSource();
@@ -80,7 +80,7 @@ namespace BitSharp.Core
 
             // write genesis block out to storage
             this.blockHeaderCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock.Header;
-            this.blockCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
+            //this.blockCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock;
             this.chainedHeaderCache[this.rules.GenesisChainedHeader.Hash] = this.rules.GenesisChainedHeader;
 
             // wire up cache events
@@ -171,16 +171,16 @@ namespace BitSharp.Core
                     if (chainStateLocal == null)
                         return;
 
-                    new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.OutputCount), () =>
-                    {
-                        var sha256 = new SHA256Managed();
-                        foreach (var output in chainStateLocal.Utxo.GetUnspentOutputs())
-                        {
-                            if (new UInt256(sha256.ComputeDoubleHash(output.Value.ScriptPublicKey.ToArray())) == UInt256.Zero)
-                            {
-                            }
-                        }
-                    });
+                    //new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.OutputCount), () =>
+                    //{
+                    //    var sha256 = new SHA256Managed();
+                    //    foreach (var output in chainStateLocal.Utxo.GetUnspentOutputs())
+                    //    {
+                    //        if (new UInt256(sha256.ComputeDoubleHash(output.Value.ScriptPublicKey.ToArray())) == UInt256.Zero)
+                    //        {
+                    //        }
+                    //    }
+                    //});
                 }, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
         }
 
@@ -227,6 +227,17 @@ namespace BitSharp.Core
 
         public void Start()
         {
+            //var blockStorageNew = this.kernel.Get<IBlockStorageNew>();
+
+            //var blockIndex = 0;
+            //foreach (var block in this.blockCache.Values)
+            //{
+            //    this.logger.Info(blockIndex.ToString());
+
+            //    blockStorageNew.AddBlock(block);
+            //    blockIndex++;
+            //}
+
             // start loading the existing state from storage
             //TODO LoadExistingState();
 

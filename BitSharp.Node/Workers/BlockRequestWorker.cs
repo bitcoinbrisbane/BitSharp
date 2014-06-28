@@ -28,7 +28,7 @@ namespace BitSharp.Node.Workers
         private readonly LocalClient localClient;
         private readonly CoreDaemon blockchainDaemon;
         private readonly ChainedHeaderCache chainedHeaderCache;
-        private readonly BlockCache blockCache;
+        private readonly IBlockStorageNew blockCache;
 
         private readonly ConcurrentDictionary<UInt256, DateTime> allBlockRequests;
         private readonly ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>> blockRequestsByPeer;
@@ -49,7 +49,7 @@ namespace BitSharp.Node.Workers
         private readonly WorkerMethod flushWorker;
         private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
 
-        public BlockRequestWorker(Logger logger, WorkerConfig workerConfig, LocalClient localClient, CoreDaemon blockchainDaemon, ChainedHeaderCache chainedHeaderCache, BlockCache blockCache)
+        public BlockRequestWorker(Logger logger, WorkerConfig workerConfig, LocalClient localClient, CoreDaemon blockchainDaemon, ChainedHeaderCache chainedHeaderCache, IBlockStorageNew blockCache)
             : base("BlockRequestWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;

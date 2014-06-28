@@ -43,7 +43,7 @@ namespace BitSharp.Core.Rules
                 var txInput = value.Item4;
                 var txOutput = value.Item5;
 
-                this.rules.ValidationTransactionScript(chainedHeader, tx, chainPosition.TxIndex, txInput, chainPosition.InputIndex, txOutput);
+                //this.rules.ValidationTransactionScript(chainedHeader, tx, chainPosition.TxIndex, txInput, chainPosition.InputIndex, txOutput);
             }
             catch (Exception e)
             {

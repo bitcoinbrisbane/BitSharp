@@ -47,7 +47,7 @@ namespace BitSharp.Esent
             // bind concrete storage providers
             this.Bind<BlockHeaderStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<ChainedHeaderStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-            this.Bind<BlockStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
+            //this.Bind<BlockStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             if (this.transientBlockStorage)
             {
                 this.Bind<MemoryBlockTxHashesStorage>().ToSelf().InSingletonScope();
@@ -62,11 +62,12 @@ namespace BitSharp.Esent
             this.Bind<SpentOutputsStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<InvalidBlockStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<NetworkPeerStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
+            this.Bind<BlockStorageNew>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
 
             // bind storage providers interfaces
             this.Bind<IBlockHeaderStorage>().ToMethod(x => this.Kernel.Get<BlockHeaderStorage>()).InSingletonScope();
             this.Bind<IChainedHeaderStorage>().ToMethod(x => this.Kernel.Get<ChainedHeaderStorage>()).InSingletonScope();
-            this.Bind<IBlockStorage>().ToMethod(x => this.Kernel.Get<BlockStorage>()).InSingletonScope();
+            //this.Bind<IBlockStorage>().ToMethod(x => this.Kernel.Get<BlockStorage>()).InSingletonScope();
             if (this.transientBlockStorage)
             {
                 this.Bind<IBlockTxHashesStorage>().ToMethod(x => this.Kernel.Get<MemoryBlockTxHashesStorage>()).InSingletonScope();
@@ -81,8 +82,10 @@ namespace BitSharp.Esent
             this.Bind<ISpentOutputsStorage>().ToMethod(x => this.Kernel.Get<SpentOutputsStorage>()).InSingletonScope();
             this.Bind<IInvalidBlockStorage>().ToMethod(x => this.Kernel.Get<InvalidBlockStorage>()).InSingletonScope();
             this.Bind<INetworkPeerStorage>().ToMethod(x => this.Kernel.Get<NetworkPeerStorage>()).InSingletonScope();
+            this.Bind<IBlockStorageNew>().ToMethod(x => this.Kernel.Get<BlockStorageNew>()).InSingletonScope();
 
-            this.Bind<IChainStateBuilderStorage>().To<ChainStateBuilderStorage>().InTransientScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
+            //this.Bind<IChainStateBuilderStorage>().To<ChainStateBuilderStorage>().InTransientScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
+            this.Bind<IChainStateBuilderStorage>().To<MemoryChainStateBuilderStorage>().InTransientScope();
         }
     }
 }

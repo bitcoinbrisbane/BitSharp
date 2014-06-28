@@ -378,6 +378,7 @@ namespace BitSharp.Core
             {
                 return new UnspentTx(
                     confirmedBlockHash: reader.ReadUInt256(),
+                    txIndex: reader.ReadInt32(),
                     outputStates: new OutputStates(
                         bytes: reader.ReadVarBytes(),
                         length: reader.ReadInt32())
@@ -398,6 +399,7 @@ namespace BitSharp.Core
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
                 writer.WriteUInt256(unspentTx.ConfirmedBlockHash);
+                writer.WriteInt32(unspentTx.TxIndex);
                 writer.WriteVarBytes(unspentTx.OutputStates.ToByteArray());
                 writer.WriteInt32(unspentTx.OutputStates.Length);
             }
@@ -418,6 +420,7 @@ namespace BitSharp.Core
             {
                 return new SpentTx(
                     confirmedBlockHash: reader.ReadUInt256(),
+                    txIndex: reader.ReadInt32(),
                     outputCount: reader.ReadInt32()
                 );
             }
@@ -436,6 +439,7 @@ namespace BitSharp.Core
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
                 writer.WriteUInt256(spentTx.ConfirmedBlockHash);
+                writer.WriteInt32(spentTx.TxIndex);
                 writer.WriteInt32(spentTx.OutputCount);
             }
         }

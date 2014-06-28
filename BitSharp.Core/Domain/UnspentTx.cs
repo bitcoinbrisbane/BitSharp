@@ -10,32 +10,37 @@ namespace BitSharp.Core.Domain
     public class UnspentTx
     {
         private readonly UInt256 confirmedBlockHash;
+        private readonly int txIndex;
         private readonly OutputStates outputStates;
 
-        public UnspentTx(UInt256 confirmedBlockHash, OutputStates outputStates)
+        public UnspentTx(UInt256 confirmedBlockHash, int txIndex, OutputStates outputStates)
         {
             this.confirmedBlockHash = confirmedBlockHash;
+            this.txIndex = txIndex;
             this.outputStates = outputStates;
         }
 
-        public UnspentTx(UInt256 confirmedBlockHash, int length, OutputState state)
+        public UnspentTx(UInt256 confirmedBlockHash, int txIndex, int length, OutputState state)
         {
             this.confirmedBlockHash = confirmedBlockHash;
+            this.txIndex = txIndex;
             this.outputStates = new OutputStates(length, state);
         }
 
         public UInt256 ConfirmedBlockHash { get { return this.confirmedBlockHash; } }
 
+        public int TxIndex { get { return this.txIndex; } }
+
         public OutputStates OutputStates { get { return this.outputStates; } }
 
         public UnspentTx SetOutputState(int index, OutputState value)
         {
-            return new UnspentTx(this.confirmedBlockHash, this.outputStates.Set(index, value));
+            return new UnspentTx(this.confirmedBlockHash, this.txIndex, this.outputStates.Set(index, value));
         }
 
         public SpentTx ToSpent()
         {
-            return new SpentTx(this.confirmedBlockHash, this.outputStates.Length);
+            return new SpentTx(this.confirmedBlockHash, this.txIndex, this.outputStates.Length);
         }
 
         public override bool Equals(object obj)

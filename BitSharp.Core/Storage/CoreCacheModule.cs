@@ -17,7 +17,7 @@ namespace BitSharp.Core.Storage
     {
         private IBoundedCache<UInt256, BlockHeader> blockHeaderCache;
         private IBoundedCache<UInt256, ChainedHeader> chainedHeaderCache;
-        private IBoundedCache<UInt256, Block> blockCache;
+        //private IBoundedCache<UInt256, Block> blockCache;
         private IBoundedCache<UInt256, IImmutableList<UInt256>> blockTxHashesCache;
         private IUnboundedCache<UInt256, Transaction> transactionCache;
         private IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, SpentTx>>> spentTransactionsCache;
@@ -34,9 +34,9 @@ namespace BitSharp.Core.Storage
             this.chainedHeaderCache = this.Kernel.Get<BoundedFullCache<UInt256, ChainedHeader>>(
                 new ConstructorArgument("name", "Chained Block Cache"), new ConstructorArgument("dataStorage", chainedHeaderStorage));
 
-            var blockStorage = this.Kernel.Get<IBlockStorage>();
-            this.blockCache = this.Kernel.Get<BoundedCache<UInt256, Block>>(
-                new ConstructorArgument("name", "Block Cache"), new ConstructorArgument("dataStorage", blockStorage));
+            //this.blockStorage = this.Kernel.Get<IBlockStorageNew>();
+            //this.blockCache = this.Kernel.Get<BoundedCache<UInt256, Block>>(
+            //    new ConstructorArgument("name", "Block Cache"), new ConstructorArgument("dataStorage", blockStorage));
 
             var blockTxHashesStorage = this.Kernel.Get<IBlockTxHashesStorage>();
             this.blockTxHashesCache = this.Kernel.Get<BoundedCache<UInt256, IImmutableList<UInt256>>>(
@@ -60,7 +60,7 @@ namespace BitSharp.Core.Storage
 
             this.Bind<BlockHeaderCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockHeaderCache);
             this.Bind<ChainedHeaderCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.chainedHeaderCache);
-            this.Bind<BlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockCache);
+            //this.Bind<BlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockCache);
             this.Bind<BlockTxHashesCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockTxHashesCache);
             this.Bind<TransactionCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.transactionCache);
             this.Bind<SpentTransactionsCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.spentTransactionsCache);
@@ -69,8 +69,8 @@ namespace BitSharp.Core.Storage
 
             if (false)
             {
-                this.blockCache = this.Kernel.Get<BlockCompositeCache>();
-                this.Bind<BlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockCache);
+                //this.blockCache = this.Kernel.Get<BlockCompositeCache>();
+                //this.Bind<BlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockCache);
             }
         }
 
@@ -80,7 +80,7 @@ namespace BitSharp.Core.Storage
             {
                 this.blockHeaderCache,
                 this.chainedHeaderCache,
-                this.blockCache,
+                //this.blockCache,
                 this.blockTxHashesCache,
                 this.transactionCache,
                 this.spentTransactionsCache,

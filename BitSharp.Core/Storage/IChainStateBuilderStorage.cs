@@ -33,17 +33,17 @@ namespace BitSharp.Core.Storage
         IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions();
 
 
-        int OutputCount { get; }
+        //int OutputCount { get; }
 
-        bool ContainsOutput(TxOutputKey txOutputKey);
+        //bool ContainsOutput(TxOutputKey txOutputKey);
 
-        bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput);
+        //bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput);
 
-        void AddOutput(TxOutputKey txOutputKey, TxOutput txOutput);
+        //void AddOutput(TxOutputKey txOutputKey, TxOutput txOutput);
 
-        bool RemoveOutput(TxOutputKey txOutputKey);
+        //bool RemoveOutput(TxOutputKey txOutputKey);
 
-        IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs();
+        //IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs();
 
 
         void Flush();

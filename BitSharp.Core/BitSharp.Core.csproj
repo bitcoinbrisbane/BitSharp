@@ -139,6 +139,7 @@
     <Compile Include="Storage\CoreStorageInstance.cs" />
     <Compile Include="Storage\ExtensionMethods.cs" />
     <Compile Include="Storage\GenesisChainStateStorage.cs" />
+    <Compile Include="Storage\IBlockStorageNew.cs" />
     <Compile Include="Storage\IBoundedCache.cs" />
     <Compile Include="Storage\IBoundedStorage.cs" />
     <Compile Include="Storage\ICoreStorage.cs" />

@@ -22,12 +22,12 @@ namespace BitSharp.Core.Storage
         IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions();
 
         
-        int OutputCount { get; }
+        //int OutputCount { get; }
 
-        bool ContainsOutput(TxOutputKey txOutputKey);
+        //bool ContainsOutput(TxOutputKey txOutputKey);
 
-        bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput);
+        //bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput);
 
-        IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs();
+        //IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs();
     }
 }

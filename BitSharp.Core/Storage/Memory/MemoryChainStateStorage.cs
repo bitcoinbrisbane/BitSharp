@@ -13,18 +13,18 @@ namespace BitSharp.Core.Storage.Memory
     {
         private UInt256 blockHash;
         private ImmutableDictionary<UInt256, UnspentTx> unspentTransactions;
-        private ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs;
+        //private ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs;
 
-        public MemoryChainStateStorage(UInt256 blockHash, ImmutableDictionary<UInt256, UnspentTx> unspentTransactions, ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs)
+        public MemoryChainStateStorage(UInt256 blockHash, ImmutableDictionary<UInt256, UnspentTx> unspentTransactions) //, ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs)
         {
             this.blockHash = blockHash;
             this.unspentTransactions = unspentTransactions;
-            this.unspentOutputs = unspentOutputs;
+            //this.unspentOutputs = unspentOutputs;
         }
 
         public ImmutableDictionary<UInt256, UnspentTx> UnspentTransactions { get { return this.unspentTransactions; } }
 
-        public ImmutableDictionary<TxOutputKey, TxOutput> UnspentOutputs { get { return this.unspentOutputs; } }
+        //public ImmutableDictionary<TxOutputKey, TxOutput> UnspentOutputs { get { return this.unspentOutputs; } }
 
         public UInt256 BlockHash
         {
@@ -51,25 +51,25 @@ namespace BitSharp.Core.Storage.Memory
             return this.unspentTransactions;
         }
 
-        public int OutputCount
-        {
-            get { return this.unspentOutputs.Count; }
-        }
+        //public int OutputCount
+        //{
+        //    get { return this.unspentOutputs.Count; }
+        //}
 
-        public bool ContainsOutput(TxOutputKey txOutputKey)
-        {
-            return this.unspentOutputs.ContainsKey(txOutputKey);
-        }
+        //public bool ContainsOutput(TxOutputKey txOutputKey)
+        //{
+        //    return this.unspentOutputs.ContainsKey(txOutputKey);
+        //}
 
-        public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
-        {
-            return this.unspentOutputs.TryGetValue(txOutputKey, out txOutput);
-        }
+        //public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
+        //{
+        //    return this.unspentOutputs.TryGetValue(txOutputKey, out txOutput);
+        //}
 
-        IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> IChainStateStorage.UnspentOutputs()
-        {
-            return this.unspentOutputs;
-        }
+        //IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> IChainStateStorage.UnspentOutputs()
+        //{
+        //    return this.unspentOutputs;
+        //}
 
         public void Dispose()
         {

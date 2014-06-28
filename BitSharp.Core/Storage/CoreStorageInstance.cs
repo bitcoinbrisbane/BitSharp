@@ -22,7 +22,7 @@ namespace BitSharp.Core.Storage
             get { throw new NotImplementedException(); }
         }
 
-        public BlockCache BlockCache
+        public IBlockStorageNew BlockCache
         {
             get { throw new NotImplementedException(); }
         }

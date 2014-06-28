@@ -24,11 +24,11 @@ namespace BitSharp.Core.Test.Domain
 
             // prepare unspent output
             var txHash = new UInt256(0);
-            unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, length: 1, state: OutputState.Unspent));
+            unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, txIndex: 0, length: 1, state: OutputState.Unspent));
             unspentOutputs.Add(new TxOutputKey(txHash, 0), new TxOutput(0, ImmutableArray.Create<byte>()));
 
             // prepare utxo
-            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
+            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable()); //, unspentOutputs.ToImmutable());
             var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
@@ -50,10 +50,10 @@ namespace BitSharp.Core.Test.Domain
 
             // prepare spent output
             var txHash = new UInt256(0);
-            unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, length: 1, state: OutputState.Spent));
+            unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, txIndex: 0, length: 1, state: OutputState.Spent));
 
             // prepare utxo
-            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
+            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable()); //, unspentOutputs.ToImmutable());
             var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
@@ -74,7 +74,7 @@ namespace BitSharp.Core.Test.Domain
             var unspentOutputs = ImmutableDictionary.CreateBuilder<TxOutputKey, TxOutput>();
 
             // prepare utxo
-            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
+            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable()); //, unspentOutputs.ToImmutable());
             var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
@@ -96,11 +96,11 @@ namespace BitSharp.Core.Test.Domain
 
             // prepare unspent output
             var txHash = new UInt256(0);
-            unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, length: 1, state: OutputState.Unspent));
+            unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, txIndex: 0, length: 1, state: OutputState.Unspent));
             unspentOutputs.Add(new TxOutputKey(txHash, UInt32.MaxValue), new TxOutput(0, ImmutableArray.Create<byte>()));
 
             // prepare utxo
-            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
+            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable()); //, unspentOutputs.ToImmutable());
             var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
@@ -122,11 +122,11 @@ namespace BitSharp.Core.Test.Domain
 
             // prepare unspent output
             var txHash = new UInt256(0);
-            unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, length: 1, state: OutputState.Unspent));
+            unspentTransactions.Add(txHash, new UnspentTx(confirmedBlockHash: 0, txIndex: 0, length: 1, state: OutputState.Unspent));
             unspentOutputs.Add(new TxOutputKey(txHash, 1), new TxOutput(0, ImmutableArray.Create<byte>()));
 
             // prepare utxo
-            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable(), unspentOutputs.ToImmutable());
+            var chainStateStorage = new MemoryChainStateStorage(0, unspentTransactions.ToImmutable()); //, unspentOutputs.ToImmutable());
             var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
