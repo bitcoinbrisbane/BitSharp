@@ -84,8 +84,8 @@ namespace BitSharp.Esent
             this.Bind<INetworkPeerStorage>().ToMethod(x => this.Kernel.Get<NetworkPeerStorage>()).InSingletonScope();
             this.Bind<IBlockStorageNew>().ToMethod(x => this.Kernel.Get<BlockStorageNew>()).InSingletonScope();
 
-            //this.Bind<IChainStateBuilderStorage>().To<ChainStateBuilderStorage>().InTransientScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-            this.Bind<IChainStateBuilderStorage>().To<MemoryChainStateBuilderStorage>().InTransientScope();
+            this.Bind<IChainStateBuilderStorage>().To<ChainStateBuilderStorage>().InTransientScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
+            //this.Bind<IChainStateBuilderStorage>().To<MemoryChainStateBuilderStorage>().InTransientScope();
         }
     }
 }
