@@ -10,6 +10,8 @@ namespace BitSharp.Core.Storage
 {
     public interface IChainStateStorage : IDisposable
     {
+        int BlockHeight { get; }
+
         UInt256 BlockHash { get; }
 
         

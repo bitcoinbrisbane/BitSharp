@@ -377,7 +377,8 @@ namespace BitSharp.Core
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
                 return new UnspentTx(
-                    confirmedBlockHash: reader.ReadUInt256(),
+                    //confirmedBlockHash: reader.ReadUInt256(),
+                    blockIndex: reader.ReadInt32(),
                     txIndex: reader.ReadInt32(),
                     outputStates: new OutputStates(
                         bytes: reader.ReadVarBytes(),
@@ -398,7 +399,8 @@ namespace BitSharp.Core
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.WriteUInt256(unspentTx.ConfirmedBlockHash);
+                //writer.WriteUInt256(unspentTx.ConfirmedBlockHash);
+                writer.WriteInt32(unspentTx.BlockIndex);
                 writer.WriteInt32(unspentTx.TxIndex);
                 writer.WriteVarBytes(unspentTx.OutputStates.ToByteArray());
                 writer.WriteInt32(unspentTx.OutputStates.Length);
@@ -419,7 +421,8 @@ namespace BitSharp.Core
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
                 return new SpentTx(
-                    confirmedBlockHash: reader.ReadUInt256(),
+                    //confirmedBlockHash: reader.ReadUInt256(),
+                    blockIndex: reader.ReadInt32(),
                     txIndex: reader.ReadInt32(),
                     outputCount: reader.ReadInt32()
                 );
@@ -438,7 +441,8 @@ namespace BitSharp.Core
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.WriteUInt256(spentTx.ConfirmedBlockHash);
+                //writer.WriteUInt256(spentTx.ConfirmedBlockHash);
+                writer.WriteInt32(spentTx.BlockIndex);
                 writer.WriteInt32(spentTx.TxIndex);
                 writer.WriteInt32(spentTx.OutputCount);
             }

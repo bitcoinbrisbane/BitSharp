@@ -14,7 +14,9 @@ namespace BitSharp.Core.Storage
         void CommitTransaction();
         void RollbackTransaction();
 
-        
+
+        int BlockHeight { get; set; }
+
         UInt256 BlockHash { get; set; }
 
         

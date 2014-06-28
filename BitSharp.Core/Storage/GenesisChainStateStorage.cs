@@ -19,6 +19,12 @@ namespace BitSharp.Core.Storage
             this.blockHash = blockHash;
         }
 
+        public int BlockHeight
+        {
+            get { return 0; }
+        }
+
+        
         public UInt256 BlockHash
         {
             get { return this.blockHash; }

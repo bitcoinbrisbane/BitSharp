@@ -11,12 +11,14 @@ namespace BitSharp.Core.Storage.Memory
 {
     public class MemoryChainStateStorage : IChainStateStorage
     {
+        private int blockHeight;
         private UInt256 blockHash;
         private ImmutableDictionary<UInt256, UnspentTx> unspentTransactions;
         //private ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs;
 
-        public MemoryChainStateStorage(UInt256 blockHash, ImmutableDictionary<UInt256, UnspentTx> unspentTransactions) //, ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs)
+        public MemoryChainStateStorage(int blockHeight, UInt256 blockHash, ImmutableDictionary<UInt256, UnspentTx> unspentTransactions) //, ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs)
         {
+            this.blockHeight = blockHeight;
             this.blockHash = blockHash;
             this.unspentTransactions = unspentTransactions;
             //this.unspentOutputs = unspentOutputs;
@@ -25,6 +27,11 @@ namespace BitSharp.Core.Storage.Memory
         public ImmutableDictionary<UInt256, UnspentTx> UnspentTransactions { get { return this.unspentTransactions; } }
 
         //public ImmutableDictionary<TxOutputKey, TxOutput> UnspentOutputs { get { return this.unspentOutputs; } }
+
+        public int BlockHeight
+        {
+            get { return this.blockHeight; }
+        }
 
         public UInt256 BlockHash
         {

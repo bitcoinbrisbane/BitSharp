@@ -171,6 +171,13 @@ namespace BitSharp.Core
                     if (chainStateLocal == null)
                         return;
 
+                    new MethodTimer(this.logger).Time("UTXO Commitment: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
+                    {
+                        var sha256 = new SHA256Managed();
+                        var utxoHash = sha256.ComputeHash(new UtxoStream(chainStateLocal.Utxo.GetUnspentTransactions()));
+                        this.logger.Info("UXO Commitment Hash: {0}".Format2(utxoHash.ToHexNumberString()));
+                    });
+
                     //new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.OutputCount), () =>
                     //{
                     //    var sha256 = new SHA256Managed();
@@ -181,7 +188,7 @@ namespace BitSharp.Core
                     //        }
                     //    }
                     //});
-                }, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
+                }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(60), maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
         }
 
         public ChainedHeader TargetBlock { get { return this.targetChainWorker.TargetBlock; } }
@@ -256,7 +263,7 @@ namespace BitSharp.Core
             this.targetChainWorker.Stop();
             this.chainStateWorker.Stop();
             this.gcWorker.Stop();
-            //this.utxoScanWorker.Stop();
+            this.utxoScanWorker.Stop();
         }
 
         public void Dispose()

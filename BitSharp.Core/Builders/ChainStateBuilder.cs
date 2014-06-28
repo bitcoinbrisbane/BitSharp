@@ -52,6 +52,8 @@ namespace BitSharp.Core.Builders
         //private readonly ImmutableList<KeyValuePair<UInt256, SpentTx>>.Builder spentTransactions;
         //private readonly ImmutableList<KeyValuePair<TxOutputKey, TxOutput>>.Builder spentOutputs;
 
+        private readonly ReaderWriterLockSlim commitLock;
+
         private readonly BuilderStats stats;
 
         public ChainStateBuilder(ChainBuilder chain, Utxo parentUtxo, Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, IBlockStorageNew blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
@@ -73,6 +75,8 @@ namespace BitSharp.Core.Builders
 
             //this.spentTransactions = ImmutableList.CreateBuilder<KeyValuePair<UInt256, SpentTx>>();
             //this.spentOutputs = ImmutableList.CreateBuilder<KeyValuePair<TxOutputKey, TxOutput>>();
+
+            this.commitLock = new ReaderWriterLockSlim();
 
             this.stats = new BuilderStats();
         }
@@ -149,13 +153,14 @@ namespace BitSharp.Core.Builders
                     this.Chain.AddBlock(chainedBlock.ChainedHeader);
 
                     // store block hash
+                    this.chainStateBuilderStorage.BlockHeight = chainedBlock.Height;
                     this.chainStateBuilderStorage.BlockHash = chainedBlock.Hash;
 
                     // validate the block
-                    this.Stats.validateStopwatch.Start();
-                    new MethodTimer(false).Time("ValidateBlock", () =>
-                        this.rules.ValidateBlock(chainedBlock, this));
-                    this.Stats.validateStopwatch.Stop();
+                    //this.Stats.validateStopwatch.Start();
+                    //new MethodTimer(false).Time("ValidateBlock", () =>
+                    //    this.rules.ValidateBlock(chainedBlock, this));
+                    //this.Stats.validateStopwatch.Stop();
 
                     // calculate the new block utxo, double spends will be checked for
                     long txCount = 0, inputCount = 0;
@@ -235,6 +240,7 @@ namespace BitSharp.Core.Builders
                     this.Chain.RemoveBlock(chainedBlock.ChainedHeader);
 
                     // store the block hash
+                    this.chainStateBuilderStorage.BlockHeight = this.Chain.Height;
                     this.chainStateBuilderStorage.BlockHash = this.Chain.LastBlockHash;
 
                     // rollback the utxo
@@ -314,8 +320,10 @@ namespace BitSharp.Core.Builders
             UnspentTx unspentTx;
             if (this.TryGetUnspentTx(txOutputKey, out unspentTx))
             {
+                var blockIndex = this.chain.Blocks[unspentTx.BlockIndex].Hash;
+
                 Transaction transaction;
-                if (this.blockCache.TryGetTransaction(unspentTx.ConfirmedBlockHash, unspentTx.TxIndex, out transaction))
+                if (this.blockCache.TryGetTransaction(/*unspentTx.ConfirmedBlockHash,*/ blockIndex, unspentTx.TxIndex, out transaction))
                 {
                     txOutput = transaction.Outputs[txOutputKey.TxOutputIndex.ToIntChecked()];
                     return true;
@@ -436,7 +444,7 @@ namespace BitSharp.Core.Builders
             }
 
             // add transaction to the utxo
-            this.chainStateBuilderStorage.AddTransaction(tx.Hash, new UnspentTx(chainedHeader.Hash, txIndex, tx.Outputs.Length, OutputState.Unspent));
+            this.chainStateBuilderStorage.AddTransaction(tx.Hash, new UnspentTx(/*chainedHeader.Hash,*/ chainedHeader.Height, txIndex, tx.Outputs.Length, OutputState.Unspent));
 
             //// add transaction outputs to the utxo
             //foreach (var output in tx.Outputs.Select((x, i) => new KeyValuePair<TxOutputKey, TxOutput>(new TxOutputKey(tx.Hash, (UInt32)i), x)))
@@ -453,7 +461,7 @@ namespace BitSharp.Core.Builders
         {
             UnspentTx unspentTx;
             if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
-                //|| !this.chainStateBuilderStorage.ContainsOutput(input.PreviousTxOutputKey))
+            //|| !this.chainStateBuilderStorage.ContainsOutput(input.PreviousTxOutputKey))
             {
                 // output wasn't present in utxo, invalid block
                 throw new ValidationException(chainedHeader.Hash);
@@ -476,9 +484,9 @@ namespace BitSharp.Core.Builders
             //TODO don't remove data immediately, needs to stick around for rollback
 
             // retrieve previous output
-            TxOutput prevOutput;
-            if (!this.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
-                throw new Exception("TODO - corruption");
+            //TxOutput prevOutput;
+            //if (!this.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
+            //    throw new Exception("TODO - corruption");
 
             // update output states
             unspentTx = unspentTx.SetOutputState(outputIndex, OutputState.Spent);
@@ -504,8 +512,8 @@ namespace BitSharp.Core.Builders
             //this.chainStateBuilderStorage.RemoveOutput(input.PreviousTxOutputKey);
 
             // MONITOR: SpendTxOutput
-            if (this.chainStateMonitor != null)
-                this.chainStateMonitor.SpendTxOutput(new ChainPosition(chainedHeader.Hash, txIndex, tx.Hash, inputIndex, -1), chainedHeader, tx, input, input.PreviousTxOutputKey, prevOutput, GetOutputScripHash(prevOutput));
+            //if (this.chainStateMonitor != null)
+            //    this.chainStateMonitor.SpendTxOutput(new ChainPosition(chainedHeader.Hash, txIndex, tx.Hash, inputIndex, -1), chainedHeader, tx, input, input.PreviousTxOutputKey, prevOutput, GetOutputScripHash(prevOutput));
         }
 
         //TODO with the rollback information that's now being stored, rollback could be down without needing the block
@@ -638,7 +646,7 @@ namespace BitSharp.Core.Builders
                     throw new Exception("TODO - corruption");
 
                 // create fully spent transaction output state
-                unspentTx = new UnspentTx(prevSpentTx.ConfirmedBlockHash, prevSpentTx.TxIndex, prevSpentTx.OutputCount, OutputState.Spent);
+                unspentTx = new UnspentTx(/*prevSpentTx.ConfirmedBlockHash,*/ prevSpentTx.BlockIndex, prevSpentTx.TxIndex, prevSpentTx.OutputCount, OutputState.Spent);
             }
 
             // retrieve previous output index
@@ -682,10 +690,8 @@ namespace BitSharp.Core.Builders
 
         public ChainState ToImmutable()
         {
-            if (this.inTransaction)
-                throw new InvalidOperationException();
-
-            return new ChainState(this.chain.ToImmutable(), new Utxo(chainStateBuilderStorage.ToImmutable()));
+            return this.commitLock.DoRead(() =>
+                new ChainState(this.chain.ToImmutable(), new Utxo(chainStateBuilderStorage.ToImmutable())));
         }
 
         private void BeginTransaction()
@@ -693,6 +699,7 @@ namespace BitSharp.Core.Builders
             if (this.inTransaction)
                 throw new InvalidOperationException();
 
+            this.commitLock.EnterWriteLock();
             this.chainStateBuilderStorage.BeginTransaction();
             this.savedChain = this.chain.ToImmutable();
             this.inTransaction = true;
@@ -706,6 +713,7 @@ namespace BitSharp.Core.Builders
             this.chainStateBuilderStorage.CommitTransaction();
             this.savedChain = null;
             this.inTransaction = false;
+            this.commitLock.ExitWriteLock();
         }
 
         private void RollbackTransaction()
@@ -716,6 +724,7 @@ namespace BitSharp.Core.Builders
             this.chainStateBuilderStorage.RollbackTransaction();
             this.chain = this.savedChain.ToBuilder();
             this.inTransaction = false;
+            this.commitLock.ExitWriteLock();
         }
 
         public sealed class BuilderStats : IDisposable
