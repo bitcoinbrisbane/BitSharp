@@ -256,7 +256,7 @@ namespace BitSharp.Core
             this.targetChainWorker.Start();
             this.chainStateWorker.Start();
             this.gcWorker.Start();
-            this.utxoScanWorker.Start();
+            //this.utxoScanWorker.Start();
         }
 
         public void Stop()
