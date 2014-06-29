@@ -1,4 +1,6 @@
 ﻿using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,17 +12,22 @@ namespace BitSharp.Core.Domain
 {
     public class UtxoStream : Stream
     {
+        private readonly Logger logger;
         private readonly IEnumerator<KeyValuePair<UInt256, UnspentTx>> unspentTransactions;
         private readonly List<byte> unreadBytes;
+        private int totalBytes;
 
-        public UtxoStream(IEnumerable<KeyValuePair<UInt256, UnspentTx>> unspentTransactions)
+        public UtxoStream(Logger logger, IEnumerable<KeyValuePair<UInt256, UnspentTx>> unspentTransactions)
         {
+            this.logger = logger;
             this.unspentTransactions = unspentTransactions.GetEnumerator();
             this.unreadBytes = new List<byte>();
         }
 
         protected override void Dispose(bool disposing)
         {
+            this.logger.Info("UTXO Commitment Bytes: {0:#,##0}".Format2(this.totalBytes));
+
             this.unspentTransactions.Dispose();
             base.Dispose(disposing);
         }
@@ -80,12 +87,14 @@ namespace BitSharp.Core.Domain
             {
                 unreadBytes.CopyTo(0, buffer, offset, count);
                 unreadBytes.RemoveRange(0, count);
+                this.totalBytes += count;
                 return count;
             }
             else
             {
                 unreadBytes.CopyTo(0, buffer, offset, available);
                 unreadBytes.Clear();
+                this.totalBytes += available;
                 return available;
             }
         }
