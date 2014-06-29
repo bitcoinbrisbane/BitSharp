@@ -40,8 +40,8 @@ namespace BitSharp.Core.Builders
         //private readonly SpentTransactionsCache spentTransactionsCache;
         //private readonly SpentOutputsCache spentOutputsCache;
 
-        private readonly ChainStateMonitor chainStateMonitor;
-        private readonly ScriptValidator scriptValidator;
+        //private readonly ChainStateMonitor chainStateMonitor;
+        //private readonly ScriptValidator scriptValidator;
 
         private bool inTransaction;
         private ChainBuilder chain;
@@ -66,9 +66,9 @@ namespace BitSharp.Core.Builders
             //this.spentTransactionsCache = spentTransactionsCache;
             //this.spentOutputsCache = spentOutputsCache;
 
-            this.chainStateMonitor = new ChainStateMonitor(this.logger);
-            this.scriptValidator = new ScriptValidator(this.logger, this.rules);
-            this.chainStateMonitor.Subscribe(this.scriptValidator);
+            //this.chainStateMonitor = new ChainStateMonitor(this.logger);
+            //this.scriptValidator = new ScriptValidator(this.logger, this.rules);
+            //this.chainStateMonitor.Subscribe(this.scriptValidator);
 
             this.chain = chain;
             this.chainStateBuilderStorage = kernel.Get<IChainStateBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo.Storage));
@@ -90,10 +90,10 @@ namespace BitSharp.Core.Builders
         {
             GC.SuppressFinalize(this);
 
-            if (this.chainStateMonitor != null)
-                this.chainStateMonitor.Dispose();
-            if (this.scriptValidator != null)
-                this.scriptValidator.Dispose();
+            //if (this.chainStateMonitor != null)
+            //    this.chainStateMonitor.Dispose();
+            //if (this.scriptValidator != null)
+            //    this.scriptValidator.Dispose();
 
             this.stats.Dispose();
             this.chainStateBuilderStorage.Dispose();
@@ -131,23 +131,25 @@ namespace BitSharp.Core.Builders
 
         public IDisposable Subscribe(IChainStateVisitor visitor)
         {
-            if (this.chainStateMonitor == null)
-                throw new InvalidOperationException();
+            return null;
 
-            return this.chainStateMonitor.Subscribe(visitor);
+            //if (this.chainStateMonitor == null)
+            //    throw new InvalidOperationException();
+
+            //return this.chainStateMonitor.Subscribe(visitor);
         }
 
         public void AddBlock(ChainedBlock chainedBlock)
         {
-            using (this.chainStateMonitor.Start())
-            using (this.scriptValidator.Start())
+            //using (this.chainStateMonitor.Start())
+            //using (this.scriptValidator.Start())
             {
                 this.BeginTransaction();
                 try
                 {
                     // MONITOR: BeginBlock
-                    if (this.chainStateMonitor != null)
-                        this.chainStateMonitor.BeginBlock(chainedBlock.ChainedHeader);
+                    //if (this.chainStateMonitor != null)
+                    //    this.chainStateMonitor.BeginBlock(chainedBlock.ChainedHeader);
 
                     // add the block to the chain
                     this.Chain.AddBlock(chainedBlock.ChainedHeader);
@@ -171,26 +173,26 @@ namespace BitSharp.Core.Builders
                     //this.SaveRollbackInformation(chainedBlock.Hash, this.spentTransactionsCache, this.spentOutputsCache);
 
                     // wait for monitor events to finish
-                    this.chainStateMonitor.CompleteAdding();
-                    this.chainStateMonitor.WaitToComplete();
+                    //this.chainStateMonitor.CompleteAdding();
+                    //this.chainStateMonitor.WaitToComplete();
 
                     // check script validation results
-                    this.scriptValidator.CompleteAdding();
-                    this.scriptValidator.WaitToComplete();
-                    if (this.scriptValidator.ValidationExceptions.Count > 0)
-                    {
-                        if (!MainnetRules.IgnoreScriptErrors)
-                            throw new AggregateException(this.scriptValidator.ValidationExceptions);
-                        else
-                            this.logger.Info("Ignoring script error in block: {0}".Format2(chainedBlock.Hash));
-                    }
+                    //this.scriptValidator.CompleteAdding();
+                    //this.scriptValidator.WaitToComplete();
+                    //if (this.scriptValidator.ValidationExceptions.Count > 0)
+                    //{
+                    //    if (!MainnetRules.IgnoreScriptErrors)
+                    //        throw new AggregateException(this.scriptValidator.ValidationExceptions);
+                    //    else
+                    //        this.logger.Info("Ignoring script error in block: {0}".Format2(chainedBlock.Hash));
+                    //}
 
                     // commit the chain state
                     this.CommitTransaction();
 
                     // MONITOR: CommitBlock
-                    if (this.chainStateMonitor != null)
-                        this.chainStateMonitor.CommitBlock(chainedBlock.ChainedHeader);
+                    //if (this.chainStateMonitor != null)
+                    //    this.chainStateMonitor.CommitBlock(chainedBlock.ChainedHeader);
 
                     // MEASURE: Block Rate
                     this.stats.blockRateMeasure.Tick();
@@ -212,13 +214,13 @@ namespace BitSharp.Core.Builders
                     this.RollbackTransaction();
 
                     // MONITOR: RollbackBlock
-                    if (this.chainStateMonitor != null)
-                        this.chainStateMonitor.RollbackBlock(chainedBlock.ChainedHeader);
+                    //if (this.chainStateMonitor != null)
+                    //    this.chainStateMonitor.RollbackBlock(chainedBlock.ChainedHeader);
 
-                    this.chainStateMonitor.CompleteAdding();
-                    this.chainStateMonitor.WaitToComplete();
-                    this.scriptValidator.CompleteAdding();
-                    this.scriptValidator.WaitToComplete();
+                    //this.chainStateMonitor.CompleteAdding();
+                    //this.chainStateMonitor.WaitToComplete();
+                    //this.scriptValidator.CompleteAdding();
+                    //this.scriptValidator.WaitToComplete();
 
                     throw;
                 }
@@ -227,14 +229,14 @@ namespace BitSharp.Core.Builders
 
         public void RollbackBlock(ChainedBlock chainedBlock)
         {
-            using (this.chainStateMonitor.Start())
+            //using (this.chainStateMonitor.Start())
             {
                 this.BeginTransaction();
                 try
                 {
                     // MONITOR: BeginBlock
-                    if (this.chainStateMonitor != null)
-                        this.chainStateMonitor.BeginBlock(chainedBlock.ChainedHeader);
+                    //if (this.chainStateMonitor != null)
+                    //    this.chainStateMonitor.BeginBlock(chainedBlock.ChainedHeader);
 
                     // remove the block from the chain
                     this.Chain.RemoveBlock(chainedBlock.ChainedHeader);
@@ -247,26 +249,26 @@ namespace BitSharp.Core.Builders
                     this.RollbackUtxo(chainedBlock);
 
                     // wait for monitor events to finish
-                    this.chainStateMonitor.CompleteAdding();
-                    this.chainStateMonitor.WaitToComplete();
+                    //this.chainStateMonitor.CompleteAdding();
+                    //this.chainStateMonitor.WaitToComplete();
 
                     // commit the chain state
                     this.CommitTransaction();
 
                     // MONITOR: CommitBlock
-                    if (this.chainStateMonitor != null)
-                        this.chainStateMonitor.CommitBlock(chainedBlock.ChainedHeader);
+                    //if (this.chainStateMonitor != null)
+                    //    this.chainStateMonitor.CommitBlock(chainedBlock.ChainedHeader);
                 }
                 catch (Exception)
                 {
                     this.RollbackTransaction();
 
-                    this.chainStateMonitor.CompleteAdding();
-                    this.chainStateMonitor.WaitToComplete();
+                    //this.chainStateMonitor.CompleteAdding();
+                    //this.chainStateMonitor.WaitToComplete();
 
                     // MONITOR: RollbackBlock
-                    if (this.chainStateMonitor != null)
-                        this.chainStateMonitor.RollbackBlock(chainedBlock.ChainedHeader);
+                    //if (this.chainStateMonitor != null)
+                    //    this.chainStateMonitor.RollbackBlock(chainedBlock.ChainedHeader);
 
                     throw;
                 }
@@ -367,19 +369,19 @@ namespace BitSharp.Core.Builders
             var coinbaseTx = chainedBlock.Transactions[0];
 
             // MONITOR: BeforeAddTransaction
-            if (this.chainStateMonitor != null)
-                this.chainStateMonitor.BeforeAddTransaction(ChainPosition.Fake(), coinbaseTx);
+            //if (this.chainStateMonitor != null)
+            //    this.chainStateMonitor.BeforeAddTransaction(ChainPosition.Fake(), coinbaseTx);
 
             // MONITOR: CoinbaseInput
-            if (this.chainStateMonitor != null)
-                foreach (var input in coinbaseTx.Inputs)
-                    this.chainStateMonitor.CoinbaseInput(ChainPosition.Fake(), input);
+            //if (this.chainStateMonitor != null)
+            //    foreach (var input in coinbaseTx.Inputs)
+            //        this.chainStateMonitor.CoinbaseInput(ChainPosition.Fake(), input);
 
             this.Mint(coinbaseTx, 0, chainedBlock.ChainedHeader, isCoinbase: true);
 
             // MONITOR: AfterAddTransaction
-            if (this.chainStateMonitor != null)
-                this.chainStateMonitor.AfterAddTransaction(ChainPosition.Fake(), coinbaseTx);
+            //if (this.chainStateMonitor != null)
+            //    this.chainStateMonitor.AfterAddTransaction(ChainPosition.Fake(), coinbaseTx);
 
             // check for double spends
             for (var txIndex = 1; txIndex < chainedBlock.Transactions.Length; txIndex++)
@@ -388,8 +390,8 @@ namespace BitSharp.Core.Builders
                 txCount++;
 
                 // MONITOR: BeforeAddTransaction
-                if (this.chainStateMonitor != null)
-                    this.chainStateMonitor.BeforeAddTransaction(ChainPosition.Fake(), tx);
+                //if (this.chainStateMonitor != null)
+                //    this.chainStateMonitor.BeforeAddTransaction(ChainPosition.Fake(), tx);
 
                 for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
                 {
@@ -405,8 +407,8 @@ namespace BitSharp.Core.Builders
                 this.Mint(tx, txIndex, chainedBlock.ChainedHeader, isCoinbase: false);
 
                 // MONITOR: AfterAddTransaction
-                if (this.chainStateMonitor != null)
-                    this.chainStateMonitor.AfterAddTransaction(ChainPosition.Fake(), tx);
+                //if (this.chainStateMonitor != null)
+                //    this.chainStateMonitor.AfterAddTransaction(ChainPosition.Fake(), tx);
 
                 // MEASURE: Transaction Rate
                 this.stats.txRateMeasure.Tick();
@@ -612,8 +614,8 @@ namespace BitSharp.Core.Builders
                 //this.chainStateBuilderStorage.RemoveOutput(txOutputKey);
 
                 // MONITOR: UnspendTxOutput
-                if (this.chainStateMonitor != null)
-                    this.chainStateMonitor.UnmintTxOutput(ChainPosition.Fake(), txOutputKey, txOutput, GetOutputScripHash(txOutput), isCoinbase);
+                //if (this.chainStateMonitor != null)
+                //    this.chainStateMonitor.UnmintTxOutput(ChainPosition.Fake(), txOutputKey, txOutput, GetOutputScripHash(txOutput), isCoinbase);
             }
         }
 
@@ -665,8 +667,8 @@ namespace BitSharp.Core.Builders
             //this.chainStateBuilderStorage.AddOutput(input.PreviousTxOutputKey, prevTxOutput);
 
             // MONITOR: UnspendTxOutput
-            if (this.chainStateMonitor != null)
-                this.chainStateMonitor.UnspendTxOutput(ChainPosition.Fake(), input, input.PreviousTxOutputKey, prevTxOutput, GetOutputScripHash(prevTxOutput));
+            //if (this.chainStateMonitor != null)
+            //    this.chainStateMonitor.UnspendTxOutput(ChainPosition.Fake(), input, input.PreviousTxOutputKey, prevTxOutput, GetOutputScripHash(prevTxOutput));
         }
 
         private UInt256 GetOutputScripHash(TxOutput txOutput)
