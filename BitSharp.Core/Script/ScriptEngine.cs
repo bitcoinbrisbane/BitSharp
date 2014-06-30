@@ -319,12 +319,12 @@ Verifying script for block {0}, transaction {1}, input {2}
 
             // Blank out other inputs' signatures
             var empty = ImmutableArray.Create<byte>();
-            var newInputs = new TxInput[tx.Inputs.Length];
+            var newInputs = ImmutableArray.CreateBuilder<TxInput>(tx.Inputs.Length);
             for (var i = 0; i < tx.Inputs.Length; i++)
             {
                 var oldInput = tx.Inputs[i];
                 var newInput = oldInput.With(scriptSignature: i == inputIndex ? scriptPubKey : empty);
-                newInputs[i] = newInput;
+                newInputs.Add(newInput);
             }
 
             //// Blank out some of the outputs
@@ -355,7 +355,7 @@ Verifying script for block {0}, transaction {1}, input {2}
             //}
 
             // create simplified transaction
-            var newTx = tx.With(Inputs: newInputs.ToImmutableArray());
+            var newTx = tx.With(Inputs: newInputs.ToImmutable());
 
             // return wire-encoded simplified transaction with the 4-byte hashType tacked onto the end
             using (var stream = new MemoryStream())

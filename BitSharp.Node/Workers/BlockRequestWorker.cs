@@ -262,7 +262,7 @@ namespace BitSharp.Node.Workers
                 if (requestCount > 0)
                 {
                     // iterate through the blocks that should be requested for this peer
-                    var invVectors = new List<InventoryVector>();
+                    var invVectors = ImmutableArray.CreateBuilder<InventoryVector>();
                     foreach (var requestBlock in GetRequestBlocksForPeer(requestCount, peerBlockRequests))
                     {
                         // track block requests
@@ -274,7 +274,7 @@ namespace BitSharp.Node.Workers
                     }
 
                     // send out the request for blocks
-                    requestTasks.Add(peer.Value.Sender.SendGetData(invVectors.ToImmutableArray()));
+                    requestTasks.Add(peer.Value.Sender.SendGetData(invVectors.ToImmutable()));
                 }
             }
 

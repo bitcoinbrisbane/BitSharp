@@ -87,7 +87,7 @@ namespace BitSharp.Core.Storage
                 {
                     if (blockHeader.MerkleRoot == DataCalculator.CalculateMerkleRoot(blockTxHashes))
                     {
-                        var blockTransactions = new Transaction[blockTxHashes.Count];
+                        var blockTransactions = ImmutableArray.CreateBuilder<Transaction>(blockTxHashes.Count);
 
                         var success = true;
                         var i = 0;
@@ -96,7 +96,7 @@ namespace BitSharp.Core.Storage
                             Transaction transaction;
                             if (this.transactionCache.TryGetValue(txHash, out transaction))
                             {
-                                blockTransactions[i] = transaction;
+                                blockTransactions.Add(transaction);
                                 i++;
                             }
                             else
@@ -108,7 +108,7 @@ namespace BitSharp.Core.Storage
 
                         if (success)
                         {
-                            block = new Block(blockHeader, blockTransactions.ToImmutableArray());
+                            block = new Block(blockHeader, blockTransactions.ToImmutable());
                             this.missingData.Remove(blockHash);
                             return true;
                         }

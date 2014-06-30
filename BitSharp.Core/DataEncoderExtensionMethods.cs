@@ -70,13 +70,13 @@ namespace BitSharp.Core.ExtensionMethods
         {
             var length = reader.ReadVarInt().ToIntChecked();
 
-            var list = new T[length];
+            var list = ImmutableArray.CreateBuilder<T>(length);
             for (var i = 0; i < length; i++)
             {
-                list[i] = decode();
+                list.Add(decode());
             }
 
-            return list.ToImmutableArray();
+            return list.ToImmutable();
         }
 
         private static BinaryReader ReverseRead(this BinaryReader reader, int length)

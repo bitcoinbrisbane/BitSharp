@@ -493,7 +493,7 @@ namespace BitSharp.Node
 
             if (this.Type == RulesEnum.ComparisonToolTestNet)
             {
-                var responseInvVectors = new List<InventoryVector>();
+                var responseInvVectors = ImmutableArray.CreateBuilder<InventoryVector>();
 
                 foreach (var invVector in invVectors)
                 {
@@ -504,7 +504,7 @@ namespace BitSharp.Node
                     }
                 }
 
-                connectedPeersLocal.Single().Sender.SendGetData(responseInvVectors.ToImmutableArray()).Forget();
+                connectedPeersLocal.Single().Sender.SendGetData(responseInvVectors.ToImmutable()).Forget();
             }
         }
 
@@ -598,20 +598,18 @@ namespace BitSharp.Node
                 matchingChainedHeader = this.rules.GenesisChainedHeader;
             }
 
-            var count = 0;
             var limit = 500;
-            var invVectors = new InventoryVector[limit];
-            for (var i = matchingChainedHeader.Height; i < targetChainLocal.Blocks.Count && count <= limit; i++, count++)
+            var invVectors = ImmutableArray.CreateBuilder<InventoryVector>(limit);
+            for (var i = matchingChainedHeader.Height; i < targetChainLocal.Blocks.Count && invVectors.Count < limit; i++)
             {
                 var chainedHeader = targetChainLocal.Blocks[i];
-                invVectors[count] = new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, chainedHeader.Hash);
+                invVectors.Add(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, chainedHeader.Hash));
 
                 if (chainedHeader.Hash == payload.HashStop)
                     break;
             }
-            Array.Resize(ref invVectors, count);
 
-            remoteNode.Sender.SendInventory(invVectors.ToImmutableArray()).Forget();
+            remoteNode.Sender.SendInventory(invVectors.ToImmutable()).Forget();
         }
 
         private void OnGetHeaders(RemoteNode remoteNode, GetBlocksPayload payload)
@@ -645,17 +643,16 @@ namespace BitSharp.Node
                 matchingChainedHeader = this.rules.GenesisChainedHeader;
             }
 
-            var count = 0;
             var limit = 500;
-            var blockHeaders = new BlockHeader[limit];
-            for (var i = matchingChainedHeader.Height; i < targetChainLocal.Blocks.Count && count <= limit; i++, count++)
+            var blockHeaders = ImmutableArray.CreateBuilder<BlockHeader>(limit);
+            for (var i = matchingChainedHeader.Height; i < targetChainLocal.Blocks.Count && blockHeaders.Count < limit; i++)
             {
                 var chainedHeader = targetChainLocal.Blocks[i];
 
                 BlockHeader blockHeader;
                 if (this.blockHeaderCache.TryGetValue(targetChainLocal.Blocks[i].Hash, out blockHeader))
                 {
-                    blockHeaders[count] = blockHeader;
+                    blockHeaders.Add(blockHeader);
                 }
                 else
                 {
@@ -665,9 +662,8 @@ namespace BitSharp.Node
                 if (chainedHeader.Hash == payload.HashStop)
                     break;
             }
-            Array.Resize(ref blockHeaders, count);
 
-            remoteNode.Sender.SendHeaders(blockHeaders.ToImmutableArray()).Forget();
+            remoteNode.Sender.SendHeaders(blockHeaders.ToImmutable()).Forget();
         }
 
         private void OnGetData(RemoteNode remoteNode, InventoryPayload payload)
