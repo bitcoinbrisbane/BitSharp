@@ -50,7 +50,7 @@ namespace BitSharp.Core
         private readonly ChainedHeaderCache chainedHeaderCache;
         private readonly BlockTxHashesCache blockTxHashesCache;
         private readonly TransactionCache transactionCache;
-        private readonly BlockCache blockCache;
+        private readonly IBlockStorageNew blockCache;
 
         private readonly CancellationTokenSource shutdownToken;
 
@@ -65,7 +65,7 @@ namespace BitSharp.Core
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
 
-        public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, BlockCache blockCache)
+        public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, IBlockStorageNew blockCache)
         {
             this.logger = logger;
             this.shutdownToken = new CancellationTokenSource();
@@ -171,17 +171,27 @@ namespace BitSharp.Core
                     if (chainStateLocal == null)
                         return;
 
-                    new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.OutputCount), () =>
+                    new MethodTimer(this.logger).Time("UTXO Commitment: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
                     {
-                        var sha256 = new SHA256Managed();
-                        foreach (var output in chainStateLocal.Utxo.GetUnspentOutputs())
+                        using (var utxoStream = new UtxoStream(this.logger, chainStateLocal.Utxo.GetUnspentTransactions()))
                         {
-                            if (new UInt256(sha256.ComputeDoubleHash(output.Value.ScriptPublicKey.ToArray())) == UInt256.Zero)
-                            {
-                            }
+                            var sha256 = new SHA256Managed();
+                            var utxoHash = sha256.ComputeHash(utxoStream);
+                            this.logger.Info("UXO Commitment Hash: {0}".Format2(utxoHash.ToHexNumberString()));
                         }
                     });
-                }, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
+
+                    //new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.OutputCount), () =>
+                    //{
+                    //    var sha256 = new SHA256Managed();
+                    //    foreach (var output in chainStateLocal.Utxo.GetUnspentOutputs())
+                    //    {
+                    //        if (new UInt256(sha256.ComputeDoubleHash(output.Value.ScriptPublicKey.ToArray())) == UInt256.Zero)
+                    //        {
+                    //        }
+                    //    }
+                    //});
+                }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(60), maxIdleTime: TimeSpan.FromSeconds(60), logger: this.logger);
         }
 
         public ChainedHeader TargetBlock { get { return this.targetChainWorker.TargetBlock; } }
@@ -227,6 +237,17 @@ namespace BitSharp.Core
 
         public void Start()
         {
+            //var blockStorageNew = this.kernel.Get<IBlockStorageNew>();
+
+            //var blockIndex = 0;
+            //foreach (var block in this.blockCache.Values)
+            //{
+            //    this.logger.Info(blockIndex.ToString());
+
+            //    blockStorageNew.AddBlock(block);
+            //    blockIndex++;
+            //}
+
             // start loading the existing state from storage
             //TODO LoadExistingState();
 
@@ -245,7 +266,7 @@ namespace BitSharp.Core
             this.targetChainWorker.Stop();
             this.chainStateWorker.Stop();
             this.gcWorker.Stop();
-            //this.utxoScanWorker.Stop();
+            this.utxoScanWorker.Stop();
         }
 
         public void Dispose()

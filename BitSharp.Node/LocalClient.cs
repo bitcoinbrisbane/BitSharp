@@ -49,7 +49,7 @@ namespace BitSharp.Node
         private readonly BlockHeaderCache blockHeaderCache;
         private readonly ChainedHeaderCache chainedHeaderCache;
         private readonly TransactionCache transactionCache;
-        private readonly BlockCache blockCache;
+        private readonly IBlockStorageNew blockCache;
         private readonly NetworkPeerCache networkPeerCache;
 
         private readonly WorkerMethod connectWorker;
@@ -70,7 +70,7 @@ namespace BitSharp.Node
 
         private Socket listenSocket;
 
-        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, CoreDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, TransactionCache transactionCache, BlockCache blockCache, NetworkPeerCache networkPeerCache)
+        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, CoreDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, TransactionCache transactionCache, IBlockStorageNew blockCache, NetworkPeerCache networkPeerCache)
         {
             this.shutdownToken = new CancellationTokenSource();
 
@@ -553,7 +553,7 @@ namespace BitSharp.Node
 
         private void OnReceivedAddresses(ImmutableArray<NetworkAddressWithTime> addresses)
         {
-            var ipEndpoints = new List<IPEndPoint>(addresses.Count);
+            var ipEndpoints = new List<IPEndPoint>(addresses.Length);
             foreach (var address in addresses)
             {
                 var ipEndpoint = address.NetworkAddress.ToIPEndPoint();
@@ -741,7 +741,7 @@ namespace BitSharp.Node
 
                 //TODO shouldn't have to decode again
                 var versionMessage = versionTask.Result;
-                var versionPayload = NodeEncoder.DecodeVersionPayload(versionMessage.Payload.ToArray(), versionMessage.Payload.Count);
+                var versionPayload = NodeEncoder.DecodeVersionPayload(versionMessage.Payload.ToArray(), versionMessage.Payload.Length);
 
                 var remoteAddressWithTime = new NetworkAddressWithTime
                 (

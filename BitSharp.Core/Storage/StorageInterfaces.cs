@@ -45,11 +45,12 @@ namespace BitSharp.Core.Storage
             : base(cache) { }
     }
 
-    public sealed class BlockCache : PassthroughBoundedCache<UInt256, Block>
-    {
-        public BlockCache(IBoundedCache<UInt256, Block> cache)
-            : base(cache) { }
-    }
+    //public interface BlockCache : IBlockStorageNew { }
+    //public sealed class BlockCache : PassthroughBoundedCache<UInt256, Block>
+    //{
+    //    public BlockCache(IBoundedCache<UInt256, Block> cache)
+    //        : base(cache) { }
+    //}
 
     public sealed class BlockTxHashesCache : PassthroughBoundedCache<UInt256, IImmutableList<UInt256>>
     {

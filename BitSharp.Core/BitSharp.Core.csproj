@@ -77,8 +77,9 @@
       <HintPath>Script\Secp256k1.NET.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Collections.Immutable">
-      <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.30\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
+    <Reference Include="System.Collections.Immutable, Version=1.1.22.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Bcl.Immutable.1.1.22-beta\lib\portable-net45+win8+wpa81\System.Collections.Immutable.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Data.Linq" />
@@ -113,6 +114,7 @@
     <Compile Include="Domain\TxOutputKey.cs" />
     <Compile Include="Domain\UnspentTx.cs" />
     <Compile Include="Domain\Utxo.cs" />
+    <Compile Include="Domain\UtxoStream.cs" />
     <Compile Include="JsonRpc\CoreRpcServer.cs" />
     <Compile Include="Monitor\ChainStateMonitor.cs" />
     <Compile Include="Rules\ScriptValidator.cs" />
@@ -139,6 +141,7 @@
     <Compile Include="Storage\CoreStorageInstance.cs" />
     <Compile Include="Storage\ExtensionMethods.cs" />
     <Compile Include="Storage\GenesisChainStateStorage.cs" />
+    <Compile Include="Storage\IBlockStorageNew.cs" />
     <Compile Include="Storage\IBoundedCache.cs" />
     <Compile Include="Storage\IBoundedStorage.cs" />
     <Compile Include="Storage\ICoreStorage.cs" />

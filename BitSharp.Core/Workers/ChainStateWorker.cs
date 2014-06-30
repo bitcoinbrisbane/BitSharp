@@ -27,7 +27,7 @@ namespace BitSharp.Core.Workers
         private readonly Func<Chain> getTargetChain;
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
-        private readonly BlockCache blockCache;
+        private readonly IBlockStorageNew blockCache;
         private readonly SpentTransactionsCache spentTransactionsCache;
         private readonly InvalidBlockCache invalidBlockCache;
 
@@ -38,7 +38,7 @@ namespace BitSharp.Core.Workers
 
         private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(TargetChainWorker targetChainWorker, ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, WorkerConfig workerConfig, Logger logger, IKernel kernel, IBlockchainRules rules, BlockCache blockCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
+        public ChainStateWorker(TargetChainWorker targetChainWorker, ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, WorkerConfig workerConfig, Logger logger, IKernel kernel, IBlockchainRules rules, IBlockStorageNew blockCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
@@ -82,7 +82,7 @@ namespace BitSharp.Core.Workers
 
         protected override void SubStart()
         {
-            this.pruningWorker.Start();
+            //this.pruningWorker.Start();
         }
 
         protected override void SubStop()

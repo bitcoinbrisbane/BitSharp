@@ -10,7 +10,7 @@ namespace BitSharp.Core.Storage
     {
         BlockHeaderCache BlockHeaderCache { get; }
         ChainedHeaderCache ChainedHeaderCache { get; }
-        BlockCache BlockCache { get; }
+        IBlockStorageNew BlockCache { get; }
         InvalidBlockCache InvalidBlockCache { get; }
 
         //TODO move to utxo storage

@@ -2,7 +2,7 @@
 //#define TESTNET3
 //#define MEMORY
 //#define TRANSIENT_BLOCKS
-#define DUMMY_MONITOR
+//#define DUMMY_MONITOR
 
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Node;

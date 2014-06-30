@@ -73,12 +73,12 @@ namespace BitSharp.Core.Script
 
         private bool CastToBool(ImmutableArray<byte> value)
         {
-            for (var i = 0; i < value.Count; i++)
+            for (var i = 0; i < value.Length; i++)
             {
                 if (value[i] != 0)
                 {
                     // Can be negative zero
-                    if (i == value.Count - 1 && value[i] == 0x80)
+                    if (i == value.Length - 1 && value[i] == 0x80)
                         return false;
                     
                     return true;

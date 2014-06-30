@@ -27,7 +27,7 @@ namespace BitSharp.Client
         private readonly IKernel kernel;
         private readonly CoreDaemon blockchainDaemon;
         private readonly LocalClient localClient;
-        private readonly BlockCache blockCache;
+        private readonly IBlockStorageNew blockCache;
 
         private readonly DateTime startTime;
         private string runningTime;
@@ -57,7 +57,7 @@ namespace BitSharp.Client
             this.kernel = kernel;
             this.blockchainDaemon = kernel.Get<CoreDaemon>();
             this.localClient = kernel.Get<LocalClient>();
-            this.blockCache = kernel.Get<BlockCache>();
+            this.blockCache = kernel.Get<IBlockStorageNew>();
 
             this.startTime = DateTime.UtcNow;
             this.runningTimeTimer = new DispatcherTimer();

@@ -315,12 +315,12 @@ Verifying script for block {0}, transaction {1}, input {2}
         public byte[] TxSignature(ImmutableArray<byte> scriptPubKey, Transaction tx, int inputIndex, byte hashType)
         {
             ///TODO
-            Debug.Assert(inputIndex < tx.Inputs.Count);
+            Debug.Assert(inputIndex < tx.Inputs.Length);
 
             // Blank out other inputs' signatures
             var empty = ImmutableArray.Create<byte>();
-            var newInputs = new TxInput[tx.Inputs.Count];
-            for (var i = 0; i < tx.Inputs.Count; i++)
+            var newInputs = new TxInput[tx.Inputs.Length];
+            for (var i = 0; i < tx.Inputs.Length; i++)
             {
                 var oldInput = tx.Inputs[i];
                 var newInput = oldInput.With(scriptSignature: i == inputIndex ? scriptPubKey : empty);

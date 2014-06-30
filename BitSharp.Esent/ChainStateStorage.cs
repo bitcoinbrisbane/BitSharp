@@ -26,6 +26,11 @@ namespace BitSharp.Esent
             this.storage = new ChainStateBuilderStorage(parentStorage);
         }
 
+        public int BlockHeight
+        {
+            get { return this.storage.BlockHeight; }
+        }
+
         public UInt256 BlockHash
         {
             get { return this.storage.BlockHash; }
@@ -49,26 +54,6 @@ namespace BitSharp.Esent
         public IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions()
         {
             return this.storage.UnspentTransactions();
-        }
-
-        public int OutputCount
-        {
-            get { return this.storage.OutputCount; }
-        }
-
-        public bool ContainsOutput(TxOutputKey txOutputKey)
-        {
-            return this.storage.ContainsOutput(txOutputKey);
-        }
-
-        public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
-        {
-            return this.storage.TryGetOutput(txOutputKey, out txOutput);
-        }
-
-        public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs()
-        {
-            return this.storage.UnspentOutputs();
         }
 
         public void Dispose()

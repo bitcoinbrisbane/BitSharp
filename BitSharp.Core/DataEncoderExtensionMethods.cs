@@ -191,9 +191,9 @@ namespace BitSharp.Core.ExtensionMethods
 
         public static void WriteList<T>(this BinaryWriter writer, ImmutableArray<T> list, Action<T> encode)
         {
-            writer.WriteVarInt((UInt64)list.Count);
+            writer.WriteVarInt((UInt64)list.Length);
 
-            for (var i = 0; i < list.Count; i++)
+            for (var i = 0; i < list.Length; i++)
             {
                 encode(list[i]);
             }
