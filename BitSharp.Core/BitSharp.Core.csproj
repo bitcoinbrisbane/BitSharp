@@ -91,6 +91,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataCalculatorNew.cs" />
     <Compile Include="BlockchainWalker.cs" />
     <Compile Include="CoreDaemon.cs" />
     <Compile Include="DataCalculator.cs" />
@@ -102,6 +103,8 @@
     <Compile Include="Domain\BlockHeader.cs" />
     <Compile Include="Builders\ChainBuilder.cs" />
     <Compile Include="Builders\ChainStateBuilder.cs" />
+    <Compile Include="Domain\BlockTx.cs" />
+    <Compile Include="Domain\BlockElement.cs" />
     <Compile Include="Domain\Chain.cs" />
     <Compile Include="Domain\ChainedBlock.cs" />
     <Compile Include="Domain\ChainedHeader.cs" />
