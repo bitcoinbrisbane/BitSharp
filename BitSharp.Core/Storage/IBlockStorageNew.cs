@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Storage
 {
-    public interface IBlockStorageNew
+    public interface IBlockStorageNew : IDisposable
     {
         void AddBlock(Block block);
 

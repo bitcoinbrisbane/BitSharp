@@ -1,0 +1,90 @@
+﻿using Microsoft.Isam.Esent.Interop;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace BitSharp.Esent
+{
+    public class BlockStorageCursor : IDisposable
+    {
+        public readonly string jetDatabase;
+        public readonly Instance jetInstance;
+
+        public readonly Session jetSession;
+        public readonly JET_DBID blockDbId;
+
+        public readonly JET_TABLEID blockHeadersTableId;
+        public readonly JET_COLUMNID blockHeaderHashColumnId;
+        public readonly JET_COLUMNID blockHeaderBytesColumnId;
+
+        public readonly JET_TABLEID blocksTableId;
+        public readonly JET_COLUMNID blockHashColumnId;
+        public readonly JET_COLUMNID blockTxIndexColumnId;
+        public readonly JET_COLUMNID blockDepthColumnId;
+        public readonly JET_COLUMNID blockTxHashColumnId;
+        public readonly JET_COLUMNID blockTxBytesColumnId;
+
+        public BlockStorageCursor(string jetDatabase, Instance jetInstance)
+        {
+            this.jetDatabase = jetDatabase;
+            this.jetInstance = jetInstance;
+
+            this.OpenCursor(this.jetDatabase, this.jetInstance, false /*readOnly*/,
+                out this.jetSession,
+                out this.blockDbId,
+                out this.blockHeadersTableId,
+                    out this.blockHeaderHashColumnId,
+                    out this.blockHeaderBytesColumnId,
+                out this.blocksTableId,
+                    out this.blockHashColumnId,
+                    out this.blockTxIndexColumnId,
+                    out this.blockDepthColumnId,
+                    out this.blockTxHashColumnId,
+                    out this.blockTxBytesColumnId);
+        }
+
+        public void Dispose()
+        {
+            this.jetSession.Dispose();
+        }
+
+        private void OpenCursor(string jetDatabase, Instance jetInstance, bool readOnly,
+            out Session jetSession,
+            out JET_DBID blockDbId,
+            out JET_TABLEID blockHeadersTableId,
+            out JET_COLUMNID blockHeaderHashColumnId,
+            out JET_COLUMNID blockHeaderBytesColumnId,
+            out JET_TABLEID blocksTableId,
+            out JET_COLUMNID blockHashColumnId,
+            out JET_COLUMNID blockTxIndexColumnId,
+            out JET_COLUMNID blockDepthColumnId,
+            out JET_COLUMNID blockTxHashColumnId,
+            out JET_COLUMNID blockTxBytesColumnId)
+        {
+            jetSession = new Session(jetInstance);
+            try
+            {
+                Api.JetAttachDatabase(jetSession, jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
+                Api.JetOpenDatabase(jetSession, jetDatabase, "", out blockDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
+
+                Api.JetOpenTable(jetSession, blockDbId, "BlockHeaders", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out blockHeadersTableId);
+                blockHeaderHashColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "BlockHash");
+                blockHeaderBytesColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "BlockHeaderBytes");
+
+                Api.JetOpenTable(jetSession, blockDbId, "Blocks", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out blocksTableId);
+                blockHashColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "BlockHash");
+                blockTxIndexColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxIndex");
+                blockDepthColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "Depth");
+                blockTxHashColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxHash");
+                blockTxBytesColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxBytes");
+            }
+            catch (Exception)
+            {
+                jetSession.Dispose();
+                throw;
+            }
+        }
+    }
+}
