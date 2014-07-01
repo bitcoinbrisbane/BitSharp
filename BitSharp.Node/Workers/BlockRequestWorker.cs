@@ -24,6 +24,7 @@ namespace BitSharp.Node.Workers
         private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan MISSING_STALE_REQUEST_TIME = TimeSpan.FromSeconds(15);
         private static readonly int MAX_CRITICAL_LOOKAHEAD = 1.THOUSAND();
+        private static readonly int MAX_REQUESTS_PER_PEER = 100;
 
         private readonly Logger logger;
         private readonly LocalClient localClient;
@@ -246,6 +247,7 @@ namespace BitSharp.Node.Workers
                 return;
 
             var requestsPerPeer = Math.Max(1, this.missingBlockQueue.Count + (this.targetChainLookAhead / peerCount * 5));
+            requestsPerPeer = Math.Max(requestsPerPeer, MAX_REQUESTS_PER_PEER);
 
             // loop through each connected peer
             foreach (var peer in this.localClient.ConnectedPeers)
@@ -305,6 +307,8 @@ namespace BitSharp.Node.Workers
                     && !this.allBlockRequests.ContainsKey(missingBlock.Hash)
                     && !this.blockCache.ContainsKey(missingBlock.Hash))
                 {
+                    this.logger.Info("Requesting missing block: {0:#,##0}, {1}".Format2(missingBlock.Height, missingBlock.Hash));
+
                     yield return missingBlock.Hash;
                     currentCount++;
                 }
