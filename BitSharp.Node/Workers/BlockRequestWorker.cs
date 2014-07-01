@@ -23,6 +23,7 @@ namespace BitSharp.Node.Workers
     {
         private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan MISSING_STALE_REQUEST_TIME = TimeSpan.FromSeconds(15);
+        private static readonly int MAX_CRITICAL_LOOKAHEAD = 1.THOUSAND();
 
         private readonly Logger logger;
         private readonly LocalClient localClient;
@@ -155,6 +156,7 @@ namespace BitSharp.Node.Workers
                 // determine critical target chain look ahead
                 var criticalLookAheadTime = TimeSpan.FromSeconds(5);
                 this.criticalTargetChainLookAhead = 1 + (int)(criticalLookAheadTime.TotalSeconds / blockProcessingTime.TotalSeconds);
+                this.criticalTargetChainLookAhead = Math.Min(this.criticalTargetChainLookAhead, MAX_CRITICAL_LOOKAHEAD);
 
                 this.logger.Debug(new string('-', 80));
                 this.logger.Debug("Block Request Time: {0}".Format2(avgBlockRequestTime));
