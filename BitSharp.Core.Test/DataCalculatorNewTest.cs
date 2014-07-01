@@ -149,5 +149,60 @@ namespace BitSharp.Core.Test
             CollectionAssert.AreEqual(blockElements, readElements);
         }
 
+        [TestMethod]
+        [ExpectedException(typeof(ValidationException))]
+        public void TestReadBlockElementsBadDepth()
+        {
+            var sha256 = new SHA256Managed();
+
+            var blockHash = (UInt256)0;
+
+            var depth0Hash1 = (UInt256)1;
+            var depth0Hash2 = (UInt256)2;
+            var depth0Hash3 = (UInt256)3;
+
+            var depth1Hash1 = DataCalculatorNew.PairHashes(depth0Hash1, depth0Hash2);
+            var depth1Hash2 = DataCalculatorNew.PairHashes(depth0Hash3, depth0Hash3);
+
+            var merkleRoot = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
+
+            var blockElements = new List<BlockElement> { 
+                new BlockElement(blockHash, index: 0, depth: 0, hash: depth0Hash1),
+                new BlockElement(blockHash, index: 1, depth: 0, hash: depth0Hash2),
+                new BlockElement(blockHash, index: 2, depth: 1, hash: depth0Hash3),
+            };
+
+            var readElements = DataCalculatorNew.ReadBlockElements(blockHash, merkleRoot, blockElements).ToList();
+
+            CollectionAssert.AreEqual(blockElements, readElements);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ValidationException))]
+        public void TestReadBlockElementsBadIndex()
+        {
+            var sha256 = new SHA256Managed();
+
+            var blockHash = (UInt256)0;
+
+            var depth0Hash1 = (UInt256)1;
+            var depth0Hash2 = (UInt256)2;
+            var depth0Hash3 = (UInt256)3;
+
+            var depth1Hash1 = DataCalculatorNew.PairHashes(depth0Hash1, depth0Hash2);
+            var depth1Hash2 = DataCalculatorNew.PairHashes(depth0Hash3, depth0Hash3);
+
+            var merkleRoot = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
+
+            var blockElements = new List<BlockElement> { 
+                new BlockElement(blockHash, index: 0, depth: 0, hash: depth0Hash1),
+                new BlockElement(blockHash, index: 1, depth: 0, hash: depth0Hash2),
+                new BlockElement(blockHash, index: 3, depth: 0, hash: depth0Hash3),
+            };
+
+            var readElements = DataCalculatorNew.ReadBlockElements(blockHash, merkleRoot, blockElements).ToList();
+
+            CollectionAssert.AreEqual(blockElements, readElements);
+        }
     }
 }
