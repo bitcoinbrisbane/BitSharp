@@ -241,15 +241,20 @@ namespace BitSharp.Node.Workers
             var now = DateTime.UtcNow;
             var requestTasks = new List<Task>();
 
+            // determine stale request times
+            var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
+            var staleRequestTime = STALE_REQUEST_TIME + avgBlockRequestTime;
+            var missingStaleRequestTime = MISSING_STALE_REQUEST_TIME + avgBlockRequestTime;
+
             // remove any stale requests from the global list of requests
-            this.allBlockRequests.RemoveWhere(x => (now - x.Value) > STALE_REQUEST_TIME);
+            this.allBlockRequests.RemoveWhere(x => (now - x.Value) > staleRequestTime);
 
             // remove any stale requests for missing blocks, using a shorter timeout
             var missingBlocks = this.missingBlockQueue.Values.ToDictionary(x => x.Hash, x => x);
             this.allBlockRequests.RemoveWhere(x =>
                 {
                     ChainedHeader missingBlock;
-                    if ((now - x.Value) > MISSING_STALE_REQUEST_TIME
+                    if ((now - x.Value) > missingStaleRequestTime
                         && missingBlocks.TryGetValue(x.Key, out missingBlock))
                     {
                         this.logger.Debug("Clearing stale request for missing block: {0,10:#,##0}: {1}".Format2(missingBlock.Height, missingBlock.Hash));
