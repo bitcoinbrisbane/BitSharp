@@ -445,16 +445,15 @@ namespace BitSharp.Core.Builders
                 return;
             }
 
-            // verify transaction does not already exist in utxo
-            if (this.chainStateBuilderStorage.ContainsTransaction(tx.Hash))
+            // add transaction to the utxo
+            var unspentTx = new UnspentTx(/*chainedHeader.Hash,*/ chainedHeader.Height, txIndex, tx.Outputs.Length, OutputState.Unspent);
+            if (!this.chainStateBuilderStorage.TryAddTransaction(tx.Hash, unspentTx))
             {
-                // duplicate transaction output
+                // duplicate transaction
                 this.logger.Warn("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(chainedHeader.Height, chainedHeader.Hash.ToHexNumberString()));
                 throw new ValidationException(chainedHeader.Hash);
             }
 
-            // add transaction to the utxo
-            this.chainStateBuilderStorage.AddTransaction(tx.Hash, new UnspentTx(/*chainedHeader.Hash,*/ chainedHeader.Height, txIndex, tx.Outputs.Length, OutputState.Unspent));
 
             //// add transaction outputs to the utxo
             //foreach (var output in tx.Outputs.Select((x, i) => new KeyValuePair<TxOutputKey, TxOutput>(new TxOutputKey(tx.Hash, (UInt32)i), x)))

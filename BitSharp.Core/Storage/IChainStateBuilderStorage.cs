@@ -26,7 +26,7 @@ namespace BitSharp.Core.Storage
 
         bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx);
 
-        void AddTransaction(UInt256 txHash, UnspentTx unspentTx);
+        bool TryAddTransaction(UInt256 txHash, UnspentTx unspentTx);
 
         bool RemoveTransaction(UInt256 txHash);
 

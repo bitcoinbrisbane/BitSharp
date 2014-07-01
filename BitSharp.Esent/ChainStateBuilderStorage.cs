@@ -72,7 +72,7 @@ namespace BitSharp.Esent
             this.BlockHash = parentUtxo.BlockHash;
 
             foreach (var unspentTx in parentUtxo.UnspentTransactions())
-                this.AddTransaction(unspentTx.Key, unspentTx.Value);
+                this.TryAddTransaction(unspentTx.Key, unspentTx.Value);
         }
 
         public ChainStateBuilderStorage(ChainStateBuilderStorage parentStorage)
@@ -224,33 +224,42 @@ namespace BitSharp.Esent
             }
         }
 
-        public void AddTransaction(UInt256 txHash, UnspentTx unspentTx)
+        public bool TryAddTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
-            Api.JetBeginTransaction(this.jetSession);
             try
             {
-                Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Insert);
+                Api.JetBeginTransaction(this.jetSession);
                 try
                 {
-                    Api.SetColumn(this.jetSession, this.unspentTxTableId, this.txHashColumnId, txHash.ToByteArray());
-                    Api.SetColumn(this.jetSession, this.unspentTxTableId, this.blockIndexColumnId, unspentTx.BlockIndex);
-                    Api.SetColumn(this.jetSession, this.unspentTxTableId, this.txIndexColumnId, unspentTx.TxIndex);
-                    Api.SetColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
+                    Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Insert);
+                    try
+                    {
+                        Api.SetColumn(this.jetSession, this.unspentTxTableId, this.txHashColumnId, txHash.ToByteArray());
+                        Api.SetColumn(this.jetSession, this.unspentTxTableId, this.blockIndexColumnId, unspentTx.BlockIndex);
+                        Api.SetColumn(this.jetSession, this.unspentTxTableId, this.txIndexColumnId, unspentTx.TxIndex);
+                        Api.SetColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
 
-                    Api.JetUpdate(this.jetSession, this.unspentTxTableId);
-                    Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
-                    this.unspentTxCount++;
+                        Api.JetUpdate(this.jetSession, this.unspentTxTableId);
+                        Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+                        this.unspentTxCount++;
+
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Cancel);
+                        throw;
+                    }
                 }
                 catch (Exception)
                 {
-                    Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Cancel);
+                    Api.JetRollback(this.jetSession, RollbackTransactionGrbit.None);
                     throw;
                 }
             }
-            catch (Exception)
+            catch (EsentKeyDuplicateException)
             {
-                Api.JetRollback(this.jetSession, RollbackTransactionGrbit.None);
-                throw;
+                return false;
             }
         }
 

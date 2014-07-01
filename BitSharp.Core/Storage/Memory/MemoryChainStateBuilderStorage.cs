@@ -68,9 +68,17 @@ namespace BitSharp.Core.Storage.Memory
             return this.unspentTransactions.TryGetValue(txHash, out unspentTx);
         }
 
-        public void AddTransaction(UInt256 txHash, UnspentTx unspentTx)
+        public bool TryAddTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
-            this.unspentTransactions.Add(txHash, unspentTx);
+            try
+            {
+                this.unspentTransactions.Add(txHash, unspentTx);
+                return true;
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
         }
 
         public bool RemoveTransaction(UInt256 txHash)
