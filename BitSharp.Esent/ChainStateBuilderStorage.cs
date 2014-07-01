@@ -486,19 +486,41 @@ namespace BitSharp.Esent
             out JET_COLUMNID outputStatesColumnId)
         {
             jetSession = new Session(jetInstance);
+            try
+            {
+                Api.JetAttachDatabase(jetSession, jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
+                try
+                {
+                    Api.JetOpenDatabase(jetSession, jetDatabase, "", out utxoDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
+                    try
+                    {
+                        Api.JetOpenTable(jetSession, utxoDbId, "global", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out globalTableId);
+                        blockHeightColumnId = Api.GetTableColumnid(jetSession, globalTableId, "BlockHeight");
+                        blockHashColumnId = Api.GetTableColumnid(jetSession, globalTableId, "BlockHash");
 
-            Api.JetAttachDatabase(jetSession, jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
-            Api.JetOpenDatabase(jetSession, jetDatabase, "", out utxoDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
-
-            Api.JetOpenTable(jetSession, utxoDbId, "global", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out globalTableId);
-            blockHeightColumnId = Api.GetTableColumnid(jetSession, globalTableId, "BlockHeight");
-            blockHashColumnId = Api.GetTableColumnid(jetSession, globalTableId, "BlockHash");
-
-            Api.JetOpenTable(jetSession, utxoDbId, "unspentTx", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out unspentTxTableId);
-            txHashColumnId = Api.GetTableColumnid(jetSession, unspentTxTableId, "TxHash");
-            blockIndexColumnId = Api.GetTableColumnid(jetSession, unspentTxTableId, "BlockIndex");
-            txIndexColumnId = Api.GetTableColumnid(jetSession, unspentTxTableId, "TxIndex");
-            outputStatesColumnId = Api.GetTableColumnid(jetSession, unspentTxTableId, "OutputStates");
+                        Api.JetOpenTable(jetSession, utxoDbId, "unspentTx", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out unspentTxTableId);
+                        txHashColumnId = Api.GetTableColumnid(jetSession, unspentTxTableId, "TxHash");
+                        blockIndexColumnId = Api.GetTableColumnid(jetSession, unspentTxTableId, "BlockIndex");
+                        txIndexColumnId = Api.GetTableColumnid(jetSession, unspentTxTableId, "TxIndex");
+                        outputStatesColumnId = Api.GetTableColumnid(jetSession, unspentTxTableId, "OutputStates");
+                    }
+                    catch (Exception)
+                    {
+                        Api.JetCloseDatabase(jetSession, utxoDbId, CloseDatabaseGrbit.None);
+                        throw;
+                    }
+                }
+                catch (Exception)
+                {
+                    Api.JetDetachDatabase(jetSession, jetDatabase);
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                jetSession.Dispose();
+                throw;
+            }
         }
     }
 }

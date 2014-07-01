@@ -37,6 +37,7 @@ namespace BitSharp.Esent
         private readonly JET_TABLEID blocksTableId;
         private readonly JET_COLUMNID blockHashColumnId;
         private readonly JET_COLUMNID blockTxIndexColumnId;
+        private readonly JET_COLUMNID blockDepthColumnId;
         private readonly JET_COLUMNID blockTxHashColumnId;
         private readonly JET_COLUMNID blockTxBytesColumnId;
 
@@ -67,6 +68,7 @@ namespace BitSharp.Esent
                 out this.blocksTableId,
                     out this.blockHashColumnId,
                     out this.blockTxIndexColumnId,
+                    out this.blockDepthColumnId,
                     out this.blockTxHashColumnId,
                     out this.blockTxBytesColumnId);
         }
@@ -174,6 +176,8 @@ namespace BitSharp.Esent
             {
                 Api.SetColumn(this.jetSession, this.blocksTableId, this.blockHashColumnId, blockHash.ToByteArray());
                 Api.SetColumn(this.jetSession, this.blocksTableId, this.blockTxIndexColumnId, txIndex);
+                //TODO i'm using -1 depth to mean not pruned, this should be interpreted as depth 0
+                Api.SetColumn(this.jetSession, this.blocksTableId, this.blockDepthColumnId, -1);
                 Api.SetColumn(this.jetSession, this.blocksTableId, this.blockTxHashColumnId, txHash.ToByteArray());
                 Api.SetColumn(this.jetSession, this.blocksTableId, this.blockTxBytesColumnId, txBytes);
 
@@ -364,12 +368,13 @@ namespace BitSharp.Esent
             out JET_TABLEID blocksTableId,
             out JET_COLUMNID blockHashColumnId,
             out JET_COLUMNID blockTxIndexColumnId,
+            out JET_COLUMNID blockDepthColumnId,
             out JET_COLUMNID blockTxHashColumnId,
             out JET_COLUMNID blockTxBytesColumnId)
         {
             try
             {
-                OpenDatabase(jetDatabase, jetInstance, readOnly, out jetSession, out blockDbId, out blockHeadersTableId, out blockHeaderHashColumnId, out blockHeaderBytesColumnId, out blocksTableId, out blockHashColumnId, out blockTxIndexColumnId, out blockTxHashColumnId, out blockTxBytesColumnId);
+                OpenDatabase(jetDatabase, jetInstance, readOnly, out jetSession, out blockDbId, out blockHeadersTableId, out blockHeaderHashColumnId, out blockHeaderBytesColumnId, out blocksTableId, out blockHashColumnId, out blockTxIndexColumnId, out blockDepthColumnId, out blockTxHashColumnId, out blockTxBytesColumnId);
             }
             catch (Exception)
             {
@@ -378,7 +383,7 @@ namespace BitSharp.Esent
                 Directory.CreateDirectory(jetDirectory);
 
                 CreateDatabase(jetDatabase, jetInstance);
-                OpenDatabase(jetDatabase, jetInstance, readOnly, out jetSession, out blockDbId, out blockHeadersTableId, out blockHeaderHashColumnId, out blockHeaderBytesColumnId, out blocksTableId, out blockHashColumnId, out blockTxIndexColumnId, out blockTxHashColumnId, out blockTxBytesColumnId);
+                OpenDatabase(jetDatabase, jetInstance, readOnly, out jetSession, out blockDbId, out blockHeadersTableId, out blockHeaderHashColumnId, out blockHeaderBytesColumnId, out blocksTableId, out blockHashColumnId, out blockTxIndexColumnId, out blockDepthColumnId, out blockTxHashColumnId, out blockTxBytesColumnId);
             }
         }
 
@@ -392,6 +397,7 @@ namespace BitSharp.Esent
             JET_TABLEID blocksTableId;
             JET_COLUMNID blockHashColumnId;
             JET_COLUMNID blockTxIndexColumnId;
+            JET_COLUMNID blockDepthColumnId;
             JET_COLUMNID blockTxHashColumnId;
             JET_COLUMNID blockTxBytesColumnId;
 
@@ -421,6 +427,7 @@ namespace BitSharp.Esent
                 Api.JetCreateTable(jetSession, blockDbId, "Blocks", 0, 0, out blocksTableId);
                 Api.JetAddColumn(jetSession, blocksTableId, "BlockHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out blockHashColumnId);
                 Api.JetAddColumn(jetSession, blocksTableId, "TxIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out blockTxIndexColumnId);
+                Api.JetAddColumn(jetSession, blocksTableId, "Depth", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out blockDepthColumnId);
                 Api.JetAddColumn(jetSession, blocksTableId, "TxHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out blockTxHashColumnId);
                 Api.JetAddColumn(jetSession, blocksTableId, "TxBytes", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary }, null, 0, out blockTxBytesColumnId);
 
@@ -450,23 +457,47 @@ namespace BitSharp.Esent
             out JET_TABLEID blocksTableId,
             out JET_COLUMNID blockHashColumnId,
             out JET_COLUMNID blockTxIndexColumnId,
+            out JET_COLUMNID blockDepthColumnId,
             out JET_COLUMNID blockTxHashColumnId,
             out JET_COLUMNID blockTxBytesColumnId)
         {
             jetSession = new Session(jetInstance);
+            try
+            {
+                Api.JetAttachDatabase(jetSession, jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
+                try
+                {
+                    Api.JetOpenDatabase(jetSession, jetDatabase, "", out blockDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
+                    try
+                    {
+                        Api.JetOpenTable(jetSession, blockDbId, "BlockHeaders", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out blockHeadersTableId);
+                        blockHeaderHashColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "BlockHash");
+                        blockHeaderBytesColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "BlockHeaderBytes");
 
-            Api.JetAttachDatabase(jetSession, jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
-            Api.JetOpenDatabase(jetSession, jetDatabase, "", out blockDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
-
-            Api.JetOpenTable(jetSession, blockDbId, "BlockHeaders", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out blockHeadersTableId);
-            blockHeaderHashColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "BlockHash");
-            blockHeaderBytesColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "BlockHeaderBytes");
-
-            Api.JetOpenTable(jetSession, blockDbId, "Blocks", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out blocksTableId);
-            blockHashColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "BlockHash");
-            blockTxIndexColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxIndex");
-            blockTxHashColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxHash");
-            blockTxBytesColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxBytes");
+                        Api.JetOpenTable(jetSession, blockDbId, "Blocks", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out blocksTableId);
+                        blockHashColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "BlockHash");
+                        blockTxIndexColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxIndex");
+                        blockDepthColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "Depth");
+                        blockTxHashColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxHash");
+                        blockTxBytesColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxBytes");
+                    }
+                    catch (Exception)
+                    {
+                        Api.JetCloseDatabase(jetSession, blockDbId, CloseDatabaseGrbit.None);
+                        throw;
+                    }
+                }
+                catch (Exception)
+                {
+                    Api.JetDetachDatabase(jetSession, jetDatabase);
+                    throw;
+                }
+            }
+            catch (Exception)
+            {
+                jetSession.Dispose();
+                throw;
+            }
         }
 
         public int Count
