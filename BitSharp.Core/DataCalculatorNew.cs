@@ -52,6 +52,7 @@ namespace BitSharp.Core
 
         private class MerkleStream
         {
+            private readonly SHA256Managed sha256 = new SHA256Managed();
             private readonly List<MerkleHash> leftHashes = new List<MerkleHash>();
 
             public MerkleHash RootHash
@@ -81,7 +82,7 @@ namespace BitSharp.Core
                     }
                     else if (newHash.Depth == leftHash.Depth)
                     {
-                        this.leftHashes[this.leftHashes.Count - 1] = leftHash.PairWith(newHash);
+                        this.leftHashes[this.leftHashes.Count - 1] = Pair(leftHash, newHash);
                     }
                     else if (newHash.Depth > leftHash.Depth)
                     {
@@ -113,13 +114,36 @@ namespace BitSharp.Core
                     if (leftHash.Depth == rightHash.Depth)
                     {
                         this.leftHashes.RemoveAt(this.leftHashes.Count - 1);
-                        this.leftHashes[this.leftHashes.Count - 1] = leftHash.PairWith(rightHash);
+                        this.leftHashes[this.leftHashes.Count - 1] = Pair(leftHash, rightHash);
                     }
                     else
                     {
                         break;
                     }
                 }
+            }
+
+            private MerkleHash Pair( MerkleHash left, MerkleHash right)
+            {
+                if (left.Depth != right.Depth)
+                    throw new InvalidOperationException();
+
+                var pairHashBytes = ImmutableArray.CreateBuilder<byte>(64);
+                pairHashBytes.AddRange(left.Hash.ToByteArray());
+                pairHashBytes.AddRange(right.Hash.ToByteArray());
+                
+                var pairHash = new UInt256(this.sha256.ComputeDoubleHash(pairHashBytes.ToArray()));
+
+                return new MerkleHash(left.Depth + 1, pairHash);
+            }
+
+
+            private UInt256 PairHashes(UInt256 left, UInt256 right)
+            {
+                var bytes = ImmutableArray.CreateBuilder<byte>(64);
+                bytes.AddRange(left.ToByteArray());
+                bytes.AddRange(right.ToByteArray());
+                return new UInt256(new SHA256Managed().ComputeDoubleHash(bytes.ToArray()));
             }
         }
 
@@ -143,14 +167,6 @@ namespace BitSharp.Core
             public int Depth { get { return this.depth; } }
 
             public UInt256 Hash { get { return this.hash; } }
-
-            public MerkleHash PairWith(MerkleHash other)
-            {
-                if (this.depth != other.depth)
-                    throw new InvalidOperationException();
-
-                return new MerkleHash(this.depth + 1, PairHashes(this.hash, other.hash));
-            }
         }
     }
 }

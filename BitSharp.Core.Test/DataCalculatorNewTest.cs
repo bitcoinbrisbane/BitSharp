@@ -4,6 +4,7 @@ using BitSharp.Core.Domain;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -124,5 +125,29 @@ namespace BitSharp.Core.Test
 
             CollectionAssert.AreEqual(blockElements, readElements);
         }
+
+        [TestMethod]
+        public void TestReadBlockElementsPerformance()
+        {
+            var sha256 = new SHA256Managed();
+
+            var blockHash = (UInt256)0;
+
+            var count = 10.THOUSAND();
+            var blockElements = new List<BlockElement>(count);
+            for (var i = 0; i < count; i++)
+            {
+                blockElements.Add(new BlockElement(blockHash, i, depth: 0, hash: i));
+            }
+
+            var merkleRoot = new MethodTimer().Time(() =>
+                DataCalculator.CalculateMerkleRoot(blockElements.Select(x => x.Hash).ToImmutableList()));
+
+            var readElements = new MethodTimer().Time(() =>
+                DataCalculatorNew.ReadBlockElements(blockHash, merkleRoot, blockElements).ToList());
+
+            CollectionAssert.AreEqual(blockElements, readElements);
+        }
+
     }
 }
