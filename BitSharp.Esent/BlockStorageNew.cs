@@ -58,10 +58,7 @@ namespace BitSharp.Esent
             this.jetInstance = CreateInstance(this.jetDirectory);
             this.jetInstance.Init();
 
-            if (!File.Exists(this.jetDatabase))
-                CreateDatabase(this.jetDatabase, this.jetInstance);
-
-            OpenDatabase(this.jetDatabase, this.jetInstance, false /*readOnly*/,
+            CreateOrOpenDatabase(this.jetDirectory, this.jetDatabase, this.jetInstance, false /*readOnly*/,
                 out this.jetSession,
                 out this.blockDbId,
                 out this.blockHeadersTableId,
@@ -357,6 +354,34 @@ namespace BitSharp.Esent
         //    Api.JetRollback(this.jetSession, RollbackTransactionGrbit.None);
         //    this.inTransaction = false;
         //}
+
+        private static void CreateOrOpenDatabase(string jetDirectory, string jetDatabase, Instance jetInstance, bool readOnly,
+            out Session jetSession,
+            out JET_DBID blockDbId,
+            out JET_TABLEID blockHeadersTableId,
+            out JET_COLUMNID blockHeaderHashColumnId,
+            out JET_COLUMNID blockHeaderBytesColumnId,
+            out JET_TABLEID blocksTableId,
+            out JET_COLUMNID blockHashColumnId,
+            out JET_COLUMNID blockTxIndexColumnId,
+            out JET_COLUMNID blockTxHashColumnId,
+            out JET_COLUMNID blockTxBytesColumnId)
+        {
+            try
+            {
+                OpenDatabase(jetDatabase, jetInstance, readOnly, out jetSession, out blockDbId, out blockHeadersTableId, out blockHeaderHashColumnId, out blockHeaderBytesColumnId, out blocksTableId, out blockHashColumnId, out blockTxIndexColumnId, out blockTxHashColumnId, out blockTxBytesColumnId);
+            }
+            catch (Exception)
+            {
+                try { Directory.Delete(jetDirectory, recursive: true); }
+                catch (Exception) { }
+                Directory.CreateDirectory(jetDirectory);
+
+                CreateDatabase(jetDatabase, jetInstance);
+                OpenDatabase(jetDatabase, jetInstance, readOnly, out jetSession, out blockDbId, out blockHeadersTableId, out blockHeaderHashColumnId, out blockHeaderBytesColumnId, out blocksTableId, out blockHashColumnId, out blockTxIndexColumnId, out blockTxHashColumnId, out blockTxBytesColumnId);
+            }
+        }
+
 
         private static void CreateDatabase(string jetDatabase, Instance jetInstance)
         {
