@@ -313,10 +313,13 @@ namespace BitSharp.Esent
                     Api.MakeKey(cursor.jetSession, cursor.blocksTableId, -1, MakeKeyGrbit.None);
                     if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekGE))
                     {
+                        var found = false;
                         do
                         {
                             if (blockHash != new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
                                 break;
+                            else
+                                found = true;
 
                             var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
                             var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
@@ -336,6 +339,9 @@ namespace BitSharp.Esent
 
                             yield return blockTx;
                         } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));
+
+                        if (!found)
+                            throw new MissingDataException(blockHash);
                     }
                 }
                 finally
