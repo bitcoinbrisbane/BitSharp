@@ -15,6 +15,7 @@ using Microsoft.Isam.Esent.Interop;
 using System.IO;
 using System.Threading;
 using System.Collections.Immutable;
+using System.Security.Cryptography;
 
 namespace BitSharp.Esent
 {
@@ -279,6 +280,61 @@ namespace BitSharp.Esent
                             RaiseOnMissing(blockHash);
 
                         return false;
+                    }
+                }
+                finally
+                {
+                    Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
+                }
+            }
+            finally
+            {
+                this.FreeCursor(cursor);
+            }
+        }
+
+        public IEnumerable<BlockTx> ReadBlock(ChainedHeader chainedHeader)
+        {
+            return DataCalculatorNew.ReadBlockElements(chainedHeader.Hash, chainedHeader.MerkleRoot, this.ReadBlockTransactions(chainedHeader.Hash));
+        }
+
+        private IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash)
+        {
+            var cursor = this.OpenCursor();
+            try
+            {
+                var sha256 = new SHA256Managed();
+
+                Api.JetBeginTransaction2(cursor.jetSession, BeginTransactionGrbit.ReadOnly);
+                try
+                {
+                    Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockHashTxIndex");
+                    Api.MakeKey(cursor.jetSession, cursor.blocksTableId, blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
+                    Api.MakeKey(cursor.jetSession, cursor.blocksTableId, -1, MakeKeyGrbit.None);
+                    if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekGE))
+                    {
+                        do
+                        {
+                            if (blockHash != new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
+                                break;
+
+                            var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
+                            var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
+                            var txHash = new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
+                            var txBytes = ImmutableArray.Create(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId));
+
+                            // missing data if any transactions are pruned
+                            if (depth >= 0)
+                                throw new MissingDataException(blockHash);
+
+                            // verify transaction is not corrupt
+                            if (txHash != new UInt256(sha256.ComputeDoubleHash(txBytes.ToArray())))
+                                throw new MissingDataException(blockHash);
+
+                            var blockTx = new BlockTx(blockHash, txIndex, 0 /*depth*/, txHash, txBytes);
+
+                            yield return blockTx;
+                        } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));
                     }
                 }
                 finally

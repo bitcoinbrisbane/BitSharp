@@ -139,7 +139,7 @@ namespace BitSharp.Core.Builders
             //return this.chainStateMonitor.Subscribe(visitor);
         }
 
-        public void AddBlock(ChainedBlock chainedBlock)
+        public void AddBlock(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
         {
             //using (this.chainStateMonitor.Start())
             //using (this.scriptValidator.Start())
@@ -152,11 +152,11 @@ namespace BitSharp.Core.Builders
                     //    this.chainStateMonitor.BeginBlock(chainedBlock.ChainedHeader);
 
                     // add the block to the chain
-                    this.Chain.AddBlock(chainedBlock.ChainedHeader);
+                    this.Chain.AddBlock(chainedHeader);
 
                     // store block hash
-                    this.chainStateBuilderStorage.BlockHeight = chainedBlock.Height;
-                    this.chainStateBuilderStorage.BlockHash = chainedBlock.Hash;
+                    this.chainStateBuilderStorage.BlockHeight = chainedHeader.Height;
+                    this.chainStateBuilderStorage.BlockHash = chainedHeader.Hash;
 
                     // validate the block
                     //this.Stats.validateStopwatch.Start();
@@ -167,7 +167,7 @@ namespace BitSharp.Core.Builders
                     // calculate the new block utxo, double spends will be checked for
                     long txCount = 0, inputCount = 0;
                     new MethodTimer(false).Time("CalculateUtxo", () =>
-                        this.CalculateUtxo(chainedBlock, out txCount, out inputCount));
+                        this.CalculateUtxo(chainedHeader, blockTxes, out txCount, out inputCount));
 
                     // collect rollback informatino and store it
                     //this.SaveRollbackInformation(chainedBlock.Hash, this.spentTransactionsCache, this.spentOutputsCache);
@@ -348,14 +348,11 @@ namespace BitSharp.Core.Builders
         //    return this.chainStateBuilderStorage.UnspentOutputs();
         //}
 
-        private void CalculateUtxo(ChainedBlock chainedBlock, out long txCount, out long inputCount)
+        private void CalculateUtxo(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes, out long txCount, out long inputCount)
         {
             // don't include genesis block coinbase in utxo
-            if (chainedBlock.Height <= 0)
+            if (chainedHeader.Height <= 0)
                 throw new InvalidOperationException();
-
-            txCount = 1;
-            inputCount = 0;
 
             //using (var txInputQueue = new ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>>())
             //using (var validateScriptsTask = Task.Factory.StartNew(() => this.ValidateTransactionScripts(chainedBlock, txInputQueue)))
@@ -364,54 +361,65 @@ namespace BitSharp.Core.Builders
             //try
             //{
 
-            //TODO apply real coinbase rule
-            // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
-            var coinbaseTx = chainedBlock.Transactions[0];
+            txCount = 0;
+            inputCount = 0;
 
-            // MONITOR: BeforeAddTransaction
-            //if (this.chainStateMonitor != null)
-            //    this.chainStateMonitor.BeforeAddTransaction(ChainPosition.Fake(), coinbaseTx);
-
-            // MONITOR: CoinbaseInput
-            //if (this.chainStateMonitor != null)
-            //    foreach (var input in coinbaseTx.Inputs)
-            //        this.chainStateMonitor.CoinbaseInput(ChainPosition.Fake(), input);
-
-            this.Mint(coinbaseTx, 0, chainedBlock.ChainedHeader, isCoinbase: true);
-
-            // MONITOR: AfterAddTransaction
-            //if (this.chainStateMonitor != null)
-            //    this.chainStateMonitor.AfterAddTransaction(ChainPosition.Fake(), coinbaseTx);
-
-            // check for double spends
-            for (var txIndex = 1; txIndex < chainedBlock.Transactions.Length; txIndex++)
+            var txIndex = -1;
+            foreach (var blockTx in blockTxes)
             {
-                var tx = chainedBlock.Transactions[txIndex];
+                txIndex++;
                 txCount++;
 
-                // MONITOR: BeforeAddTransaction
-                //if (this.chainStateMonitor != null)
-                //    this.chainStateMonitor.BeforeAddTransaction(ChainPosition.Fake(), tx);
-
-                for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+                if (txIndex == 0)
                 {
-                    var input = tx.Inputs[inputIndex];
-                    inputCount++;
+                    //TODO apply real coinbase rule
+                    // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
+                    var coinbaseTx = DataEncoder.DecodeTransaction(blockTx.TxBytes.ToArray());
 
-                    this.Spend(txIndex, tx, inputIndex, input, chainedBlock.ChainedHeader);
+                    // MONITOR: BeforeAddTransaction
+                    //if (this.chainStateMonitor != null)
+                    //    this.chainStateMonitor.BeforeAddTransaction(ChainPosition.Fake(), coinbaseTx);
 
-                    // MEASURE: Input Rate
-                    this.stats.inputRateMeasure.Tick();
+                    // MONITOR: CoinbaseInput
+                    //if (this.chainStateMonitor != null)
+                    //    foreach (var input in coinbaseTx.Inputs)
+                    //        this.chainStateMonitor.CoinbaseInput(ChainPosition.Fake(), input);
+
+                    this.Mint(coinbaseTx, 0, chainedHeader, isCoinbase: true);
+
+                    // MONITOR: AfterAddTransaction
+                    //if (this.chainStateMonitor != null)
+                    //    this.chainStateMonitor.AfterAddTransaction(ChainPosition.Fake(), coinbaseTx);
                 }
+                else
+                {
+                    // check for double spends
+                    var tx = DataEncoder.DecodeTransaction(blockTx.TxBytes.ToArray());
 
-                this.Mint(tx, txIndex, chainedBlock.ChainedHeader, isCoinbase: false);
+                    // MONITOR: BeforeAddTransaction
+                    //if (this.chainStateMonitor != null)
+                    //    this.chainStateMonitor.BeforeAddTransaction(ChainPosition.Fake(), tx);
 
-                // MONITOR: AfterAddTransaction
-                //if (this.chainStateMonitor != null)
-                //    this.chainStateMonitor.AfterAddTransaction(ChainPosition.Fake(), tx);
+                    for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+                    {
+                        var input = tx.Inputs[inputIndex];
+                        inputCount++;
 
-                // MEASURE: Transaction Rate
-                this.stats.txRateMeasure.Tick();
+                        this.Spend(txIndex, tx, inputIndex, input, chainedHeader);
+
+                        // MEASURE: Input Rate
+                        this.stats.inputRateMeasure.Tick();
+                    }
+
+                    this.Mint(tx, txIndex, chainedHeader, isCoinbase: false);
+
+                    // MONITOR: AfterAddTransaction
+                    //if (this.chainStateMonitor != null)
+                    //    this.chainStateMonitor.AfterAddTransaction(ChainPosition.Fake(), tx);
+
+                    // MEASURE: Transaction Rate
+                    this.stats.txRateMeasure.Tick();
+                }
             }
 
             //}

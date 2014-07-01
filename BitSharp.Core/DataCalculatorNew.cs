@@ -14,7 +14,8 @@ namespace BitSharp.Core
     //TODO organize and name properly
     public static class DataCalculatorNew
     {
-        public static IEnumerable<BlockElement> ReadBlockElements(UInt256 blockHash, UInt256 merkleRoot, IEnumerable<BlockElement> blockElements)
+        public static IEnumerable<T> ReadBlockElements<T>(UInt256 blockHash, UInt256 merkleRoot, IEnumerable<T> blockElements)
+            where T : BlockElement
         {
             var expectedIndex = 0;
 
@@ -123,7 +124,7 @@ namespace BitSharp.Core
                 }
             }
 
-            private MerkleHash Pair( MerkleHash left, MerkleHash right)
+            private MerkleHash Pair(MerkleHash left, MerkleHash right)
             {
                 if (left.Depth != right.Depth)
                     throw new InvalidOperationException();
@@ -131,7 +132,7 @@ namespace BitSharp.Core
                 var pairHashBytes = ImmutableArray.CreateBuilder<byte>(64);
                 pairHashBytes.AddRange(left.Hash.ToByteArray());
                 pairHashBytes.AddRange(right.Hash.ToByteArray());
-                
+
                 var pairHash = new UInt256(this.sha256.ComputeDoubleHash(pairHashBytes.ToArray()));
 
                 return new MerkleHash(left.Depth + 1, pairHash);
