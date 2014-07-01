@@ -96,7 +96,9 @@ namespace BitSharp.Core.Workers
             {
                 // calculate the new blockchain along the target path
                 var didWork = false;
-                foreach (var pathElement in this.chainStateBuilder.Chain.NavigateTowards(this.getTargetChain))
+                foreach (var pathElement in
+                    this.ChainedBlockLookAhead(this.chainStateBuilder.Chain.NavigateTowards(this.getTargetChain),
+                        chainLookAhead: 10, txLookAhead: 100))
                 {
                     // cooperative loop
                     this.ThrowIfCancelled();
@@ -106,12 +108,12 @@ namespace BitSharp.Core.Workers
                     // get block and metadata for next link in blockchain
                     var direction = pathElement.Item1;
                     var chainedHeader = pathElement.Item2;
+                    var blockTxes = pathElement.Item3;
 
                     var blockStopwatch = Stopwatch.StartNew();
                     if (direction > 0)
                     {
-                        this.chainStateBuilder.AddBlock(chainedHeader,
-                            this.blockCache.ReadBlock(chainedHeader).LookAhead(10));
+                        this.chainStateBuilder.AddBlock(chainedHeader, blockTxes);
                     }
                     else if (direction < 0)
                     {
@@ -156,7 +158,7 @@ namespace BitSharp.Core.Workers
             }
         }
 
-        private IEnumerable<Tuple<int, ChainedBlock>> ChainedBlockLookAhead(IEnumerable<Tuple<int, ChainedHeader>> chain, int lookAhead)
+        private IEnumerable<Tuple<int, ChainedHeader, IEnumerable<BlockTx>>> ChainedBlockLookAhead(IEnumerable<Tuple<int, ChainedHeader>> chain, int chainLookAhead, int txLookAhead)
         {
             return chain
                 .Select(
@@ -168,14 +170,10 @@ namespace BitSharp.Core.Workers
                             this.ThrowIfCancelled();
 
                             var direction = chainedHeaderTuple.Item1;
-
                             var chainedHeader = chainedHeaderTuple.Item2;
-                            var block = new MethodTimer(false).Time("GetBlock", () =>
-                                this.blockCache[chainedHeader.Hash]);
+                            var blockTxes = this.blockCache.ReadBlock(chainedHeader).LookAhead(txLookAhead);
 
-                            var chainedBlock = new ChainedBlock(chainedHeader, block);
-
-                            return Tuple.Create(direction, chainedBlock);
+                            return Tuple.Create(direction, chainedHeader, blockTxes);
                         }
                         catch (MissingDataException e)
                         {
@@ -183,7 +181,7 @@ namespace BitSharp.Core.Workers
                             throw;
                         }
                     })
-                .LookAhead(1);
+                .LookAhead(chainLookAhead);
         }
     }
 }
