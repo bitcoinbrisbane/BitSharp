@@ -96,9 +96,7 @@ namespace BitSharp.Core.Workers
             {
                 // calculate the new blockchain along the target path
                 var didWork = false;
-                foreach (var pathElement in
-                    this.ChainedBlockLookAhead(this.chainStateBuilder.Chain.NavigateTowards(this.getTargetChain),
-                        chainLookAhead: 10, txLookAhead: 100))
+                foreach (var pathElement in this.chainStateBuilder.Chain.NavigateTowards(this.getTargetChain))
                 {
                     // cooperative loop
                     this.ThrowIfCancelled();
@@ -108,7 +106,7 @@ namespace BitSharp.Core.Workers
                     // get block and metadata for next link in blockchain
                     var direction = pathElement.Item1;
                     var chainedHeader = pathElement.Item2;
-                    var blockTxes = pathElement.Item3;
+                    var blockTxes = this.blockCache.ReadBlock(chainedHeader).LookAhead(100);
 
                     var blockStopwatch = Stopwatch.StartNew();
                     if (direction > 0)

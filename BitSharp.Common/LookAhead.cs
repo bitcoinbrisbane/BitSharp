@@ -31,10 +31,6 @@ namespace BitSharp.Common
                             readValues.Add(value, abortToken.Token);
                         }
                     }
-                    catch (OperationCanceledException)
-                    {
-                        //TODO swallow this exception due to look-ahead inside of look-ahead, but a better fix is needed
-                    }
                     finally
                     {
                         try { readValues.CompleteAdding(); }
