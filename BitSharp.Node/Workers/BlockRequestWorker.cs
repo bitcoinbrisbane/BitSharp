@@ -306,6 +306,9 @@ namespace BitSharp.Node.Workers
                 }
             }
 
+            // wait for request tasks to complete
+            Task.WaitAll(requestTasks.ToArray());
+
             // notify for another loop of work when out of target chain queue to use, unless there is nothing left missing
             if (this.targetChainQueue != null && this.targetChainQueueIndex >= this.targetChainQueue.Count && this.missingBlockQueue.Count > 0)
                 this.NotifyWork();
