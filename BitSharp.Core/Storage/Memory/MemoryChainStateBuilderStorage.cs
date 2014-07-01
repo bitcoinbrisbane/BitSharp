@@ -13,12 +13,12 @@ namespace BitSharp.Core.Storage.Memory
     {
         private int blockHeight;
         private UInt256 blockHash;
-        private ImmutableDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
+        private ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
         //private ImmutableDictionary<TxOutputKey, TxOutput>.Builder unspentOutputs;
 
         private int? savedBlockHeight;
         private UInt256? savedBlockHash;
-        private ImmutableDictionary<UInt256, UnspentTx> savedUnspentTransactions;
+        private ImmutableSortedDictionary<UInt256, UnspentTx> savedUnspentTransactions;
         //private ImmutableDictionary<TxOutputKey, TxOutput> savedUnspentOutputs;
 
         public MemoryChainStateBuilderStorage(IChainStateStorage parentUtxo)
@@ -32,12 +32,12 @@ namespace BitSharp.Core.Storage.Memory
             }
             else
             {
-                this.unspentTransactions = ImmutableDictionary.CreateRange(parentUtxo.UnspentTransactions()).ToBuilder();
+                this.unspentTransactions = ImmutableSortedDictionary.CreateRange(parentUtxo.UnspentTransactions()).ToBuilder();
                 //this.unspentOutputs = ImmutableDictionary.CreateRange(parentUtxo.UnspentOutputs()).ToBuilder();
             }
         }
 
-        public ImmutableDictionary<UInt256, UnspentTx>.Builder UnspentTransactionsDictionary { get { return this.unspentTransactions; } }
+        public ImmutableSortedDictionary<UInt256, UnspentTx>.Builder UnspentTransactionsDictionary { get { return this.unspentTransactions; } }
 
         //public ImmutableDictionary<TxOutputKey, TxOutput>.Builder UnspentOutputsDictionary { get { return this.unspentOutputs; } }
 
@@ -139,7 +139,7 @@ namespace BitSharp.Core.Storage.Memory
             }
             else
             {
-                var compactUnspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
+                var compactUnspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
                 foreach (var unspentTransaction in this.unspentTransactions)
                     compactUnspentTransactions.Add(unspentTransaction);
 

@@ -19,8 +19,8 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_Unspent()
         {
             // prepare utxo storage
-            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
-            var unspentOutputs = ImmutableDictionary.CreateBuilder<TxOutputKey, TxOutput>();
+            var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
+            var unspentOutputs = ImmutableSortedDictionary.CreateBuilder<TxOutputKey, TxOutput>();
 
             // prepare unspent output
             var txHash = new UInt256(0);
@@ -45,8 +45,8 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_Spent()
         {
             // prepare utxo storage
-            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
-            var unspentOutputs = ImmutableDictionary.CreateBuilder<TxOutputKey, TxOutput>();
+            var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
+            var unspentOutputs = ImmutableSortedDictionary.CreateBuilder<TxOutputKey, TxOutput>();
 
             // prepare spent output
             var txHash = new UInt256(0);
@@ -70,8 +70,8 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_Missing()
         {
             // prepare utxo storage
-            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
-            var unspentOutputs = ImmutableDictionary.CreateBuilder<TxOutputKey, TxOutput>();
+            var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
+            var unspentOutputs = ImmutableSortedDictionary.CreateBuilder<TxOutputKey, TxOutput>();
 
             // prepare utxo
             var chainStateStorage = new MemoryChainStateStorage(0, 0, unspentTransactions.ToImmutable()); //, unspentOutputs.ToImmutable());
@@ -91,8 +91,8 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_NegativeIndex()
         {
             // prepare utxo storage
-            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
-            var unspentOutputs = ImmutableDictionary.CreateBuilder<TxOutputKey, TxOutput>();
+            var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
+            var unspentOutputs = ImmutableSortedDictionary.CreateBuilder<TxOutputKey, TxOutput>();
 
             // prepare unspent output
             var txHash = new UInt256(0);
@@ -117,8 +117,8 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_IndexOutOfRange()
         {
             // prepare utxo storage
-            var unspentTransactions = ImmutableDictionary.CreateBuilder<UInt256, UnspentTx>();
-            var unspentOutputs = ImmutableDictionary.CreateBuilder<TxOutputKey, TxOutput>();
+            var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
+            var unspentOutputs = ImmutableSortedDictionary.CreateBuilder<TxOutputKey, TxOutput>();
 
             // prepare unspent output
             var txHash = new UInt256(0);
