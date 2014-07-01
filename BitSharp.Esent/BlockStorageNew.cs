@@ -203,7 +203,7 @@ namespace BitSharp.Esent
                     {
                         var blockHeader = DataEncoder.DecodeBlockHeader(Api.RetrieveColumn(this.jetSession, this.blockHeadersTableId, this.blockHeaderBytesColumnId));
 
-                        var transactions = new List<BitSharp.Core.Domain.Transaction>();
+                        var transactions = ImmutableArray.CreateBuilder<BitSharp.Core.Domain.Transaction>();
 
                         Api.JetSetCurrentIndex(this.jetSession, this.blocksTableId, "IX_BlockHashTxIndex");
                         Api.MakeKey(this.jetSession, this.blocksTableId, blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
@@ -226,7 +226,7 @@ namespace BitSharp.Esent
 
                             if (found2)
                             {
-                                result = new Block(blockHeader, ImmutableArray.Create(transactions.ToArray()));
+                                result = new Block(blockHeader, transactions.ToImmutable());
                                 //var merkleRoot = DataCalculator.CalculateMerkleRoot(result.Transactions.Select(x => x.Hash).ToImmutableList());
                                 //if (merkleRoot != blockHeader.MerkleRoot)
                                 //{
