@@ -243,7 +243,7 @@ namespace BitSharp.Node.Workers
 
             // determine stale request times
             var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
-            var staleRequestTime = STALE_REQUEST_TIME + avgBlockRequestTime;
+            var staleRequestTime = STALE_REQUEST_TIME; // + avgBlockRequestTime;
             var missingStaleRequestTime = MISSING_STALE_REQUEST_TIME + avgBlockRequestTime;
 
             // remove any stale requests from the global list of requests
@@ -307,7 +307,7 @@ namespace BitSharp.Node.Workers
             }
 
             // wait for request tasks to complete
-            Task.WaitAll(requestTasks.ToArray());
+            Task.WaitAll(requestTasks.ToArray(), TimeSpan.FromSeconds(10));
 
             // notify for another loop of work when out of target chain queue to use, unless there is nothing left missing
             if (this.targetChainQueue != null && this.targetChainQueueIndex >= this.targetChainQueue.Count && this.missingBlockQueue.Count > 0)
@@ -356,6 +356,9 @@ namespace BitSharp.Node.Workers
 
         private void FlushWorkerMethod()
         {
+            var initalCount = this.flushQueue.Count;
+            var count = 0;
+
             Tuple<RemoteNode, Block> tuple;
             while (this.flushQueue.TryDequeue(out tuple))
             {
@@ -383,7 +386,13 @@ namespace BitSharp.Node.Workers
                 }
 
                 this.NotifyWork();
+
+                count++;
+                if (count > initalCount)
+                    break;
             }
+
+            this.blockCache.Flush();
         }
 
         private void HandleBlock(RemoteNode remoteNode, Block block)
