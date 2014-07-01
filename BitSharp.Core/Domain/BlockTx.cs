@@ -10,14 +10,14 @@ namespace BitSharp.Core.Domain
 {
     public class BlockTx : BlockElement
     {
-        private readonly ImmutableArray<byte> txBytes;
+        private readonly Transaction transaction;
 
-        public BlockTx(UInt256 blockHash, int index, int depth, UInt256 hash, ImmutableArray<byte> txBytes)
+        public BlockTx(UInt256 blockHash, int index, int depth, UInt256 hash, Transaction transaction)
             : base(blockHash, index, depth, hash)
         {
-            this.txBytes = txBytes;
+            this.transaction = transaction;
         }
 
-        public ImmutableArray<byte> TxBytes { get { return this.txBytes; } }
+        public Transaction Transaction { get { return this.transaction; } }
     }
 }

@@ -321,17 +321,18 @@ namespace BitSharp.Esent
                             var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
                             var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
                             var txHash = new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
-                            var txBytes = ImmutableArray.Create(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId));
+                            var txBytes = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId);
 
                             // missing data if any transactions are pruned
                             if (depth >= 0)
                                 throw new MissingDataException(blockHash);
 
                             // verify transaction is not corrupt
-                            if (txHash != new UInt256(sha256.ComputeDoubleHash(txBytes.ToArray())))
+                            if (txHash != new UInt256(sha256.ComputeDoubleHash(txBytes)))
                                 throw new MissingDataException(blockHash);
 
-                            var blockTx = new BlockTx(blockHash, txIndex, 0 /*depth*/, txHash, txBytes);
+                            var tx = DataEncoder.DecodeTransaction(txBytes);
+                            var blockTx = new BlockTx(blockHash, txIndex, 0 /*depth*/, txHash, tx);
 
                             yield return blockTx;
                         } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));

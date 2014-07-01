@@ -31,9 +31,9 @@ namespace BitSharp.Core.Domain
         
         public UInt256 Hash { get { return this.hash; } }
 
-        public BlockTx ToBlockTx(ImmutableArray<byte> txBytes)
+        public BlockTx ToBlockTx(Transaction transaction)
         {
-            return new BlockTx(this.blockHash, this.index, this.depth, this.hash, txBytes);
+            return new BlockTx(this.blockHash, this.index, this.depth, this.hash, transaction);
         }
     }
 }

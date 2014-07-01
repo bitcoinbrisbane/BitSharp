@@ -374,7 +374,7 @@ namespace BitSharp.Core.Builders
                 {
                     //TODO apply real coinbase rule
                     // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
-                    var coinbaseTx = DataEncoder.DecodeTransaction(blockTx.TxBytes.ToArray());
+                    var coinbaseTx = blockTx.Transaction;
 
                     // MONITOR: BeforeAddTransaction
                     //if (this.chainStateMonitor != null)
@@ -394,7 +394,7 @@ namespace BitSharp.Core.Builders
                 else
                 {
                     // check for double spends
-                    var tx = DataEncoder.DecodeTransaction(blockTx.TxBytes.ToArray());
+                    var tx = blockTx.Transaction;
 
                     // MONITOR: BeforeAddTransaction
                     //if (this.chainStateMonitor != null)
