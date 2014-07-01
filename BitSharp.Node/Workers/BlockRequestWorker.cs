@@ -173,6 +173,7 @@ namespace BitSharp.Node.Workers
         {
             var currentChainLocal = this.blockchainDaemon.CurrentChain;
             var targetChainLocal = this.blockchainDaemon.TargetChain;
+            var maxMissingHeight = currentChainLocal.Height + this.criticalTargetChainLookAhead;
 
             // remove any blocks that are no longer missing
             this.missingBlockQueue.RemoveWhere(x => this.blockCache.ContainsKey(x.Value.Hash));
@@ -180,11 +181,15 @@ namespace BitSharp.Node.Workers
             // remove old missing blocks
             this.missingBlockQueue.RemoveWhere(x => x.Value.Height < currentChainLocal.Height);
 
+            // remove any missing blocks that are too far ahead
+            this.missingBlockQueue.RemoveWhere(x => x.Value.Height > maxMissingHeight);
+
             // add any blocks that are currently missing
             foreach (var missingBlock in this.blockCache.MissingData)
             {
                 ChainedHeader missingBlockChained;
-                if (this.chainedHeaderCache.TryGetValue(missingBlock, out missingBlockChained))
+                if (this.chainedHeaderCache.TryGetValue(missingBlock, out missingBlockChained)
+                    && missingBlockChained.Height <= maxMissingHeight)
                 {
                     this.missingBlockQueue[missingBlockChained.Height] = missingBlockChained;
                 }
@@ -198,7 +203,8 @@ namespace BitSharp.Node.Workers
                     .Select(x => x.Item2)
                     .Take(this.criticalTargetChainLookAhead)
                     .Where(x =>
-                        !this.missingBlockQueue.ContainsKey(x.Height)
+                        x.Height <= maxMissingHeight
+                        && !this.missingBlockQueue.ContainsKey(x.Height)
                         && !this.blockCache.ContainsKey(x.Hash)))
                 {
                     this.missingBlockQueue[upcomingBlock.Height] = upcomingBlock;
@@ -239,8 +245,21 @@ namespace BitSharp.Node.Workers
             this.allBlockRequests.RemoveWhere(x => (now - x.Value) > STALE_REQUEST_TIME);
 
             // remove any stale requests for missing blocks, using a shorter timeout
-            var missingBlockHashes = new HashSet<UInt256>(this.missingBlockQueue.Values.Select(x => x.Hash));
-            this.allBlockRequests.RemoveWhere(x => missingBlockHashes.Contains(x.Key) && (now - x.Value) > MISSING_STALE_REQUEST_TIME);
+            var missingBlocks = this.missingBlockQueue.Values.ToDictionary(x => x.Hash, x => x);
+            this.allBlockRequests.RemoveWhere(x =>
+                {
+                    ChainedHeader missingBlock;
+                    if ((now - x.Value) > MISSING_STALE_REQUEST_TIME
+                        && missingBlocks.TryGetValue(x.Key, out missingBlock))
+                    {
+                        this.logger.Debug("Clearing stale request for missing block: {0,10:#,##0}: {1}".Format2(missingBlock.Height, missingBlock.Hash));
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                });
 
             var peerCount = this.localClient.ConnectedPeers.Count;
             if (peerCount == 0)
@@ -307,8 +326,6 @@ namespace BitSharp.Node.Workers
                     && !this.allBlockRequests.ContainsKey(missingBlock.Hash)
                     && !this.blockCache.ContainsKey(missingBlock.Hash))
                 {
-                    this.logger.Info("Requesting missing block: {0:#,##0}, {1}".Format2(missingBlock.Height, missingBlock.Hash));
-
                     yield return missingBlock.Hash;
                     currentCount++;
                 }
