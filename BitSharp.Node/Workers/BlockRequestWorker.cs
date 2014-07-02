@@ -106,6 +106,7 @@ namespace BitSharp.Node.Workers
             this.duplicateBlockDownloadRateMeasure.Dispose();
 
             this.flushWorker.Dispose();
+            this.diagnosticWorker.Dispose();
         }
 
         protected override void SubStart()
