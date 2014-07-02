@@ -51,6 +51,8 @@ namespace BitSharp.Node.Workers
         private readonly WorkerMethod flushWorker;
         private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
 
+        private readonly WorkerMethod diagnosticWorker;
+
         public BlockRequestWorker(Logger logger, WorkerConfig workerConfig, LocalClient localClient, CoreDaemon blockchainDaemon, ChainedHeaderCache chainedHeaderCache, IBlockStorageNew blockCache)
             : base("BlockRequestWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
@@ -78,6 +80,8 @@ namespace BitSharp.Node.Workers
 
             this.flushWorker = new WorkerMethod("BlockRequestWorker.FlushWorker", FlushWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
             this.flushQueue = new ConcurrentQueue<Tuple<RemoteNode, Block>>();
+
+            this.diagnosticWorker = new WorkerMethod("BlockRequestWorker.DiagnosticWorker", DiagnosticWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(10), maxIdleTime: TimeSpan.FromSeconds(10), logger: this.logger);
         }
 
         public float GetBlockDownloadRate(TimeSpan perUnitTime)
@@ -107,11 +111,13 @@ namespace BitSharp.Node.Workers
         protected override void SubStart()
         {
             this.flushWorker.Start();
+            //this.diagnosticWorker.Start();
         }
 
         protected override void SubStop()
         {
             this.flushWorker.Stop();
+            this.diagnosticWorker.Stop();
         }
 
         protected override void WorkAction()
@@ -271,7 +277,7 @@ namespace BitSharp.Node.Workers
                 return;
 
             var requestsPerPeer = Math.Max(1, this.missingBlockQueue.Count + (this.targetChainLookAhead / peerCount * 5));
-            requestsPerPeer = Math.Max(requestsPerPeer, MAX_REQUESTS_PER_PEER);
+            requestsPerPeer = Math.Min(requestsPerPeer, MAX_REQUESTS_PER_PEER);
 
             // loop through each connected peer
             foreach (var peer in this.localClient.ConnectedPeers)
@@ -307,7 +313,10 @@ namespace BitSharp.Node.Workers
             }
 
             // wait for request tasks to complete
-            Task.WaitAll(requestTasks.ToArray(), TimeSpan.FromSeconds(10));
+            if (!Task.WaitAll(requestTasks.ToArray(), TimeSpan.FromSeconds(10)))
+            {
+                this.logger.Info("Request tasks timed out.");
+            }
 
             // notify for another loop of work when out of target chain queue to use, unless there is nothing left missing
             if (this.targetChainQueue != null && this.targetChainQueueIndex >= this.targetChainQueue.Count && this.missingBlockQueue.Count > 0)
@@ -393,6 +402,23 @@ namespace BitSharp.Node.Workers
             }
 
             this.blockCache.Flush();
+        }
+
+        private void DiagnosticWorkerMethod()
+        {
+            this.logger.Info(new string('-', 80));
+            this.logger.Info("allBlockRequests.Count: {0:#,##0}".Format2(this.allBlockRequests.Count));
+            this.logger.Info("blockRequestsByPeer.InnerCount: {0:#,##0}".Format2(this.blockRequestsByPeer.Sum(x => x.Value.Count)));
+            this.logger.Info("missingBlockQueue.Count: {0:#,##0}".Format2(this.missingBlockQueue.Count));
+            this.logger.Info("targetChainQueue.Count: {0:#,##0}".Format2(this.targetChainQueue != null ? this.targetChainQueue.Count : (int?)null));
+            this.logger.Info("targetChainQueueIndex: {0:#,##0}".Format2(this.targetChainQueueIndex));
+            this.logger.Info("targetChainQueueTime: {0}".Format2(this.targetChainQueueTime));
+            this.logger.Info("blockRequestDurationMeasure: {0}".Format2(this.blockRequestDurationMeasure.GetAverage()));
+            this.logger.Info("blockDownloadRateMeasure: {0}/s".Format2(this.blockDownloadRateMeasure.GetAverage(TimeSpan.FromSeconds(1))));
+            this.logger.Info("duplicateBlockDownloadRateMeasure: {0}/s".Format2(this.duplicateBlockDownloadRateMeasure.GetAverage(TimeSpan.FromSeconds(1))));
+            this.logger.Info("targetChainLookAhead: {0}".Format2(this.targetChainLookAhead));
+            this.logger.Info("criticalTargetChainLookAhead: {0}".Format2(this.criticalTargetChainLookAhead));
+            this.logger.Info("flushQueue.Count: {0}".Format2(this.flushQueue.Count));
         }
 
         private void HandleBlock(RemoteNode remoteNode, Block block)
