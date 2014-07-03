@@ -81,7 +81,7 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
-        public bool RemoveTransaction(UInt256 txHash)
+        public bool RemoveTransaction(UInt256 txHash, int spentBlockIndex)
         {
             return this.unspentTransactions.Remove(txHash);
         }

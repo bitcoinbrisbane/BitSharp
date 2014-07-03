@@ -425,7 +425,7 @@ namespace BitSharp.Core.Builders
             // remove fully spent transaction from the utxo
             else
             {
-                this.chainStateBuilderStorage.RemoveTransaction(input.PreviousTxOutputKey.TxHash);
+                this.chainStateBuilderStorage.RemoveTransaction(input.PreviousTxOutputKey.TxHash, chainedHeader.Height);
 
                 // store rollback information, the block containing the previous transaction will need to be known during rollback
                 //this.spentTransactions.Add(new KeyValuePair<UInt256, SpentTx>(input.PreviousTxOutputKey.TxHash, unspentTx.ToSpent()));
@@ -525,7 +525,7 @@ namespace BitSharp.Core.Builders
             }
 
             // remove the transaction
-            this.chainStateBuilderStorage.RemoveTransaction(tx.Hash);
+            this.chainStateBuilderStorage.RemoveTransaction(tx.Hash, /*TODO*/spentBlockIndex: -1);
 
             // remove the transaction outputs
             for (var outputIndex = 0; outputIndex < tx.Outputs.Length; outputIndex++)
