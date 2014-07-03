@@ -17,6 +17,7 @@ using BitSharp.Core.Domain;
 
 #if SECP256K1_DLL
 using Secp256k1;
+using BitSharp.Core.Rules;
 #endif
 
 namespace BitSharp.Core.Script
@@ -304,12 +305,19 @@ Verifying script for block {0}, transaction {1}, input {2}
             var sha256 = new SHA256Managed();
             txSignatureHash = sha256.ComputeDoubleHash(txSignature);
 
+            if (MainnetRules.IgnoreSignatures)
+            {
+                return true;
+            }
+            else
+            {
 #if SECP256K1_DLL
-            // verify that signature is valid for pubKey and the simplified/signing transaction's hash
-            return Signatures.Verify(txSignatureHash, sigDER, pubKey) == Signatures.VerifyResult.Verified;
+                // verify that signature is valid for pubKey and the simplified/signing transaction's hash
+                return Signatures.Verify(txSignatureHash, sigDER, pubKey) == Signatures.VerifyResult.Verified;
 #else
-            return true;
+                return true;
 #endif
+            }
         }
 
         public byte[] TxSignature(ImmutableArray<byte> scriptPubKey, Transaction tx, int inputIndex, byte hashType)

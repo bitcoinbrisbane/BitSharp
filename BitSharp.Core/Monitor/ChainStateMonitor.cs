@@ -155,6 +155,10 @@ namespace BitSharp.Core.Monitor
             action();
         }
 
+        protected override void CompletedItems()
+        {
+        }
+
         private sealed class Unsubscriber : IDisposable
         {
             private readonly ConcurrentSet<IChainStateVisitor> visitors;

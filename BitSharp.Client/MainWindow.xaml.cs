@@ -1,7 +1,6 @@
 ﻿//#define TEST_TOOL
 //#define TESTNET3
 //#define MEMORY
-//#define TRANSIENT_BLOCKS
 //#define DUMMY_MONITOR
 
 using BitSharp.Common.ExtensionMethods;
@@ -56,7 +55,9 @@ namespace BitSharp.Client
 
                 //TODO
                 //MainnetRules.BypassValidation = true;
+                MainnetRules.IgnoreScripts = true;
                 MainnetRules.IgnoreScriptErrors = true;
+                MainnetRules.IgnoreSignatures = true;
 
                 // initialize kernel
                 this.kernel = new StandardKernel();
@@ -75,9 +76,6 @@ namespace BitSharp.Client
                 modules.Add(new MemoryStorageModule());
 #elif MEMORY
                 modules.Add(new MemoryStorageModule());
-#elif TRANSIENT_BLOCKS
-                modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "Data"), transientBlockStorage: true));
-                //ChainStateBuilderStorage.IndexOutputs = true;
 #else
                 modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "Data"), cacheSizeMaxBytes: int.MaxValue - 1));
                 //ChainStateBuilderStorage.IndexOutputs = true;

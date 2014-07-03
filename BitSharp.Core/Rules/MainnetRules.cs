@@ -23,7 +23,11 @@ namespace BitSharp.Core.Rules
     {
         public static bool BypassValidation { get; set; }
 
+        public static bool IgnoreScripts { get; set; }
+
         public static bool IgnoreScriptErrors { get; set; }
+
+        public static bool IgnoreSignatures { get; set; }
 
         private const UInt64 SATOSHI_PER_BTC = 100 * 1000 * 1000;
 

@@ -22,14 +22,12 @@ namespace BitSharp.Esent
         private readonly string baseDirectory;
         private readonly long? cacheSizeMinBytes;
         private readonly long? cacheSizeMaxBytes;
-        private readonly bool transientBlockStorage;
 
-        public EsentStorageModule(string baseDirectory, long? cacheSizeMinBytes = null, long? cacheSizeMaxBytes = null, bool transientBlockStorage = false)
+        public EsentStorageModule(string baseDirectory, long? cacheSizeMinBytes = null, long? cacheSizeMaxBytes = null)
         {
             this.baseDirectory = baseDirectory;
             this.cacheSizeMinBytes = cacheSizeMinBytes;
             this.cacheSizeMaxBytes = cacheSizeMaxBytes;
-            this.transientBlockStorage = transientBlockStorage;
         }
 
         public override void Load()
@@ -47,17 +45,6 @@ namespace BitSharp.Esent
             // bind concrete storage providers
             this.Bind<BlockHeaderStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<ChainedHeaderStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-            //this.Bind<BlockStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-            if (this.transientBlockStorage)
-            {
-                this.Bind<MemoryBlockTxHashesStorage>().ToSelf().InSingletonScope();
-                this.Bind<MemoryTransactionStorage>().ToSelf().InSingletonScope();
-            }
-            else
-            {
-                this.Bind<BlockTxHashesStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-                this.Bind<TransactionStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-            }
             this.Bind<SpentTransactionsStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<SpentOutputsStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<InvalidBlockStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
@@ -67,17 +54,6 @@ namespace BitSharp.Esent
             // bind storage providers interfaces
             this.Bind<IBlockHeaderStorage>().ToMethod(x => this.Kernel.Get<BlockHeaderStorage>()).InSingletonScope();
             this.Bind<IChainedHeaderStorage>().ToMethod(x => this.Kernel.Get<ChainedHeaderStorage>()).InSingletonScope();
-            //this.Bind<IBlockStorage>().ToMethod(x => this.Kernel.Get<BlockStorage>()).InSingletonScope();
-            if (this.transientBlockStorage)
-            {
-                this.Bind<IBlockTxHashesStorage>().ToMethod(x => this.Kernel.Get<MemoryBlockTxHashesStorage>()).InSingletonScope();
-                this.Bind<ITransactionStorage>().ToMethod(x => this.Kernel.Get<MemoryTransactionStorage>()).InSingletonScope();
-            }
-            else
-            {
-                this.Bind<IBlockTxHashesStorage>().ToMethod(x => this.Kernel.Get<BlockTxHashesStorage>()).InSingletonScope();
-                this.Bind<ITransactionStorage>().ToMethod(x => this.Kernel.Get<TransactionStorage>()).InSingletonScope();
-            }
             this.Bind<ISpentTransactionsStorage>().ToMethod(x => this.Kernel.Get<SpentTransactionsStorage>()).InSingletonScope();
             this.Bind<ISpentOutputsStorage>().ToMethod(x => this.Kernel.Get<SpentOutputsStorage>()).InSingletonScope();
             this.Bind<IInvalidBlockStorage>().ToMethod(x => this.Kernel.Get<InvalidBlockStorage>()).InSingletonScope();

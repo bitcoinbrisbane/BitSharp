@@ -27,16 +27,6 @@ namespace BitSharp.Core.Storage
             get { throw new NotImplementedException(); }
         }
 
-        public BlockTxHashesCache BlockTxHashesCache
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        public TransactionCache TransactionCache
-        {
-            get { throw new NotImplementedException(); }
-        }
-
         public SpentTransactionsCache SpentTransactionsCache
         {
             get { throw new NotImplementedException(); }

@@ -12,7 +12,7 @@ namespace BitSharp.Common
     public abstract class BlockingCollectionWorker<T> : IDisposable
     {
         private readonly string name;
-        private readonly bool isConcurrent;
+        private bool isConcurrent;
         private readonly Logger logger;
         private readonly WorkerMethod queueWorker;
 
@@ -39,10 +39,13 @@ namespace BitSharp.Common
 
         public string Name { get { return this.name; } }
 
-        public IDisposable Start()
+        public IDisposable Start(bool? isConcurrent = null)
         {
             if (this.queue != null)
                 throw new InvalidOperationException();
+
+            if (isConcurrent != null)
+                this.isConcurrent = isConcurrent.Value;
 
             this.SubStart();
 
@@ -91,12 +94,17 @@ namespace BitSharp.Common
 
         protected abstract void ConsumeItem(T value);
 
+        protected abstract void CompletedItems();
+
         private void Stop()
         {
             if (this.queue == null || !this.isCompleteAdding || !this.isCompleted)
                 throw new InvalidOperationException();
 
             this.SubStop();
+
+            this.CompleteAdding();
+            this.WaitToComplete();
 
             this.workEvent.Dispose();
             this.completedEvent.Dispose();
@@ -120,6 +128,8 @@ namespace BitSharp.Common
                 foreach (var value in this.GetConsumingEnumerable())
                     ConsumeItem(value);
             }
+
+            this.CompletedItems();
 
             this.isCompleted = true;
             this.completedEvent.Set();

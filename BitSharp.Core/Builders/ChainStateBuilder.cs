@@ -37,11 +37,10 @@ namespace BitSharp.Core.Builders
         private readonly IBlockchainRules rules;
         private readonly BlockHeaderCache blockHeaderCache;
         private readonly IBlockStorageNew blockCache;
-        //private readonly SpentTransactionsCache spentTransactionsCache;
-        //private readonly SpentOutputsCache spentOutputsCache;
 
-        //private readonly ChainStateMonitor chainStateMonitor;
-        //private readonly ScriptValidator scriptValidator;
+        private readonly TxLoader txLoader;
+        private readonly TxValidator txValidator;
+        private readonly ScriptValidator scriptValidator;
 
         private bool inTransaction;
         private ChainBuilder chain;
@@ -66,9 +65,9 @@ namespace BitSharp.Core.Builders
             //this.spentTransactionsCache = spentTransactionsCache;
             //this.spentOutputsCache = spentOutputsCache;
 
-            //this.chainStateMonitor = new ChainStateMonitor(this.logger);
-            //this.scriptValidator = new ScriptValidator(this.logger, this.rules);
-            //this.chainStateMonitor.Subscribe(this.scriptValidator);
+            this.scriptValidator = new ScriptValidator(this.logger, this.rules, isConcurrent: false);
+            this.txValidator = new TxValidator(this.scriptValidator, this.logger, this.rules, isConcurrent: false);
+            this.txLoader = new TxLoader(this.blockCache, this.txValidator, this.logger, this.rules, isConcurrent: false);
 
             this.chain = chain;
             this.chainStateBuilderStorage = kernel.Get<IChainStateBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo.Storage));
@@ -90,10 +89,9 @@ namespace BitSharp.Core.Builders
         {
             GC.SuppressFinalize(this);
 
-            //if (this.chainStateMonitor != null)
-            //    this.chainStateMonitor.Dispose();
-            //if (this.scriptValidator != null)
-            //    this.scriptValidator.Dispose();
+            this.txLoader.Dispose();
+            this.txValidator.Dispose();
+            this.scriptValidator.Dispose();
 
             this.stats.Dispose();
             this.chainStateBuilderStorage.Dispose();
@@ -131,26 +129,18 @@ namespace BitSharp.Core.Builders
 
         public IDisposable Subscribe(IChainStateVisitor visitor)
         {
-            return null;
-
-            //if (this.chainStateMonitor == null)
-            //    throw new InvalidOperationException();
-
-            //return this.chainStateMonitor.Subscribe(visitor);
+            throw new InvalidOperationException();
         }
 
         public void AddBlock(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
         {
-            //using (this.chainStateMonitor.Start())
-            //using (this.scriptValidator.Start())
+            using (this.txLoader.Start())
+            using (this.txValidator.Start())
+            using (this.scriptValidator.Start(/*isConcurrent: chainedHeader.Height > 150.THOUSAND()*/))
             {
                 this.BeginTransaction();
                 try
                 {
-                    // MONITOR: BeginBlock
-                    //if (this.chainStateMonitor != null)
-                    //    this.chainStateMonitor.BeginBlock(chainedBlock.ChainedHeader);
-
                     // add the block to the chain
                     this.Chain.AddBlock(chainedHeader);
 
@@ -165,64 +155,63 @@ namespace BitSharp.Core.Builders
                     //this.Stats.validateStopwatch.Stop();
 
                     // calculate the new block utxo, double spends will be checked for
-                    long txCount = 0, inputCount = 0;
                     new MethodTimer(false).Time("CalculateUtxo", () =>
-                        this.CalculateUtxo(chainedHeader, blockTxes, out txCount, out inputCount));
+                    {
+                        foreach (var pendingTx in this.CalculateUtxo(chainedHeader, blockTxes))
+                        {
+                            this.txLoader.Add(pendingTx);
+                        }
+
+                        this.txLoader.CompleteAdding();
+                    });
 
                     // collect rollback informatino and store it
                     //this.SaveRollbackInformation(chainedBlock.Hash, this.spentTransactionsCache, this.spentOutputsCache);
 
-                    // wait for monitor events to finish
-                    //this.chainStateMonitor.CompleteAdding();
-                    //this.chainStateMonitor.WaitToComplete();
+                    // wait for transactions to load
+                    this.txLoader.WaitToComplete();
+                    if (this.txLoader.Exceptions.Count > 0)
+                    {
+                        throw new AggregateException(this.txLoader.Exceptions);
+                    }
 
-                    // check script validation results
-                    //this.scriptValidator.CompleteAdding();
-                    //this.scriptValidator.WaitToComplete();
-                    //if (this.scriptValidator.ValidationExceptions.Count > 0)
-                    //{
-                    //    if (!MainnetRules.IgnoreScriptErrors)
-                    //        throw new AggregateException(this.scriptValidator.ValidationExceptions);
-                    //    else
-                    //        this.logger.Info("Ignoring script error in block: {0}".Format2(chainedBlock.Hash));
-                    //}
+                    // wait for transactions to validate
+                    this.txValidator.WaitToComplete();
+                    if (this.txValidator.Exceptions.Count > 0)
+                    {
+                        throw new AggregateException(this.txValidator.Exceptions);
+                    }
+
+                    // wait for scripts to validate
+                    this.scriptValidator.WaitToComplete();
+                    if (this.scriptValidator.Exceptions.Count > 0)
+                    {
+                        if (!MainnetRules.IgnoreScriptErrors)
+                            throw new AggregateException(this.scriptValidator.Exceptions);
+                        else
+                            this.logger.Info("Ignoring script error in block: {0}".Format2(chainedHeader.Hash));
+                    }
 
                     // commit the chain state
                     this.CommitTransaction();
-
-                    // MONITOR: CommitBlock
-                    //if (this.chainStateMonitor != null)
-                    //    this.chainStateMonitor.CommitBlock(chainedBlock.ChainedHeader);
-
-                    // MEASURE: Block Rate
-                    this.stats.blockRateMeasure.Tick();
-
-                    // blockchain processing statistics
-                    this.Stats.blockCount++;
-                    this.Stats.txCount += txCount;
-                    this.Stats.inputCount += inputCount;
-
-                    var logInterval = TimeSpan.FromSeconds(15);
-                    if (DateTime.UtcNow - this.Stats.lastLogTime >= logInterval)
-                    {
-                        this.LogBlockchainProgress();
-                        this.Stats.lastLogTime = DateTime.UtcNow;
-                    }
                 }
                 catch (Exception)
                 {
                     this.RollbackTransaction();
-
-                    // MONITOR: RollbackBlock
-                    //if (this.chainStateMonitor != null)
-                    //    this.chainStateMonitor.RollbackBlock(chainedBlock.ChainedHeader);
-
-                    //this.chainStateMonitor.CompleteAdding();
-                    //this.chainStateMonitor.WaitToComplete();
-                    //this.scriptValidator.CompleteAdding();
-                    //this.scriptValidator.WaitToComplete();
-
                     throw;
+                }
+
+                // MEASURE: Block Rate
+                this.stats.blockRateMeasure.Tick();
+
+                // blockchain processing statistics
+                this.Stats.blockCount++;
+
+                var logInterval = TimeSpan.FromSeconds(15);
+                if (DateTime.UtcNow - this.Stats.lastLogTime >= logInterval)
+                {
+                    this.LogBlockchainProgress();
+                    this.Stats.lastLogTime = DateTime.UtcNow;
                 }
             }
         }
@@ -234,10 +223,6 @@ namespace BitSharp.Core.Builders
                 this.BeginTransaction();
                 try
                 {
-                    // MONITOR: BeginBlock
-                    //if (this.chainStateMonitor != null)
-                    //    this.chainStateMonitor.BeginBlock(chainedBlock.ChainedHeader);
-
                     // remove the block from the chain
                     this.Chain.RemoveBlock(chainedBlock.ChainedHeader);
 
@@ -248,28 +233,12 @@ namespace BitSharp.Core.Builders
                     // rollback the utxo
                     this.RollbackUtxo(chainedBlock);
 
-                    // wait for monitor events to finish
-                    //this.chainStateMonitor.CompleteAdding();
-                    //this.chainStateMonitor.WaitToComplete();
-
                     // commit the chain state
                     this.CommitTransaction();
-
-                    // MONITOR: CommitBlock
-                    //if (this.chainStateMonitor != null)
-                    //    this.chainStateMonitor.CommitBlock(chainedBlock.ChainedHeader);
                 }
                 catch (Exception)
                 {
                     this.RollbackTransaction();
-
-                    //this.chainStateMonitor.CompleteAdding();
-                    //this.chainStateMonitor.WaitToComplete();
-
-                    // MONITOR: RollbackBlock
-                    //if (this.chainStateMonitor != null)
-                    //    this.chainStateMonitor.RollbackBlock(chainedBlock.ChainedHeader);
-
                     throw;
                 }
             }
@@ -348,103 +317,64 @@ namespace BitSharp.Core.Builders
         //    return this.chainStateBuilderStorage.UnspentOutputs();
         //}
 
-        private void CalculateUtxo(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes, out long txCount, out long inputCount)
+        private IEnumerable<PendingTx> CalculateUtxo(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
         {
             // don't include genesis block coinbase in utxo
             if (chainedHeader.Height <= 0)
                 throw new InvalidOperationException();
 
-            //using (var txInputQueue = new ProducerConsumer<Tuple<Transaction, int, TxInput, int, TxOutput>>())
-            //using (var validateScriptsTask = Task.Factory.StartNew(() => this.ValidateTransactionScripts(chainedBlock, txInputQueue)))
-            //using (var txOutputQueue = new ProducerConsumer<Tuple<int, ChainPosition, TxOutput>>())
-            //using (var scannerTask = Task.Factory.StartNew(() => this.ScanTransactions(txOutputQueue, monitors)))
-            //try
-            //{
-
-            txCount = 0;
-            inputCount = 0;
-
             var txIndex = -1;
             foreach (var blockTx in blockTxes)
             {
                 txIndex++;
-                txCount++;
+                this.stats.txCount++;
 
+                //TODO apply real coinbase rule
+                // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
                 if (txIndex == 0)
                 {
-                    //TODO apply real coinbase rule
-                    // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
                     var coinbaseTx = blockTx.Transaction;
 
-                    // MONITOR: BeforeAddTransaction
-                    //if (this.chainStateMonitor != null)
-                    //    this.chainStateMonitor.BeforeAddTransaction(ChainPosition.Fake(), coinbaseTx);
+                    // there exist two duplicate coinbases in the blockchain, which the design assumes to be impossible
+                    // ignore the first occurrences of these duplicates so that they do not need to later be deleted from the utxo, an unsupported operation
+                    // no other duplicates will occur again, it is now disallowed
+                    if ((chainedHeader.Height == DUPE_COINBASE_1_HEIGHT && coinbaseTx.Hash == DUPE_COINBASE_1_HASH)
+                        || (chainedHeader.Height == DUPE_COINBASE_2_HEIGHT && coinbaseTx.Hash == DUPE_COINBASE_2_HASH))
+                    {
+                        continue;
+                    }
 
-                    // MONITOR: CoinbaseInput
-                    //if (this.chainStateMonitor != null)
-                    //    foreach (var input in coinbaseTx.Inputs)
-                    //        this.chainStateMonitor.CoinbaseInput(ChainPosition.Fake(), input);
-
-                    this.Mint(coinbaseTx, 0, chainedHeader, isCoinbase: true);
-
-                    // MONITOR: AfterAddTransaction
-                    //if (this.chainStateMonitor != null)
-                    //    this.chainStateMonitor.AfterAddTransaction(ChainPosition.Fake(), coinbaseTx);
+                    // mint the transaction's outputs in the utxo
+                    yield return this.Mint(coinbaseTx, 0, chainedHeader, isCoinbase: true, spentTxes: ImmutableArray.Create<BlockTxKey>());
                 }
                 else
                 {
-                    // check for double spends
                     var tx = blockTx.Transaction;
+                    var spentTxes = ImmutableArray.CreateBuilder<BlockTxKey>();
 
-                    // MONITOR: BeforeAddTransaction
-                    //if (this.chainStateMonitor != null)
-                    //    this.chainStateMonitor.BeforeAddTransaction(ChainPosition.Fake(), tx);
-
+                    // spend each of the transaction's inputs in the utxo
                     for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
                     {
-                        var input = tx.Inputs[inputIndex];
-                        inputCount++;
+                        this.stats.inputCount++;
 
-                        this.Spend(txIndex, tx, inputIndex, input, chainedHeader);
+                        var input = tx.Inputs[inputIndex];
+                        spentTxes.Add(this.Spend(txIndex, tx, inputIndex, input, chainedHeader));
 
                         // MEASURE: Input Rate
                         this.stats.inputRateMeasure.Tick();
                     }
 
-                    this.Mint(tx, txIndex, chainedHeader, isCoinbase: false);
-
-                    // MONITOR: AfterAddTransaction
-                    //if (this.chainStateMonitor != null)
-                    //    this.chainStateMonitor.AfterAddTransaction(ChainPosition.Fake(), tx);
+                    // mint the transaction's outputs in the utxo
+                    yield return this.Mint(tx, txIndex, chainedHeader, false /*isCoinbase*/, spentTxes.ToImmutable());
 
                     // MEASURE: Transaction Rate
                     this.stats.txRateMeasure.Tick();
                 }
             }
-
-            //}
-            //finally
-            //{
-            //    // ensure that started tasks always complete using a finally block
-            //    // any exceptions will be propagated by Task.WaitAll()
-            //    //TODO unwrap aggregation exception into something more specific
-            //    txInputQueue.CompleteAdding();
-            //    txOutputQueue.CompleteAdding();
-            //    Task.WaitAll(validateScriptsTask, scannerTask);
-            //}
         }
 
-        public void Mint(Transaction tx, int txIndex, ChainedHeader chainedHeader, bool isCoinbase)
+        public PendingTx Mint(Transaction tx, int txIndex, ChainedHeader chainedHeader, bool isCoinbase, ImmutableArray<BlockTxKey> spentTxes)
         {
-            // there exist two duplicate coinbases in the blockchain, which the design assumes to be impossible
-            // ignore the first occurrences of these duplicates so that they do not need to later be deleted from the utxo, an unsupported operation
-            // no other duplicates will occur again, it is now disallowed
-            if ((chainedHeader.Height == DUPE_COINBASE_1_HEIGHT && tx.Hash == DUPE_COINBASE_1_HASH)
-                || (chainedHeader.Height == DUPE_COINBASE_2_HEIGHT && tx.Hash == DUPE_COINBASE_2_HASH))
-            {
-                return;
-            }
-
             // add transaction to the utxo
             var unspentTx = new UnspentTx(/*chainedHeader.Hash,*/ chainedHeader.Height, txIndex, tx.Outputs.Length, OutputState.Unspent);
             if (!this.chainStateBuilderStorage.TryAddTransaction(tx.Hash, unspentTx))
@@ -454,19 +384,10 @@ namespace BitSharp.Core.Builders
                 throw new ValidationException(chainedHeader.Hash);
             }
 
-
-            //// add transaction outputs to the utxo
-            //foreach (var output in tx.Outputs.Select((x, i) => new KeyValuePair<TxOutputKey, TxOutput>(new TxOutputKey(tx.Hash, (UInt32)i), x)))
-            //{
-            //    this.chainStateBuilderStorage.AddOutput(output.Key, output.Value);
-
-            //    // MONITOR: MintTxOutput
-            //    if (this.chainStateMonitor != null)
-            //        this.chainStateMonitor.MintTxOutput(ChainPosition.Fake(), output.Key, output.Value, GetOutputScripHash(output.Value), isCoinbase);
-            //}
+            return new PendingTx(txIndex, tx, chainedHeader, isCoinbase, spentTxes);
         }
 
-        public void Spend(int txIndex, Transaction tx, int inputIndex, TxInput input, ChainedHeader chainedHeader)
+        public BlockTxKey Spend(int txIndex, Transaction tx, int inputIndex, TxInput input, ChainedHeader chainedHeader)
         {
             UnspentTx unspentTx;
             if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
@@ -492,11 +413,6 @@ namespace BitSharp.Core.Builders
 
             //TODO don't remove data immediately, needs to stick around for rollback
 
-            // retrieve previous output
-            //TxOutput prevOutput;
-            //if (!this.TryGetOutput(input.PreviousTxOutputKey, out prevOutput))
-            //    throw new Exception("TODO - corruption");
-
             // update output states
             unspentTx = unspentTx.SetOutputState(outputIndex, OutputState.Spent);
 
@@ -520,9 +436,7 @@ namespace BitSharp.Core.Builders
             // remove the output from the utxo
             //this.chainStateBuilderStorage.RemoveOutput(input.PreviousTxOutputKey);
 
-            // MONITOR: SpendTxOutput
-            //if (this.chainStateMonitor != null)
-            //    this.chainStateMonitor.SpendTxOutput(new ChainPosition(chainedHeader.Hash, txIndex, tx.Hash, inputIndex, -1), chainedHeader, tx, input, input.PreviousTxOutputKey, prevOutput, GetOutputScripHash(prevOutput));
+            return new BlockTxKey(this.chain.Blocks[unspentTx.BlockIndex].Hash, unspentTx.TxIndex);
         }
 
         //TODO with the rollback information that's now being stored, rollback could be down without needing the block

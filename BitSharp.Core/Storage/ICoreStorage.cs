@@ -16,9 +16,5 @@ namespace BitSharp.Core.Storage
         //TODO move to utxo storage
         SpentTransactionsCache SpentTransactionsCache { get; }
         SpentOutputsCache SpentOutputsCache { get; }
-
-        //TODO move to indexed storage
-        BlockTxHashesCache BlockTxHashesCache { get; }
-        TransactionCache TransactionCache { get; }
     }
 }

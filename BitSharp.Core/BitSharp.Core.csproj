@@ -91,6 +91,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Builders\PendingScript.cs" />
+    <Compile Include="Builders\PendingTxValid.cs" />
+    <Compile Include="Builders\PendingTx.cs" />
+    <Compile Include="Builders\BlockTxKey.cs" />
+    <Compile Include="Builders\TxValidator.cs" />
     <Compile Include="DataCalculatorNew.cs" />
     <Compile Include="BlockchainWalker.cs" />
     <Compile Include="CoreDaemon.cs" />
@@ -120,7 +125,8 @@
     <Compile Include="Domain\UtxoStream.cs" />
     <Compile Include="JsonRpc\CoreRpcServer.cs" />
     <Compile Include="Monitor\ChainStateMonitor.cs" />
-    <Compile Include="Rules\ScriptValidator.cs" />
+    <Compile Include="Builders\TxLoader.cs" />
+    <Compile Include="Builders\ScriptValidator.cs" />
     <Compile Include="Monitor\ChainPosition.cs" />
     <Compile Include="Monitor\ChainStateVisitorBase.cs" />
     <Compile Include="Monitor\IChainStateVisitor.cs" />

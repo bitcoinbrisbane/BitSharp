@@ -55,9 +55,9 @@ namespace BitSharp.Core.Workers
             this.chainStateBuilder = chainStateBuilder;
             this.currentChain = this.chainStateBuilder.Chain.ToImmutable();
 
-            this.pruningWorker = kernel.Get<PruningWorker>(
-                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromMinutes(5))),
-                new ConstructorArgument("getChainStateBuilder", (Func<ChainStateBuilder>)(() => this.chainStateBuilder)));
+            //this.pruningWorker = kernel.Get<PruningWorker>(
+            //    new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromMinutes(5))),
+            //    new ConstructorArgument("getChainStateBuilder", (Func<ChainStateBuilder>)(() => this.chainStateBuilder)));
         }
 
         public TimeSpan AverageBlockProcessingTime()
@@ -87,7 +87,7 @@ namespace BitSharp.Core.Workers
 
         protected override void SubStop()
         {
-            this.pruningWorker.Stop();
+            //this.pruningWorker.Stop();
         }
 
         protected override void WorkAction()
@@ -126,7 +126,7 @@ namespace BitSharp.Core.Workers
                     blockStopwatch.Stop();
                     this.blockProcessingDurationMeasure.Tick(blockStopwatch.Elapsed);
 
-                    this.pruningWorker.NotifyWork();
+                    //this.pruningWorker.NotifyWork();
 
                     this.currentChain = this.chainStateBuilder.Chain.ToImmutable();
 

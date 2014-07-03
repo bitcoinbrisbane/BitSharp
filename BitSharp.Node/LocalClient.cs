@@ -48,7 +48,6 @@ namespace BitSharp.Node
         private readonly CoreDaemon blockchainDaemon;
         private readonly BlockHeaderCache blockHeaderCache;
         private readonly ChainedHeaderCache chainedHeaderCache;
-        private readonly TransactionCache transactionCache;
         private readonly IBlockStorageNew blockCache;
         private readonly NetworkPeerCache networkPeerCache;
 
@@ -70,7 +69,7 @@ namespace BitSharp.Node
 
         private Socket listenSocket;
 
-        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, CoreDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, TransactionCache transactionCache, IBlockStorageNew blockCache, NetworkPeerCache networkPeerCache)
+        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, CoreDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, IBlockStorageNew blockCache, NetworkPeerCache networkPeerCache)
         {
             this.shutdownToken = new CancellationTokenSource();
 
@@ -81,7 +80,6 @@ namespace BitSharp.Node
             this.blockchainDaemon = blockchainDaemon;
             this.blockHeaderCache = blockHeaderCache;
             this.chainedHeaderCache = chainedHeaderCache;
-            this.transactionCache = transactionCache;
             this.blockCache = blockCache;
             this.networkPeerCache = networkPeerCache;
 
@@ -510,10 +508,6 @@ namespace BitSharp.Node
 
         private Task RequestTransaction(RemoteNode remoteNode, UInt256 txHash)
         {
-            //TODO
-            //if (this.TransactionCache.ContainsKey(txHash))
-            //    return null;
-
             var now = DateTime.UtcNow;
             var newRequestTime = now;
 
@@ -548,7 +542,6 @@ namespace BitSharp.Node
 
             DateTime ignore;
             this.requestedTransactions.TryRemove(transaction.Hash, out ignore);
-            this.transactionCache.TryAdd(transaction.Hash, transaction);
         }
 
         private void OnReceivedAddresses(ImmutableArray<NetworkAddressWithTime> addresses)
@@ -681,11 +674,7 @@ namespace BitSharp.Node
                         break;
 
                     case InventoryVector.TYPE_MESSAGE_TRANSACTION:
-                        Transaction transaction;
-                        if (this.transactionCache.TryGetValue(invVector.Hash, out transaction))
-                        {
-                            remoteNode.Sender.SendTransaction(transaction).Forget();
-                        }
+                        //TODO
                         break;
                 }
             }
