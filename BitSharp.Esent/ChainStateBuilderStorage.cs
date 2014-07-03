@@ -277,22 +277,27 @@ namespace BitSharp.Esent
                 if (!Api.TrySeek(this.jetSession, this.unspentTxTableId, SeekGrbit.SeekEQ))
                     throw new KeyNotFoundException();
 
-                //Api.JetDelete(this.jetSession, this.unspentTxTableId);
-
-                Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Replace);
-                try
+                if (true)
                 {
-                    Api.SetColumn(this.jetSession, this.unspentTxTableId, this.spentBlockIndexColumnId, spentBlockIndex);
-
-                    Api.JetUpdate(this.jetSession, this.unspentTxTableId);
-                    Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+                    Api.JetDelete(this.jetSession, this.unspentTxTableId);
                 }
-                catch (Exception)
+                else
                 {
-                    Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Cancel);
-                    throw;
+                    Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Replace);
+                    try
+                    {
+                        Api.SetColumn(this.jetSession, this.unspentTxTableId, this.spentBlockIndexColumnId, spentBlockIndex);
+
+                        Api.JetUpdate(this.jetSession, this.unspentTxTableId);
+                    }
+                    catch (Exception)
+                    {
+                        Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Cancel);
+                        throw;
+                    }
                 }
 
+                Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
                 this.unspentTxCount--;
                 return true;
             }
