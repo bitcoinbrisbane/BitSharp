@@ -20,9 +20,10 @@ namespace BitSharp.Common
         private readonly bool[] queueWorkersCompleted;
         private readonly object queueWorkersLock;
 
-        private AutoResetEvent workEvent;
-        private ManualResetEventSlim completedEvent;
+        private readonly AutoResetEvent workEvent;
+        private readonly ManualResetEventSlim completedEvent;
         private ConcurrentQueue<T> queue;
+        private bool isStarted;
         private bool isCompleteAdding;
         private bool isCompleted;
 
@@ -31,6 +32,9 @@ namespace BitSharp.Common
             this.name = name;
             this.isConcurrent = isConcurrent;
             this.logger = logger;
+
+            this.workEvent = new AutoResetEvent(false);
+            this.completedEvent = new ManualResetEventSlim();
 
             this.queueWorkers = new WorkerMethod[isConcurrent ? Environment.ProcessorCount * 2 : 1];
             this.queueWorkersCompleted = new bool[this.queueWorkers.Length];
@@ -47,6 +51,13 @@ namespace BitSharp.Common
         public void Dispose()
         {
             this.SubDispose();
+
+            new IDisposable[]
+            {
+                this.workEvent,
+                this.completedEvent
+            }.DisposeList();
+
             this.queueWorkers.DisposeList();
         }
 
@@ -54,17 +65,18 @@ namespace BitSharp.Common
 
         public IDisposable Start()
         {
-            if (this.queue != null)
+            if (this.isStarted)
                 throw new InvalidOperationException();
 
             this.SubStart();
 
-            this.workEvent = new AutoResetEvent(false);
-            this.completedEvent = new ManualResetEventSlim();
+            this.workEvent.Reset();
+            this.completedEvent.Reset();
             this.queue = new ConcurrentQueue<T>();
+            this.isStarted = true;
             this.isCompleteAdding = false;
             this.isCompleted = false;
-            
+
             Array.Clear(this.queueWorkersCompleted, 0, this.queueWorkersCompleted.Length);
             for (var i = 0; i < this.queueWorkers.Length; i++)
             {
@@ -76,19 +88,13 @@ namespace BitSharp.Common
 
         public void CompleteAdding()
         {
-            if (this.queue == null)
-                throw new InvalidOperationException();
-
             this.isCompleteAdding = true;
             this.workEvent.Set();
         }
 
         public void WaitToComplete()
         {
-            if (this.queue == null)
-                throw new InvalidOperationException();
-
-            while (!this.isCompleted)
+            while (this.isStarted && !this.isCompleted)
                 this.completedEvent.Wait(1);
         }
 
@@ -113,16 +119,15 @@ namespace BitSharp.Common
 
         private void Stop()
         {
-            if (this.queue == null || !this.isCompleteAdding || !this.isCompleted)
-                throw new InvalidOperationException();
-
             this.SubStop();
 
-            this.CompleteAdding();
-            this.WaitToComplete();
+            if (this.isStarted)
+            {
+                this.CompleteAdding();
+                this.WaitToComplete();
+            }
 
-            this.workEvent.Dispose();
-            this.completedEvent.Dispose();
+            this.isStarted = false;
             this.queue = null;
         }
 
