@@ -390,15 +390,13 @@ namespace BitSharp.Node.Workers
                 this.flushBlocks.Remove(block.Hash);
 
                 DateTime requestTime;
-                if (this.allBlockRequests.TryRemove(block.Hash, out requestTime))
-                {
-                    this.blockRequestDurationMeasure.Tick(DateTime.UtcNow - requestTime);
-                }
+                this.allBlockRequests.TryRemove(block.Hash, out requestTime);
 
                 ConcurrentDictionary<UInt256, DateTime> peerBlockRequests;
-                if (this.blockRequestsByPeer.TryGetValue(remoteNode.RemoteEndPoint, out peerBlockRequests))
+                if (this.blockRequestsByPeer.TryGetValue(remoteNode.RemoteEndPoint, out peerBlockRequests)
+                    && peerBlockRequests.TryRemove(block.Hash, out requestTime))
                 {
-                    peerBlockRequests.TryRemove(block.Hash, out requestTime);
+                    this.blockRequestDurationMeasure.Tick(DateTime.UtcNow - requestTime);
                 }
 
                 this.NotifyWork();
