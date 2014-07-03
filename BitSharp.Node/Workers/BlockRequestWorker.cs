@@ -429,8 +429,8 @@ namespace BitSharp.Node.Workers
 
         private void HandleBlock(RemoteNode remoteNode, Block block)
         {
-            this.flushQueue.Enqueue(Tuple.Create(remoteNode, block));
             this.flushBlocks.Add(block.Hash);
+            this.flushQueue.Enqueue(Tuple.Create(remoteNode, block));
             this.flushWorker.NotifyWork();
         }
 
