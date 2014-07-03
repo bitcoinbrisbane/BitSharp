@@ -45,6 +45,7 @@ namespace BitSharp.Client
         private float inputRate;
         private float blockDownloadRate;
         private float duplicateBlockDownloadRate;
+        private float blockMissRate;
 
         private readonly WalletMonitor walletMonitor;
         private decimal bitBalance;
@@ -77,6 +78,7 @@ namespace BitSharp.Client
                 this.InputRate = this.blockchainDaemon.GetInputRate(TimeSpan.FromSeconds(1));
                 this.BlockDownloadRate = this.localClient.GetBlockDownloadRate(TimeSpan.FromSeconds(1));
                 this.DuplicateBlockDownloadRate = this.localClient.GetDuplicateBlockDownloadRate(TimeSpan.FromSeconds(1));
+                this.BlockMissRate = this.localClient.GetBlockMissRate(TimeSpan.FromSeconds(1));
             };
             ratesTimer.Interval = TimeSpan.FromSeconds(1);
             ratesTimer.Start();
@@ -163,6 +165,12 @@ namespace BitSharp.Client
         {
             get { return this.duplicateBlockDownloadRate; }
             set { SetValue(ref this.duplicateBlockDownloadRate, value); }
+        }
+
+        public float BlockMissRate
+        {
+            get { return this.blockMissRate; }
+            set { SetValue(ref this.blockMissRate, value); }
         }
 
         public long ViewBlockchainHeight

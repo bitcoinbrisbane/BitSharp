@@ -29,12 +29,15 @@ namespace BitSharp.Esent
         private readonly BlockStorageCursor[] cursors;
         private readonly object cursorsLock;
 
+        //TODO track these more cleanly, notPresentBlocks is so that ContainsBlock doesn't raise missing events
         private readonly ConcurrentSetBuilder<UInt256> presentBlocks;
+        private readonly ConcurrentSetBuilder<UInt256> notPresentBlocks;
         private readonly ConcurrentSetBuilder<UInt256> missingBlocks;
 
         public BlockStorageNew(string baseDirectory)
         {
             this.presentBlocks = new ConcurrentSetBuilder<UInt256>();
+            this.notPresentBlocks = new ConcurrentSetBuilder<UInt256>();
             this.missingBlocks = new ConcurrentSetBuilder<UInt256>();
 
             this.jetDirectory = Path.Combine(baseDirectory, "BlocksNew");
@@ -83,6 +86,8 @@ namespace BitSharp.Esent
         {
             if (this.presentBlocks.Contains(blockHash))
                 return true;
+            else if (this.notPresentBlocks.Contains(blockHash))
+                return false;
             else if (this.missingBlocks.Contains(blockHash))
                 return false;
 
@@ -100,8 +105,7 @@ namespace BitSharp.Esent
                 }
                 else
                 {
-                    if (this.missingBlocks.Add(blockHash))
-                        RaiseOnMissing(blockHash);
+                    this.notPresentBlocks.Add(blockHash);
                 }
 
                 return found;
@@ -168,6 +172,7 @@ namespace BitSharp.Esent
             }
 
             this.missingBlocks.Remove(block.Hash);
+            this.notPresentBlocks.Remove(block.Hash);
             if (this.presentBlocks.Add(block.Hash))
                 RaiseOnAddition(block.Hash, block);
         }
@@ -244,6 +249,7 @@ namespace BitSharp.Esent
                                 block = new Block(blockHeader, transactions.ToImmutable());
 
                                 this.missingBlocks.Remove(blockHash);
+                                this.notPresentBlocks.Remove(block.Hash); 
                                 if (this.presentBlocks.Add(blockHash))
                                     RaiseOnAddition(blockHash, block);
 

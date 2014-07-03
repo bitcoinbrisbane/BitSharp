@@ -50,6 +50,7 @@ namespace BitSharp.Node.Workers
 
         private readonly WorkerMethod flushWorker;
         private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
+        private readonly ConcurrentSet<UInt256> flushBlocks;
 
         private readonly WorkerMethod diagnosticWorker;
 
@@ -80,6 +81,7 @@ namespace BitSharp.Node.Workers
 
             this.flushWorker = new WorkerMethod("BlockRequestWorker.FlushWorker", FlushWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
             this.flushQueue = new ConcurrentQueue<Tuple<RemoteNode, Block>>();
+            this.flushBlocks = new ConcurrentSet<UInt256>();
 
             this.diagnosticWorker = new WorkerMethod("BlockRequestWorker.DiagnosticWorker", DiagnosticWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(10), maxIdleTime: TimeSpan.FromSeconds(10), logger: this.logger);
         }
@@ -340,7 +342,8 @@ namespace BitSharp.Node.Workers
                 if (currentCount >= count)
                     break;
 
-                if (!peerBlockRequests.ContainsKey(missingBlock.Hash)
+                if (!this.flushBlocks.Contains(missingBlock.Hash)
+                    && !peerBlockRequests.ContainsKey(missingBlock.Hash)
                     && !this.allBlockRequests.ContainsKey(missingBlock.Hash)
                     && !this.blockCache.ContainsKey(missingBlock.Hash))
                 {
@@ -352,13 +355,14 @@ namespace BitSharp.Node.Workers
             // iterate through the blocks on the target chain, each peer will request a separate chunk of blocks
             for (; this.targetChainQueue != null && this.targetChainQueueIndex < this.targetChainQueue.Count && currentCount < count; this.targetChainQueueIndex++)
             {
-                var requestBlock = this.targetChainQueue[this.targetChainQueueIndex].Hash;
+                var requestBlock = this.targetChainQueue[this.targetChainQueueIndex];
 
-                if (!peerBlockRequests.ContainsKey(requestBlock)
-                    && !this.allBlockRequests.ContainsKey(requestBlock)
-                    && !this.blockCache.ContainsKey(requestBlock))
+                if (!this.flushBlocks.Contains(requestBlock.Hash)
+                    && !peerBlockRequests.ContainsKey(requestBlock.Hash)
+                    && !this.allBlockRequests.ContainsKey(requestBlock.Hash)
+                    && !this.blockCache.ContainsKey(requestBlock.Hash))
                 {
-                    yield return requestBlock;
+                    yield return requestBlock.Hash;
                     currentCount++;
                 }
             }
@@ -383,6 +387,8 @@ namespace BitSharp.Node.Workers
                 else
                     this.duplicateBlockDownloadRateMeasure.Tick();
 
+                this.flushBlocks.Remove(block.Hash);
+
                 DateTime requestTime;
                 if (this.allBlockRequests.TryRemove(block.Hash, out requestTime))
                 {
@@ -402,7 +408,7 @@ namespace BitSharp.Node.Workers
                     break;
             }
 
-            this.blockCache.Flush();
+            //this.blockCache.Flush();
         }
 
         private void DiagnosticWorkerMethod(WorkerMethod instance)
@@ -420,11 +426,13 @@ namespace BitSharp.Node.Workers
             this.logger.Info("targetChainLookAhead: {0}".Format2(this.targetChainLookAhead));
             this.logger.Info("criticalTargetChainLookAhead: {0}".Format2(this.criticalTargetChainLookAhead));
             this.logger.Info("flushQueue.Count: {0}".Format2(this.flushQueue.Count));
+            this.logger.Info("flushBlocks.Count: {0}".Format2(this.flushBlocks.Count));
         }
 
         private void HandleBlock(RemoteNode remoteNode, Block block)
         {
             this.flushQueue.Enqueue(Tuple.Create(remoteNode, block));
+            this.flushBlocks.Add(block.Hash);
             this.flushWorker.NotifyWork();
         }
 

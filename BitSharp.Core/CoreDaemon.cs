@@ -229,6 +229,11 @@ namespace BitSharp.Core
             return this.chainStateWorker.AverageBlockProcessingTime();
         }
 
+        public float GetBlockMissRate(TimeSpan perUnitTime)
+        {
+            return this.chainStateWorker.GetBlockMissRate(perUnitTime);
+        }
+
         public void Start()
         {
             //var blockStorageNew = this.kernel.Get<IBlockStorageNew>();

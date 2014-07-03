@@ -52,6 +52,8 @@
         <Label Content="{Binding BlockDownloadRate}" ContentStringFormat="#,##0'/s'" HorizontalContentAlignment="Right" HorizontalAlignment="Left" Margin="346,110,0,0" VerticalAlignment="Top" Width="75"/>
         <Label Content="Duplicate Download Rate:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="200,140,0,0"/>
         <Label Content="{Binding DuplicateBlockDownloadRate}" ContentStringFormat="#,##0'/s'" HorizontalContentAlignment="Right" HorizontalAlignment="Left" Margin="346,140,0,0" VerticalAlignment="Top" Width="75"/>
+        <Label Content="Block Miss Rate:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="200,170,0,0"/>
+        <Label Content="{Binding BlockMissRate}" ContentStringFormat="#,##0'/s'" HorizontalContentAlignment="Right" HorizontalAlignment="Left" Margin="346,170,0,0" VerticalAlignment="Top" Width="75"/>
         <ListView HorizontalAlignment="Left" Height="183" VerticalAlignment="Top" Width="500" Margin="10,240,0,0" ItemsSource="{Binding WalletEntries}">
             <ListView.View>
                 <GridView>

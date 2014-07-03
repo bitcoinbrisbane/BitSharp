@@ -32,6 +32,9 @@ namespace BitSharp.Core.Workers
         private readonly InvalidBlockCache invalidBlockCache;
 
         private readonly DurationMeasure blockProcessingDurationMeasure;
+        private readonly RateMeasure blockMissRateMeasure;
+        private UInt256? lastBlockMissHash;
+
         private readonly TargetChainWorker targetChainWorker;
         private readonly ChainStateBuilder chainStateBuilder;
         private Chain currentChain;
@@ -50,6 +53,7 @@ namespace BitSharp.Core.Workers
             this.invalidBlockCache = invalidBlockCache;
 
             this.blockProcessingDurationMeasure = new DurationMeasure();
+            this.blockMissRateMeasure = new RateMeasure();
 
             this.targetChainWorker = targetChainWorker;
             this.chainStateBuilder = chainStateBuilder;
@@ -65,6 +69,11 @@ namespace BitSharp.Core.Workers
             return this.blockProcessingDurationMeasure.GetAverage();
         }
 
+        public float GetBlockMissRate(TimeSpan perUnitTime)
+        {
+            return this.blockMissRateMeasure.GetAverage(perUnitTime);
+        }
+
         public Chain CurrentChain
         {
             get { return this.currentChain; }
@@ -75,6 +84,7 @@ namespace BitSharp.Core.Workers
             new IDisposable[]
             {
                 this.blockProcessingDurationMeasure,
+                this.blockMissRateMeasure,
                 this.chainStateBuilder,
                 this.pruningWorker,
             }.DisposeList();
@@ -140,6 +150,14 @@ namespace BitSharp.Core.Workers
             }
             catch (Exception e)
             {
+                var missingException = e as MissingDataException;
+                if (missingException != null &&
+                    (this.lastBlockMissHash == null || this.lastBlockMissHash.Value != (UInt256)missingException.Key))
+                {
+                    this.lastBlockMissHash = (UInt256)missingException.Key;
+                    this.blockMissRateMeasure.Tick();
+                }
+
                 if (!(e is MissingDataException))
                 {
                     this.logger.WarnException("ChainStateWorker exception", e);

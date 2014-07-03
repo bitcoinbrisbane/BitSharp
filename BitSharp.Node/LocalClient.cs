@@ -159,6 +159,11 @@ namespace BitSharp.Node
             return this.blockRequestWorker.GetDuplicateBlockDownloadRate(perUnitTime);
         }
 
+        public float GetBlockMissRate(TimeSpan perUnitTime)
+        {
+            return this.blockchainDaemon.GetBlockMissRate(perUnitTime);
+        }
+
         private void ConnectWorker(WorkerMethod instance)
         {
             if (this.Type == RulesEnum.ComparisonToolTestNet)
