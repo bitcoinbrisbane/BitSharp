@@ -1,4 +1,8 @@
-﻿using System;
+﻿#if SECP256K1_DLL
+using Secp256k1;
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -14,11 +18,7 @@ using System.Threading;
 using System.Collections.Immutable;
 using NLog;
 using BitSharp.Core.Domain;
-
-#if SECP256K1_DLL
-using Secp256k1;
 using BitSharp.Core.Rules;
-#endif
 
 namespace BitSharp.Core.Script
 {

@@ -56,8 +56,8 @@ namespace BitSharp.Client
                 //TODO
                 //MainnetRules.BypassValidation = true;
                 MainnetRules.IgnoreScripts = true;
+                MainnetRules.IgnoreSignatures = false;
                 MainnetRules.IgnoreScriptErrors = true;
-                MainnetRules.IgnoreSignatures = true;
 
                 // initialize kernel
                 this.kernel = new StandardKernel();
