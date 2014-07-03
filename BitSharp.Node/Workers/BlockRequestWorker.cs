@@ -364,7 +364,7 @@ namespace BitSharp.Node.Workers
             }
         }
 
-        private void FlushWorkerMethod()
+        private void FlushWorkerMethod(WorkerMethod instance)
         {
             var initalCount = this.flushQueue.Count;
             var count = 0;
@@ -405,7 +405,7 @@ namespace BitSharp.Node.Workers
             this.blockCache.Flush();
         }
 
-        private void DiagnosticWorkerMethod()
+        private void DiagnosticWorkerMethod(WorkerMethod instance)
         {
             this.logger.Info(new string('-', 80));
             this.logger.Info("allBlockRequests.Count: {0:#,##0}".Format2(this.allBlockRequests.Count));

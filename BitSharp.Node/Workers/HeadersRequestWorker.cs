@@ -97,7 +97,7 @@ namespace BitSharp.Node.Workers
             }
         }
 
-        private void FlushWorkerMethod()
+        private void FlushWorkerMethod(WorkerMethod instance)
         {
             Tuple<RemoteNode, IImmutableList<BlockHeader>> tuple;
             while (this.flushQueue.TryDequeue(out tuple))

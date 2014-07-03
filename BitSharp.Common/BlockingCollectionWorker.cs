@@ -1,7 +1,9 @@
-﻿using NLog;
+﻿using BitSharp.Common.ExtensionMethods;
+using NLog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -12,9 +14,11 @@ namespace BitSharp.Common
     public abstract class BlockingCollectionWorker<T> : IDisposable
     {
         private readonly string name;
-        private bool isConcurrent;
+        private readonly bool isConcurrent;
         private readonly Logger logger;
-        private readonly WorkerMethod queueWorker;
+        private readonly WorkerMethod[] queueWorkers;
+        private readonly bool[] queueWorkersCompleted;
+        private readonly object queueWorkersLock;
 
         private AutoResetEvent workEvent;
         private ManualResetEventSlim completedEvent;
@@ -27,25 +31,31 @@ namespace BitSharp.Common
             this.name = name;
             this.isConcurrent = isConcurrent;
             this.logger = logger;
-            this.queueWorker = new WorkerMethod(name, WorkAction, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: logger);
-            this.queueWorker.Start();
+
+            this.queueWorkers = new WorkerMethod[isConcurrent ? Environment.ProcessorCount * 2 : 1];
+            this.queueWorkersCompleted = new bool[this.queueWorkers.Length];
+            this.queueWorkersLock = new object();
+
+            for (var i = 0; i < this.queueWorkers.Length; i++)
+            {
+                this.queueWorkers[i] = new WorkerMethod(name, WorkAction, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: logger);
+                this.queueWorkers[i].Data = i;
+                this.queueWorkers[i].Start();
+            }
         }
 
         public void Dispose()
         {
             this.SubDispose();
-            this.queueWorker.Dispose();
+            this.queueWorkers.DisposeList();
         }
 
         public string Name { get { return this.name; } }
 
-        public IDisposable Start(bool? isConcurrent = null)
+        public IDisposable Start()
         {
             if (this.queue != null)
                 throw new InvalidOperationException();
-
-            if (isConcurrent != null)
-                this.isConcurrent = isConcurrent.Value;
 
             this.SubStart();
 
@@ -54,8 +64,13 @@ namespace BitSharp.Common
             this.queue = new ConcurrentQueue<T>();
             this.isCompleteAdding = false;
             this.isCompleted = false;
+            
+            Array.Clear(this.queueWorkersCompleted, 0, this.queueWorkersCompleted.Length);
+            for (var i = 0; i < this.queueWorkers.Length; i++)
+            {
+                this.queueWorkers[i].NotifyWork();
+            }
 
-            this.queueWorker.NotifyWork();
             return new Stopper(this);
         }
 
@@ -111,28 +126,37 @@ namespace BitSharp.Common
             this.queue = null;
         }
 
-        private void WorkAction()
+        private void WorkAction(WorkerMethod instance)
         {
             if (this.queue == null)
                 throw new InvalidOperationException();
 
-            if (this.isConcurrent)
+            foreach (var value in this.GetConsumingEnumerable())
+                ConsumeItem(value);
+
+            CompleteWorker((int)instance.Data);
+        }
+
+        private void CompleteWorker(int i)
+        {
+            bool wasCompleted;
+            bool completed;
+            lock (this.queueWorkersLock)
             {
-                Parallel.ForEach(
-                    this.GetConsumingEnumerable(),
-                    new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
-                    value => ConsumeItem(value));
-            }
-            else
-            {
-                foreach (var value in this.GetConsumingEnumerable())
-                    ConsumeItem(value);
+                wasCompleted = this.queueWorkersCompleted.All(x => x);
+                this.queueWorkersCompleted[i] = true;
+                completed = this.queueWorkersCompleted.All(x => x);
             }
 
-            this.CompletedItems();
+            if (!wasCompleted && completed)
+            {
+                Debug.Assert(!this.isCompleted);
 
-            this.isCompleted = true;
-            this.completedEvent.Set();
+                this.CompletedItems();
+
+                this.isCompleted = true;
+                this.completedEvent.Set();
+            }
         }
 
         private IEnumerable<T> GetConsumingEnumerable()

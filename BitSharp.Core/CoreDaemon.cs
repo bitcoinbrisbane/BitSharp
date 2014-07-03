@@ -142,7 +142,7 @@ namespace BitSharp.Core
                 };
 
             this.gcWorker = new WorkerMethod("GC Worker",
-                () =>
+                _ =>
                 {
                     this.logger.Info(
                         string.Join("\n",
@@ -159,7 +159,7 @@ namespace BitSharp.Core
                 }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromSeconds(30), logger: this.logger);
 
             this.utxoScanWorker = new WorkerMethod("UTXO Scan Worker",
-                () =>
+                _ =>
                 {
                     var chainStateLocal = this.GetChainState();
                     if (chainStateLocal == null)

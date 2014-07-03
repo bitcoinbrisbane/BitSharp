@@ -65,9 +65,10 @@ namespace BitSharp.Core.Builders
             //this.spentTransactionsCache = spentTransactionsCache;
             //this.spentOutputsCache = spentOutputsCache;
 
-            this.scriptValidator = new ScriptValidator(this.logger, this.rules, isConcurrent: false);
-            this.txValidator = new TxValidator(this.scriptValidator, this.logger, this.rules, isConcurrent: false);
-            this.txLoader = new TxLoader(this.blockCache, this.txValidator, this.logger, this.rules, isConcurrent: false);
+            var isConcurrent = true;
+            this.scriptValidator = new ScriptValidator(this.logger, this.rules, isConcurrent);
+            this.txValidator = new TxValidator(this.scriptValidator, this.logger, this.rules, isConcurrent);
+            this.txLoader = new TxLoader(this.blockCache, this.txValidator, this.logger, this.rules, isConcurrent);
 
             this.chain = chain;
             this.chainStateBuilderStorage = kernel.Get<IChainStateBuilderStorage>(new ConstructorArgument("parentUtxo", parentUtxo.Storage));

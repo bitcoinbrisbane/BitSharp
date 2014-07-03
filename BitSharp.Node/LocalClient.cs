@@ -159,7 +159,7 @@ namespace BitSharp.Node
             return this.blockRequestWorker.GetDuplicateBlockDownloadRate(perUnitTime);
         }
 
-        private void ConnectWorker()
+        private void ConnectWorker(WorkerMethod instance)
         {
             if (this.Type == RulesEnum.ComparisonToolTestNet)
                 return;
@@ -214,7 +214,7 @@ namespace BitSharp.Node
             }
         }
 
-        private void StatsWorker()
+        private void StatsWorker(WorkerMethod instance)
         {
             this.logger.Info(
                 "UNCONNECTED: {0,3}, PENDING: {1,3}, CONNECTED: {2,3}, BAD: {3,3}, INCOMING: {4,3}, MESSAGES/SEC: {5,6:#,##0}".Format2(
