@@ -249,7 +249,7 @@ namespace BitSharp.Esent
                                 block = new Block(blockHeader, transactions.ToImmutable());
 
                                 this.missingBlocks.Remove(blockHash);
-                                this.notPresentBlocks.Remove(block.Hash); 
+                                this.notPresentBlocks.Remove(block.Hash);
                                 if (this.presentBlocks.Add(blockHash))
                                     RaiseOnAddition(blockHash, block);
 
@@ -301,7 +301,7 @@ namespace BitSharp.Esent
 
         public IEnumerable<BlockTx> ReadBlock(ChainedHeader chainedHeader)
         {
-            return DataCalculatorNew.ReadMerkleTreeNodes(chainedHeader.Hash, chainedHeader.MerkleRoot, this.ReadBlockTransactions(chainedHeader.Hash));
+            return DataCalculatorNew.ReadMerkleTreeNodes(chainedHeader.MerkleRoot, this.ReadBlockTransactions(chainedHeader.Hash));
         }
 
         private IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash)

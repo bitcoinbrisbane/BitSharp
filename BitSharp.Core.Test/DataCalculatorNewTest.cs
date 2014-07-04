@@ -32,22 +32,20 @@ namespace BitSharp.Core.Test
 
             var merkleWalker = new MemoryMerkleWalker();
 
-            var blockHash = (UInt256)0;
+            var node1 = new MerkleTreeNode(index: 0, depth: 0, hash: 1);
+            var node2 = new MerkleTreeNode(index: 1, depth: 0, hash: 2);
+            var node3 = new MerkleTreeNode(index: 2, depth: 0, hash: 3);
+            var node4 = new MerkleTreeNode(index: 3, depth: 0, hash: 4);
 
-            var blockElement1 = new BlockElement(blockHash, index: 0, depth: 0, hash: 1);
-            var blockElement2 = new BlockElement(blockHash, index: 1, depth: 0, hash: 2);
-            var blockElement3 = new BlockElement(blockHash, index: 2, depth: 0, hash: 3);
-            var blockElement4 = new BlockElement(blockHash, index: 3, depth: 0, hash: 4);
-
-            var depth1Hash1 = DataCalculatorNew.PairHashes(blockElement1.Hash, blockElement2.Hash);
-            var depth1Hash2 = DataCalculatorNew.PairHashes(blockElement3.Hash, blockElement4.Hash);
+            var depth1Hash1 = DataCalculatorNew.PairHashes(node1.Hash, node2.Hash);
+            var depth1Hash2 = DataCalculatorNew.PairHashes(node3.Hash, node4.Hash);
             var merkleRoot = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
 
-            var blockElements = new List<BlockElement> { blockElement1, blockElement2, blockElement3, blockElement4 };
+            var nodes = new List<MerkleTreeNode> { node1, node2, node3, node4 };
 
-            var readElements = DataCalculatorNew.ReadMerkleTreeNodes(blockHash, merkleRoot, blockElements).ToList();
+            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
 
-            CollectionAssert.AreEqual(blockElements, readElements);
+            CollectionAssert.AreEqual(nodes, actualNodes);
         }
 
         [TestMethod]
@@ -55,30 +53,26 @@ namespace BitSharp.Core.Test
         {
             var sha256 = new SHA256Managed();
 
-            var blockHash = (UInt256)0;
+            var node1 = new MerkleTreeNode(index: 0, depth: 0, hash: 1);
+            var node2 = new MerkleTreeNode(index: 1, depth: 0, hash: 2);
+            var node3 = new MerkleTreeNode(index: 2, depth: 0, hash: 3);
+            var node4 = new MerkleTreeNode(index: 3, depth: 0, hash: 4);
 
-            var blockElement1 = new BlockElement(blockHash, index: 0, depth: 0, hash: 1);
-            var blockElement2 = new BlockElement(blockHash, index: 1, depth: 0, hash: 2);
-            var blockElement3 = new BlockElement(blockHash, index: 2, depth: 0, hash: 3);
-            var blockElement4 = new BlockElement(blockHash, index: 3, depth: 0, hash: 4);
-
-            var depth1Hash1 = DataCalculatorNew.PairHashes(blockElement1.Hash, blockElement2.Hash);
-            var depth1Hash2 = DataCalculatorNew.PairHashes(blockElement3.Hash, blockElement4.Hash);
+            var depth1Hash1 = DataCalculatorNew.PairHashes(node1.Hash, node2.Hash);
+            var depth1Hash2 = DataCalculatorNew.PairHashes(node3.Hash, node4.Hash);
             var merkleRoot = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
 
-            var blockElements = new List<BlockElement> { blockElement1, blockElement2, blockElement3, blockElement4 };
+            var nodes = new List<MerkleTreeNode> { node1, node2, node3, node4 };
 
-            var readElements = DataCalculatorNew.ReadMerkleTreeNodes(blockHash, merkleRoot, blockElements).ToList();
+            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
 
-            CollectionAssert.AreEqual(blockElements, readElements);
+            CollectionAssert.AreEqual(nodes, actualNodes);
         }
 
         [TestMethod]
         public void TestReadMerkleTreeNodesOddPower()
         {
             var sha256 = new SHA256Managed();
-
-            var blockHash = (UInt256)0;
 
             var depth0Hash1 = (UInt256)1;
             var depth0Hash2 = (UInt256)2;
@@ -89,23 +83,21 @@ namespace BitSharp.Core.Test
 
             var merkleRoot = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
 
-            var blockElements = new List<BlockElement> { 
-                new BlockElement(blockHash, index: 0, depth: 0, hash: depth0Hash1),
-                new BlockElement(blockHash, index: 1, depth: 0, hash: depth0Hash2),
-                new BlockElement(blockHash, index: 2, depth: 0, hash: depth0Hash3),
+            var nodes = new List<MerkleTreeNode> { 
+                new MerkleTreeNode(index: 0, depth: 0, hash: depth0Hash1),
+                new MerkleTreeNode(index: 1, depth: 0, hash: depth0Hash2),
+                new MerkleTreeNode(index: 2, depth: 0, hash: depth0Hash3),
             };
 
-            var readElements = DataCalculatorNew.ReadMerkleTreeNodes(blockHash, merkleRoot, blockElements).ToList();
+            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
 
-            CollectionAssert.AreEqual(blockElements, readElements);
+            CollectionAssert.AreEqual(nodes, actualNodes);
         }
 
         [TestMethod]
         public void TestReadMerkleTreeNodesPruned()
         {
             var sha256 = new SHA256Managed();
-
-            var blockHash = (UInt256)0;
 
             var depth0Hash1 = (UInt256)1;
             var depth0Hash2 = (UInt256)2;
@@ -142,23 +134,23 @@ namespace BitSharp.Core.Test
 
             var merkleRoot = DataCalculatorNew.PairHashes(depth3Hash1, depth3Hash2);
 
-            var blockElements = new List<BlockElement> { 
-                new BlockElement(blockHash, index: 0, depth: 0, hash: depth0Hash1),
-                new BlockElement(blockHash, index: 1, depth: 0, hash: depth0Hash2),
-                new BlockElement(blockHash, index: 2, depth: 0, hash: depth0Hash3),
-                new BlockElement(blockHash, index: 3, depth: 0, hash: depth0Hash4),
-                        new BlockElement(blockHash, index: 4, depth: 2, hash: depth2Hash2),
-                new BlockElement(blockHash, index: 8, depth: 0, hash: depth0Hash9),
-                new BlockElement(blockHash, index: 9, depth: 0, hash: depth0Hash10),
-                    new BlockElement(blockHash, index: 10, depth: 1, hash: depth1Hash6),
-                new BlockElement(blockHash, index: 12, depth: 0, hash: depth0Hash13),
-                new BlockElement(blockHash, index: 13, depth: 0, hash: depth0Hash14),
-                    new BlockElement(blockHash, index: 14, depth: 1, hash: depth1Hash8),
+            var nodes = new List<MerkleTreeNode> { 
+                new MerkleTreeNode(index: 0, depth: 0, hash: depth0Hash1),
+                new MerkleTreeNode(index: 1, depth: 0, hash: depth0Hash2),
+                new MerkleTreeNode(index: 2, depth: 0, hash: depth0Hash3),
+                new MerkleTreeNode(index: 3, depth: 0, hash: depth0Hash4),
+                        new MerkleTreeNode(index: 4, depth: 2, hash: depth2Hash2),
+                new MerkleTreeNode(index: 8, depth: 0, hash: depth0Hash9),
+                new MerkleTreeNode(index: 9, depth: 0, hash: depth0Hash10),
+                    new MerkleTreeNode(index: 10, depth: 1, hash: depth1Hash6),
+                new MerkleTreeNode(index: 12, depth: 0, hash: depth0Hash13),
+                new MerkleTreeNode(index: 13, depth: 0, hash: depth0Hash14),
+                    new MerkleTreeNode(index: 14, depth: 1, hash: depth1Hash8),
             };
 
-            var readElements = DataCalculatorNew.ReadMerkleTreeNodes(blockHash, merkleRoot, blockElements).ToList();
+            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
 
-            CollectionAssert.AreEqual(blockElements, readElements);
+            CollectionAssert.AreEqual(nodes, actualNodes);
         }
 
         [TestMethod]
@@ -166,22 +158,20 @@ namespace BitSharp.Core.Test
         {
             var sha256 = new SHA256Managed();
 
-            var blockHash = (UInt256)0;
-
             var count = 10.THOUSAND();
-            var blockElements = new List<BlockElement>(count);
+            var nodes = new List<MerkleTreeNode>(count);
             for (var i = 0; i < count; i++)
             {
-                blockElements.Add(new BlockElement(blockHash, i, depth: 0, hash: i));
+                nodes.Add(new MerkleTreeNode(i, depth: 0, hash: i));
             }
 
             var merkleRoot = new MethodTimer().Time(() =>
-                DataCalculator.CalculateMerkleRoot(blockElements.Select(x => x.Hash).ToImmutableList()));
+                DataCalculator.CalculateMerkleRoot(nodes.Select(x => x.Hash).ToImmutableList()));
 
-            var readElements = new MethodTimer().Time(() =>
-                DataCalculatorNew.ReadMerkleTreeNodes(blockHash, merkleRoot, blockElements).ToList());
+            var actualNodes = new MethodTimer().Time(() =>
+                DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList());
 
-            CollectionAssert.AreEqual(blockElements, readElements);
+            CollectionAssert.AreEqual(nodes, actualNodes);
         }
 
         [TestMethod]
@@ -190,8 +180,6 @@ namespace BitSharp.Core.Test
         {
             var sha256 = new SHA256Managed();
 
-            var blockHash = (UInt256)0;
-
             var depth0Hash1 = (UInt256)1;
             var depth0Hash2 = (UInt256)2;
             var depth0Hash3 = (UInt256)3;
@@ -201,15 +189,15 @@ namespace BitSharp.Core.Test
 
             var merkleRoot = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
 
-            var blockElements = new List<BlockElement> { 
-                new BlockElement(blockHash, index: 0, depth: 0, hash: depth0Hash1),
-                new BlockElement(blockHash, index: 1, depth: 0, hash: depth0Hash2),
-                new BlockElement(blockHash, index: 2, depth: 1, hash: depth0Hash3),
+            var nodes = new List<MerkleTreeNode> { 
+                new MerkleTreeNode(index: 0, depth: 0, hash: depth0Hash1),
+                new MerkleTreeNode(index: 1, depth: 0, hash: depth0Hash2),
+                new MerkleTreeNode(index: 2, depth: 1, hash: depth0Hash3),
             };
 
-            var readElements = DataCalculatorNew.ReadMerkleTreeNodes(blockHash, merkleRoot, blockElements).ToList();
+            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
 
-            CollectionAssert.AreEqual(blockElements, readElements);
+            CollectionAssert.AreEqual(nodes, actualNodes);
         }
 
         [TestMethod]
@@ -218,8 +206,6 @@ namespace BitSharp.Core.Test
         {
             var sha256 = new SHA256Managed();
 
-            var blockHash = (UInt256)0;
-
             var depth0Hash1 = (UInt256)1;
             var depth0Hash2 = (UInt256)2;
             var depth0Hash3 = (UInt256)3;
@@ -229,15 +215,15 @@ namespace BitSharp.Core.Test
 
             var merkleRoot = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
 
-            var blockElements = new List<BlockElement> { 
-                new BlockElement(blockHash, index: 0, depth: 0, hash: depth0Hash1),
-                new BlockElement(blockHash, index: 1, depth: 0, hash: depth0Hash2),
-                new BlockElement(blockHash, index: 3, depth: 0, hash: depth0Hash3),
+            var nodes = new List<MerkleTreeNode> { 
+                new MerkleTreeNode(index: 0, depth: 0, hash: depth0Hash1),
+                new MerkleTreeNode(index: 1, depth: 0, hash: depth0Hash2),
+                new MerkleTreeNode(index: 3, depth: 0, hash: depth0Hash3),
             };
 
-            var readElements = DataCalculatorNew.ReadMerkleTreeNodes(blockHash, merkleRoot, blockElements).ToList();
+            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
 
-            CollectionAssert.AreEqual(blockElements, readElements);
+            CollectionAssert.AreEqual(nodes, actualNodes);
         }
     }
 }

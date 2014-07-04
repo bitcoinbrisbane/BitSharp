@@ -19,7 +19,7 @@ namespace BitSharp.Core
 
         }
 
-        public static IEnumerable<T> ReadMerkleTreeNodes<T>(UInt256 blockHash, UInt256 merkleRoot, IEnumerable<T> merkleTreeNodes)
+        public static IEnumerable<T> ReadMerkleTreeNodes<T>(UInt256 merkleRoot, IEnumerable<T> merkleTreeNodes)
             where T : MerkleTreeNode
         {
             var expectedIndex = 0;
@@ -30,7 +30,7 @@ namespace BitSharp.Core
             {
                 if (node.Index != expectedIndex)
                 {
-                    throw new ValidationException(blockHash);
+                    throw new ValidationException(0 /*TODO blockHash*/);
                 }
 
                 merkleStream.AddNode(node);
@@ -44,7 +44,7 @@ namespace BitSharp.Core
 
             if (merkleStream.RootNode.Hash != merkleRoot)
             {
-                throw new ValidationException(blockHash);
+                throw new ValidationException(0 /*TODO blockHash*/);
             }
         }
 
