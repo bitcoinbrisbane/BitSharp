@@ -99,6 +99,14 @@ namespace BitSharp.Common
             return buffer;
         }
 
+        public void ToByteArray(byte[] buffer, int offset)
+        {
+            Buffer.BlockCopy(Bits.GetBytes(this.part4), 0, buffer, 0 + offset, 8);
+            Buffer.BlockCopy(Bits.GetBytes(this.part3), 0, buffer, 8 + offset, 8);
+            Buffer.BlockCopy(Bits.GetBytes(this.part2), 0, buffer, 16 + offset, 8);
+            Buffer.BlockCopy(Bits.GetBytes(this.part1), 0, buffer, 24 + offset, 8);
+        }
+
         public BigInteger ToBigInteger()
         {
             // add a trailing zero so that value is always positive

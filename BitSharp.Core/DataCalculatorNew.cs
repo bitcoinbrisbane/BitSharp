@@ -14,30 +14,35 @@ namespace BitSharp.Core
     //TODO organize and name properly
     public static class DataCalculatorNew
     {
-        public static IEnumerable<T> ReadBlockElements<T>(UInt256 blockHash, UInt256 merkleRoot, IEnumerable<T> blockElements)
-            where T : BlockElement
+        public static void PruneNode(IMerkleWalker merkleWalker)
+        {
+
+        }
+
+        public static IEnumerable<T> ReadMerkleTreeNodes<T>(UInt256 blockHash, UInt256 merkleRoot, IEnumerable<T> merkleTreeNodes)
+            where T : MerkleTreeNode
         {
             var expectedIndex = 0;
 
             var merkleStream = new MerkleStream();
 
-            foreach (var blockElement in blockElements)
+            foreach (var node in merkleTreeNodes)
             {
-                if (blockElement.Index != expectedIndex)
+                if (node.Index != expectedIndex)
                 {
                     throw new ValidationException(blockHash);
                 }
 
-                merkleStream.AddHash(new MerkleHash(blockElement));
+                merkleStream.AddNode(node);
 
-                yield return blockElement;
+                yield return node;
 
-                expectedIndex += 1 << blockElement.Depth;
+                expectedIndex += 1 << node.Depth;
             }
 
             merkleStream.FinishPairing();
 
-            if (merkleStream.RootHash.Hash != merkleRoot)
+            if (merkleStream.RootNode.Hash != merkleRoot)
             {
                 throw new ValidationException(blockHash);
             }
@@ -54,38 +59,38 @@ namespace BitSharp.Core
         private class MerkleStream
         {
             private readonly SHA256Managed sha256 = new SHA256Managed();
-            private readonly List<MerkleHash> leftHashes = new List<MerkleHash>();
+            private readonly List<MerkleTreeNode> leftNodes = new List<MerkleTreeNode>();
 
-            public MerkleHash RootHash
+            public MerkleTreeNode RootNode
             {
                 get
                 {
-                    if (this.leftHashes.Count != 1)
+                    if (this.leftNodes.Count != 1)
                         throw new InvalidOperationException();
 
-                    return this.leftHashes[0];
+                    return this.leftNodes[0];
                 }
             }
 
-            public void AddHash(MerkleHash newHash)
+            public void AddNode(MerkleTreeNode newNode)
             {
-                if (this.leftHashes.Count == 0)
+                if (this.leftNodes.Count == 0)
                 {
-                    this.leftHashes.Add(newHash);
+                    this.leftNodes.Add(newNode);
                 }
                 else
                 {
-                    var leftHash = this.leftHashes.Last();
+                    var leftNode = this.leftNodes.Last();
 
-                    if (newHash.Depth < leftHash.Depth)
+                    if (newNode.Depth < leftNode.Depth)
                     {
-                        this.leftHashes.Add(newHash);
+                        this.leftNodes.Add(newNode);
                     }
-                    else if (newHash.Depth == leftHash.Depth)
+                    else if (newNode.Depth == leftNode.Depth)
                     {
-                        this.leftHashes[this.leftHashes.Count - 1] = Pair(leftHash, newHash);
+                        this.leftNodes[this.leftNodes.Count - 1] = Pair(leftNode, newNode);
                     }
-                    else if (newHash.Depth > leftHash.Depth)
+                    else if (newNode.Depth > leftNode.Depth)
                     {
                         throw new InvalidOperationException();
                     }
@@ -96,26 +101,28 @@ namespace BitSharp.Core
 
             public void FinishPairing()
             {
-                if (this.leftHashes.Count == 0)
+                if (this.leftNodes.Count == 0)
                     throw new InvalidOperationException();
 
-                while (this.leftHashes.Count > 1)
+                while (this.leftNodes.Count > 1)
                 {
-                    AddHash(this.leftHashes.Last());
+                    var leftNode = this.leftNodes.Last();
+                    var rightNode = new MerkleTreeNode(leftNode.Index + (1 << leftNode.Depth), leftNode.Depth, leftNode.Hash);
+                    AddNode(rightNode);
                 }
             }
 
             private void ClosePairs()
             {
-                while (this.leftHashes.Count >= 2)
+                while (this.leftNodes.Count >= 2)
                 {
-                    var leftHash = this.leftHashes[this.leftHashes.Count - 2];
-                    var rightHash = this.leftHashes[this.leftHashes.Count - 1];
+                    var leftNode = this.leftNodes[this.leftNodes.Count - 2];
+                    var rightNode = this.leftNodes[this.leftNodes.Count - 1];
 
-                    if (leftHash.Depth == rightHash.Depth)
+                    if (leftNode.Depth == rightNode.Depth)
                     {
-                        this.leftHashes.RemoveAt(this.leftHashes.Count - 1);
-                        this.leftHashes[this.leftHashes.Count - 1] = Pair(leftHash, rightHash);
+                        this.leftNodes.RemoveAt(this.leftNodes.Count - 1);
+                        this.leftNodes[this.leftNodes.Count - 1] = Pair(leftNode, rightNode);
                     }
                     else
                     {
@@ -124,50 +131,33 @@ namespace BitSharp.Core
                 }
             }
 
-            private MerkleHash Pair(MerkleHash left, MerkleHash right)
+            private MerkleTreeNode Pair(MerkleTreeNode left, MerkleTreeNode right)
             {
                 if (left.Depth != right.Depth)
                     throw new InvalidOperationException();
 
-                var pairHashBytes = ImmutableArray.CreateBuilder<byte>(64);
-                pairHashBytes.AddRange(left.Hash.ToByteArray());
-                pairHashBytes.AddRange(right.Hash.ToByteArray());
+                var expectedIndex = left.Index + (1 << left.Depth);
+                if (right.Index != expectedIndex)
+                    throw new InvalidOperationException();
 
-                var pairHash = new UInt256(this.sha256.ComputeDoubleHash(pairHashBytes.ToArray()));
+                var pairHashBytes = new byte[64];
+                left.Hash.ToByteArray(pairHashBytes, 0);
+                right.Hash.ToByteArray(pairHashBytes, 32);
 
-                return new MerkleHash(left.Depth + 1, pairHash);
+                var pairHash = new UInt256(this.sha256.ComputeDoubleHash(pairHashBytes));
+
+                return new MerkleTreeNode(left.Index, left.Depth + 1, pairHash);
             }
 
 
             private UInt256 PairHashes(UInt256 left, UInt256 right)
             {
-                var bytes = ImmutableArray.CreateBuilder<byte>(64);
-                bytes.AddRange(left.ToByteArray());
-                bytes.AddRange(right.ToByteArray());
-                return new UInt256(new SHA256Managed().ComputeDoubleHash(bytes.ToArray()));
+                var pairHashBytes = new byte[64];
+                left.ToByteArray(pairHashBytes, 0);
+                right.ToByteArray(pairHashBytes, 32);
+
+                return new UInt256(new SHA256Managed().ComputeDoubleHash(pairHashBytes));
             }
-        }
-
-        private struct MerkleHash
-        {
-            private readonly int depth;
-            private readonly UInt256 hash;
-
-            public MerkleHash(int depth, UInt256 hash)
-            {
-                this.depth = depth;
-                this.hash = hash;
-            }
-
-            public MerkleHash(BlockElement blockElement)
-            {
-                this.depth = blockElement.Depth;
-                this.hash = blockElement.Hash;
-            }
-
-            public int Depth { get { return this.depth; } }
-
-            public UInt256 Hash { get { return this.hash; } }
         }
     }
 }

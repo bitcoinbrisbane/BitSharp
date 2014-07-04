@@ -301,7 +301,7 @@ namespace BitSharp.Esent
 
         public IEnumerable<BlockTx> ReadBlock(ChainedHeader chainedHeader)
         {
-            return DataCalculatorNew.ReadBlockElements(chainedHeader.Hash, chainedHeader.MerkleRoot, this.ReadBlockTransactions(chainedHeader.Hash));
+            return DataCalculatorNew.ReadMerkleTreeNodes(chainedHeader.Hash, chainedHeader.MerkleRoot, this.ReadBlockTransactions(chainedHeader.Hash));
         }
 
         private IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash)

@@ -8,32 +8,21 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Domain
 {
-    public class BlockElement
+    public class BlockElement : MerkleTreeNode
     {
         private readonly UInt256 blockHash;
-        private readonly int index;
-        private readonly int depth;
-        private readonly UInt256 hash;
 
         public BlockElement(UInt256 blockHash, int index, int depth, UInt256 hash)
+            : base(index, depth, hash)
         {
             this.blockHash = blockHash;
-            this.index = index;
-            this.depth = depth;
-            this.hash = hash;
         }
 
         public UInt256 BlockHash { get { return this.blockHash; } }
-        
-        public int Index { get { return this.index; } }
-        
-        public int Depth { get { return this.depth; } }
-        
-        public UInt256 Hash { get { return this.hash; } }
 
         public BlockTx ToBlockTx(Transaction transaction)
         {
-            return new BlockTx(this.blockHash, this.index, this.depth, this.hash, transaction);
+            return new BlockTx(this.blockHash, this.Index, this.Depth, this.Hash, transaction);
         }
     }
 }
