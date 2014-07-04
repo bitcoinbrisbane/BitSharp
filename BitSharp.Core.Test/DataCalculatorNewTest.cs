@@ -25,10 +25,11 @@ namespace BitSharp.Core.Test
 
         public bool TryMoveToIndex(int index, out BlockElement element)
         {
-            if (index >= 0 && index < this.blockElements.Count)
+            this.index = this.blockElements.FindIndex(x => x.Index == index);
+
+            if (this.index >= 0 && this.index < this.blockElements.Count)
             {
-                this.index = index;
-                element = this.blockElements[index];
+                element = this.blockElements[this.index];
                 return true;
             }
             else
@@ -38,12 +39,71 @@ namespace BitSharp.Core.Test
             }
         }
 
+        public bool TryMoveLeft(out BlockElement element)
+        {
+            if (this.index >= 0 && this.index < this.blockElements.Count)
+            {
+                var newIndex = this.index - 1;
+                if (newIndex >= 0 && newIndex < this.blockElements.Count)
+                {
+                    this.index = newIndex;
+                    element = this.blockElements[newIndex];
+                    return true;
+                }
+            }
+
+            element = default(BlockElement);
+            return false;
+        }
+
+        public bool TryMoveRight(out BlockElement element)
+        {
+            if (this.index >= 0 && this.index < this.blockElements.Count)
+            {
+                var newIndex = this.index + 1;
+                if (newIndex >= 0 && newIndex < this.blockElements.Count)
+                {
+                    this.index = newIndex;
+                    element = this.blockElements[newIndex];
+                    return true;
+                }
+            }
+
+            element = default(BlockElement);
+            return false;
+        }
+
         public void WriteElement(BlockElement element)
         {
             if (this.index < 0 || this.index >= this.blockElements.Count)
                 throw new InvalidOperationException();
 
             this.blockElements[this.index] = element;
+        }
+
+        public void DeleteElementToLeft()
+        {
+            if (this.index < 0 || this.index >= this.blockElements.Count)
+                throw new InvalidOperationException();
+
+            var removeIndex = this.index - 1;
+            if (removeIndex < 0 || removeIndex >= this.blockElements.Count)
+                throw new InvalidOperationException();
+
+            this.blockElements.RemoveAt(removeIndex);
+            this.index--;
+        }
+
+        public void DeleteElementToRight()
+        {
+            if (this.index < 0 || this.index >= this.blockElements.Count)
+                throw new InvalidOperationException();
+
+            var removeIndex = this.index + 1;
+            if (removeIndex < 0 || removeIndex >= this.blockElements.Count)
+                throw new InvalidOperationException();
+
+            this.blockElements.RemoveAt(removeIndex);
         }
 
         public IEnumerable<BlockElement> StreamElements()
@@ -67,67 +127,76 @@ namespace BitSharp.Core.Test
             var node5 = new BlockElement(index: 4, depth: 0, hash: 5, pruned: false);
             var node6 = new BlockElement(index: 5, depth: 0, hash: 6, pruned: false);
             var node7 = new BlockElement(index: 6, depth: 0, hash: 7, pruned: false);
-            var node8 = new BlockElement(index: 7, depth: 0, hash: 8, pruned: false);
 
-            var depth1Node1 = node1.PairWith(node2);
-            var depth1Node2 = node3.PairWith(node4);
-            var depth1Node3 = node5.PairWith(node6);
-            var depth1Node4 = node7.PairWith(node8);
+            var depth1Node1 = node1.AsPruned().PairWith(node2.AsPruned());
+            var depth1Node2 = node3.AsPruned().PairWith(node4.AsPruned());
+            var depth1Node3 = node5.AsPruned().PairWith(node6.AsPruned());
+            var depth1Node4 = node7.AsPruned().PairWithSelf();
 
             var depth2Node1 = depth1Node1.PairWith(depth1Node2);
             var depth2Node2 = depth1Node3.PairWith(depth1Node4);
 
             var merkleRoot = depth2Node1.PairWith(depth2Node2);
 
-            var nodes = new List<BlockElement> { node1, node2, node3, node4, node5, node6, node7, node8 };
+            var nodes = new List<BlockElement> { node1, node2, node3, node4, node5, node6, node7 };
 
             var elementWalker = new BlockElementWalker(nodes);
+
+            //////////////////////////////////////////////////
 
             var expectedNodes1 = nodes;
             var actualNodes1 = elementWalker.StreamElements().ToList();
             CollectionAssert.AreEqual(expectedNodes1, actualNodes1);
 
+            //////////////////////////////////////////////////
+
             DataCalculatorNew.PruneNode(elementWalker, 2);
 
-            var expectedNodes2 = new List<BlockElement> { node1, node2, node3.AsPruned(), node4, node5, node6, node7, node8 };
+            var expectedNodes2 = new List<BlockElement> { node1, node2, node3.AsPruned(), node4, node5, node6, node7 };
             var actualNodes2 = elementWalker.StreamElements().ToList();
             CollectionAssert.AreEqual(expectedNodes2, actualNodes2);
 
+            //////////////////////////////////////////////////
+
             DataCalculatorNew.PruneNode(elementWalker, 0);
 
-            var expectedNodes3 = new List<BlockElement> { node1.AsPruned(), node2, node3.AsPruned(), node4 };
+            var expectedNodes3 = new List<BlockElement> { node1.AsPruned(), node2, node3.AsPruned(), node4, node5, node6, node7 };
             var actualNodes3 = elementWalker.StreamElements().ToList();
             CollectionAssert.AreEqual(expectedNodes3, actualNodes3);
 
+            //////////////////////////////////////////////////
+
             DataCalculatorNew.PruneNode(elementWalker, 1);
 
-            var expectedNodes4 = new List<BlockElement> { depth1Node1, node3.AsPruned(), node4, node5, node6, node7, node8 };
+            var expectedNodes4 = new List<BlockElement> { depth1Node1, node3.AsPruned(), node4, node5, node6, node7 };
             var actualNodes4 = elementWalker.StreamElements().ToList();
             CollectionAssert.AreEqual(expectedNodes4, actualNodes4);
 
+            //////////////////////////////////////////////////
+
             DataCalculatorNew.PruneNode(elementWalker, 3);
 
-            var expectedNodes5 = new List<BlockElement> { depth2Node1, node5, node6, node7, node8 };
+            var expectedNodes5 = new List<BlockElement> { depth2Node1, node5, node6, node7 };
             var actualNodes5 = elementWalker.StreamElements().ToList();
             CollectionAssert.AreEqual(expectedNodes5, actualNodes5);
 
+            //////////////////////////////////////////////////
+
             DataCalculatorNew.PruneNode(elementWalker, 5);
 
-            var expectedNodes6 = new List<BlockElement> { depth2Node1, node5, node6.AsPruned(), node7, node8 };
+            var expectedNodes6 = new List<BlockElement> { depth2Node1, node5, node6.AsPruned(), node7 };
             var actualNodes6 = elementWalker.StreamElements().ToList();
             CollectionAssert.AreEqual(expectedNodes6, actualNodes6);
 
-            DataCalculatorNew.PruneNode(elementWalker, 7);
-
-            var expectedNodes7 = new List<BlockElement> { depth2Node1, node5, node6.AsPruned(), node7, node8.AsPruned() };
-            var actualNodes7 = elementWalker.StreamElements().ToList();
-            CollectionAssert.AreEqual(expectedNodes7, actualNodes7);
+            //////////////////////////////////////////////////
 
             DataCalculatorNew.PruneNode(elementWalker, 6);
 
             var expectedNodes8 = new List<BlockElement> { depth2Node1, node5, node6.AsPruned(), depth1Node4 };
             var actualNodes8 = elementWalker.StreamElements().ToList();
             CollectionAssert.AreEqual(expectedNodes8, actualNodes8);
+
+            //////////////////////////////////////////////////
 
             DataCalculatorNew.PruneNode(elementWalker, 4);
 

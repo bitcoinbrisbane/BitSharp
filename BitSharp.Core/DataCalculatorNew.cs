@@ -4,6 +4,7 @@ using BitSharp.Core.Domain;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -16,18 +17,68 @@ namespace BitSharp.Core
     {
         public static void PruneNode(IBlockElementWalker merkleWalker, int index)
         {
+            if (index == 4)
+                Debugger.Break();
+
             BlockElement element;
             if (!merkleWalker.TryMoveToIndex(index, out element))
                 throw new InvalidOperationException();
 
             if (element.Depth == 0 && !element.Pruned)
             {
-                merkleWalker.WriteElement(element.AsPruned());
+                element = element.AsPruned();
+                merkleWalker.WriteElement(element);
             }
-            else
+
+            bool didWork;
+            do
             {
-                throw new InvalidOperationException();
-            }
+                didWork = false;
+
+                if (element.IsLeft)
+                {
+                    BlockElement rightElement;
+                    if (merkleWalker.TryMoveRight(out rightElement))
+                    {
+                        if (element.Pruned && rightElement.Pruned && element.Depth == rightElement.Depth)
+                        {
+                            var newElement = element.PairWith(rightElement);
+                            merkleWalker.WriteElement(newElement);
+                            merkleWalker.DeleteElementToLeft();
+
+                            element = newElement;
+                            didWork = true;
+                        }
+                    }
+                    else
+                    {
+                        if (element.Index != 0 && element.Pruned)
+                        {
+                            var newElement = element.PairWithSelf();
+                            merkleWalker.WriteElement(newElement);
+
+                            element = newElement;
+                            didWork = true;
+                        }
+                    }
+                }
+                else
+                {
+                    BlockElement leftElement;
+                    if (merkleWalker.TryMoveLeft(out leftElement))
+                    {
+                        if (element.Pruned && leftElement.Pruned && element.Depth == leftElement.Depth)
+                        {
+                            var newElement = leftElement.PairWith(element);
+                            merkleWalker.WriteElement(newElement);
+                            merkleWalker.DeleteElementToRight();
+
+                            element = newElement;
+                            didWork = true;
+                        }
+                    }
+                }
+            } while (didWork);
         }
 
         public static IEnumerable<T> ReadMerkleTreeNodes<T>(UInt256 merkleRoot, IEnumerable<T> merkleTreeNodes)

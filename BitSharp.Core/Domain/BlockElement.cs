@@ -50,6 +50,14 @@ namespace BitSharp.Core.Domain
             return new BlockElement(Pair(this, right), pruned: true);
         }
 
+        public BlockElement PairWithSelf()
+        {
+            if (!this.pruned)
+                throw new InvalidOperationException();
+
+            return new BlockElement(PairWithSelf(this), pruned: true);
+        }
+
         public override bool Equals(object obj)
         {
             if (!(obj is BlockElement))

@@ -28,9 +28,18 @@ namespace BitSharp.Core.Domain
 
         public UInt256 Hash { get { return this.hash; } }
 
+        public bool IsLeft { get { return (this.index >> this.depth) % 2 == 0; } }
+
+        public bool IsRight { get { return !this.IsLeft; } }
+
         public MerkleTreeNode PairWith(MerkleTreeNode right)
         {
             return Pair(this, right);
+        }
+
+        public MerkleTreeNode PairWithSelf()
+        {
+            return PairWithSelf(this);
         }
 
         public override bool Equals(object obj)
@@ -64,6 +73,11 @@ namespace BitSharp.Core.Domain
             var pairHash = new UInt256(sha256.ComputeDoubleHash(pairHashBytes));
 
             return new MerkleTreeNode(left.Index, left.Depth + 1, pairHash);
+        }
+
+        public static MerkleTreeNode PairWithSelf(MerkleTreeNode left)
+        {
+            return Pair(left, new MerkleTreeNode(left.index + (1 << left.depth), left.depth, left.hash));
         }
     }
 }
