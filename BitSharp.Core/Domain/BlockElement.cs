@@ -10,19 +10,43 @@ namespace BitSharp.Core.Domain
 {
     public class BlockElement : MerkleTreeNode
     {
-        private readonly UInt256 blockHash;
+        private readonly bool pruned;
 
-        public BlockElement(UInt256 blockHash, int index, int depth, UInt256 hash)
+        public BlockElement(int index, int depth, UInt256 hash, bool pruned)
             : base(index, depth, hash)
         {
-            this.blockHash = blockHash;
         }
 
-        public UInt256 BlockHash { get { return this.blockHash; } }
+        public bool Pruned { get { return this.pruned; } }
 
         public BlockTx ToBlockTx(Transaction transaction)
         {
-            return new BlockTx(this.blockHash, this.Index, this.Depth, this.Hash, transaction);
+            if (this.Depth != 0 || this.Pruned)
+                throw new InvalidOperationException();
+
+            return new BlockTx(this.Index, this.Depth, this.Hash, transaction);
+        }
+
+        public BlockElement AsPruned()
+        {
+            if (this.Depth != 0)
+                throw new InvalidOperationException();
+
+            return new BlockElement(this.Index, this.Depth, this.Hash, pruned: true);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (!(obj is BlockElement))
+                return false;
+
+            var other = (BlockElement)obj;
+            return base.Equals(obj) && other.pruned == this.pruned;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode() ^ this.pruned.GetHashCode();
         }
     }
 }

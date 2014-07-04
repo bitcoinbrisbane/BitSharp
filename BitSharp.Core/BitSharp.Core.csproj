@@ -123,7 +123,7 @@
     <Compile Include="Domain\UnspentTx.cs" />
     <Compile Include="Domain\Utxo.cs" />
     <Compile Include="Domain\UtxoStream.cs" />
-    <Compile Include="IMerkleWalker.cs" />
+    <Compile Include="IBlockElementWalker.cs" />
     <Compile Include="JsonRpc\CoreRpcServer.cs" />
     <Compile Include="Domain\MerkleTreeNode.cs" />
     <Compile Include="Monitor\ChainStateMonitor.cs" />

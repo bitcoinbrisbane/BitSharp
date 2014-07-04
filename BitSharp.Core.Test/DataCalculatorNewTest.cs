@@ -12,13 +12,43 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Test
 {
-    public class MemoryMerkleWalker : IMerkleWalker
+    public class BlockElementWalker : IBlockElementWalker
     {
-        private List<MerkleTreeNode> merkleTreeNodes;
+        private readonly List<BlockElement> blockElements;
+        private int index;
 
-        public IEnumerable<MerkleTreeNode> StreamNodes()
+        public BlockElementWalker(IEnumerable<BlockElement> blockElements)
         {
-            return this.merkleTreeNodes;
+            this.blockElements = new List<BlockElement>(blockElements);
+            this.index = -1;
+        }
+
+        public bool TryMoveToIndex(int index, out BlockElement element)
+        {
+            if (index >= 0 && index < this.blockElements.Count)
+            {
+                this.index = index;
+                element = this.blockElements[index];
+                return true;
+            }
+            else
+            {
+                element = default(BlockElement);
+                return false;
+            }
+        }
+
+        public void WriteElement(BlockElement element)
+        {
+            if (this.index < 0 || this.index >= this.blockElements.Count)
+                throw new InvalidOperationException();
+
+            this.blockElements[this.index] = element;
+        }
+
+        public IEnumerable<BlockElement> StreamElements()
+        {
+            return this.blockElements;
         }
     }
 
@@ -30,22 +60,28 @@ namespace BitSharp.Core.Test
         {
             var sha256 = new SHA256Managed();
 
-            var merkleWalker = new MemoryMerkleWalker();
-
-            var node1 = new MerkleTreeNode(index: 0, depth: 0, hash: 1);
-            var node2 = new MerkleTreeNode(index: 1, depth: 0, hash: 2);
-            var node3 = new MerkleTreeNode(index: 2, depth: 0, hash: 3);
-            var node4 = new MerkleTreeNode(index: 3, depth: 0, hash: 4);
+            var node1 = new BlockElement(index: 0, depth: 0, hash: 1, pruned: false);
+            var node2 = new BlockElement(index: 1, depth: 0, hash: 2, pruned: false);
+            var node3 = new BlockElement(index: 2, depth: 0, hash: 3, pruned: false);
+            var node4 = new BlockElement(index: 3, depth: 0, hash: 4, pruned: false);
 
             var depth1Node1 = node1.PairWith(node2);
             var depth1Node2 = node3.PairWith(node4);
             var merkleRoot = depth1Node1.PairWith(depth1Node2);
 
-            var nodes = new List<MerkleTreeNode> { node1, node2, node3, node4 };
+            var nodes = new List<BlockElement> { node1, node2, node3, node4 };
 
-            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot.Hash, nodes).ToList();
+            var elementWalker = new BlockElementWalker(nodes);
 
-            CollectionAssert.AreEqual(nodes, actualNodes);
+            var expectedNodes1 = nodes;
+            var actualNodes1 = elementWalker.StreamElements().ToList();
+            CollectionAssert.AreEqual(expectedNodes1, actualNodes1);
+
+            DataCalculatorNew.PruneNode(elementWalker, 3);
+
+            var expectedNodes2 = new List<BlockElement> { node1, node2, node3.AsPruned(), node4 };
+            var actualNodes2 = elementWalker.StreamElements().ToList();
+            CollectionAssert.AreEqual(expectedNodes2, actualNodes2);
         }
 
         [TestMethod]

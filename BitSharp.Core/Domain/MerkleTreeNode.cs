@@ -33,6 +33,20 @@ namespace BitSharp.Core.Domain
             return Pair(this, right);
         }
 
+        public override bool Equals(object obj)
+        {
+            if (!(obj is MerkleTreeNode))
+                return false;
+
+            var other = (MerkleTreeNode)obj;
+            return other.index == this.index && other.depth == this.depth && other.hash == this.hash;
+        }
+
+        public override int GetHashCode()
+        {
+            return this.index.GetHashCode() ^ this.depth.GetHashCode() ^ this.hash.GetHashCode();
+        }
+
         public static MerkleTreeNode Pair(MerkleTreeNode left, MerkleTreeNode right)
         {
             if (left.Depth != right.Depth)

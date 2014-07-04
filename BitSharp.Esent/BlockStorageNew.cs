@@ -342,7 +342,7 @@ namespace BitSharp.Esent
                                 throw new MissingDataException(blockHash);
 
                             var tx = DataEncoder.DecodeTransaction(txBytes);
-                            var blockTx = new BlockTx(blockHash, txIndex, 0 /*depth*/, txHash, tx);
+                            var blockTx = new BlockTx(txIndex, 0 /*depth*/, txHash, tx);
 
                             yield return blockTx;
                         } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));

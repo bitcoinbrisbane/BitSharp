@@ -14,9 +14,20 @@ namespace BitSharp.Core
     //TODO organize and name properly
     public static class DataCalculatorNew
     {
-        public static void PruneNode(IMerkleWalker merkleWalker)
+        public static void PruneNode(IBlockElementWalker merkleWalker, int index)
         {
+            BlockElement element;
+            if (!merkleWalker.TryMoveToIndex(index, out element))
+                throw new InvalidOperationException();
 
+            if (element.Depth == 0 && !element.Pruned)
+            {
+                merkleWalker.WriteElement(element.AsPruned());
+            }
+            else
+            {
+                throw new InvalidOperationException();
+            }
         }
 
         public static IEnumerable<T> ReadMerkleTreeNodes<T>(UInt256 merkleRoot, IEnumerable<T> merkleTreeNodes)
