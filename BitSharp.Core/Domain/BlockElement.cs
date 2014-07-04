@@ -18,6 +18,12 @@ namespace BitSharp.Core.Domain
             this.pruned = pruned;
         }
 
+        public BlockElement(MerkleTreeNode node, bool pruned)
+            : base(node.Index, node.Depth, node.Hash)
+        {
+            this.pruned = pruned;
+        }
+
         public bool Pruned { get { return this.pruned; } }
 
         public BlockTx ToBlockTx(Transaction transaction)
@@ -34,6 +40,14 @@ namespace BitSharp.Core.Domain
                 throw new InvalidOperationException();
 
             return new BlockElement(this.Index, this.Depth, this.Hash, pruned: true);
+        }
+
+        public BlockElement PairWith(BlockElement right)
+        {
+            if (!this.pruned || !right.pruned)
+                throw new InvalidOperationException();
+
+            return new BlockElement(Pair(this, right), pruned: true);
         }
 
         public override bool Equals(object obj)

@@ -82,6 +82,24 @@ namespace BitSharp.Core.Test
             var expectedNodes2 = new List<BlockElement> { node1, node2, node3.AsPruned(), node4 };
             var actualNodes2 = elementWalker.StreamElements().ToList();
             CollectionAssert.AreEqual(expectedNodes2, actualNodes2);
+
+            DataCalculatorNew.PruneNode(elementWalker, 0);
+
+            var expectedNodes3 = new List<BlockElement> { node1.AsPruned(), node2, node3.AsPruned(), node4 };
+            var actualNodes3 = elementWalker.StreamElements().ToList();
+            CollectionAssert.AreEqual(expectedNodes3, actualNodes3);
+
+            DataCalculatorNew.PruneNode(elementWalker, 1);
+
+            var expectedNodes4 = new List<BlockElement> { depth1Node1, node3.AsPruned(), node4 };
+            var actualNodes4 = elementWalker.StreamElements().ToList();
+            CollectionAssert.AreEqual(expectedNodes4, actualNodes4);
+
+            DataCalculatorNew.PruneNode(elementWalker, 3);
+
+            var expectedNodes5 = new List<BlockElement> { merkleRoot };
+            var actualNodes5 = elementWalker.StreamElements().ToList();
+            CollectionAssert.AreEqual(expectedNodes5, actualNodes5);
         }
 
         [TestMethod]
