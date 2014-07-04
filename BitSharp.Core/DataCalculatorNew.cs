@@ -58,7 +58,6 @@ namespace BitSharp.Core
 
         private class MerkleStream
         {
-            private readonly SHA256Managed sha256 = new SHA256Managed();
             private readonly List<MerkleTreeNode> leftNodes = new List<MerkleTreeNode>();
 
             public MerkleTreeNode RootNode
@@ -88,7 +87,7 @@ namespace BitSharp.Core
                     }
                     else if (newNode.Depth == leftNode.Depth)
                     {
-                        this.leftNodes[this.leftNodes.Count - 1] = Pair(leftNode, newNode);
+                        this.leftNodes[this.leftNodes.Count - 1] = leftNode.PairWith(newNode);
                     }
                     else if (newNode.Depth > leftNode.Depth)
                     {
@@ -122,41 +121,13 @@ namespace BitSharp.Core
                     if (leftNode.Depth == rightNode.Depth)
                     {
                         this.leftNodes.RemoveAt(this.leftNodes.Count - 1);
-                        this.leftNodes[this.leftNodes.Count - 1] = Pair(leftNode, rightNode);
+                        this.leftNodes[this.leftNodes.Count - 1] = leftNode.PairWith(rightNode);
                     }
                     else
                     {
                         break;
                     }
                 }
-            }
-
-            private MerkleTreeNode Pair(MerkleTreeNode left, MerkleTreeNode right)
-            {
-                if (left.Depth != right.Depth)
-                    throw new InvalidOperationException();
-
-                var expectedIndex = left.Index + (1 << left.Depth);
-                if (right.Index != expectedIndex)
-                    throw new InvalidOperationException();
-
-                var pairHashBytes = new byte[64];
-                left.Hash.ToByteArray(pairHashBytes, 0);
-                right.Hash.ToByteArray(pairHashBytes, 32);
-
-                var pairHash = new UInt256(this.sha256.ComputeDoubleHash(pairHashBytes));
-
-                return new MerkleTreeNode(left.Index, left.Depth + 1, pairHash);
-            }
-
-
-            private UInt256 PairHashes(UInt256 left, UInt256 right)
-            {
-                var pairHashBytes = new byte[64];
-                left.ToByteArray(pairHashBytes, 0);
-                right.ToByteArray(pairHashBytes, 32);
-
-                return new UInt256(new SHA256Managed().ComputeDoubleHash(pairHashBytes));
             }
         }
     }

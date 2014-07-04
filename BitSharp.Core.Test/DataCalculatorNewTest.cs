@@ -37,13 +37,13 @@ namespace BitSharp.Core.Test
             var node3 = new MerkleTreeNode(index: 2, depth: 0, hash: 3);
             var node4 = new MerkleTreeNode(index: 3, depth: 0, hash: 4);
 
-            var depth1Hash1 = DataCalculatorNew.PairHashes(node1.Hash, node2.Hash);
-            var depth1Hash2 = DataCalculatorNew.PairHashes(node3.Hash, node4.Hash);
-            var merkleRoot = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
+            var depth1Node1 = node1.PairWith(node2);
+            var depth1Node2 = node3.PairWith(node4);
+            var merkleRoot = depth1Node1.PairWith(depth1Node2);
 
             var nodes = new List<MerkleTreeNode> { node1, node2, node3, node4 };
 
-            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
+            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot.Hash, nodes).ToList();
 
             CollectionAssert.AreEqual(nodes, actualNodes);
         }
