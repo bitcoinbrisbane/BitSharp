@@ -77,7 +77,7 @@ namespace BitSharp.Core.Test
             var actualNodes1 = elementWalker.StreamElements().ToList();
             CollectionAssert.AreEqual(expectedNodes1, actualNodes1);
 
-            DataCalculatorNew.PruneNode(elementWalker, 3);
+            DataCalculatorNew.PruneNode(elementWalker, 2);
 
             var expectedNodes2 = new List<BlockElement> { node1, node2, node3.AsPruned(), node4 };
             var actualNodes2 = elementWalker.StreamElements().ToList();

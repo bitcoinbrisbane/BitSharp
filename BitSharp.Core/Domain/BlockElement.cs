@@ -15,6 +15,7 @@ namespace BitSharp.Core.Domain
         public BlockElement(int index, int depth, UInt256 hash, bool pruned)
             : base(index, depth, hash)
         {
+            this.pruned = pruned;
         }
 
         public bool Pruned { get { return this.pruned; } }
