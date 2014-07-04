@@ -64,12 +64,22 @@ namespace BitSharp.Core.Test
             var node2 = new BlockElement(index: 1, depth: 0, hash: 2, pruned: false);
             var node3 = new BlockElement(index: 2, depth: 0, hash: 3, pruned: false);
             var node4 = new BlockElement(index: 3, depth: 0, hash: 4, pruned: false);
+            var node5 = new BlockElement(index: 4, depth: 0, hash: 5, pruned: false);
+            var node6 = new BlockElement(index: 5, depth: 0, hash: 6, pruned: false);
+            var node7 = new BlockElement(index: 6, depth: 0, hash: 7, pruned: false);
+            var node8 = new BlockElement(index: 7, depth: 0, hash: 8, pruned: false);
 
             var depth1Node1 = node1.PairWith(node2);
             var depth1Node2 = node3.PairWith(node4);
-            var merkleRoot = depth1Node1.PairWith(depth1Node2);
+            var depth1Node3 = node5.PairWith(node6);
+            var depth1Node4 = node7.PairWith(node8);
 
-            var nodes = new List<BlockElement> { node1, node2, node3, node4 };
+            var depth2Node1 = depth1Node1.PairWith(depth1Node2);
+            var depth2Node2 = depth1Node3.PairWith(depth1Node4);
+
+            var merkleRoot = depth2Node1.PairWith(depth2Node2);
+
+            var nodes = new List<BlockElement> { node1, node2, node3, node4, node5, node6, node7, node8 };
 
             var elementWalker = new BlockElementWalker(nodes);
 
@@ -79,7 +89,7 @@ namespace BitSharp.Core.Test
 
             DataCalculatorNew.PruneNode(elementWalker, 2);
 
-            var expectedNodes2 = new List<BlockElement> { node1, node2, node3.AsPruned(), node4 };
+            var expectedNodes2 = new List<BlockElement> { node1, node2, node3.AsPruned(), node4, node5, node6, node7, node8 };
             var actualNodes2 = elementWalker.StreamElements().ToList();
             CollectionAssert.AreEqual(expectedNodes2, actualNodes2);
 
@@ -91,15 +101,39 @@ namespace BitSharp.Core.Test
 
             DataCalculatorNew.PruneNode(elementWalker, 1);
 
-            var expectedNodes4 = new List<BlockElement> { depth1Node1, node3.AsPruned(), node4 };
+            var expectedNodes4 = new List<BlockElement> { depth1Node1, node3.AsPruned(), node4, node5, node6, node7, node8 };
             var actualNodes4 = elementWalker.StreamElements().ToList();
             CollectionAssert.AreEqual(expectedNodes4, actualNodes4);
 
             DataCalculatorNew.PruneNode(elementWalker, 3);
 
-            var expectedNodes5 = new List<BlockElement> { merkleRoot };
+            var expectedNodes5 = new List<BlockElement> { depth2Node1, node5, node6, node7, node8 };
             var actualNodes5 = elementWalker.StreamElements().ToList();
             CollectionAssert.AreEqual(expectedNodes5, actualNodes5);
+
+            DataCalculatorNew.PruneNode(elementWalker, 5);
+
+            var expectedNodes6 = new List<BlockElement> { depth2Node1, node5, node6.AsPruned(), node7, node8 };
+            var actualNodes6 = elementWalker.StreamElements().ToList();
+            CollectionAssert.AreEqual(expectedNodes6, actualNodes6);
+
+            DataCalculatorNew.PruneNode(elementWalker, 7);
+
+            var expectedNodes7 = new List<BlockElement> { depth2Node1, node5, node6.AsPruned(), node7, node8.AsPruned() };
+            var actualNodes7 = elementWalker.StreamElements().ToList();
+            CollectionAssert.AreEqual(expectedNodes7, actualNodes7);
+
+            DataCalculatorNew.PruneNode(elementWalker, 6);
+
+            var expectedNodes8 = new List<BlockElement> { depth2Node1, node5, node6.AsPruned(), depth1Node4 };
+            var actualNodes8 = elementWalker.StreamElements().ToList();
+            CollectionAssert.AreEqual(expectedNodes8, actualNodes8);
+
+            DataCalculatorNew.PruneNode(elementWalker, 4);
+
+            var expectedNodes9 = new List<BlockElement> { merkleRoot };
+            var actualNodes9 = elementWalker.StreamElements().ToList();
+            CollectionAssert.AreEqual(expectedNodes9, actualNodes9);
         }
 
         [TestMethod]
