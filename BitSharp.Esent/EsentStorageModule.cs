@@ -49,7 +49,14 @@ namespace BitSharp.Esent
             this.Bind<SpentOutputsStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<InvalidBlockStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<NetworkPeerStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-            this.Bind<BlockStorageNew>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
+            if (true)
+            {
+                this.Bind<BlockStorageNew>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
+            }
+            else
+            {
+                this.Bind<BlockStorageManager>().ToSelf().InSingletonScope();
+            }
 
             // bind storage providers interfaces
             this.Bind<IBlockHeaderStorage>().ToMethod(x => this.Kernel.Get<BlockHeaderStorage>()).InSingletonScope();
@@ -58,7 +65,14 @@ namespace BitSharp.Esent
             this.Bind<ISpentOutputsStorage>().ToMethod(x => this.Kernel.Get<SpentOutputsStorage>()).InSingletonScope();
             this.Bind<IInvalidBlockStorage>().ToMethod(x => this.Kernel.Get<InvalidBlockStorage>()).InSingletonScope();
             this.Bind<INetworkPeerStorage>().ToMethod(x => this.Kernel.Get<NetworkPeerStorage>()).InSingletonScope();
-            this.Bind<IBlockStorageNew>().ToMethod(x => this.Kernel.Get<BlockStorageNew>()).InSingletonScope();
+            if (true)
+            {
+                this.Bind<IBlockStorageNew>().ToMethod(x => this.Kernel.Get<BlockStorageNew>()).InSingletonScope();
+            }
+            else
+            {
+                this.Bind<IBlockStorageNew>().ToMethod(x => this.Kernel.Get<BlockStorageManager>()).InSingletonScope();
+            }
 
             this.Bind<IChainStateBuilderStorage>().To<ChainStateBuilderStorage>().InTransientScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             //this.Bind<IChainStateBuilderStorage>().To<MemoryChainStateBuilderStorage>().InTransientScope();

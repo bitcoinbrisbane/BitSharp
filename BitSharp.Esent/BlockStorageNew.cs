@@ -492,7 +492,7 @@ namespace BitSharp.Esent
             instance.Parameters.CheckpointDepthMax = 64 * 1024 * 1024;
             instance.Parameters.LogFileSize = 1024 * 32;
             instance.Parameters.LogBuffers = 1024 * 32;
-            instance.Parameters.MaxTemporaryTables = 0;
+            instance.Parameters.MaxTemporaryTables = 1;
             instance.Parameters.MaxVerPages = 1024 * 256;
             instance.Parameters.NoInformationEvent = true;
             instance.Parameters.WaypointLatency = 1;
