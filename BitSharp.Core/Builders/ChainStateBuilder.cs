@@ -398,6 +398,7 @@ namespace BitSharp.Core.Builders
                 throw new ValidationException(chainedHeader.Hash);
             }
 
+            var unspentTxBlockHash = this.chain.Blocks[unspentTx.BlockIndex].Hash;
             var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
 
             if (outputIndex < 0 || outputIndex >= unspentTx.OutputStates.Length)
@@ -429,6 +430,11 @@ namespace BitSharp.Core.Builders
 
                 // store rollback information, the block containing the previous transaction will need to be known during rollback
                 //this.spentTransactions.Add(new KeyValuePair<UInt256, SpentTx>(input.PreviousTxOutputKey.TxHash, unspentTx.ToSpent()));
+
+                if (false)
+                {
+                    this.blockCache.PruneElements(unspentTxBlockHash, new[] { unspentTx.TxIndex });
+                }
             }
 
             // store rollback information, the output will need to be added back during rollback
@@ -437,7 +443,7 @@ namespace BitSharp.Core.Builders
             // remove the output from the utxo
             //this.chainStateBuilderStorage.RemoveOutput(input.PreviousTxOutputKey);
 
-            return new BlockTxKey(this.chain.Blocks[unspentTx.BlockIndex].Hash, unspentTx.TxIndex);
+            return new BlockTxKey(unspentTxBlockHash, unspentTx.TxIndex);
         }
 
         //TODO with the rollback information that's now being stored, rollback could be down without needing the block

@@ -309,6 +309,19 @@ namespace BitSharp.Esent
             return DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, this.ReadBlockElements(blockHash));
         }
 
+        public void PruneElements(UInt256 blockHash, IEnumerable<int> indices)
+        {
+            using (var merkleWalker = OpenWalker(blockHash))
+            {
+                merkleWalker.BeginTransaction();
+
+                foreach (var index in indices)
+                    DataCalculatorNew.PruneNode(merkleWalker, index);
+
+                merkleWalker.CommitTransaction();
+            }
+        }
+
         public BlockElementWalker OpenWalker(UInt256 blockHash)
         {
             var cursor = this.OpenCursor();

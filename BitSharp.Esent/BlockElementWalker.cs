@@ -107,6 +107,8 @@ namespace BitSharp.Esent
                 //TODO i'm using -1 depth to mean not pruned, this should be interpreted as depth 0
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId, !element.Pruned ? -1 : element.Depth);
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId, element.Hash.ToByteArray());
+                if (element.Pruned)
+                    Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId, null);
 
                 Api.JetUpdate(cursor.jetSession, cursor.blocksTableId);
             }

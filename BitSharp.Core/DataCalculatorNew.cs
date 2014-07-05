@@ -21,7 +21,10 @@ namespace BitSharp.Core
             if (!merkleWalker.TryMoveToIndex(index, out element))
                 throw new InvalidOperationException();
 
-            if (element.Depth == 0 && !element.Pruned)
+            if (element.Depth != 0)
+                throw new InvalidOperationException();
+
+            if (!element.Pruned)
             {
                 element = element.AsPruned();
                 merkleWalker.WriteElement(element);

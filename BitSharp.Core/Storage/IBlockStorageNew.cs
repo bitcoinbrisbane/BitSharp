@@ -19,6 +19,7 @@ namespace BitSharp.Core.Storage
 
         IEnumerable<BlockElement> ReadBlockElements(UInt256 blockHash, UInt256 merkleRoot);
 
+        void PruneElements(UInt256 blockHash, IEnumerable<int> indices);
 
 
 
