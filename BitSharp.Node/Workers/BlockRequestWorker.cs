@@ -382,7 +382,7 @@ namespace BitSharp.Node.Workers
                 var remoteNode = tuple.Item1;
                 var block = tuple.Item2;
 
-                if (this.blockCache.TryAdd(block.Hash, block))
+                if (!this.blockCache.ContainsKey(block.Hash) && this.blockCache.TryAdd(block.Hash, block))
                     this.blockDownloadRateMeasure.Tick();
                 else
                     this.duplicateBlockDownloadRateMeasure.Tick();
