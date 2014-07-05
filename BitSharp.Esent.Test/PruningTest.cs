@@ -54,22 +54,16 @@ namespace BitSharp.Esent.Test
 
                 new MethodTimer().Time(() =>
                 {
-                    using (var merkleWalker = blockStorage.OpenWalker(block.Hash))
+                    foreach (var pruneIndex in pruneOrder)
                     {
-                        foreach (var pruneIndex in pruneOrder)
-                        {
-                            merkleWalker.BeginTransaction();
-                            DataCalculatorNew.PruneNode(merkleWalker, pruneIndex);
-                            merkleWalker.CommitTransaction();
-
-                            blockStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
-                        }
-
-                        var finalBlockElements = blockStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
-
-                        Assert.AreEqual(1, finalBlockElements.Count);
-                        Assert.AreEqual(expectedFinalElement, finalBlockElements[0]);
+                        blockStorage.PruneElements(block.Hash, new[] { pruneIndex });
+                        blockStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
                     }
+
+                    var finalBlockElements = blockStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
+
+                    Assert.AreEqual(1, finalBlockElements.Count);
+                    Assert.AreEqual(expectedFinalElement, finalBlockElements[0]);
                 });
             }
         }
