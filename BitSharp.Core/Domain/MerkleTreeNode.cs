@@ -79,5 +79,15 @@ namespace BitSharp.Core.Domain
         {
             return Pair(left, new MerkleTreeNode(left.index + (1 << left.depth), left.depth, left.hash));
         }
+
+        public static bool operator ==(MerkleTreeNode left, MerkleTreeNode right)
+        {
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.Equals(right));
+        }
+
+        public static bool operator !=(MerkleTreeNode left, MerkleTreeNode right)
+        {
+            return !(left == right);
+        }
     }
 }

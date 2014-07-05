@@ -17,10 +17,8 @@ namespace BitSharp.Core
 
         void WriteElement(BlockElement element);
 
-        void DeleteElementToLeft();
-        
-        void DeleteElementToRight();
+        void MoveLeft();
 
-        IEnumerable<BlockElement> StreamElements();
+        void DeleteElementToRight();
     }
 }

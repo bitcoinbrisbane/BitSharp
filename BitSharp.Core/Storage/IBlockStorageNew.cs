@@ -15,7 +15,9 @@ namespace BitSharp.Core.Storage
 
         bool TryGetTransaction(UInt256 blockHash, int txIndex, out Transaction transaction);
 
-        IEnumerable<BlockTx> ReadBlock(ChainedHeader chainedHeader);
+        IEnumerable<BlockTx> ReadBlock(UInt256 blockHash, UInt256 merkleRoot);
+
+        IEnumerable<BlockElement> ReadBlockElements(UInt256 blockHash, UInt256 merkleRoot);
 
 
 

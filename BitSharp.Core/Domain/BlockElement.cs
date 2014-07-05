@@ -71,5 +71,15 @@ namespace BitSharp.Core.Domain
         {
             return base.GetHashCode() ^ this.pruned.GetHashCode();
         }
+
+        public static bool operator ==(BlockElement left, BlockElement right)
+        {
+            return object.ReferenceEquals(left, right) || (!object.ReferenceEquals(left, null) && !object.ReferenceEquals(right, null) && left.Equals(right));
+        }
+
+        public static bool operator !=(BlockElement left, BlockElement right)
+        {
+            return !(left == right);
+        }
     }
 }

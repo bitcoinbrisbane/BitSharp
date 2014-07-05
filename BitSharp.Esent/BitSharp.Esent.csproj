@@ -83,6 +83,7 @@
   <ItemGroup>
     <Compile Include="BlockHeaderStorage.cs" />
     <Compile Include="BlockStorageCursor.cs" />
+    <Compile Include="BlockElementWalker.cs" />
     <Compile Include="BlockStorageNew.cs" />
     <Compile Include="BlockStorage.cs" />
     <Compile Include="SpentOutputsStorage.cs" />

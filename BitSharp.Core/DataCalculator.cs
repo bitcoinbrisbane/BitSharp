@@ -40,13 +40,19 @@ namespace BitSharp.Core
             return new UInt256(sha256.ComputeDoubleHash(DataEncoder.EncodeTransaction(Version, Inputs, Outputs, LockTime)));
         }
 
-        public static UInt256 CalculateMerkleRoot(IImmutableList<UInt256> txHashes)
+        public static UInt256 CalculateMerkleRoot(IEnumerable<Transaction> transactions)
+        {
+            ImmutableList<ImmutableArray<byte>> merkleTree;
+            return CalculateMerkleRoot(transactions.Select(x => x.Hash), out merkleTree);
+        }
+
+        public static UInt256 CalculateMerkleRoot(IEnumerable<UInt256> txHashes)
         {
             ImmutableList<ImmutableArray<byte>> merkleTree;
             return CalculateMerkleRoot(txHashes, out merkleTree);
         }
 
-        public static UInt256 CalculateMerkleRoot(IImmutableList<UInt256> txHashes, out ImmutableList<ImmutableArray<byte>> merkleTree)
+        public static UInt256 CalculateMerkleRoot(IEnumerable<UInt256> txHashes, out ImmutableList<ImmutableArray<byte>> merkleTree)
         {
             var sha256 = new SHA256Managed();
             var workingMerkleTree = ImmutableList.CreateBuilder<ImmutableArray<byte>>();

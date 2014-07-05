@@ -81,17 +81,11 @@ namespace BitSharp.Core.Test
             this.blockElements[this.index] = element;
         }
 
-        public void DeleteElementToLeft()
+        public void MoveLeft()
         {
-            if (this.index < 0 || this.index >= this.blockElements.Count)
+            BlockElement element;
+            if (!this.TryMoveLeft(out element))
                 throw new InvalidOperationException();
-
-            var removeIndex = this.index - 1;
-            if (removeIndex < 0 || removeIndex >= this.blockElements.Count)
-                throw new InvalidOperationException();
-
-            this.blockElements.RemoveAt(removeIndex);
-            this.index--;
         }
 
         public void DeleteElementToRight()

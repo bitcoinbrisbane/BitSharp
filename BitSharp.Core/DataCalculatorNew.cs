@@ -17,9 +17,6 @@ namespace BitSharp.Core
     {
         public static void PruneNode(IBlockElementWalker merkleWalker, int index)
         {
-            if (index == 4)
-                Debugger.Break();
-
             BlockElement element;
             if (!merkleWalker.TryMoveToIndex(index, out element))
                 throw new InvalidOperationException();
@@ -43,8 +40,9 @@ namespace BitSharp.Core
                         if (element.Pruned && rightElement.Pruned && element.Depth == rightElement.Depth)
                         {
                             var newElement = element.PairWith(rightElement);
+                            merkleWalker.MoveLeft();
                             merkleWalker.WriteElement(newElement);
-                            merkleWalker.DeleteElementToLeft();
+                            merkleWalker.DeleteElementToRight();
 
                             element = newElement;
                             didWork = true;

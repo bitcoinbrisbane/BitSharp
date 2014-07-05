@@ -299,9 +299,29 @@ namespace BitSharp.Esent
             }
         }
 
-        public IEnumerable<BlockTx> ReadBlock(ChainedHeader chainedHeader)
+        public IEnumerable<BlockTx> ReadBlock(UInt256 blockHash, UInt256 merkleRoot)
         {
-            return DataCalculatorNew.ReadMerkleTreeNodes(chainedHeader.MerkleRoot, this.ReadBlockTransactions(chainedHeader.Hash));
+            return DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, this.ReadBlockTransactions(blockHash));
+        }
+
+        public IEnumerable<BlockElement> ReadBlockElements(UInt256 blockHash, UInt256 merkleRoot)
+        {
+            return DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, this.ReadBlockElements(blockHash));
+        }
+
+        public BlockElementWalker OpenWalker(UInt256 blockHash)
+        {
+            var cursor = this.OpenCursor();
+            try
+            {
+                return new BlockElementWalker(blockHash, cursor,
+                    disposeAction: () => this.FreeCursor(cursor));
+            }
+            catch (Exception)
+            {
+                this.FreeCursor(cursor);
+                throw;
+            }
         }
 
         private IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash)
@@ -345,6 +365,54 @@ namespace BitSharp.Esent
                             var blockTx = new BlockTx(txIndex, 0 /*depth*/, txHash, tx);
 
                             yield return blockTx;
+                        } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));
+                    }
+                    else
+                    {
+                        throw new MissingDataException(blockHash);
+                    }
+                }
+                finally
+                {
+                    Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
+                }
+            }
+            finally
+            {
+                this.FreeCursor(cursor);
+            }
+        }
+
+        private IEnumerable<BlockElement> ReadBlockElements(UInt256 blockHash)
+        {
+            var cursor = this.OpenCursor();
+            try
+            {
+                Api.JetBeginTransaction2(cursor.jetSession, BeginTransactionGrbit.ReadOnly);
+                try
+                {
+                    Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockHashTxIndex");
+                    Api.MakeKey(cursor.jetSession, cursor.blocksTableId, blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
+                    Api.MakeKey(cursor.jetSession, cursor.blocksTableId, -1, MakeKeyGrbit.None);
+                    if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekGE))
+                    {
+                        // perform an initial block hash check to see if at least one element was found
+                        if (blockHash != new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
+                            throw new MissingDataException(blockHash);
+
+                        do
+                        {
+                            if (blockHash != new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
+                                break;
+
+                            var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
+                            var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
+                            var txHash = new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
+                            var pruned = depth >= 0;
+
+                            var blockElement = new BlockElement(txIndex, Math.Max(0, depth), txHash, pruned);
+
+                            yield return blockElement;
                         } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));
                     }
                     else
