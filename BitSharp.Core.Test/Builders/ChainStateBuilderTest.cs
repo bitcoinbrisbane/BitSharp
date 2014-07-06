@@ -24,9 +24,6 @@ namespace BitSharp.Core.Test.Builders
         [TestMethod]
         public void TestSimpleSpend()
         {
-            // prepare test kernel
-            var kernel = new StandardKernel(new MemoryStorageModule());
-
             // prepare block
             var fakeHeaders = new FakeHeaders();
             var chainedHeader = new ChainedHeader(fakeHeaders.Genesis(), height: 0, totalWork: 0);
@@ -50,10 +47,9 @@ namespace BitSharp.Core.Test.Builders
 
             // initialize memory utxo builder storage
             var memoryChainStateBuilderStorage = new MemoryChainStateBuilderStorage(mockParentChainStateStorage.Object);
-            kernel.Rebind<IChainStateBuilderStorage>().ToConstant(memoryChainStateBuilderStorage);
 
             // initialize utxo builder
-            var chainStateBuilder = new ChainStateBuilder(null, parentUtxo, LogManager.CreateNullLogger(), kernel, null, null, null, null);
+            var chainStateBuilder = new ChainStateBuilder(null, memoryChainStateBuilderStorage, LogManager.CreateNullLogger(), null, null, null, null);
 
             // create an input to spend the unspent transaction's first output
             var input0 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
@@ -98,9 +94,6 @@ namespace BitSharp.Core.Test.Builders
         [ExpectedException(typeof(ValidationException))]
         public void TestDoubleSpend()
         {
-            // prepare test kernel
-            var kernel = new StandardKernel(new MemoryStorageModule());
-
             // prepare block
             var fakeHeaders = new FakeHeaders();
             var chainedHeader = new ChainedHeader(fakeHeaders.Genesis(), height: 0, totalWork: 0);
@@ -117,10 +110,9 @@ namespace BitSharp.Core.Test.Builders
 
             // initialize memory utxo builder storage
             var memoryChainStateBuilderStorage = new MemoryChainStateBuilderStorage(mockParentChainStateStorage.Object);
-            kernel.Rebind<IChainStateBuilderStorage>().ToConstant(memoryChainStateBuilderStorage);
 
             // initialize utxo builder
-            var chainStateBuilder = new ChainStateBuilder(null, parentUtxo, LogManager.CreateNullLogger(), kernel, null, null, null, null);
+            var chainStateBuilder = new ChainStateBuilder(null, memoryChainStateBuilderStorage, LogManager.CreateNullLogger(), null, null, null, null);
 
             // create an input to spend the unspent transaction
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);

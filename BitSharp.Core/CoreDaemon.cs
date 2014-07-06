@@ -52,6 +52,7 @@ namespace BitSharp.Core
 
         private readonly CancellationTokenSource shutdownToken;
 
+        private readonly IChainStateBuilderStorage chainStateBuilderStorage;
         private readonly ChainStateBuilder chainStateBuilder;
         private ChainState prevChainState;
         private ChainState chainState;
@@ -88,10 +89,12 @@ namespace BitSharp.Core
             this.chainedHeaderCache.OnModification += OnChainedHeaderModification;
 
             // create chain state builder
+            this.chainStateBuilderStorage =
+                this.kernel.Get<IChainStateBuilderStorage>(new ConstructorArgument("parentUtxo", Utxo.CreateForGenesisBlock(this.rules.GenesisBlock.Hash).Storage));
             this.chainStateBuilder =
                 this.kernel.Get<ChainStateBuilder>(
                 new ConstructorArgument("chain", Chain.CreateForGenesisBlock(this.rules.GenesisChainedHeader).ToBuilder()),
-                new ConstructorArgument("parentUtxo", Utxo.CreateForGenesisBlock(this.rules.GenesisBlock.Hash)));
+                new ConstructorArgument("chainStateBuilderStorage", this.chainStateBuilderStorage));
 
             this.chainStateLock = new ReaderWriterLockSlim();
 
