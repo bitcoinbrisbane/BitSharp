@@ -53,7 +53,7 @@ namespace BitSharp.Core.Test.Builders
             kernel.Rebind<IChainStateBuilderStorage>().ToConstant(memoryChainStateBuilderStorage);
 
             // initialize utxo builder
-            var chainStateBuilder = new ChainStateBuilder(null, parentUtxo, LogManager.CreateNullLogger(), kernel, null, null, null, null, null);
+            var chainStateBuilder = new ChainStateBuilder(null, parentUtxo, LogManager.CreateNullLogger(), kernel, null, null, null, null);
 
             // create an input to spend the unspent transaction's first output
             var input0 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
@@ -120,7 +120,7 @@ namespace BitSharp.Core.Test.Builders
             kernel.Rebind<IChainStateBuilderStorage>().ToConstant(memoryChainStateBuilderStorage);
 
             // initialize utxo builder
-            var chainStateBuilder = new ChainStateBuilder(null, parentUtxo, LogManager.CreateNullLogger(), kernel, null, null, null, null, null);
+            var chainStateBuilder = new ChainStateBuilder(null, parentUtxo, LogManager.CreateNullLogger(), kernel, null, null, null, null);
 
             // create an input to spend the unspent transaction
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
