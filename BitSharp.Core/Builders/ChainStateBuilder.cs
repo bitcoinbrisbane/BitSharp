@@ -35,7 +35,6 @@ namespace BitSharp.Core.Builders
         private readonly Logger logger;
         private readonly SHA256Managed sha256;
         private readonly IBlockchainRules rules;
-        private readonly BlockHeaderCache blockHeaderCache;
         private readonly IBlockStorageNew blockCache;
 
         private readonly TxLoader txLoader;
@@ -55,12 +54,11 @@ namespace BitSharp.Core.Builders
 
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(ChainBuilder chain, Utxo parentUtxo, Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, IBlockStorageNew blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
+        public ChainStateBuilder(ChainBuilder chain, Utxo parentUtxo, Logger logger, IKernel kernel, IBlockchainRules rules, IBlockStorageNew blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
         {
             this.logger = logger;
             this.sha256 = new SHA256Managed();
             this.rules = rules;
-            this.blockHeaderCache = blockHeaderCache;
             this.blockCache = blockCache;
             //this.spentTransactionsCache = spentTransactionsCache;
             //this.spentOutputsCache = spentOutputsCache;
