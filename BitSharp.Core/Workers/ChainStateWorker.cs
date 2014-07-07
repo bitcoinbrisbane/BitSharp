@@ -28,7 +28,6 @@ namespace BitSharp.Core.Workers
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
         private readonly IBlockStorageNew blockCache;
-        private readonly SpentTransactionsCache spentTransactionsCache;
         private readonly InvalidBlockCache invalidBlockCache;
 
         private readonly DurationMeasure blockProcessingDurationMeasure;
@@ -39,9 +38,9 @@ namespace BitSharp.Core.Workers
         private readonly ChainStateBuilder chainStateBuilder;
         private Chain currentChain;
 
-        private readonly PruningWorker pruningWorker;
+        //private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(TargetChainWorker targetChainWorker, ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, WorkerConfig workerConfig, Logger logger, IKernel kernel, IBlockchainRules rules, IBlockStorageNew blockCache, SpentTransactionsCache spentTransactionsCache, InvalidBlockCache invalidBlockCache)
+        public ChainStateWorker(TargetChainWorker targetChainWorker, ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, WorkerConfig workerConfig, Logger logger, IKernel kernel, IBlockchainRules rules, IBlockStorageNew blockCache, InvalidBlockCache invalidBlockCache)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
@@ -49,7 +48,6 @@ namespace BitSharp.Core.Workers
             this.kernel = kernel;
             this.rules = rules;
             this.blockCache = blockCache;
-            this.spentTransactionsCache = spentTransactionsCache;
             this.invalidBlockCache = invalidBlockCache;
 
             this.blockProcessingDurationMeasure = new DurationMeasure();
@@ -86,7 +84,7 @@ namespace BitSharp.Core.Workers
                 this.blockProcessingDurationMeasure,
                 this.blockMissRateMeasure,
                 this.chainStateBuilder,
-                this.pruningWorker,
+                //this.pruningWorker,
             }.DisposeList();
         }
 

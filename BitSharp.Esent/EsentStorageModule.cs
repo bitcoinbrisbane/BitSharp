@@ -45,8 +45,6 @@ namespace BitSharp.Esent
             // bind concrete storage providers
             this.Bind<BlockHeaderStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<ChainedHeaderStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-            this.Bind<SpentTransactionsStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-            this.Bind<SpentOutputsStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<InvalidBlockStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             this.Bind<NetworkPeerStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
             if (true)
@@ -61,8 +59,6 @@ namespace BitSharp.Esent
             // bind storage providers interfaces
             this.Bind<IBlockHeaderStorage>().ToMethod(x => this.Kernel.Get<BlockHeaderStorage>()).InSingletonScope();
             this.Bind<IChainedHeaderStorage>().ToMethod(x => this.Kernel.Get<ChainedHeaderStorage>()).InSingletonScope();
-            this.Bind<ISpentTransactionsStorage>().ToMethod(x => this.Kernel.Get<SpentTransactionsStorage>()).InSingletonScope();
-            this.Bind<ISpentOutputsStorage>().ToMethod(x => this.Kernel.Get<SpentOutputsStorage>()).InSingletonScope();
             this.Bind<IInvalidBlockStorage>().ToMethod(x => this.Kernel.Get<InvalidBlockStorage>()).InSingletonScope();
             this.Bind<INetworkPeerStorage>().ToMethod(x => this.Kernel.Get<NetworkPeerStorage>()).InSingletonScope();
             if (true)

@@ -31,22 +31,12 @@ namespace BitSharp.Core.Storage
             this.chainedHeaderCache = this.Kernel.Get<BoundedFullCache<UInt256, ChainedHeader>>(
                 new ConstructorArgument("name", "Chained Header Cache"), new ConstructorArgument("dataStorage", chainedHeaderStorage));
 
-            var spentTransactionsStorage = this.Kernel.Get<ISpentTransactionsStorage>();
-            this.spentTransactionsCache = this.Kernel.Get<BoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, SpentTx>>>>(
-                new ConstructorArgument("name", "Spent Transactions Cache"), new ConstructorArgument("dataStorage", spentTransactionsStorage));
-
-            var spentOutputsStorage = this.Kernel.Get<ISpentOutputsStorage>();
-            this.spentOutputsCache = this.Kernel.Get<BoundedCache<UInt256, IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>>>(
-                new ConstructorArgument("name", "Spent Outputs Cache"), new ConstructorArgument("dataStorage", spentOutputsStorage));
-
             var invalidBlockStorage = this.Kernel.Get<IInvalidBlockStorage>();
             this.invalidBlockCache = this.Kernel.Get<BoundedCache<UInt256, string>>(
                 new ConstructorArgument("name", "Invalid Block Cache"), new ConstructorArgument("dataStorage", invalidBlockStorage));
 
             this.Bind<BlockHeaderCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.blockHeaderCache);
             this.Bind<ChainedHeaderCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.chainedHeaderCache);
-            this.Bind<SpentTransactionsCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.spentTransactionsCache);
-            this.Bind<SpentOutputsCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.spentOutputsCache);
             this.Bind<InvalidBlockCache>().ToSelf().InSingletonScope().WithConstructorArgument(this.invalidBlockCache);
         }
 

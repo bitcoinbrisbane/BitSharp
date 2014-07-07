@@ -145,17 +145,14 @@
     <Compile Include="Script\Stack.cs" />
     <Compile Include="Script\PayToPublicKeyHashBuilder.cs" />
     <Compile Include="Script\TransactionManager.cs" />
-    <Compile Include="Storage\BlockCompositeCache.cs" />
     <Compile Include="Storage\BoundedCache.cs" />
     <Compile Include="Storage\BoundedFullCache.cs" />
     <Compile Include="Storage\CoreCacheModule.cs" />
-    <Compile Include="Storage\CoreStorageInstance.cs" />
     <Compile Include="Storage\ExtensionMethods.cs" />
     <Compile Include="Storage\GenesisChainStateStorage.cs" />
     <Compile Include="Storage\IBlockStorageNew.cs" />
     <Compile Include="Storage\IBoundedCache.cs" />
     <Compile Include="Storage\IBoundedStorage.cs" />
-    <Compile Include="Storage\ICoreStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Storage\IUnboundedCache.cs" />
     <Compile Include="Storage\IUnboundedStorage.cs" />
