@@ -50,15 +50,17 @@ namespace BitSharp.Common
 
         public void Dispose()
         {
+            this.Stop();
+
             this.SubDispose();
 
+            this.queueWorkers.DisposeList();
+            
             new IDisposable[]
             {
                 this.workEvent,
                 this.completedEvent
             }.DisposeList();
-
-            this.queueWorkers.DisposeList();
         }
 
         public string Name { get { return this.name; } }
@@ -119,10 +121,10 @@ namespace BitSharp.Common
 
         private void Stop()
         {
-            this.SubStop();
-
             if (this.isStarted)
             {
+                this.SubStop();
+                
                 this.CompleteAdding();
                 this.WaitToComplete();
             }
