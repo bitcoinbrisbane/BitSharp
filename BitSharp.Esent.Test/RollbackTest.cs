@@ -1,4 +1,5 @@
-﻿using BitSharp.Core.Builders;
+﻿using BitSharp.Common;
+using BitSharp.Core.Builders;
 using BitSharp.Core.Domain;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Test;
@@ -40,7 +41,8 @@ namespace BitSharp.Esent.Test
                 foreach (var block in blocks)
                     blockStorage.AddBlock(block);
 
-                var expectedUtxo = chainStateBuilder.ToImmutable().Utxo.GetUnspentTransactions().ToList();
+                var expectedUtxos = new List<List<KeyValuePair<UInt256, UnspentTx>>>();
+                expectedUtxos.Add(chainStateBuilder.ToImmutable().Utxo.GetUnspentTransactions().ToList());
 
                 for (var blockIndex = 1; blockIndex < blocks.Count; blockIndex++)
                 {
@@ -49,6 +51,7 @@ namespace BitSharp.Esent.Test
                     var blockTxes = block.Transactions.Select((x, i) => new BlockTx(i, 0, x.Hash, x));
 
                     chainStateBuilder.AddBlock(chainedHeader, blockTxes);
+                    expectedUtxos.Add(chainStateBuilder.ToImmutable().Utxo.GetUnspentTransactions().ToList());
                 }
 
                 for (var blockIndex = blocks.Count - 1; blockIndex >= 1; blockIndex--)
@@ -59,11 +62,15 @@ namespace BitSharp.Esent.Test
 
                     var chainedBlock = new ChainedBlock(chainedHeader, block);
                     chainStateBuilder.RollbackBlock(chainedBlock);
+
+                    var expectedUtxo = expectedUtxos.Last();
+                    expectedUtxos.RemoveAt(expectedUtxos.Count - 1);
+
+                    var actualUtxo = chainStateBuilder.ToImmutable().Utxo.GetUnspentTransactions().ToList();
+                    
+                    //TODO need to implement the actual equality comparision
+                    CollectionAssert.AreEqual(expectedUtxo, actualUtxo);
                 }
-
-                var actualUtxo = chainStateBuilder.ToImmutable().Utxo.GetUnspentTransactions().ToList();
-
-                CollectionAssert.AreEqual(expectedUtxo, actualUtxo);
             }
         }
     }
