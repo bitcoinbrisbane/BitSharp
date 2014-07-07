@@ -48,7 +48,9 @@ namespace BitSharp.Esent
 
             // bind concrete storage providers
             this.Bind<EsentStorageManager>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
-            this.Bind<NetworkPeerStorage>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
+            this.Bind<NetworkPeerStorage>().ToSelf().InSingletonScope()
+                .WithConstructorArgument("baseDirectory", this.baseDirectory)
+                .WithConstructorArgument("rulesType", this.rulesType);
 
             // bind storage providers interfaces
             this.Bind<IStorageManager>().ToMethod(x => this.Kernel.Get<EsentStorageManager>()).InSingletonScope();

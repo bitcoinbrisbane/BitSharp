@@ -13,6 +13,7 @@ using BitSharp.Node.Storage;
 using BitSharp.Node.Domain;
 using BitSharp.Core;
 using BitSharp.Node;
+using BitSharp.Core.Rules;
 
 namespace BitSharp.Esent
 {
@@ -22,10 +23,10 @@ namespace BitSharp.Esent
         private readonly string directory;
         private readonly PersistentByteDictionary dict;
 
-        public NetworkPeerStorage()
+        public NetworkPeerStorage(RulesEnum rulesType)
         {
             this.name = "KnownAddresses";
-            this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "Peers", this.name);
+            this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "Peers", rulesType.ToString(), this.name);
             this.dict = new PersistentByteDictionary(this.directory);
         }
 
