@@ -44,6 +44,9 @@ namespace BitSharp.Core.Builders
         {
             try
             {
+                if (MainnetRules.BypassValidation)
+                    return;
+
                 var txIndex = pendingTx.txIndex;
                 var transaction = pendingTx.transaction;
                 var chainedHeader = pendingTx.chainedHeader;
