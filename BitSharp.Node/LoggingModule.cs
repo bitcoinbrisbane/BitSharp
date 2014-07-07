@@ -39,7 +39,7 @@ namespace BitSharp.Node
             config.LoggingRules.Add(new LoggingRule("*", logLevel, consoleTarget));
 
             // create file target
-            var fileTarget = new FileTarget();
+            var fileTarget = new FileTarget() { AutoFlush = false };
             config.AddTarget("file", fileTarget);
 
             // file settings
