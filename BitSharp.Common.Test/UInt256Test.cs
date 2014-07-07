@@ -90,7 +90,7 @@ namespace BitSharp.Common.Test
         public void TestUInt256HexString()
         {
             var hex = TestData.HEX_STRING_64;
-            var expected1 = "0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b";
+            var expected1 = "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b";
             var expected2 = "[3b,a3,ed,fd,7a,7b,12,b2,7a,c7,2c,3e,67,76,8f,61,7f,c8,1b,c3,88,8a,51,32,3a,9f,b8,aa,4b,1e,5e,4a]";
 
             var actual1 = UInt256.Parse(hex, NumberStyles.HexNumber).ToHexNumberString();

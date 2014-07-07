@@ -51,7 +51,7 @@ namespace BitSharp.Common.ExtensionMethods
 
         public static string ToHexNumberString(this byte[] value)
         {
-            return string.Format("0x{0}", Bits.ToString(value.Reverse().ToArray()).Replace("-", "").ToLower());
+            return Bits.ToString(value.Reverse().ToArray()).Replace("-", "").ToLower();
         }
 
         public static string ToHexNumberString(this IEnumerable<byte> value)
