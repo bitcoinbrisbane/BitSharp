@@ -34,22 +34,17 @@ namespace BitSharp.Core.Test.Builders
 
             // prepare unspent output
             var unspentTransactions = ImmutableDictionary.Create<UInt256, UnspentTx>().Add(txHash, unspentTx);
-            var unspentOutputs = ImmutableDictionary.Create<TxOutputKey, TxOutput>()
-                .Add(new TxOutputKey(txHash, 0), new TxOutput(0, ImmutableArray.Create<byte>()))
-                .Add(new TxOutputKey(txHash, 1), new TxOutput(0, ImmutableArray.Create<byte>()))
-                .Add(new TxOutputKey(txHash, 2), new TxOutput(0, ImmutableArray.Create<byte>()));
 
             // mock a parent utxo containing the unspent transaction
             var mockParentChainStateStorage = new Mock<IChainStateStorage>();
             mockParentChainStateStorage.Setup(utxo => utxo.UnspentTransactions()).Returns(unspentTransactions);
-            //mockParentChainStateStorage.Setup(utxo => utxo.UnspentOutputs()).Returns(unspentOutputs);
             var parentUtxo = new Utxo(mockParentChainStateStorage.Object);
 
             // initialize memory utxo builder storage
             var memoryChainStateBuilderStorage = new MemoryChainStateBuilderStorage(mockParentChainStateStorage.Object);
 
             // initialize utxo builder
-            var chainStateBuilder = new ChainStateBuilder(null, memoryChainStateBuilderStorage, LogManager.CreateNullLogger(), null, null, null, null);
+            var chainStateBuilder = new ChainStateBuilder(null, memoryChainStateBuilderStorage, LogManager.CreateNullLogger(), null, null);
 
             // create an input to spend the unspent transaction's first output
             var input0 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
@@ -112,7 +107,7 @@ namespace BitSharp.Core.Test.Builders
             var memoryChainStateBuilderStorage = new MemoryChainStateBuilderStorage(mockParentChainStateStorage.Object);
 
             // initialize utxo builder
-            var chainStateBuilder = new ChainStateBuilder(null, memoryChainStateBuilderStorage, LogManager.CreateNullLogger(), null, null, null, null);
+            var chainStateBuilder = new ChainStateBuilder(null, memoryChainStateBuilderStorage, LogManager.CreateNullLogger(), null, null);
 
             // create an input to spend the unspent transaction
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);

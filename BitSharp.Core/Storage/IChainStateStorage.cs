@@ -22,14 +22,5 @@ namespace BitSharp.Core.Storage
         bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx);
 
         IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions();
-
-        
-        //int OutputCount { get; }
-
-        //bool ContainsOutput(TxOutputKey txOutputKey);
-
-        //bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput);
-
-        //IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs();
     }
 }

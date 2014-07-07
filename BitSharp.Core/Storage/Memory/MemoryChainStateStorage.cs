@@ -14,19 +14,15 @@ namespace BitSharp.Core.Storage.Memory
         private int blockHeight;
         private UInt256 blockHash;
         private ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions;
-        //private ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs;
 
-        public MemoryChainStateStorage(int blockHeight, UInt256 blockHash, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions) //, ImmutableDictionary<TxOutputKey, TxOutput> unspentOutputs)
+        public MemoryChainStateStorage(int blockHeight, UInt256 blockHash, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions)
         {
             this.blockHeight = blockHeight;
             this.blockHash = blockHash;
             this.unspentTransactions = unspentTransactions;
-            //this.unspentOutputs = unspentOutputs;
         }
 
         public ImmutableSortedDictionary<UInt256, UnspentTx> UnspentTransactions { get { return this.unspentTransactions; } }
-
-        //public ImmutableDictionary<TxOutputKey, TxOutput> UnspentOutputs { get { return this.unspentOutputs; } }
 
         public int BlockHeight
         {
@@ -57,26 +53,6 @@ namespace BitSharp.Core.Storage.Memory
         {
             return this.unspentTransactions;
         }
-
-        //public int OutputCount
-        //{
-        //    get { return this.unspentOutputs.Count; }
-        //}
-
-        //public bool ContainsOutput(TxOutputKey txOutputKey)
-        //{
-        //    return this.unspentOutputs.ContainsKey(txOutputKey);
-        //}
-
-        //public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
-        //{
-        //    return this.unspentOutputs.TryGetValue(txOutputKey, out txOutput);
-        //}
-
-        //IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> IChainStateStorage.UnspentOutputs()
-        //{
-        //    return this.unspentOutputs;
-        //}
 
         public void Dispose()
         {

@@ -19,7 +19,7 @@ namespace BitSharp.Core.Storage
 
         UInt256 BlockHash { get; set; }
 
-        
+
         int TransactionCount { get; }
 
         bool ContainsTransaction(UInt256 txHash);
@@ -35,19 +35,6 @@ namespace BitSharp.Core.Storage
         void UpdateTransaction(UInt256 txHash, UnspentTx unspentTx);
 
         IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions();
-
-
-        //int OutputCount { get; }
-
-        //bool ContainsOutput(TxOutputKey txOutputKey);
-
-        //bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput);
-
-        //void AddOutput(TxOutputKey txOutputKey, TxOutput txOutput);
-
-        //bool RemoveOutput(TxOutputKey txOutputKey);
-
-        //IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs();
 
 
         void Flush();

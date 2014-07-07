@@ -24,7 +24,6 @@ namespace BitSharp.Esent
         private readonly string jetDirectory;
         private readonly string jetDatabase;
         private readonly Instance jetInstance;
-        private bool inTransaction;
 
         private readonly BlockStorageCursor[] cursors;
         private readonly object cursorsLock;
@@ -115,33 +114,6 @@ namespace BitSharp.Esent
                 this.FreeCursor(cursor);
             }
         }
-
-        //public bool TryGetTransaction(UInt256 blockHash, int txIndex, out UnspentTx unspentTx)
-        //{
-        //    Api.JetBeginTransaction2(this.jetSession, BeginTransactionGrbit.ReadOnly);
-        //    try
-        //    {
-        //        //Api.JetSetCurrentIndex(this.jetSession, this.unspentTxTableId, "IX_TxHash");
-        //        Api.MakeKey(this.jetSession, this.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
-        //        if (Api.TrySeek(this.jetSession, this.unspentTxTableId, SeekGrbit.SeekEQ))
-        //        {
-        //            var confirmedBlockHash = new UInt256(Api.RetrieveColumn(this.jetSession, this.unspentTxTableId, this.confirmedBlockHashColumnId));
-        //            var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId));
-
-        //            unspentTx = new UnspentTx(confirmedBlockHash, outputStates);
-        //            return true;
-        //        }
-        //        else
-        //        {
-        //            unspentTx = default(UnspentTx);
-        //            return false;
-        //        }
-        //    }
-        //    finally
-        //    {
-        //        Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
-        //    }
-        //}
 
         public void AddBlock(Block block)
         {

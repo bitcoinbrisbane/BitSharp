@@ -307,7 +307,7 @@ namespace BitSharp.Esent
                 if (!Api.TrySeek(this.jetSession, this.unspentTxTableId, SeekGrbit.SeekEQ))
                     throw new KeyNotFoundException();
 
-                if (false)
+                if (spentBlockIndex < 0)
                 {
                     Api.JetDelete(this.jetSession, this.unspentTxTableId);
                 }

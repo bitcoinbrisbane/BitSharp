@@ -51,27 +51,6 @@ namespace BitSharp.Core.Storage
             return Enumerable.Empty<KeyValuePair<UInt256, UnspentTx>>();
         }
 
-        public int OutputCount
-        {
-            get { return 0; }
-        }
-
-        public bool ContainsOutput(TxOutputKey txOutputKey)
-        {
-            return false;
-        }
-
-        public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
-        {
-            txOutput = default(TxOutput);
-            return false;
-        }
-
-        public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> UnspentOutputs()
-        {
-            return Enumerable.Empty<KeyValuePair<TxOutputKey, TxOutput>>();
-        }
-
         public void Dispose()
         {
         }

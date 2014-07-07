@@ -178,14 +178,11 @@ namespace BitSharp.Core
                         }
                     });
 
-                    //new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.OutputCount), () =>
+                    //new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
                     //{
                     //    var sha256 = new SHA256Managed();
-                    //    foreach (var output in chainStateLocal.Utxo.GetUnspentOutputs())
+                    //    foreach (var output in chainStateLocal.Utxo.GetUnspentTransactions())
                     //    {
-                    //        if (new UInt256(sha256.ComputeDoubleHash(output.Value.ScriptPublicKey.ToArray())) == UInt256.Zero)
-                    //        {
-                    //        }
                     //    }
                     //});
                 }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(60), maxIdleTime: TimeSpan.FromSeconds(60), logger: this.logger);

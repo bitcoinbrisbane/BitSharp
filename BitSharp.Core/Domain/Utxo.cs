@@ -38,11 +38,6 @@ namespace BitSharp.Domain
             get { return this.chainStateStorage.TransactionCount; }
         }
 
-        //public int OutputCount
-        //{
-        //    get { return this.chainStateStorage.OutputCount; }
-        //}
-
         public bool CanSpend(TxOutputKey txOutputKey)
         {
             if (txOutputKey == null)
@@ -68,11 +63,6 @@ namespace BitSharp.Domain
         {
             return this.chainStateStorage.UnspentTransactions();
         }
-
-        //public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> GetUnspentOutputs()
-        //{
-        //    return this.chainStateStorage.UnspentOutputs();
-        //}
 
         public static Utxo CreateForGenesisBlock(UInt256 blockHash)
         {

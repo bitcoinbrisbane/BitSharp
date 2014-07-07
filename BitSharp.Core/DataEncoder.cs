@@ -24,7 +24,7 @@ namespace BitSharp.Core
             }
         }
 
-        public static UInt256 DecodeUInt256(UInt256 confirmedBlockHash, byte[] bytes)
+        public static UInt256 DecodeUInt256(byte[] bytes)
         {
             using (var stream = new MemoryStream(bytes))
             {
@@ -377,7 +377,6 @@ namespace BitSharp.Core
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
                 return new UnspentTx(
-                    //confirmedBlockHash: reader.ReadUInt256(),
                     blockIndex: reader.ReadInt32(),
                     txIndex: reader.ReadInt32(),
                     outputStates: new OutputStates(
@@ -387,7 +386,7 @@ namespace BitSharp.Core
             }
         }
 
-        public static UnspentTx DecodeUnspentTx(UInt256 confirmedBlockHash, byte[] bytes)
+        public static UnspentTx DecodeUnspentTx(byte[] bytes)
         {
             using (var stream = new MemoryStream(bytes))
             {
@@ -399,7 +398,6 @@ namespace BitSharp.Core
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                //writer.WriteUInt256(unspentTx.ConfirmedBlockHash);
                 writer.WriteInt32(unspentTx.BlockIndex);
                 writer.WriteInt32(unspentTx.TxIndex);
                 writer.WriteVarBytes(unspentTx.OutputStates.ToByteArray());
@@ -421,7 +419,6 @@ namespace BitSharp.Core
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
                 return new SpentTx(
-                    //confirmedBlockHash: reader.ReadUInt256(),
                     blockIndex: reader.ReadInt32(),
                     txIndex: reader.ReadInt32(),
                     outputCount: reader.ReadInt32()
@@ -429,7 +426,7 @@ namespace BitSharp.Core
             }
         }
 
-        public static SpentTx DecodeSpentTx(UInt256 confirmedBlockHash, byte[] bytes)
+        public static SpentTx DecodeSpentTx(byte[] bytes)
         {
             using (var stream = new MemoryStream(bytes))
             {
@@ -441,7 +438,6 @@ namespace BitSharp.Core
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                //writer.WriteUInt256(spentTx.ConfirmedBlockHash);
                 writer.WriteInt32(spentTx.BlockIndex);
                 writer.WriteInt32(spentTx.TxIndex);
                 writer.WriteInt32(spentTx.OutputCount);

@@ -336,32 +336,34 @@ namespace BitSharp.Core.Rules
 
         private TxOutput LookupPreviousOutput(TxOutputKey txOutputKey, ChainedBlock chainedBlock, Dictionary<UInt256, int> blockTxIndices, ChainStateBuilder chainStateBuilder)
         {
-            TxOutput prevOutput;
-            if (chainStateBuilder.TryGetOutput(txOutputKey, out prevOutput))
-            {
-                return prevOutput;
-            }
-            else
-            {
-                Transaction prevTx;
-                int prevTxIndex;
-                if (blockTxIndices.TryGetValue(txOutputKey.TxHash, out prevTxIndex))
-                {
-                    Debug.Assert(prevTxIndex >= 0 && prevTxIndex < chainedBlock.Transactions.Length);
-                    prevTx = chainedBlock.Transactions[prevTxIndex];
-                    Debug.Assert(prevTx.Hash == txOutputKey.TxHash);
-                }
-                else
-                {
-                    throw new ValidationException(chainedBlock.Hash);
-                }
+            throw new NotImplementedException();
 
-                var outputIndex = unchecked((int)txOutputKey.TxOutputIndex);
-                if (outputIndex < 0 || outputIndex >= prevTx.Outputs.Length)
-                    throw new ValidationException(chainedBlock.Hash);
+            //TxOutput prevOutput;
+            //if (chainStateBuilder.TryGetOutput(txOutputKey, out prevOutput))
+            //{
+            //    return prevOutput;
+            //}
+            //else
+            //{
+            //    Transaction prevTx;
+            //    int prevTxIndex;
+            //    if (blockTxIndices.TryGetValue(txOutputKey.TxHash, out prevTxIndex))
+            //    {
+            //        Debug.Assert(prevTxIndex >= 0 && prevTxIndex < chainedBlock.Transactions.Length);
+            //        prevTx = chainedBlock.Transactions[prevTxIndex];
+            //        Debug.Assert(prevTx.Hash == txOutputKey.TxHash);
+            //    }
+            //    else
+            //    {
+            //        throw new ValidationException(chainedBlock.Hash);
+            //    }
 
-                return prevTx.Outputs[outputIndex];
-            }
+            //    var outputIndex = unchecked((int)txOutputKey.TxOutputIndex);
+            //    if (outputIndex < 0 || outputIndex >= prevTx.Outputs.Length)
+            //        throw new ValidationException(chainedBlock.Hash);
+
+            //    return prevTx.Outputs[outputIndex];
+            //}
         }
     }
 }

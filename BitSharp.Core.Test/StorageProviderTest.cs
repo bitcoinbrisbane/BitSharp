@@ -28,7 +28,7 @@ namespace BitSharp.Esent.Test
 
         public abstract IChainStateBuilderStorage OpenChainStateBuilderStorage(IChainStateStorage parentUtxo, Logger logger);
 
-        public virtual void TestPrune()
+        public void TestPrune()
         {
             var txCount = 100;
             var transactions = Enumerable.Range(0, txCount).Select(x => RandomData.RandomTransaction()).ToImmutableArray();
@@ -71,7 +71,7 @@ namespace BitSharp.Esent.Test
             }
         }
 
-        public virtual void TestRollback()
+        public void TestRollback()
         {
             //TODO
             MainnetRules.BypassValidation = true;
@@ -92,7 +92,7 @@ namespace BitSharp.Esent.Test
 
             using (var blockStorage = this.OpenBlockStorage())
             using (var chainStateBuilderStorage = this.OpenChainStateBuilderStorage(genesisUtxo.Storage, logger))
-            using (var chainStateBuilder = new ChainStateBuilder(chainBuilder, chainStateBuilderStorage, logger, rules, blockStorage, null, null))
+            using (var chainStateBuilder = new ChainStateBuilder(chainBuilder, chainStateBuilderStorage, logger, rules, blockStorage))
             {
                 // add blocks to storage
                 foreach (var block in blocks)

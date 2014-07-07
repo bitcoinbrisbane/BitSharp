@@ -244,14 +244,11 @@ namespace BitSharp.Core.Test
                     {
                         var expectedUtxo = expectedChainSate.Utxo;
                         var expectedUnspentTransactions = ImmutableDictionary.CreateRange<UInt256, UnspentTx>(expectedUtxo.GetUnspentTransactions());
-                        //var expectedUnspentOutputs = ImmutableDictionary.CreateRange<TxOutputKey, TxOutput>(expectedUtxo.GetUnspentOutputs());
 
                         var actualUtxo = actualChainSate.Utxo;
                         var actualUnspentTransactions = ImmutableDictionary.CreateRange<UInt256, UnspentTx>(actualUtxo.GetUnspentTransactions());
-                        //var actualUnspentOutputs = ImmutableDictionary.CreateRange<TxOutputKey, TxOutput>(actualUtxo.GetUnspentOutputs());
 
                         CollectionAssert.AreEquivalent(expectedUnspentTransactions, actualUnspentTransactions);
-                        //CollectionAssert.AreEquivalent(expectedUnspentOutputs, actualUnspentOutputs);
                     }
                 }
             }

@@ -46,22 +46,16 @@ namespace BitSharp.Core.Builders
         private Chain savedChain;
         private readonly IChainStateBuilderStorage chainStateBuilderStorage;
 
-        //TODO when written more directly against Esent, these can be streamed out so an entire list doesn't need to be held in memory
-        //private readonly ImmutableList<KeyValuePair<UInt256, SpentTx>>.Builder spentTransactions;
-        //private readonly ImmutableList<KeyValuePair<TxOutputKey, TxOutput>>.Builder spentOutputs;
-
         private readonly ReaderWriterLockSlim commitLock;
 
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(ChainBuilder chain, IChainStateBuilderStorage chainStateBuilderStorage, Logger logger, IBlockchainRules rules, IBlockStorageNew blockCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
+        public ChainStateBuilder(ChainBuilder chain, IChainStateBuilderStorage chainStateBuilderStorage, Logger logger, IBlockchainRules rules, IBlockStorageNew blockCache)
         {
             this.logger = logger;
             this.sha256 = new SHA256Managed();
             this.rules = rules;
             this.blockCache = blockCache;
-            //this.spentTransactionsCache = spentTransactionsCache;
-            //this.spentOutputsCache = spentOutputsCache;
 
             var isConcurrent = true;
             this.scriptValidator = new ScriptValidator(this.logger, this.rules, isConcurrent);
@@ -70,9 +64,6 @@ namespace BitSharp.Core.Builders
 
             this.chain = chain;
             this.chainStateBuilderStorage = chainStateBuilderStorage;
-
-            //this.spentTransactions = ImmutableList.CreateBuilder<KeyValuePair<UInt256, SpentTx>>();
-            //this.spentOutputs = ImmutableList.CreateBuilder<KeyValuePair<TxOutputKey, TxOutput>>();
 
             this.commitLock = new ReaderWriterLockSlim();
 
@@ -163,9 +154,6 @@ namespace BitSharp.Core.Builders
 
                         this.txLoader.CompleteAdding();
                     });
-
-                    // collect rollback informatino and store it
-                    //this.SaveRollbackInformation(chainedBlock.Hash, this.spentTransactionsCache, this.spentOutputsCache);
 
                     // wait for transactions to load
                     this.txLoader.WaitToComplete();
@@ -275,47 +263,6 @@ namespace BitSharp.Core.Builders
             get { return this.chainStateBuilderStorage.TransactionCount; }
         }
 
-        //public int OutputCount
-        //{
-        //    get { return this.chainStateBuilderStorage.OutputCount; }
-        //}
-
-        public bool TryGetUnspentTx(TxOutputKey txOutputKey, out UnspentTx unspentTx)
-        {
-            return this.chainStateBuilderStorage.TryGetTransaction(txOutputKey.TxHash, out unspentTx);
-        }
-
-        public bool TryGetOutput(TxOutputKey txOutputKey, out TxOutput txOutput)
-        {
-            UnspentTx unspentTx;
-            if (this.TryGetUnspentTx(txOutputKey, out unspentTx))
-            {
-                var blockIndex = this.chain.Blocks[unspentTx.BlockIndex].Hash;
-
-                Transaction transaction;
-                if (this.blockCache.TryGetTransaction(/*unspentTx.ConfirmedBlockHash,*/ blockIndex, unspentTx.TxIndex, out transaction))
-                {
-                    txOutput = transaction.Outputs[txOutputKey.TxOutputIndex.ToIntChecked()];
-                    return true;
-                }
-                else
-                {
-                    txOutput = default(TxOutput);
-                    return false;
-                }
-            }
-            else
-            {
-                txOutput = default(TxOutput);
-                return false;
-            }
-        }
-
-        //public IEnumerable<KeyValuePair<TxOutputKey, TxOutput>> GetUnspentOutputs()
-        //{
-        //    return this.chainStateBuilderStorage.UnspentOutputs();
-        //}
-
         private IEnumerable<PendingTx> CalculateUtxo(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
         {
             // don't include genesis block coinbase in utxo
@@ -409,8 +356,6 @@ namespace BitSharp.Core.Builders
                 throw new ValidationException(chainedHeader.Hash);
             }
 
-            //TODO don't remove data immediately, needs to stick around for rollback
-
             // update output states
             unspentTx = unspentTx.SetOutputState(outputIndex, OutputState.Spent);
 
@@ -422,20 +367,11 @@ namespace BitSharp.Core.Builders
             {
                 this.chainStateBuilderStorage.RemoveTransaction(input.PreviousTxOutputKey.TxHash, chainedHeader.Height);
 
-                // store rollback information, the block containing the previous transaction will need to be known during rollback
-                //this.spentTransactions.Add(new KeyValuePair<UInt256, SpentTx>(input.PreviousTxOutputKey.TxHash, unspentTx.ToSpent()));
-
                 if (false)
                 {
                     this.blockCache.PruneElements(unspentTxBlockHash, new[] { unspentTx.TxIndex });
                 }
             }
-
-            // store rollback information, the output will need to be added back during rollback
-            //this.spentOutputs.Add(new KeyValuePair<TxOutputKey, TxOutput>(input.PreviousTxOutputKey, prevOutput));
-
-            // remove the output from the utxo
-            //this.chainStateBuilderStorage.RemoveOutput(input.PreviousTxOutputKey);
 
             return new BlockTxKey(unspentTxBlockHash, unspentTx.TxIndex);
         }
@@ -499,20 +435,7 @@ namespace BitSharp.Core.Builders
             }
 
             // remove the transaction
-            this.chainStateBuilderStorage.RemoveTransaction(tx.Hash, /*TODO*/spentBlockIndex: -1);
-
-            // remove the transaction outputs
-            for (var outputIndex = 0; outputIndex < tx.Outputs.Length; outputIndex++)
-            {
-                var txOutput = tx.Outputs[outputIndex];
-                var txOutputKey = new TxOutputKey(tx.Hash, (UInt32)outputIndex);
-
-                //this.chainStateBuilderStorage.RemoveOutput(txOutputKey);
-
-                // MONITOR: UnspendTxOutput
-                //if (this.chainStateMonitor != null)
-                //    this.chainStateMonitor.UnmintTxOutput(ChainPosition.Fake(), txOutputKey, txOutput, GetOutputScripHash(txOutput), isCoinbase);
-            }
+            this.chainStateBuilderStorage.RemoveTransaction(tx.Hash, spentBlockIndex: -1);
         }
 
         public void Unspend(TxInput input, ChainedHeader chainedHeader)
@@ -540,15 +463,6 @@ namespace BitSharp.Core.Builders
         private UInt256 GetOutputScripHash(TxOutput txOutput)
         {
             return new UInt256(this.sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
-        }
-
-        private void SaveRollbackInformation(UInt256 blockHash, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
-        {
-            //spentTransactionsCache[blockHash] = this.spentTransactions.ToImmutable();
-            //this.spentTransactions.Clear();
-
-            //spentOutputsCache[blockHash] = this.spentOutputs.ToImmutable();
-            //this.spentOutputs.Clear();
         }
 
         public void Flush()

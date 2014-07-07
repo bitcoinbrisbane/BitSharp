@@ -50,13 +50,13 @@ namespace BitSharp.Esent.Test
         }
 
         [TestMethod]
-        public override void TestPrune()
+        public void TestEsentPrune()
         {
             base.TestPrune();
         }
 
         [TestMethod]
-        public override void TestRollback()
+        public void TestEsentRollback()
         {
             base.TestRollback();
         }
