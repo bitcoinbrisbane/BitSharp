@@ -22,6 +22,12 @@ namespace BitSharp.Esent.Test
     [TestClass]
     public class RollbackTest
     {
+        [TestCleanup]
+        public void Cleanup()
+        {
+            EsentTests.CleanBaseDirectory();
+        }
+
         [TestMethod]
         public void TestRollback()
         {
