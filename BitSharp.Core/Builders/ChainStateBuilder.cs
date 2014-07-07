@@ -176,7 +176,7 @@ namespace BitSharp.Core.Builders
                         if (!MainnetRules.IgnoreScriptErrors)
                             throw new AggregateException(this.scriptValidator.Exceptions);
                         else
-                            this.logger.Info("Ignoring script error in block: {0}".Format2(chainedHeader.Hash));
+                            this.logger.Info("Ignoring script errors in block: {0,9:#,##0}, errors: {1:#,##0}".Format2(chainedHeader.Height, this.scriptValidator.Exceptions.Count));
                     }
 
                     // commit the chain state
