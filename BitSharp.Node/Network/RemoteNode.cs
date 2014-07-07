@@ -35,11 +35,13 @@ namespace BitSharp.Node.Network
         private readonly Socket socket;
         private readonly RemoteReceiver receiver;
         private readonly RemoteSender sender;
+        private readonly bool isSeed;
 
-        public RemoteNode(IPEndPoint remoteEndPoint, Logger logger)
+        public RemoteNode(IPEndPoint remoteEndPoint, bool isSeed, Logger logger)
         {
             this.logger = logger;
             this.remoteEndPoint = remoteEndPoint;
+            this.isSeed = isSeed;
 
             this.socket = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             this.receiver = new RemoteReceiver(this, this.socket, persistent: false, logger: this.logger);
@@ -48,7 +50,7 @@ namespace BitSharp.Node.Network
             WireNode();
         }
 
-        public RemoteNode(Socket socket)
+        public RemoteNode(Socket socket, bool isSeed)
         {
             this.socket = socket;
             this.isConnected = true;
@@ -78,6 +80,8 @@ namespace BitSharp.Node.Network
         public RemoteSender Sender { get { return this.sender; } }
 
         public bool IsConnected { get { return this.isConnected; } }
+
+        public bool IsSeed { get { return this.isSeed; } }
 
         public async Task ConnectAsync()
         {

@@ -285,6 +285,10 @@ namespace BitSharp.Node.Workers
             // loop through each connected peer
             foreach (var peer in this.localClient.ConnectedPeers)
             {
+                // don't request blocks from seed peers
+                if (peer.Value.IsSeed)
+                    continue;
+
                 // retrieve the peer's currently requested blocks
                 var peerBlockRequests = this.blockRequestsByPeer.AddOrUpdate(
                     peer.Key,

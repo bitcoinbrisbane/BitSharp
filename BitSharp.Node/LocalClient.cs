@@ -197,7 +197,7 @@ namespace BitSharp.Node
                     var candidatePeer = unconnectedPeersSorted[unconnectedPeerIndex];
                     unconnectedPeerIndex++;
 
-                    connectTasks.Add(ConnectToPeer(candidatePeer.IPEndPoint));
+                    connectTasks.Add(ConnectToPeer(candidatePeer.IPEndPoint, candidatePeer.IsSeed));
                 }
 
                 // wait for pending connection attempts to complete
@@ -312,7 +312,7 @@ namespace BitSharp.Node
 
                         Task.Run(async () =>
                         {
-                            var remoteNode = new RemoteNode(newSocket);
+                            var remoteNode = new RemoteNode(newSocket, isSeed: false);
                             try
                             {
                                 if (await ConnectAndHandshake(remoteNode, isIncoming: true))
@@ -361,7 +361,8 @@ namespace BitSharp.Node
                             new CandidatePeer
                             {
                                 IPEndPoint = new IPEndPoint(ipAddress, Messaging.Port),
-                                Time = DateTime.UtcNow
+                                Time = DateTime.UtcNow,
+                                IsSeed = true
                             });
                     }
                     catch (SocketException e)
@@ -411,7 +412,8 @@ namespace BitSharp.Node
                     new CandidatePeer
                     {
                         IPEndPoint = knownAddress.NetworkAddress.ToIPEndPoint(),
-                        Time = knownAddress.Time.UnixTimeToDateTime()
+                        Time = knownAddress.Time.UnixTimeToDateTime(),
+                        IsSeed = false
                     });
                 count++;
             }
@@ -419,11 +421,11 @@ namespace BitSharp.Node
             this.logger.Info("LocalClients loaded {0} known peers from database".Format2(count));
         }
 
-        private async Task<RemoteNode> ConnectToPeer(IPEndPoint remoteEndPoint)
+        private async Task<RemoteNode> ConnectToPeer(IPEndPoint remoteEndPoint, bool isSeed)
         {
             try
             {
-                var remoteNode = new RemoteNode(remoteEndPoint, this.logger);
+                var remoteNode = new RemoteNode(remoteEndPoint, isSeed, this.logger);
 
                 this.unconnectedPeers.TryRemove(remoteEndPoint.ToCandidatePeerKey());
                 this.pendingPeers.TryAdd(remoteNode.RemoteEndPoint, remoteNode);
@@ -793,6 +795,7 @@ namespace BitSharp.Node
     {
         public IPEndPoint IPEndPoint { get; set; }
         public DateTime Time { get; set; }
+        public bool IsSeed { get; set; }
 
         public override bool Equals(object obj)
         {
