@@ -227,6 +227,36 @@ namespace BitSharp.Esent
             }
         }
 
+        public bool TryGetTransaction(UInt256 txHash, int spentBlockIndex, out UnspentTx unspentTx)
+        {
+            Api.JetBeginTransaction2(this.jetSession, BeginTransactionGrbit.ReadOnly);
+            try
+            {
+                //Api.JetSetCurrentIndex(this.jetSession, this.unspentTxTableId, "IX_TxHash");
+                Api.MakeKey(this.jetSession, this.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
+                if (Api.TrySeek(this.jetSession, this.unspentTxTableId, SeekGrbit.SeekEQ))
+                {
+                    var blockIndex = Api.RetrieveColumnAsInt32(this.jetSession, this.unspentTxTableId, this.blockIndexColumnId).Value;
+                    var txIndex = Api.RetrieveColumnAsInt32(this.jetSession, this.unspentTxTableId, this.txIndexColumnId).Value;
+                    var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId));
+                    var storedSpentBlockIndex = Api.RetrieveColumnAsInt32(this.jetSession, this.unspentTxTableId, this.spentBlockIndexColumnId);
+
+                    if (storedSpentBlockIndex == null || storedSpentBlockIndex.Value == spentBlockIndex)
+                    {
+                        unspentTx = new UnspentTx(blockIndex, txIndex, outputStates);
+                        return true;
+                    }
+                }
+
+                unspentTx = default(UnspentTx);
+                return false;
+            }
+            finally
+            {
+                Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);
+            }
+        }
+
         public bool TryAddTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
             try
@@ -277,7 +307,7 @@ namespace BitSharp.Esent
                 if (!Api.TrySeek(this.jetSession, this.unspentTxTableId, SeekGrbit.SeekEQ))
                     throw new KeyNotFoundException();
 
-                if (true)
+                if (false)
                 {
                     Api.JetDelete(this.jetSession, this.unspentTxTableId);
                 }
@@ -322,6 +352,7 @@ namespace BitSharp.Esent
                 try
                 {
                     Api.SetColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
+                    Api.SetColumn(this.jetSession, this.unspentTxTableId, this.spentBlockIndexColumnId, null);
 
                     Api.JetUpdate(this.jetSession, this.unspentTxTableId);
                     Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.LazyFlush);

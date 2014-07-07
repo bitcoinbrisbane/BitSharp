@@ -502,5 +502,10 @@ namespace BitSharp.Common.ExtensionMethods
         {
             return sha256.ComputeHash(sha256.ComputeHash(buffer));
         }
+
+        public static byte[] ComputeDoubleHash(this SHA256 sha256, Stream inputStream)
+        {
+            return sha256.ComputeHash(sha256.ComputeHash(inputStream));
+        }
     }
 }

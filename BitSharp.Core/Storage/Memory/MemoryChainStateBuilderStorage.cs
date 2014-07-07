@@ -68,6 +68,11 @@ namespace BitSharp.Core.Storage.Memory
             return this.unspentTransactions.TryGetValue(txHash, out unspentTx);
         }
 
+        public bool TryGetTransaction(UInt256 txHash, int spentBlockIndex, out UnspentTx unspentTx)
+        {
+            throw new NotImplementedException();
+        }
+
         public bool TryAddTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
             try

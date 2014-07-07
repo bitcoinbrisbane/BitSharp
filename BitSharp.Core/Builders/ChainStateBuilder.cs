@@ -518,7 +518,7 @@ namespace BitSharp.Core.Builders
         public void Unspend(TxInput input, ChainedHeader chainedHeader)
         {
             UnspentTx unspentTx;
-            if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
+            if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, chainedHeader.Height, out unspentTx))
             {
                 // output wasn't present in utxo, invalid block
                 throw new ValidationException(chainedHeader.Hash);

@@ -1,4 +1,5 @@
 ﻿using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Builders;
 using BitSharp.Core.Domain;
 using BitSharp.Core.Rules;
@@ -10,7 +11,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -24,6 +27,7 @@ namespace BitSharp.Esent.Test
         {
             var logger = LogManager.CreateNullLogger();
             var baseDirectory = EsentTests.PrepareBaseDirectory();
+            var sha256 = new SHA256Managed();
 
             var blockProvider = new MainnetBlockProvider();
             var blocks = Enumerable.Range(0, 1000).Select(x => blockProvider.GetBlock(x)).ToList();
@@ -40,16 +44,18 @@ namespace BitSharp.Esent.Test
             using (var chainStateBuilderStorage = new ChainStateBuilderStorage(baseDirectory, genesisUtxo.Storage, logger))
             using (var chainStateBuilder = new ChainStateBuilder(chainBuilder, chainStateBuilderStorage, logger, rules, blockStorage, null, null))
             {
+                // add blocks to storage
                 foreach (var block in blocks)
                     blockStorage.AddBlock(block);
 
+                // store the genesis utxo state
                 var expectedUtxos = new List<List<KeyValuePair<UInt256, UnspentTx>>>();
-
                 using (var chainState = chainStateBuilder.ToImmutable())
                 {
                     expectedUtxos.Add(chainState.Utxo.GetUnspentTransactions().ToList());
                 }
 
+                // calculate utxo forward and store its state at each step along the way
                 for (var blockIndex = 1; blockIndex < blocks.Count; blockIndex++)
                 {
                     var block = blocks[blockIndex];
@@ -64,8 +70,16 @@ namespace BitSharp.Esent.Test
                     }
                 }
 
+                // verify the utxo state before rolling back
+                var expectedUtxoHash = UInt256.Parse("7e155a373c9a97d6d6f7f985e4d43f31a80833e9b4fce865c85552a650dd630e", NumberStyles.HexNumber);
+                using (var utxoStream = new UtxoStream(logger, expectedUtxos.Last()))
+                {
+                    var utxoHash = new UInt256(sha256.ComputeDoubleHash(utxoStream));
+                    Assert.AreEqual(expectedUtxoHash, utxoHash);
+                }
                 expectedUtxos.RemoveAt(expectedUtxos.Count - 1);
 
+                // roll utxo backwards and validate its state at each step along the way
                 for (var blockIndex = blocks.Count - 1; blockIndex >= 1; blockIndex--)
                 {
                     var block = blocks[blockIndex];
@@ -83,7 +97,7 @@ namespace BitSharp.Esent.Test
                         actualUtxo = chainState.Utxo.GetUnspentTransactions().ToList();
                     }
 
-                    CollectionAssert.AreEqual(expectedUtxo, actualUtxo, new UtxoComparer());
+                    CollectionAssert.AreEqual(expectedUtxo, actualUtxo, new UtxoComparer(), "UTXO differs at height: {0}".Format2(blockIndex));
                 }
             }
         }
