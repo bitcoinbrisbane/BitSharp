@@ -42,15 +42,13 @@ namespace BitSharp.Core.Builders
         private readonly ScriptValidator scriptValidator;
 
         private bool inTransaction;
-        private ChainBuilder chain;
-        private Chain savedChain;
         private readonly IChainStateBuilderStorage chainStateBuilderStorage;
 
         private readonly ReaderWriterLockSlim commitLock;
 
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(ChainBuilder chain, IChainStateBuilderStorage chainStateBuilderStorage, Logger logger, IBlockchainRules rules, IBlockStorageNew blockCache)
+        public ChainStateBuilder(IChainStateBuilderStorage chainStateBuilderStorage, Logger logger, IBlockchainRules rules, IBlockStorageNew blockCache)
         {
             this.logger = logger;
             this.sha256 = new SHA256Managed();
@@ -62,7 +60,6 @@ namespace BitSharp.Core.Builders
             this.txValidator = new TxValidator(this.scriptValidator, this.logger, this.rules, isConcurrent);
             this.txLoader = new TxLoader(this.blockCache, this.txValidator, this.logger, this.rules, isConcurrent);
 
-            this.chain = chain;
             this.chainStateBuilderStorage = chainStateBuilderStorage;
 
             this.commitLock = new ReaderWriterLockSlim();
@@ -84,12 +81,11 @@ namespace BitSharp.Core.Builders
             this.scriptValidator.Dispose();
 
             this.stats.Dispose();
-            this.chainStateBuilderStorage.Dispose();
         }
 
-        public ChainBuilder Chain { get { return this.chain; } }
+        public Chain Chain { get { return this.chainStateBuilderStorage.Chain; } }
 
-        public ChainedHeader LastBlock { get { return this.chain.LastBlock; } }
+        public ChainedHeader LastBlock { get { return this.Chain.LastBlock; } }
 
         public UInt256 LastBlockHash
         {
@@ -132,11 +128,7 @@ namespace BitSharp.Core.Builders
                 try
                 {
                     // add the block to the chain
-                    this.Chain.AddBlock(chainedHeader);
-
-                    // store block hash
-                    this.chainStateBuilderStorage.BlockHeight = chainedHeader.Height;
-                    this.chainStateBuilderStorage.BlockHash = chainedHeader.Hash;
+                    this.chainStateBuilderStorage.AddChainedHeader(chainedHeader);
 
                     // validate the block
                     //this.Stats.validateStopwatch.Start();
@@ -205,29 +197,22 @@ namespace BitSharp.Core.Builders
 
         public void RollbackBlock(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
         {
-            //using (this.chainStateMonitor.Start())
+            this.BeginTransaction();
+            try
             {
-                this.BeginTransaction();
-                try
-                {
-                    // remove the block from the chain
-                    this.Chain.RemoveBlock(chainedHeader);
+                // remove the block from the chain
+                this.chainStateBuilderStorage.RemoveChainedHeader(chainedHeader);
 
-                    // store the block hash
-                    this.chainStateBuilderStorage.BlockHeight = this.Chain.Height;
-                    this.chainStateBuilderStorage.BlockHash = this.Chain.LastBlockHash;
+                // rollback the utxo
+                this.RollbackUtxo(chainedHeader, blockTxes);
 
-                    // rollback the utxo
-                    this.RollbackUtxo(chainedHeader, blockTxes);
-
-                    // commit the chain state
-                    this.CommitTransaction();
-                }
-                catch (Exception)
-                {
-                    this.RollbackTransaction();
-                    throw;
-                }
+                // commit the chain state
+                this.CommitTransaction();
+            }
+            catch (Exception)
+            {
+                this.RollbackTransaction();
+                throw;
             }
         }
 
@@ -341,7 +326,7 @@ namespace BitSharp.Core.Builders
                 throw new ValidationException(chainedHeader.Hash);
             }
 
-            var unspentTxBlockHash = this.chain.Blocks[unspentTx.BlockIndex].Hash;
+            var unspentTxBlockHash = this.Chain.Blocks[unspentTx.BlockIndex].Hash;
             var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
 
             if (outputIndex < 0 || outputIndex >= unspentTx.OutputStates.Length)
@@ -465,15 +450,10 @@ namespace BitSharp.Core.Builders
             return new UInt256(this.sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
         }
 
-        public void Flush()
-        {
-            this.chainStateBuilderStorage.Flush();
-        }
-
         public ChainState ToImmutable()
         {
             return this.commitLock.DoRead(() =>
-                new ChainState(this.chain.ToImmutable(), new Utxo(chainStateBuilderStorage.ToImmutable())));
+                new ChainState(this.chainStateBuilderStorage.Chain, new Utxo(this.chainStateBuilderStorage.ToImmutable())));
         }
 
         private void BeginTransaction()
@@ -483,7 +463,6 @@ namespace BitSharp.Core.Builders
 
             this.commitLock.EnterWriteLock();
             this.chainStateBuilderStorage.BeginTransaction();
-            this.savedChain = this.chain.ToImmutable();
             this.inTransaction = true;
         }
 
@@ -493,7 +472,6 @@ namespace BitSharp.Core.Builders
                 throw new InvalidOperationException();
 
             this.chainStateBuilderStorage.CommitTransaction();
-            this.savedChain = null;
             this.inTransaction = false;
             this.commitLock.ExitWriteLock();
         }
@@ -504,7 +482,6 @@ namespace BitSharp.Core.Builders
                 throw new InvalidOperationException();
 
             this.chainStateBuilderStorage.RollbackTransaction();
-            this.chain = this.savedChain.ToBuilder();
             this.inTransaction = false;
             this.commitLock.ExitWriteLock();
         }

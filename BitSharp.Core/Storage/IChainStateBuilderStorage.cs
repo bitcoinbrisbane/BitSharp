@@ -11,14 +11,16 @@ namespace BitSharp.Core.Storage
     public interface IChainStateBuilderStorage : IDisposable
     {
         void BeginTransaction();
+        
         void CommitTransaction();
+        
         void RollbackTransaction();
 
+        Chain Chain { get; }
 
-        int BlockHeight { get; set; }
+        void AddChainedHeader(ChainedHeader chainedHeader);
 
-        UInt256 BlockHash { get; set; }
-
+        void RemoveChainedHeader(ChainedHeader chainedHeader);
 
         int TransactionCount { get; }
 
@@ -34,10 +36,7 @@ namespace BitSharp.Core.Storage
 
         void UpdateTransaction(UInt256 txHash, UnspentTx unspentTx);
 
-        IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions();
-
-
-        void Flush();
+        IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions();
 
         IChainStateStorage ToImmutable();
     }

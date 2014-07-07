@@ -23,6 +23,18 @@ namespace BitSharp.Core.Test
             this.index = -1;
         }
 
+        public void Dispose()
+        {
+        }
+
+        public void BeginTransaction()
+        {
+        }
+
+        public void CommitTransaction()
+        {
+        }
+
         public bool TryMoveToIndex(int index, out BlockElement element)
         {
             this.index = this.blockElements.FindIndex(x => x.Index == index);
@@ -99,7 +111,7 @@ namespace BitSharp.Core.Test
 
             this.blockElements.RemoveAt(removeIndex);
         }
-
+        
         public IEnumerable<BlockElement> StreamElements()
         {
             return this.blockElements;

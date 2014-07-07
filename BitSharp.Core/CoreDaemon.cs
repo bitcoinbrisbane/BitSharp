@@ -46,6 +46,7 @@ namespace BitSharp.Core
         private readonly Logger logger;
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
+        private readonly IStorageManager storageManager;
         private readonly BlockHeaderCache blockHeaderCache;
         private readonly ChainedHeaderCache chainedHeaderCache;
         private readonly IBlockStorageNew blockCache;
@@ -64,16 +65,17 @@ namespace BitSharp.Core
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
 
-        public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, IBlockStorageNew blockCache)
+        public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, IStorageManager storageManager, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache)
         {
             this.logger = logger;
             this.shutdownToken = new CancellationTokenSource();
 
             this.kernel = kernel;
             this.rules = rules;
+            this.storageManager = storageManager;
             this.blockHeaderCache = blockHeaderCache;
             this.chainedHeaderCache = chainedHeaderCache;
-            this.blockCache = blockCache;
+            this.blockCache = storageManager.BlockStorage;
 
             // write genesis block out to storage
             this.blockHeaderCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock.Header;
@@ -89,13 +91,8 @@ namespace BitSharp.Core
             this.chainedHeaderCache.OnModification += OnChainedHeaderModification;
 
             // create chain state builder
-            this.chainStateBuilderStorage =
-                this.kernel.Get<IChainStateBuilderStorage>(new ConstructorArgument("parentUtxo", Utxo.CreateForGenesisBlock(this.rules.GenesisBlock.Hash).Storage));
-            this.chainStateBuilder =
-                this.kernel.Get<ChainStateBuilder>(
-                new ConstructorArgument("chain", Chain.CreateForGenesisBlock(this.rules.GenesisChainedHeader).ToBuilder()),
-                new ConstructorArgument("chainStateBuilderStorage", this.chainStateBuilderStorage));
-
+            this.chainStateBuilderStorage = this.storageManager.CreateOrLoadChainState(this.rules.GenesisChainedHeader);
+            this.chainStateBuilder = new ChainStateBuilder(this.chainStateBuilderStorage, this.logger, this.rules, this.blockCache);
             this.chainStateLock = new ReaderWriterLockSlim();
 
             // create workers

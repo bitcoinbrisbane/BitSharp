@@ -28,11 +28,6 @@ namespace BitSharp.Domain
             get { return this.chainStateStorage; }
         }
 
-        public UInt256 BlockHash
-        {
-            get { return this.chainStateStorage.BlockHash; }
-        }
-
         public int TransactionCount
         {
             get { return this.chainStateStorage.TransactionCount; }
@@ -61,12 +56,12 @@ namespace BitSharp.Domain
 
         public IEnumerable<KeyValuePair<UInt256, UnspentTx>> GetUnspentTransactions()
         {
-            return this.chainStateStorage.UnspentTransactions();
+            return this.chainStateStorage.ReadUnspentTransactions();
         }
 
-        public static Utxo CreateForGenesisBlock(UInt256 blockHash)
+        public static Utxo CreateForGenesisBlock(ChainedHeader genesisHeader)
         {
-            return new Utxo(new GenesisChainStateStorage(blockHash));
+            return new Utxo(new GenesisChainStateStorage(genesisHeader));
         }
     }
 }

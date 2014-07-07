@@ -27,13 +27,13 @@ namespace BitSharp.Core.Workers
         private readonly ConcurrentQueue<BlockHeader> blockHeaders;
         private readonly Dictionary<UInt256, Dictionary<UInt256, BlockHeader>> unchainedByPrevious;
 
-        public ChainingWorker(WorkerConfig workerConfig, Logger logger, IBlockchainRules rules, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, IBlockStorageNew blockCache)
+        public ChainingWorker(WorkerConfig workerConfig, Logger logger, IBlockchainRules rules, IStorageManager storageManager, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache)
             : base("ChainingWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.rules = rules;
             this.blockHeaderCache = blockHeaderCache;
             this.chainedHeaderCache = chainedHeaderCache;
-            this.blockCache = blockCache;
+            this.blockCache = storageManager.BlockStorage;
 
             this.blockHeaders = new ConcurrentQueue<BlockHeader>();
             this.unchainedByPrevious = new Dictionary<UInt256, Dictionary<UInt256, BlockHeader>>();

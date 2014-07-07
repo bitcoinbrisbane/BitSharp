@@ -11,27 +11,24 @@ namespace BitSharp.Core.Storage.Memory
 {
     public class MemoryChainStateStorage : IChainStateStorage
     {
-        private int blockHeight;
-        private UInt256 blockHash;
+        private Chain chain;
         private ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions;
 
-        public MemoryChainStateStorage(int blockHeight, UInt256 blockHash, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions)
+        public MemoryChainStateStorage(Chain chain, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions)
         {
-            this.blockHeight = blockHeight;
-            this.blockHash = blockHash;
+            this.chain = chain;
             this.unspentTransactions = unspentTransactions;
+        }
+
+        public void Dispose()
+        {
         }
 
         public ImmutableSortedDictionary<UInt256, UnspentTx> UnspentTransactions { get { return this.unspentTransactions; } }
 
-        public int BlockHeight
+        public Chain Chain
         {
-            get { return this.blockHeight; }
-        }
-
-        public UInt256 BlockHash
-        {
-            get { return this.blockHash; }
+            get { return this.chain; }
         }
 
         public int TransactionCount
@@ -49,13 +46,14 @@ namespace BitSharp.Core.Storage.Memory
             return this.unspentTransactions.TryGetValue(txHash, out unspentTx);
         }
 
-        IEnumerable<KeyValuePair<UInt256, UnspentTx>> IChainStateStorage.UnspentTransactions()
+        IEnumerable<KeyValuePair<UInt256, UnspentTx>> IChainStateStorage.ReadUnspentTransactions()
         {
             return this.unspentTransactions;
         }
 
-        public void Dispose()
+        public IChainStateBuilderStorage ToBuilder()
         {
+            return new MemoryChainStateBuilderStorage(this);
         }
     }
 }

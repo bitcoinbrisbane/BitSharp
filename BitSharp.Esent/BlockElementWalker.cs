@@ -19,7 +19,7 @@ using System.Security.Cryptography;
 
 namespace BitSharp.Esent
 {
-    public class BlockElementWalker : IBlockElementWalker, IDisposable
+    internal class BlockElementWalker : IBlockElementWalker, IDisposable
     {
         private readonly UInt256 blockHash;
         private readonly BlockStorageCursor cursor;

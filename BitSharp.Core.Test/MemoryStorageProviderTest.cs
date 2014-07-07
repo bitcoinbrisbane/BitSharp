@@ -45,9 +45,9 @@ namespace BitSharp.Esent.Test
             return new MemoryBlockStorageNew();
         }
 
-        public override IChainStateBuilderStorage OpenChainStateBuilderStorage(IChainStateStorage parentUtxo, Logger logger)
+        public override IChainStateBuilderStorage OpenChainStateBuilderStorage(ChainedHeader genesisHeader, Logger logger)
         {
-            return new MemoryChainStateBuilderStorage(parentUtxo);
+            return new MemoryChainStateBuilderStorage(genesisHeader);
         }
 
         [TestMethod]

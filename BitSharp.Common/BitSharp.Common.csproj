@@ -77,7 +77,6 @@
     <Compile Include="Bits.cs" />
     <Compile Include="ConcurrentDictionaryBuilder.cs" />
     <Compile Include="ConcurrentSet.cs" />
-    <Compile Include="ConcurrentListBuilder.cs" />
     <Compile Include="ConcurrentSetBuilder.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="ImmutableBitArray.cs" />

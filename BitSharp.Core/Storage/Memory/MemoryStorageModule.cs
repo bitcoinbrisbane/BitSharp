@@ -16,16 +16,10 @@ namespace BitSharp.Core.Storage.Memory
         public override void Load()
         {
             // bind concrete storage providers
-            this.Bind<MemoryBlockHeaderStorage>().ToSelf().InSingletonScope();
-            this.Bind<MemoryChainedHeaderStorage>().ToSelf().InSingletonScope();
-            this.Bind<MemoryInvalidBlockStorage>().ToSelf().InSingletonScope();
+            this.Bind<MemoryStorageManager>().ToSelf().InSingletonScope();
 
             // bind storage providers interfaces
-            this.Bind<IBlockHeaderStorage>().ToMethod(x => this.Kernel.Get<MemoryBlockHeaderStorage>()).InSingletonScope();
-            this.Bind<IChainedHeaderStorage>().ToMethod(x => this.Kernel.Get<MemoryChainedHeaderStorage>()).InSingletonScope();
-            this.Bind<IInvalidBlockStorage>().ToMethod(x => this.Kernel.Get<MemoryInvalidBlockStorage>()).InSingletonScope();
-
-            this.Bind<IChainStateBuilderStorage>().To<MemoryChainStateBuilderStorage>();
+            this.Bind<IStorageManager>().ToMethod(x => this.Kernel.Get<MemoryStorageManager>()).InSingletonScope();
         }
     }
 }

@@ -40,14 +40,14 @@ namespace BitSharp.Core.Workers
 
         //private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(TargetChainWorker targetChainWorker, ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, WorkerConfig workerConfig, Logger logger, IKernel kernel, IBlockchainRules rules, IBlockStorageNew blockCache, InvalidBlockCache invalidBlockCache)
+        public ChainStateWorker(TargetChainWorker targetChainWorker, ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, WorkerConfig workerConfig, Logger logger, IKernel kernel, IBlockchainRules rules, IStorageManager storageManager, InvalidBlockCache invalidBlockCache)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.getTargetChain = getTargetChain;
             this.kernel = kernel;
             this.rules = rules;
-            this.blockCache = blockCache;
+            this.blockCache = storageManager.BlockStorage;
             this.invalidBlockCache = invalidBlockCache;
 
             this.blockProcessingDurationMeasure = new DurationMeasure();
@@ -55,7 +55,7 @@ namespace BitSharp.Core.Workers
 
             this.targetChainWorker = targetChainWorker;
             this.chainStateBuilder = chainStateBuilder;
-            this.currentChain = this.chainStateBuilder.Chain.ToImmutable();
+            this.currentChain = this.chainStateBuilder.Chain;
 
             //this.pruningWorker = kernel.Get<PruningWorker>(
             //    new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromMinutes(5))),
@@ -136,7 +136,7 @@ namespace BitSharp.Core.Workers
 
                     //this.pruningWorker.NotifyWork();
 
-                    this.currentChain = this.chainStateBuilder.Chain.ToImmutable();
+                    this.currentChain = this.chainStateBuilder.Chain;
 
                     var handler = this.OnChainStateChanged;
                     if (handler != null)

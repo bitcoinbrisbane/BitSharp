@@ -26,7 +26,7 @@ namespace BitSharp.Core.Test.Domain
             unspentTransactions.Add(txHash, new UnspentTx(blockIndex: 0, txIndex: 0, length: 1, state: OutputState.Unspent));
 
             // prepare utxo
-            var chainStateStorage = new MemoryChainStateStorage(0, 0, unspentTransactions.ToImmutable());
+            var chainStateStorage = new MemoryChainStateStorage(null, unspentTransactions.ToImmutable());
             var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
@@ -50,7 +50,7 @@ namespace BitSharp.Core.Test.Domain
             unspentTransactions.Add(txHash, new UnspentTx(blockIndex: 0, txIndex: 0, length: 1, state: OutputState.Spent));
 
             // prepare utxo
-            var chainStateStorage = new MemoryChainStateStorage(0, 0, unspentTransactions.ToImmutable());
+            var chainStateStorage = new MemoryChainStateStorage(null, unspentTransactions.ToImmutable());
             var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
@@ -70,7 +70,7 @@ namespace BitSharp.Core.Test.Domain
             var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare utxo
-            var chainStateStorage = new MemoryChainStateStorage(0, 0, unspentTransactions.ToImmutable());
+            var chainStateStorage = new MemoryChainStateStorage(null, unspentTransactions.ToImmutable());
             var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
@@ -94,7 +94,7 @@ namespace BitSharp.Core.Test.Domain
             unspentTransactions.Add(txHash, new UnspentTx(blockIndex: 0, txIndex: 0, length: 1, state: OutputState.Unspent));
 
             // prepare utxo
-            var chainStateStorage = new MemoryChainStateStorage(0, 0, unspentTransactions.ToImmutable());
+            var chainStateStorage = new MemoryChainStateStorage(null, unspentTransactions.ToImmutable());
             var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference
@@ -118,7 +118,7 @@ namespace BitSharp.Core.Test.Domain
             unspentTransactions.Add(txHash, new UnspentTx(blockIndex: 0, txIndex: 0, length: 1, state: OutputState.Unspent));
 
             // prepare utxo
-            var chainStateStorage = new MemoryChainStateStorage(0, 0, unspentTransactions.ToImmutable());
+            var chainStateStorage = new MemoryChainStateStorage(null, unspentTransactions.ToImmutable());
             var utxo = new Utxo(chainStateStorage);
 
             // prepare output reference

@@ -58,7 +58,7 @@ namespace BitSharp.Client
             this.kernel = kernel;
             this.blockchainDaemon = kernel.Get<CoreDaemon>();
             this.localClient = kernel.Get<LocalClient>();
-            this.blockCache = kernel.Get<IBlockStorageNew>();
+            this.blockCache = kernel.Get<IStorageManager>().BlockStorage;
 
             this.startTime = DateTime.UtcNow;
             this.runningTimeTimer = new DispatcherTimer();

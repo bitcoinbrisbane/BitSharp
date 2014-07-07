@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Esent
 {
-    public class BlockStorageCursor : IDisposable
+    internal class BlockStorageCursor : IDisposable
     {
         public readonly string jetDatabase;
         public readonly Instance jetInstance;

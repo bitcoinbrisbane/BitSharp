@@ -294,7 +294,7 @@ namespace BitSharp.Esent
             }
         }
 
-        public BlockElementWalker OpenWalker(UInt256 blockHash)
+        public IBlockElementWalker OpenWalker(UInt256 blockHash)
         {
             var cursor = this.OpenCursor();
             try
@@ -516,7 +516,6 @@ namespace BitSharp.Esent
                 CreateDatabase(jetDatabase, jetInstance);
             }
         }
-
 
         private void CreateDatabase(string jetDatabase, Instance jetInstance)
         {

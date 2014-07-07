@@ -1,4 +1,5 @@
 ﻿using BitSharp.Common;
+using BitSharp.Core.Builders;
 using BitSharp.Core.Domain;
 using System;
 using System.Collections.Generic;
@@ -11,40 +12,46 @@ namespace BitSharp.Core.Storage.Memory
 {
     public class MemoryChainStateBuilderStorage : IChainStateBuilderStorage
     {
-        private int blockHeight;
-        private UInt256 blockHash;
+        private ChainBuilder chain;
         private ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
 
-        private int? savedBlockHeight;
-        private UInt256? savedBlockHash;
+        private Chain savedChain;
         private ImmutableSortedDictionary<UInt256, UnspentTx> savedUnspentTransactions;
 
-        public MemoryChainStateBuilderStorage(IChainStateStorage parentUtxo)
+        public MemoryChainStateBuilderStorage(IChainStateStorage parentChainState)
         {
-            this.blockHeight = parentUtxo.BlockHeight;
-            this.blockHash = parentUtxo.BlockHash;
-            if (parentUtxo is MemoryChainStateStorage)
+            this.chain = parentChainState.Chain.ToBuilder();
+            if (parentChainState is MemoryChainStateStorage)
             {
-                this.unspentTransactions = ((MemoryChainStateStorage)parentUtxo).UnspentTransactions.ToBuilder();
+                this.unspentTransactions = ((MemoryChainStateStorage)parentChainState).UnspentTransactions.ToBuilder();
             }
             else
             {
-                this.unspentTransactions = ImmutableSortedDictionary.CreateRange(parentUtxo.UnspentTransactions()).ToBuilder();
+                this.unspentTransactions = ImmutableSortedDictionary.CreateRange(parentChainState.ReadUnspentTransactions()).ToBuilder();
             }
+        }
+
+        public MemoryChainStateBuilderStorage(ChainedHeader genesisHeader)
+        {
+            this.chain = Chain.CreateForGenesisBlock(genesisHeader).ToBuilder();
+            this.unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
         }
 
         public ImmutableSortedDictionary<UInt256, UnspentTx>.Builder UnspentTransactionsDictionary { get { return this.unspentTransactions; } }
 
-        public int BlockHeight
+        public Chain Chain
         {
-            get { return this.blockHeight; }
-            set { this.blockHeight = value; }
+            get { return this.chain.ToImmutable(); }
         }
 
-        public UInt256 BlockHash
+        public void AddChainedHeader(ChainedHeader chainedHeader)
         {
-            get { return this.blockHash; }
-            set { this.blockHash = value; }
+            this.chain.AddBlock(chainedHeader);
+        }
+
+        public void RemoveChainedHeader(ChainedHeader chainedHeader)
+        {
+            this.chain.RemoveBlock(chainedHeader);
         }
 
         public int TransactionCount
@@ -90,13 +97,9 @@ namespace BitSharp.Core.Storage.Memory
             this.unspentTransactions[txHash] = unspentTx;
         }
 
-        IEnumerable<KeyValuePair<UInt256, UnspentTx>> IChainStateBuilderStorage.UnspentTransactions()
+        IEnumerable<KeyValuePair<UInt256, UnspentTx>> IChainStateBuilderStorage.ReadUnspentTransactions()
         {
             return this.unspentTransactions;
-        }
-
-        public void Flush()
-        {
         }
 
         public IChainStateStorage ToImmutable()
@@ -104,7 +107,7 @@ namespace BitSharp.Core.Storage.Memory
             //TODO figure out if creating clean dictionaries actually has any benefits
             if (true)
             {
-                return new MemoryChainStateStorage(this.blockHeight, this.blockHash, this.unspentTransactions.ToImmutable());
+                return new MemoryChainStateStorage(this.chain.ToImmutable(), this.unspentTransactions.ToImmutable());
             }
             else
             {
@@ -112,7 +115,7 @@ namespace BitSharp.Core.Storage.Memory
                 foreach (var unspentTransaction in this.unspentTransactions)
                     compactUnspentTransactions.Add(unspentTransaction);
 
-                return new MemoryChainStateStorage(this.blockHeight, this.blockHash, compactUnspentTransactions.ToImmutable());
+                return new MemoryChainStateStorage(this.chain.ToImmutable(), compactUnspentTransactions.ToImmutable());
             }
         }
 
@@ -122,7 +125,7 @@ namespace BitSharp.Core.Storage.Memory
 
         public void BeginTransaction()
         {
-            if (this.savedUnspentTransactions != null || this.savedBlockHash != null)
+            if (this.savedChain != null || this.savedUnspentTransactions != null)
                 throw new InvalidOperationException();
 
             //if (this.blockHeight % 10000 == 0)
@@ -133,33 +136,29 @@ namespace BitSharp.Core.Storage.Memory
             //    this.unspentTransactions = compactUnspentTransactions;
             //}
 
+            this.savedChain = this.chain.ToImmutable();
             this.savedUnspentTransactions = this.unspentTransactions.ToImmutable();
-            this.savedBlockHeight = this.blockHeight;
-            this.savedBlockHash = this.blockHash;
         }
 
         public void CommitTransaction()
         {
-            if (this.savedUnspentTransactions == null || this.savedBlockHash == null)
+            if (this.savedChain == null || this.savedUnspentTransactions == null)
                 throw new InvalidOperationException();
 
+            this.savedChain = null;
             this.savedUnspentTransactions = null;
-            this.savedBlockHeight = null;
-            this.savedBlockHash = null;
         }
 
         public void RollbackTransaction()
         {
-            if (this.savedUnspentTransactions == null || this.savedBlockHash == null)
+            if (this.savedChain == null || this.savedUnspentTransactions == null)
                 throw new InvalidOperationException();
 
+            this.chain = this.savedChain.ToBuilder();
             this.unspentTransactions = this.savedUnspentTransactions.ToBuilder();
-            this.blockHeight = this.savedBlockHeight.Value;
-            this.blockHash = this.savedBlockHash.Value;
 
+            this.savedChain = null;
             this.savedUnspentTransactions = null;
-            this.savedBlockHeight = null;
-            this.savedBlockHash = null;
         }
     }
 }

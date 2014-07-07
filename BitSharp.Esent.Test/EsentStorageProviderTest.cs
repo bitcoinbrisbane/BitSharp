@@ -20,10 +20,17 @@ namespace BitSharp.Esent.Test
     public class EsentStorageProviderTest : StorageProviderTest
     {
         private string baseDirectory;
+        private EsentChainStateManager chainStateManager;
 
         [TestCleanup]
         public void Cleanup()
         {
+            if (this.chainStateManager != null)
+            {
+                this.chainStateManager.Dispose();
+                this.chainStateManager = null;
+            }
+
             if (Directory.Exists(this.baseDirectory))
                 Directory.Delete(this.baseDirectory, recursive: true);
         }
@@ -44,9 +51,10 @@ namespace BitSharp.Esent.Test
             return new BlockStorageNew(this.baseDirectory);
         }
 
-        public override IChainStateBuilderStorage OpenChainStateBuilderStorage(IChainStateStorage parentUtxo, Logger logger)
+        public override IChainStateBuilderStorage OpenChainStateBuilderStorage(ChainedHeader genesisHeader, Logger logger)
         {
-            return new ChainStateBuilderStorage(this.baseDirectory, parentUtxo, logger);
+            this.chainStateManager = new EsentChainStateManager(this.baseDirectory, logger);
+            return this.chainStateManager.CreateOrLoadChainState(genesisHeader);
         }
 
         [TestMethod]

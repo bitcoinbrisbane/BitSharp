@@ -211,7 +211,7 @@ namespace BitSharp.Core.Rules
                 return;
 
             // calculate the next required target
-            var requiredTarget = GetRequiredNextTarget(chainStateBuilder.Chain.ToImmutable());
+            var requiredTarget = GetRequiredNextTarget(chainStateBuilder.Chain);
 
             // validate block's target against the required target
             var blockTarget = chainedBlock.Header.CalculateTarget();

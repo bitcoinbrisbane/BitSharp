@@ -7,8 +7,12 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core
 {
-    public interface IBlockElementWalker
+    public interface IBlockElementWalker : IDisposable
     {
+        void BeginTransaction();
+
+        void CommitTransaction();
+
         bool TryMoveToIndex(int index, out BlockElement element);
 
         bool TryMoveLeft(out BlockElement element);

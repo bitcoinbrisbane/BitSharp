@@ -87,11 +87,14 @@
     <Compile Include="BlockStorageManager.cs" />
     <Compile Include="BlockStorageNew.cs" />
     <Compile Include="ChainedHeaderStorage.cs" />
+    <Compile Include="ChainState\ChainStateStorageCursor.cs" />
+    <Compile Include="ChainState\EsentChainStateManager.cs" />
+    <Compile Include="EsentStorageManager.cs" />
     <Compile Include="NetworkPeerStorage.cs" />
     <Compile Include="PersistentByteDictionary.cs" />
     <Compile Include="EsentStorageModule.cs" />
-    <Compile Include="ChainStateStorage.cs" />
-    <Compile Include="ChainStateBuilderStorage.cs" />
+    <Compile Include="ChainState\ChainStateStorage.cs" />
+    <Compile Include="ChainState\ChainStateBuilderStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="EsentDataStorage.cs" />
     <Compile Include="InvalidBlockStorage.cs" />

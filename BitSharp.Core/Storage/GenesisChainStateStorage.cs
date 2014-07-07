@@ -12,22 +12,20 @@ namespace BitSharp.Core.Storage
     {
         // genesis block coinbase is not included in utxo, it is unspendable
 
-        private readonly UInt256 blockHash;
+        private readonly Chain genesisChain;
 
-        public GenesisChainStateStorage(UInt256 blockHash)
+        public GenesisChainStateStorage(ChainedHeader genesisHeader)
         {
-            this.blockHash = blockHash;
+            this.genesisChain = Chain.CreateForGenesisBlock(genesisHeader);
         }
 
-        public int BlockHeight
+        public void Dispose()
         {
-            get { return 0; }
         }
 
-        
-        public UInt256 BlockHash
+        public Chain Chain
         {
-            get { return this.blockHash; }
+            get { return this.genesisChain; }
         }
 
         public int TransactionCount
@@ -46,13 +44,14 @@ namespace BitSharp.Core.Storage
             return false;
         }
 
-        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> UnspentTransactions()
+        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions()
         {
             return Enumerable.Empty<KeyValuePair<UInt256, UnspentTx>>();
         }
 
-        public void Dispose()
+        public IChainStateBuilderStorage ToBuilder()
         {
+            throw new NotSupportedException();
         }
     }
 }

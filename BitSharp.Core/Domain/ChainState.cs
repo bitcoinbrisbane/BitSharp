@@ -37,18 +37,6 @@ namespace BitSharp.Core.Domain
 
         public ChainedHeader LastBlock { get { return this.chain.LastBlock; } }
 
-        public UInt256 LastBlockHash
-        {
-            get
-            {
-                var lastBlockLocal = this.LastBlock;
-                if (lastBlockLocal != null)
-                    return this.LastBlock.Hash;
-                else
-                    return UInt256.Zero;
-            }
-        }
-
         public int Height
         {
             get
@@ -65,7 +53,7 @@ namespace BitSharp.Core.Domain
         {
             return new ChainState(
                 Chain.CreateForGenesisBlock(genesisBlock),
-                Utxo.CreateForGenesisBlock(genesisBlock.Hash)
+                Utxo.CreateForGenesisBlock(genesisBlock)
             );
         }
     }

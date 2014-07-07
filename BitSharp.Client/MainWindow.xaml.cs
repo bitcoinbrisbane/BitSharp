@@ -48,16 +48,18 @@ namespace BitSharp.Client
             try
             {
                 //TODO
-                var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "Data", "ChainState");
-                try { Directory.Delete(path, recursive: true); }
-                catch (Exception) { }
-                Directory.CreateDirectory(path);
-
-                //TODO
                 //MainnetRules.BypassValidation = true;
                 MainnetRules.IgnoreScripts = true;
                 MainnetRules.IgnoreSignatures = false;
                 MainnetRules.IgnoreScriptErrors = true;
+
+#if TEST_TOOL
+                var rulesType = RulesEnum.ComparisonToolTestNet;
+#elif TESTNET3
+                var rulesType = RulesEnum.TestNet3;
+#else
+                var rulesType = RulesEnum.MainNet;
+#endif
 
                 // initialize kernel
                 this.kernel = new StandardKernel();
@@ -77,7 +79,7 @@ namespace BitSharp.Client
 #elif MEMORY
                 modules.Add(new MemoryStorageModule());
 #else
-                modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "Data"), cacheSizeMaxBytes: int.MaxValue - 1));
+                modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "Data"), rulesType, cacheSizeMaxBytes: int.MaxValue - 1));
                 //ChainStateBuilderStorage.IndexOutputs = true;
 #endif
 
@@ -86,13 +88,7 @@ namespace BitSharp.Client
                 modules.Add(new NodeCacheModule());
 
                 // add rules module
-#if TEST_TOOL
-                modules.Add(new RulesModule(RulesEnum.ComparisonToolTestNet));
-#elif TESTNET3
-                modules.Add(new RulesModule(RulesEnum.TestNet3));
-#else
-                modules.Add(new RulesModule(RulesEnum.MainNet));
-#endif
+                modules.Add(new RulesModule(rulesType));
 
                 // load modules
                 this.kernel.Load(modules.ToArray());

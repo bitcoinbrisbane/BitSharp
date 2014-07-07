@@ -26,7 +26,7 @@ namespace BitSharp.Esent.Test
     {
         public abstract IBlockStorageNew OpenBlockStorage();
 
-        public abstract IChainStateBuilderStorage OpenChainStateBuilderStorage(IChainStateStorage parentUtxo, Logger logger);
+        public abstract IChainStateBuilderStorage OpenChainStateBuilderStorage(ChainedHeader genesisHeader, Logger logger);
 
         public void TestPrune()
         {
@@ -85,14 +85,13 @@ namespace BitSharp.Esent.Test
             var genesisBlock = blocks[0];
             var genesisHeader = new ChainedHeader(genesisBlock.Header, height: 0, totalWork: 0);
             var genesisChain = Chain.CreateForGenesisBlock(genesisHeader);
-            var genesisUtxo = Utxo.CreateForGenesisBlock(genesisBlock.Hash);
-            var chainBuilder = genesisChain.ToBuilder();
+            var genesisUtxo = Utxo.CreateForGenesisBlock(genesisHeader);
 
             var rules = new MainnetRules(logger, null);
 
             using (var blockStorage = this.OpenBlockStorage())
-            using (var chainStateBuilderStorage = this.OpenChainStateBuilderStorage(genesisUtxo.Storage, logger))
-            using (var chainStateBuilder = new ChainStateBuilder(chainBuilder, chainStateBuilderStorage, logger, rules, blockStorage))
+            using (var chainStateBuilderStorage = this.OpenChainStateBuilderStorage(genesisHeader, logger))
+            using (var chainStateBuilder = new ChainStateBuilder(chainStateBuilderStorage, logger, rules, blockStorage))
             {
                 // add blocks to storage
                 foreach (var block in blocks)
@@ -151,6 +150,11 @@ namespace BitSharp.Esent.Test
                     CollectionAssert.AreEqual(expectedUtxo, actualUtxo, new UtxoComparer(), "UTXO differs at height: {0}".Format2(blockIndex));
                 }
             }
+        }
+
+        public void TestChainStateSaveLoad()
+        {
+
         }
 
         private class UtxoComparer : IComparer, IComparer<KeyValuePair<UInt256, UnspentTx>>

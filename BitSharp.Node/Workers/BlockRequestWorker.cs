@@ -54,14 +54,14 @@ namespace BitSharp.Node.Workers
 
         private readonly WorkerMethod diagnosticWorker;
 
-        public BlockRequestWorker(Logger logger, WorkerConfig workerConfig, LocalClient localClient, CoreDaemon blockchainDaemon, ChainedHeaderCache chainedHeaderCache, IBlockStorageNew blockCache)
+        public BlockRequestWorker(Logger logger, WorkerConfig workerConfig, LocalClient localClient, CoreDaemon blockchainDaemon, IStorageManager storageManager, ChainedHeaderCache chainedHeaderCache)
             : base("BlockRequestWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.localClient = localClient;
             this.blockchainDaemon = blockchainDaemon;
             this.chainedHeaderCache = chainedHeaderCache;
-            this.blockCache = blockCache;
+            this.blockCache = storageManager.BlockStorage;
 
             this.allBlockRequests = new ConcurrentDictionary<UInt256, DateTime>();
             this.blockRequestsByPeer = new ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>>();
@@ -147,7 +147,7 @@ namespace BitSharp.Node.Workers
         private void UpdateLookAhead()
         {
             //TODO this needs to work properly when the internet connection is slower than blocks can be processed
-            
+
             var blockProcessingTime = this.blockchainDaemon.AverageBlockProcessingTime();
             if (blockProcessingTime == TimeSpan.Zero)
             {

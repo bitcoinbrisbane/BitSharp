@@ -17,21 +17,21 @@ namespace BitSharp.Core.Storage
     {
         private IBoundedCache<UInt256, BlockHeader> blockHeaderCache;
         private IBoundedCache<UInt256, ChainedHeader> chainedHeaderCache;
-        private IBoundedCache<UInt256, IImmutableList<KeyValuePair<UInt256, SpentTx>>> spentTransactionsCache;
-        private IBoundedCache<UInt256, IImmutableList<KeyValuePair<TxOutputKey, TxOutput>>> spentOutputsCache;
         private IBoundedCache<UInt256, string> invalidBlockCache;
 
         public override void Load()
         {
-            var blockHeaderStorage = this.Kernel.Get<IBlockHeaderStorage>();
+            var storageManager = this.Kernel.Get<IStorageManager>();
+
+            var blockHeaderStorage = storageManager.BlockHeaderStorage;
             this.blockHeaderCache = this.Kernel.Get<BoundedFullCache<UInt256, BlockHeader>>(
                 new ConstructorArgument("name", "Block Header Cache"), new ConstructorArgument("dataStorage", blockHeaderStorage));
 
-            var chainedHeaderStorage = this.Kernel.Get<IChainedHeaderStorage>();
+            var chainedHeaderStorage = storageManager.ChainedHeaderStorage;
             this.chainedHeaderCache = this.Kernel.Get<BoundedFullCache<UInt256, ChainedHeader>>(
                 new ConstructorArgument("name", "Chained Header Cache"), new ConstructorArgument("dataStorage", chainedHeaderStorage));
 
-            var invalidBlockStorage = this.Kernel.Get<IInvalidBlockStorage>();
+            var invalidBlockStorage = storageManager.InvalidBlockStorage;
             this.invalidBlockCache = this.Kernel.Get<BoundedCache<UInt256, string>>(
                 new ConstructorArgument("name", "Invalid Block Cache"), new ConstructorArgument("dataStorage", invalidBlockStorage));
 
@@ -46,8 +46,6 @@ namespace BitSharp.Core.Storage
             {
                 this.blockHeaderCache,
                 this.chainedHeaderCache,
-                this.spentTransactionsCache,
-                this.spentOutputsCache,
                 this.invalidBlockCache
             }
             .DisposeList();

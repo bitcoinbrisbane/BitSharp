@@ -69,7 +69,7 @@ namespace BitSharp.Node
 
         private Socket listenSocket;
 
-        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, CoreDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, IBlockStorageNew blockCache, NetworkPeerCache networkPeerCache)
+        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, CoreDaemon blockchainDaemon, IStorageManager storageManager, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, NetworkPeerCache networkPeerCache)
         {
             this.shutdownToken = new CancellationTokenSource();
 
@@ -80,7 +80,7 @@ namespace BitSharp.Node
             this.blockchainDaemon = blockchainDaemon;
             this.blockHeaderCache = blockHeaderCache;
             this.chainedHeaderCache = chainedHeaderCache;
-            this.blockCache = blockCache;
+            this.blockCache = storageManager.BlockStorage;
             this.networkPeerCache = networkPeerCache;
 
             this.messageRateMeasure = new RateMeasure();

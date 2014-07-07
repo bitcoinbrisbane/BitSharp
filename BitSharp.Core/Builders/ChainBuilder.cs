@@ -11,11 +11,16 @@ namespace BitSharp.Core.Builders
 {
     public class ChainBuilder
     {
-        private readonly ConcurrentListBuilder<ChainedHeader> blocks;
+        private readonly ImmutableList<ChainedHeader>.Builder blocks;
+
+        public ChainBuilder()
+        {
+            this.blocks = ImmutableList.CreateBuilder<ChainedHeader>();
+        }
 
         public ChainBuilder(Chain parentChain)
         {
-            this.blocks = new ConcurrentListBuilder<ChainedHeader>(parentChain.Blocks);
+            this.blocks = parentChain.Blocks.ToBuilder();
         }
 
         public ChainedHeader GenesisBlock { get { return this.blocks.First(); } }
@@ -40,9 +45,10 @@ namespace BitSharp.Core.Builders
 
         public void AddBlock(ChainedHeader chainedHeader)
         {
-            var lastBlock = this.LastBlock;
-            if (chainedHeader.PreviousBlockHash != lastBlock.Hash
-                || chainedHeader.Height != lastBlock.Height + 1)
+            var lastBlock = this.blocks.LastOrDefault();
+            if (lastBlock != null
+                && (chainedHeader.PreviousBlockHash != lastBlock.Hash
+                    || chainedHeader.Height != lastBlock.Height + 1))
                 throw new InvalidOperationException();
 
             this.blocks.Add(chainedHeader);
