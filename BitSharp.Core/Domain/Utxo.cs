@@ -23,7 +23,7 @@ namespace BitSharp.Domain
             this.chainStateStorage.Dispose();
         }
 
-        internal IChainStateStorage Storage
+        public IChainStateStorage Storage
         {
             get { return this.chainStateStorage; }
         }
