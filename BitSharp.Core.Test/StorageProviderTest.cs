@@ -1,8 +1,10 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
+using BitSharp.Core;
 using BitSharp.Core.Builders;
 using BitSharp.Core.Domain;
 using BitSharp.Core.Rules;
+using BitSharp.Core.Storage;
 using BitSharp.Core.Test;
 using BitSharp.Domain;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -10,7 +12,7 @@ using NLog;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
@@ -19,20 +21,62 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Esent.Test
 {
-    [TestClass]
-    public class RollbackTest
+    //TODO i'd like a better way than an abstract base for providing tests that storage providers can plug into
+    public abstract class StorageProviderTest
     {
-        [TestCleanup]
-        public void Cleanup()
+        public abstract IBlockStorageNew OpenBlockStorage();
+
+        public abstract IChainStateBuilderStorage OpenChainStateBuilderStorage(IChainStateStorage parentUtxo, Logger logger);
+
+        public virtual void TestPrune()
         {
-            EsentTests.CleanBaseDirectory();
+            var txCount = 100;
+            var transactions = Enumerable.Range(0, txCount).Select(x => RandomData.RandomTransaction()).ToImmutableArray();
+            var blockHeader = RandomData.RandomBlockHeader().With(MerkleRoot: DataCalculator.CalculateMerkleRoot(transactions));
+            var block = new Block(blockHeader, transactions);
+
+            var expectedFinalDepth = (int)Math.Ceiling(Math.Log(txCount, 2));
+            var expectedFinalElement = new BlockElement(index: 0, depth: expectedFinalDepth, hash: blockHeader.MerkleRoot, pruned: true);
+
+            var pruneOrderSource = Enumerable.Range(0, txCount).ToList();
+            var pruneOrder = new List<int>(txCount);
+
+            var random = new Random();
+            while (pruneOrderSource.Count > 0)
+            {
+                var randomIndex = random.Next(pruneOrderSource.Count);
+
+                pruneOrder.Add(pruneOrderSource[randomIndex]);
+                pruneOrderSource.RemoveAt(randomIndex);
+            }
+
+            using (var blockStorage = this.OpenBlockStorage())
+            {
+                blockStorage.AddBlock(block);
+                var blockTxes = blockStorage.ReadBlock(block.Hash, block.Header.MerkleRoot).ToList();
+
+                new MethodTimer().Time(() =>
+                {
+                    foreach (var pruneIndex in pruneOrder)
+                    {
+                        blockStorage.PruneElements(block.Hash, new[] { pruneIndex });
+                        blockStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
+                    }
+
+                    var finalBlockElements = blockStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
+
+                    Assert.AreEqual(1, finalBlockElements.Count);
+                    Assert.AreEqual(expectedFinalElement, finalBlockElements[0]);
+                });
+            }
         }
 
-        [TestMethod]
-        public void TestRollback()
+        public virtual void TestRollback()
         {
+            //TODO
+            MainnetRules.BypassValidation = true;
+
             var logger = LogManager.CreateNullLogger();
-            var baseDirectory = EsentTests.PrepareBaseDirectory();
             var sha256 = new SHA256Managed();
 
             var blockProvider = new MainnetBlockProvider();
@@ -46,8 +90,8 @@ namespace BitSharp.Esent.Test
 
             var rules = new MainnetRules(logger, null);
 
-            using (var blockStorage = new BlockStorageNew(baseDirectory))
-            using (var chainStateBuilderStorage = new ChainStateBuilderStorage(baseDirectory, genesisUtxo.Storage, logger))
+            using (var blockStorage = this.OpenBlockStorage())
+            using (var chainStateBuilderStorage = this.OpenChainStateBuilderStorage(genesisUtxo.Storage, logger))
             using (var chainStateBuilder = new ChainStateBuilder(chainBuilder, chainStateBuilderStorage, logger, rules, blockStorage, null, null))
             {
                 // add blocks to storage
@@ -77,6 +121,7 @@ namespace BitSharp.Esent.Test
                 }
 
                 // verify the utxo state before rolling back
+                //TODO verify the UTXO hash hard-coded here is correct
                 var expectedUtxoHash = UInt256.Parse("7e155a373c9a97d6d6f7f985e4d43f31a80833e9b4fce865c85552a650dd630e", NumberStyles.HexNumber);
                 using (var utxoStream = new UtxoStream(logger, expectedUtxos.Last()))
                 {

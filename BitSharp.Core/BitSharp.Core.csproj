@@ -161,6 +161,7 @@
     <Compile Include="Storage\IUnboundedStorage.cs" />
     <Compile Include="Storage\IChainStateBuilderStorage.cs" />
     <Compile Include="Storage\IChainStateStorage.cs" />
+    <Compile Include="Storage\Memory\MemoryBlockStorageNew.cs" />
     <Compile Include="Storage\Memory\MemoryStorage.cs" />
     <Compile Include="Storage\Memory\MemoryStorageModule.cs" />
     <Compile Include="Storage\Memory\MemoryChainStateBuilderStorage.cs" />
