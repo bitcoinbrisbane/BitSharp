@@ -426,10 +426,19 @@ namespace BitSharp.Core.Builders
         public void Unspend(TxInput input, ChainedHeader chainedHeader)
         {
             UnspentTx unspentTx;
-            if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, chainedHeader.Height, out unspentTx))
+            if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
             {
-                // output wasn't present in utxo, invalid block
-                throw new ValidationException(chainedHeader.Hash);
+                if (this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, chainedHeader.Height, out unspentTx))
+                {
+                    // restore fully spent transaction
+                    if (!this.chainStateBuilderStorage.TryAddTransaction(input.PreviousTxOutputKey.TxHash, unspentTx))
+                        throw new ValidationException(chainedHeader.Hash);
+                }
+                else
+                {
+                    // output wasn't present in utxo, invalid block
+                    throw new ValidationException(chainedHeader.Hash);
+                }
             }
 
             // retrieve previous output index

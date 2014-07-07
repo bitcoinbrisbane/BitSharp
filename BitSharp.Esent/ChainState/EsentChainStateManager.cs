@@ -97,7 +97,12 @@ namespace BitSharp.Esent
             JET_COLUMNID blockIndexColumnId;
             JET_COLUMNID txIndexColumnId;
             JET_COLUMNID outputStatesColumnId;
-            JET_COLUMNID spentBlockIndexColumnId;
+            JET_TABLEID spentTxTableId;
+            JET_COLUMNID spentTxHashColumnId;
+            JET_COLUMNID spentSpentBlockIndexColumnId;
+            JET_COLUMNID spentAddedBlockIndexColumnId;
+            JET_COLUMNID spentTxIndexColumnId;
+            JET_COLUMNID spentOutputCountColumnId;
 
             using (var jetSession = new Session(jetInstance))
             {
@@ -141,7 +146,6 @@ namespace BitSharp.Esent
                 Api.JetAddColumn(jetSession, unspentTxTableId, "BlockIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out blockIndexColumnId);
                 Api.JetAddColumn(jetSession, unspentTxTableId, "TxIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out txIndexColumnId);
                 Api.JetAddColumn(jetSession, unspentTxTableId, "OutputStates", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out outputStatesColumnId);
-                Api.JetAddColumn(jetSession, unspentTxTableId, "SpentBlockIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long }, null, 0, out spentBlockIndexColumnId);
 
                 Api.JetCreateIndex2(jetSession, unspentTxTableId,
                     new JET_INDEXCREATE[]
@@ -156,7 +160,29 @@ namespace BitSharp.Esent
                         }
                     }, 1);
 
-                Api.JetCreateIndex2(jetSession, unspentTxTableId,
+                Api.JetCloseTable(jetSession, unspentTxTableId);
+
+                Api.JetCreateTable(jetSession, utxoDbId, "SpentTx", 0, 0, out spentTxTableId);
+                Api.JetAddColumn(jetSession, spentTxTableId, "TxHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out spentTxHashColumnId);
+                Api.JetAddColumn(jetSession, spentTxTableId, "SpentBlockIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out spentSpentBlockIndexColumnId);
+                Api.JetAddColumn(jetSession, spentTxTableId, "AddedBlockIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out spentAddedBlockIndexColumnId);
+                Api.JetAddColumn(jetSession, spentTxTableId, "TxIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out spentTxIndexColumnId);
+                Api.JetAddColumn(jetSession, spentTxTableId, "OutputCount", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out spentOutputCountColumnId);
+
+                Api.JetCreateIndex2(jetSession, spentTxTableId,
+                    new JET_INDEXCREATE[]
+                    {
+                        new JET_INDEXCREATE
+                        {
+                            cbKeyMost = 255,
+                            grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                            szIndexName = "IX_TxHash",
+                            szKey = "+TxHash\0\0",
+                            cbKey = "+TxHash\0\0".Length
+                        }
+                    }, 1);
+
+                Api.JetCreateIndex2(jetSession, spentTxTableId,
                     new JET_INDEXCREATE[]
                     {
                         new JET_INDEXCREATE
@@ -164,12 +190,12 @@ namespace BitSharp.Esent
                             cbKeyMost = 255,
                             grbit = CreateIndexGrbit.IndexIgnoreAnyNull,
                             szIndexName = "IX_SpentBlockIndex",
-                            szKey = "+SpentBlockIndex\0\0",
-                            cbKey = "+SpentBlockIndex\0\0".Length
+                            szKey = "+SpentBlockIndex\0+AddedBlockIndex\0\0",
+                            cbKey = "+SpentBlockIndex\0+AddedBlockIndex\0\0".Length
                         }
                     }, 1);
 
-                Api.JetCloseTable(jetSession, unspentTxTableId);
+                Api.JetCloseTable(jetSession, spentTxTableId);
             }
         }
 

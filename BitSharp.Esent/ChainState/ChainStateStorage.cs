@@ -181,13 +181,9 @@ namespace BitSharp.Esent
                 var blockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.blockIndexColumnId).Value;
                 var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.txIndexColumnId).Value;
                 var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.outputStatesColumnId));
-                var spentBlockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.spentBlockIndexColumnId);
 
-                if (spentBlockIndex == null)
-                {
-                    unspentTx = new UnspentTx(blockIndex, txIndex, outputStates);
-                    return true;
-                }
+                unspentTx = new UnspentTx(blockIndex, txIndex, outputStates);
+                return true;
             }
 
             unspentTx = default(UnspentTx);
@@ -196,18 +192,18 @@ namespace BitSharp.Esent
 
         internal static bool TryGetTransaction(ChainStateStorageCursor cursor, UInt256 txHash, int spentBlockIndex, out UnspentTx unspentTx)
         {
-            //Api.JetSetCurrentIndex(cursor.jetSession, cursor.unspentTxTableId, "IX_TxHash");
-            Api.MakeKey(cursor.jetSession, cursor.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(cursor.jetSession, cursor.unspentTxTableId, SeekGrbit.SeekEQ))
+            //Api.JetSetCurrentIndex(cursor.jetSession, cursor.spentTxTableId, "IX_TxHash");
+            Api.MakeKey(cursor.jetSession, cursor.spentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
+            if (Api.TrySeek(cursor.jetSession, cursor.spentTxTableId, SeekGrbit.SeekEQ))
             {
-                var blockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.blockIndexColumnId).Value;
-                var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.txIndexColumnId).Value;
-                var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.outputStatesColumnId));
-                var storedSpentBlockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.spentBlockIndexColumnId);
+                var addedBlockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.spentTxTableId, cursor.spentAddedBlockIndexColumnId).Value;
+                var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.spentTxTableId, cursor.spentTxIndexColumnId).Value;
+                var outputCount = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.spentTxTableId, cursor.spentOutputCountColumnId).Value;
+                var storedSpentBlockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.spentTxTableId, cursor.spentSpentBlockIndexColumnId).Value;
 
-                if (storedSpentBlockIndex == null || storedSpentBlockIndex.Value == spentBlockIndex)
+                if (storedSpentBlockIndex == spentBlockIndex)
                 {
-                    unspentTx = new UnspentTx(blockIndex, txIndex, outputStates);
+                    unspentTx = new UnspentTx(addedBlockIndex, txIndex, new OutputStates(outputCount, OutputState.Spent));
                     return true;
                 }
             }
@@ -226,12 +222,8 @@ namespace BitSharp.Esent
                 var blockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.blockIndexColumnId).Value;
                 var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.txIndexColumnId).Value;
                 var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.outputStatesColumnId));
-                var spentBlockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.spentBlockIndexColumnId);
 
-                if (spentBlockIndex == null)
-                {
-                    yield return new KeyValuePair<UInt256, UnspentTx>(txHash, new UnspentTx(blockIndex, txIndex, outputStates));
-                }
+                yield return new KeyValuePair<UInt256, UnspentTx>(txHash, new UnspentTx(blockIndex, txIndex, outputStates));
             }
         }
 

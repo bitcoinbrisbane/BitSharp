@@ -154,7 +154,6 @@ namespace BitSharp.Esent
                     Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.blockIndexColumnId, unspentTx.BlockIndex);
                     Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.txIndexColumnId, unspentTx.TxIndex);
                     Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
-                    Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.spentBlockIndexColumnId, null);
 
                     Api.JetUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId);
 
@@ -182,22 +181,28 @@ namespace BitSharp.Esent
             if (!Api.TrySeek(this.cursor.jetSession, this.cursor.unspentTxTableId, SeekGrbit.SeekEQ))
                 throw new KeyNotFoundException();
 
-            if (spentBlockIndex < 0)
+            var addedBlockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.blockIndexColumnId).Value;
+            var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.txIndexColumnId).Value;
+            var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.outputStatesColumnId));
+
+            Api.JetDelete(this.cursor.jetSession, this.cursor.unspentTxTableId);
+
+            if (spentBlockIndex >= 0)
             {
-                Api.JetDelete(this.cursor.jetSession, this.cursor.unspentTxTableId);
-            }
-            else
-            {
-                Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId, JET_prep.Replace);
+                Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.spentTxTableId, JET_prep.Insert);
                 try
                 {
-                    Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.spentBlockIndexColumnId, spentBlockIndex);
+                    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentTxHashColumnId, txHash.ToByteArray());
+                    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentSpentBlockIndexColumnId, spentBlockIndex);
+                    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentAddedBlockIndexColumnId, addedBlockIndex);
+                    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentTxIndexColumnId, txIndex);
+                    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentOutputCountColumnId, outputStates.Length);
 
-                    Api.JetUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId);
+                    Api.JetUpdate(this.cursor.jetSession, this.cursor.spentTxTableId);
                 }
                 catch (Exception)
                 {
-                    Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId, JET_prep.Cancel);
+                    Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.spentTxTableId, JET_prep.Cancel);
                     throw;
                 }
             }
@@ -219,7 +224,6 @@ namespace BitSharp.Esent
             try
             {
                 Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
-                Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.spentBlockIndexColumnId, null);
 
                 Api.JetUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId);
             }
