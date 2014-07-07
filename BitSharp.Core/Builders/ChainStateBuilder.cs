@@ -215,7 +215,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        public void RollbackBlock(ChainedBlock chainedBlock)
+        public void RollbackBlock(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
         {
             //using (this.chainStateMonitor.Start())
             {
@@ -223,14 +223,14 @@ namespace BitSharp.Core.Builders
                 try
                 {
                     // remove the block from the chain
-                    this.Chain.RemoveBlock(chainedBlock.ChainedHeader);
+                    this.Chain.RemoveBlock(chainedHeader);
 
                     // store the block hash
                     this.chainStateBuilderStorage.BlockHeight = this.Chain.Height;
                     this.chainStateBuilderStorage.BlockHash = this.Chain.LastBlockHash;
 
                     // rollback the utxo
-                    this.RollbackUtxo(chainedBlock);
+                    this.RollbackUtxo(chainedHeader, blockTxes);
 
                     // commit the chain state
                     this.CommitTransaction();
@@ -322,10 +322,9 @@ namespace BitSharp.Core.Builders
             if (chainedHeader.Height <= 0)
                 throw new InvalidOperationException();
 
-            var txIndex = -1;
             foreach (var blockTx in blockTxes)
             {
-                txIndex++;
+                var txIndex = blockTx.Index;
                 this.stats.txCount++;
 
                 //TODO apply real coinbase rule
@@ -390,7 +389,6 @@ namespace BitSharp.Core.Builders
         {
             UnspentTx unspentTx;
             if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
-            //|| !this.chainStateBuilderStorage.ContainsOutput(input.PreviousTxOutputKey))
             {
                 // output wasn't present in utxo, invalid block
                 throw new ValidationException(chainedHeader.Hash);
@@ -416,13 +414,11 @@ namespace BitSharp.Core.Builders
             // update output states
             unspentTx = unspentTx.SetOutputState(outputIndex, OutputState.Spent);
 
-            // update partially spent transaction in the utxo
-            if (unspentTx.OutputStates.Any(x => x == OutputState.Unspent))
-            {
-                this.chainStateBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
-            }
+            // update transaction output states in the utxo
+            this.chainStateBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
+
             // remove fully spent transaction from the utxo
-            else
+            if (unspentTx.OutputStates.All(x => x == OutputState.Spent))
             {
                 this.chainStateBuilderStorage.RemoveTransaction(input.PreviousTxOutputKey.TxHash, chainedHeader.Height);
 
@@ -445,61 +441,35 @@ namespace BitSharp.Core.Builders
         }
 
         //TODO with the rollback information that's now being stored, rollback could be down without needing the block
-        private void RollbackUtxo(Block block)
+        private void RollbackUtxo(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
         {
-            //TODO currently a MissingDataException will get thrown if the rollback information is missing
-            //TODO rollback is still possible if any resurrecting transactions can be found
-            //TODO the network does not allow arbitrary transaction lookup, but if the transactions can be retrieved then this code should allow it
-            //TODO this should be handled by a distinct worker that rebuilds rollback information
+            //TODO don't reverse here, storage should be read in reverse
+            foreach (var blockTx in blockTxes.Reverse())
+            {
+                var txIndex = blockTx.Index;
 
-            //var spentTransactions = new Dictionary<UInt256, SpentTx>();
-            //spentTransactions.AddRange(this.spentTransactionsCache[block.Hash]);
+                if (txIndex == 0)
+                {
+                    var coinbaseTx = blockTx.Transaction;
 
-            //var spentOutputs = new Dictionary<TxOutputKey, TxOutput>();
-            //spentOutputs.AddRange(this.spentOutputsCache[block.Hash]);
+                    // remove coinbase outputs
+                    this.Unmint(coinbaseTx, chainedHeader, isCoinbase: true);
+                }
+                else
+                {
+                    var tx = blockTx.Transaction;
 
-            //for (var txIndex = block.Transactions.Count - 1; txIndex >= 1; txIndex--)
-            //{
-            //    var tx = block.Transactions[txIndex];
+                    // remove outputs
+                    this.Unmint(tx, chainedHeader, isCoinbase: false);
 
-            //    // MONITOR: BeforeRemoveTransaction
-            //    if (this.chainStateMonitor != null)
-            //        this.chainStateMonitor.BeforeRemoveTransaction(ChainPosition.Fake(), tx);
-
-            //    // remove outputs
-            //    this.Unmint(tx, this.LastBlock, isCoinbase: false);
-
-            //    // remove inputs in reverse order
-            //    for (var inputIndex = tx.Inputs.Count - 1; inputIndex >= 0; inputIndex--)
-            //    {
-            //        var input = tx.Inputs[inputIndex];
-            //        this.Unspend(input, this.LastBlock, spentTransactions, spentOutputs);
-            //    }
-
-            //    // MONITOR: AfterRemoveTransaction
-            //    if (this.chainStateMonitor != null)
-            //        this.chainStateMonitor.AfterRemoveTransaction(ChainPosition.Fake(), tx);
-            //}
-
-            //var coinbaseTx = block.Transactions[0];
-
-            //// MONITOR: BeforeRemoveTransaction
-            //if (this.chainStateMonitor != null)
-            //    this.chainStateMonitor.BeforeRemoveTransaction(ChainPosition.Fake(), coinbaseTx);
-
-            //// remove coinbase outputs
-            //this.Unmint(coinbaseTx, this.LastBlock, isCoinbase: true);
-
-            //for (var inputIndex = coinbaseTx.Inputs.Count - 1; inputIndex >= 0; inputIndex--)
-            //{
-            //    // MONITOR: UnCoinbaseInput
-            //    if (this.chainStateMonitor != null)
-            //        this.chainStateMonitor.UnCoinbaseInput(ChainPosition.Fake(), coinbaseTx.Inputs[inputIndex]);
-            //}
-
-            //// MONITOR: AfterRemoveTransaction
-            //if (this.chainStateMonitor != null)
-            //    this.chainStateMonitor.AfterRemoveTransaction(ChainPosition.Fake(), coinbaseTx);
+                    // remove inputs in reverse order
+                    for (var inputIndex = tx.Inputs.Length - 1; inputIndex >= 0; inputIndex--)
+                    {
+                        var input = tx.Inputs[inputIndex];
+                        this.Unspend(input, chainedHeader);
+                    }
+                }
+            }
         }
 
         public void Unmint(Transaction tx, ChainedHeader chainedHeader, bool isCoinbase)
@@ -545,36 +515,13 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        public void Unspend(TxInput input, ChainedHeader chainedHeader, Dictionary<UInt256, SpentTx> spentTransactions, Dictionary<TxOutputKey, TxOutput> spentOutputs)
+        public void Unspend(TxInput input, ChainedHeader chainedHeader)
         {
-            //TODO currently a MissingDataException will get thrown if the rollback information is missing
-            //TODO rollback is still possible if any resurrecting transactions can be found
-            //TODO the network does not allow arbitrary transaction lookup, but if the transactions can be retrieved then this code should allow it
-
-            //// retrieve rollback information
-            //UInt256 prevTxBlockHash;
-            //if (!spentTransactions.TryGetValue(input.PreviousTxOutputKey.TxHash, out prevTxBlockHash))
-            //{
-            //    //TODO throw should indicate rollback info is missing
-            //    throw new MissingDataException(null);
-            //}
-
-            // retrieve previous output
-            TxOutput prevTxOutput;
-            if (!spentOutputs.TryGetValue(input.PreviousTxOutputKey, out prevTxOutput))
-                throw new Exception("TODO - corruption");
-
-            // retrieve transaction output states, if not found then a fully spent transaction is being resurrected
             UnspentTx unspentTx;
             if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
             {
-                // retrieve spent transaction
-                SpentTx prevSpentTx;
-                if (!spentTransactions.TryGetValue(input.PreviousTxOutputKey.TxHash, out prevSpentTx))
-                    throw new Exception("TODO - corruption");
-
-                // create fully spent transaction output state
-                unspentTx = new UnspentTx(/*prevSpentTx.ConfirmedBlockHash,*/ prevSpentTx.BlockIndex, prevSpentTx.TxIndex, prevSpentTx.OutputCount, OutputState.Spent);
+                // output wasn't present in utxo, invalid block
+                throw new ValidationException(chainedHeader.Hash);
             }
 
             // retrieve previous output index
@@ -588,13 +535,6 @@ namespace BitSharp.Core.Builders
 
             // mark output as unspent
             this.chainStateBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx.SetOutputState(outputIndex, OutputState.Unspent));
-
-            // add transaction output back to utxo
-            //this.chainStateBuilderStorage.AddOutput(input.PreviousTxOutputKey, prevTxOutput);
-
-            // MONITOR: UnspendTxOutput
-            //if (this.chainStateMonitor != null)
-            //    this.chainStateMonitor.UnspendTxOutput(ChainPosition.Fake(), input, input.PreviousTxOutputKey, prevTxOutput, GetOutputScripHash(prevTxOutput));
         }
 
         private UInt256 GetOutputScripHash(TxOutput txOutput)

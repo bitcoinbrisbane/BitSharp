@@ -26,7 +26,7 @@ namespace BitSharp.Esent.Test
             var baseDirectory = EsentTests.PrepareBaseDirectory();
 
             var blockProvider = new MainnetBlockProvider();
-            var blocks = Enumerable.Range(0, 100).Select(x => blockProvider.GetBlock(x)).ToList();
+            var blocks = Enumerable.Range(0, 1000).Select(x => blockProvider.GetBlock(x)).ToList();
 
             var genesisBlock = blocks[0];
             var genesisHeader = new ChainedHeader(genesisBlock.Header, height: 0, totalWork: 0);
@@ -72,8 +72,7 @@ namespace BitSharp.Esent.Test
                     var chainedHeader = new ChainedHeader(block.Header, blockIndex, 0);
                     var blockTxes = block.Transactions.Select((x, i) => new BlockTx(i, 0, x.Hash, x));
 
-                    var chainedBlock = new ChainedBlock(chainedHeader, block);
-                    chainStateBuilder.RollbackBlock(chainedBlock);
+                    chainStateBuilder.RollbackBlock(chainedHeader, blockTxes);
 
                     var expectedUtxo = expectedUtxos.Last();
                     expectedUtxos.RemoveAt(expectedUtxos.Count - 1);
