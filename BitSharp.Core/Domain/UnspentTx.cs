@@ -9,28 +9,23 @@ namespace BitSharp.Core.Domain
 {
     public class UnspentTx
     {
-        //private readonly UInt256 confirmedBlockHash;
         private readonly int blockIndex;
         private readonly int txIndex;
         private readonly OutputStates outputStates;
 
-        public UnspentTx(/*UInt256 confirmedBlockHash,*/ int blockIndex, int txIndex, OutputStates outputStates)
+        public UnspentTx(int blockIndex, int txIndex, OutputStates outputStates)
         {
-            //this.confirmedBlockHash = confirmedBlockHash;
             this.blockIndex = blockIndex;
             this.txIndex = txIndex;
             this.outputStates = outputStates;
         }
 
-        public UnspentTx(/*UInt256 confirmedBlockHash,*/ int blockIndex, int txIndex, int length, OutputState state)
+        public UnspentTx(int blockIndex, int txIndex, int length, OutputState state)
         {
-            //this.confirmedBlockHash = confirmedBlockHash;
             this.blockIndex = blockIndex;
             this.txIndex = txIndex;
             this.outputStates = new OutputStates(length, state);
         }
-
-        //public UInt256 ConfirmedBlockHash { get { return this.confirmedBlockHash; } }
 
         public int BlockIndex { get { return this.blockIndex; } }
 
@@ -48,18 +43,18 @@ namespace BitSharp.Core.Domain
             return new SpentTx(this.blockIndex, this.txIndex, this.outputStates.Length);
         }
 
-        //public override bool Equals(object obj)
-        //{
-        //    if (!(obj is UnspentTx))
-        //        return false;
+        public override bool Equals(object obj)
+        {
+            if (!(obj is UnspentTx))
+                return false;
 
-        //    var other = (UnspentTx)obj;
-        //    return other.confirmedBlockHash == this.confirmedBlockHash && other.outputStates.Equals(this.outputStates);
-        //}
+            var other = (UnspentTx)obj;
+            return other.blockIndex == this.blockIndex && other.txIndex == this.txIndex && other.outputStates.Equals(this.outputStates);
+        }
 
-        //public override int GetHashCode()
-        //{
-        //    return this.confirmedBlockHash.GetHashCode() ^ this.outputStates.GetHashCode();
-        //}
+        public override int GetHashCode()
+        {
+            return this.blockIndex.GetHashCode() ^ this.txIndex.GetHashCode() ^ this.outputStates.GetHashCode();
+        }
     }
 }

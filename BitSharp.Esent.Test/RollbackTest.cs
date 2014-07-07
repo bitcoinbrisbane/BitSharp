@@ -7,6 +7,7 @@ using BitSharp.Domain;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NLog;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -25,7 +26,7 @@ namespace BitSharp.Esent.Test
             var baseDirectory = EsentTests.PrepareBaseDirectory();
 
             var blockProvider = new MainnetBlockProvider();
-            var blocks = Enumerable.Range(0, 10000).Select(x => blockProvider.GetBlock(x)).ToList();
+            var blocks = Enumerable.Range(0, 100).Select(x => blockProvider.GetBlock(x)).ToList();
 
             var genesisBlock = blocks[0];
             var genesisHeader = new ChainedHeader(genesisBlock.Header, height: 0, totalWork: 0);
@@ -63,6 +64,8 @@ namespace BitSharp.Esent.Test
                     }
                 }
 
+                expectedUtxos.RemoveAt(expectedUtxos.Count - 1);
+
                 for (var blockIndex = blocks.Count - 1; blockIndex >= 1; blockIndex--)
                 {
                     var block = blocks[blockIndex];
@@ -81,9 +84,24 @@ namespace BitSharp.Esent.Test
                         actualUtxo = chainState.Utxo.GetUnspentTransactions().ToList();
                     }
 
-                    //TODO need to implement the actual equality comparision
-                    CollectionAssert.AreEqual(expectedUtxo, actualUtxo);
+                    CollectionAssert.AreEqual(expectedUtxo, actualUtxo, new UtxoComparer());
                 }
+            }
+        }
+
+        private class UtxoComparer : IComparer, IComparer<KeyValuePair<UInt256, UnspentTx>>
+        {
+            public int Compare(KeyValuePair<UInt256, UnspentTx> x, KeyValuePair<UInt256, UnspentTx> y)
+            {
+                if (x.Key == y.Key && x.Value.Equals(y.Value))
+                    return 0;
+                else
+                    return -1;
+            }
+
+            int IComparer.Compare(object x, object y)
+            {
+                return this.Compare((KeyValuePair<UInt256, UnspentTx>)x, (KeyValuePair<UInt256, UnspentTx>)y);
             }
         }
     }
