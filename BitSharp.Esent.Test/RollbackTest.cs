@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NLog;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -42,7 +43,11 @@ namespace BitSharp.Esent.Test
                     blockStorage.AddBlock(block);
 
                 var expectedUtxos = new List<List<KeyValuePair<UInt256, UnspentTx>>>();
-                expectedUtxos.Add(chainStateBuilder.ToImmutable().Utxo.GetUnspentTransactions().ToList());
+
+                using (var chainState = chainStateBuilder.ToImmutable())
+                {
+                    expectedUtxos.Add(chainState.Utxo.GetUnspentTransactions().ToList());
+                }
 
                 for (var blockIndex = 1; blockIndex < blocks.Count; blockIndex++)
                 {
@@ -51,7 +56,11 @@ namespace BitSharp.Esent.Test
                     var blockTxes = block.Transactions.Select((x, i) => new BlockTx(i, 0, x.Hash, x));
 
                     chainStateBuilder.AddBlock(chainedHeader, blockTxes);
-                    expectedUtxos.Add(chainStateBuilder.ToImmutable().Utxo.GetUnspentTransactions().ToList());
+
+                    using (var chainState = chainStateBuilder.ToImmutable())
+                    {
+                        expectedUtxos.Add(chainState.Utxo.GetUnspentTransactions().ToList());
+                    }
                 }
 
                 for (var blockIndex = blocks.Count - 1; blockIndex >= 1; blockIndex--)
@@ -66,8 +75,12 @@ namespace BitSharp.Esent.Test
                     var expectedUtxo = expectedUtxos.Last();
                     expectedUtxos.RemoveAt(expectedUtxos.Count - 1);
 
-                    var actualUtxo = chainStateBuilder.ToImmutable().Utxo.GetUnspentTransactions().ToList();
-                    
+                    List<KeyValuePair<UInt256, UnspentTx>> actualUtxo;
+                    using (var chainState = chainStateBuilder.ToImmutable())
+                    {
+                        actualUtxo = chainState.Utxo.GetUnspentTransactions().ToList();
+                    }
+
                     //TODO need to implement the actual equality comparision
                     CollectionAssert.AreEqual(expectedUtxo, actualUtxo);
                 }
