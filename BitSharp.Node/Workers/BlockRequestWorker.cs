@@ -22,7 +22,7 @@ namespace BitSharp.Node.Workers
     public class BlockRequestWorker : Worker
     {
         private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromMinutes(5);
-        private static readonly TimeSpan MISSING_STALE_REQUEST_TIME = TimeSpan.FromSeconds(15);
+        private static readonly TimeSpan MISSING_STALE_REQUEST_TIME = TimeSpan.FromSeconds(3);
         private static readonly int MAX_CRITICAL_LOOKAHEAD = 1.THOUSAND();
         private static readonly int MAX_REQUESTS_PER_PEER = 100;
 
