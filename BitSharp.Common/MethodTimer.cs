@@ -110,11 +110,11 @@ namespace BitSharp.Common
             {
                 if (timerName != null)
                 {
-                    LogIf(stopwatch.ElapsedMilliseconds > filterTime, "\t[TIMING] {0}:{1}:{2} took {3:#,##0.000000} s".Format2(timerName, memberName, lineNumber, stopwatch.ElapsedSecondsFloat()));
+                    LogIf(stopwatch.ElapsedMilliseconds > filterTime, "\t[TIMING] {0}:{1}:{2} took {3:#,##0.000000} s".Format2(timerName, memberName, lineNumber, stopwatch.Elapsed.TotalSeconds));
                 }
                 else
                 {
-                    LogIf(stopwatch.ElapsedMilliseconds > filterTime, "\t[TIMING] {1}:{2} took {3:#,##0.000000} s".Format2(timerName, memberName, lineNumber, stopwatch.ElapsedSecondsFloat()));
+                    LogIf(stopwatch.ElapsedMilliseconds > filterTime, "\t[TIMING] {1}:{2} took {3:#,##0.000000} s".Format2(timerName, memberName, lineNumber, stopwatch.Elapsed.TotalSeconds));
                 }
             }
         }
