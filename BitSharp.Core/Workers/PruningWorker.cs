@@ -59,8 +59,11 @@ namespace BitSharp.Core.Workers
                     //        this.logger.Info("Pruned to block: {0:#,##0}".Format2(i));
                     //}
 
+                    var stopwatch = Stopwatch.StartNew();
                     this.chainStateBuilder.RemoveSpentTransactionsToHeight(maxHeight);
-                    this.logger.Info("Pruned to block: {0:#,##0}".Format2(maxHeight));
+                    stopwatch.Stop();
+
+                    this.logger.Info("Pruned to block: {0:#,##0}, took: {1:#,##0.000}s".Format2(maxHeight, stopwatch.Elapsed.TotalSeconds));
 
                     break;
 
