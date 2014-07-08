@@ -218,7 +218,7 @@ namespace BitSharp.Core.Builders
 
         public void LogBlockchainProgress()
         {
-            var elapsedSeconds = this.Stats.durationStopwatch.ElapsedSecondsFloat();
+            var elapsedSeconds = this.Stats.durationStopwatch.Elapsed.TotalSeconds;
             var blockRate = this.stats.blockRateMeasure.GetAverage(TimeSpan.FromSeconds(1));
             var txRate = this.stats.txRateMeasure.GetAverage(TimeSpan.FromSeconds(1));
             var inputRate = this.stats.inputRateMeasure.GetAverage(TimeSpan.FromSeconds(1));

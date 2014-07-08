@@ -257,7 +257,7 @@ namespace BitSharp.Common
                         if (DateTime.Now - lastReportTime > TimeSpan.FromSeconds(30))
                         {
                             lastReportTime = DateTime.Now;
-                            var percentWorkerTime = workerTime.ElapsedSecondsFloat() / totalTime.ElapsedSecondsFloat();
+                            var percentWorkerTime = workerTime.Elapsed.TotalSeconds / totalTime.Elapsed.TotalSeconds;
                             this.logger.Debug("{0,55} work time: {1,10:##0.00%}".Format2(this.Name, percentWorkerTime));
                         }
                     }

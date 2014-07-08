@@ -100,7 +100,7 @@ namespace BitSharp.Core.Workers
             finally
             {
                 stopwatch.Stop();
-                this.logger.Info("Blockchain revalidation: {0:#,##0.000000}s".Format2(stopwatch.ElapsedSecondsFloat()));
+                this.logger.Info("Blockchain revalidation: {0:#,##0.000000}s".Format2(stopwatch.Elapsed.TotalSeconds));
             }
         }
     }

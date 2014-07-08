@@ -330,11 +330,6 @@ namespace BitSharp.Common.ExtensionMethods
             return value * 1000 * 1000 * 1000;
         }
 
-        public static float ElapsedSecondsFloat(this Stopwatch stopwatch)
-        {
-            return (float)stopwatch.ElapsedTicks / Stopwatch.Frequency;
-        }
-
         public static void DisposeList(this IEnumerable<IDisposable> disposables)
         {
             var exceptions = new List<Exception>();
