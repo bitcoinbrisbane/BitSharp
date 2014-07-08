@@ -50,7 +50,7 @@ namespace BitSharp.Core.Workers
             this.blockCache = storageManager.BlockStorage;
             this.invalidBlockCache = invalidBlockCache;
 
-            this.blockProcessingDurationMeasure = new DurationMeasure();
+            this.blockProcessingDurationMeasure = new DurationMeasure(sampleCutoff: TimeSpan.FromMinutes(5));
             this.blockMissRateMeasure = new RateMeasure();
 
             this.targetChainWorker = targetChainWorker;
