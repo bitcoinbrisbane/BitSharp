@@ -38,6 +38,8 @@ namespace BitSharp.Core.Storage
 
         IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions();
 
+        void RemoveSpentTransactions(int spentBlockIndex);
+
         IChainStateStorage ToImmutable();
     }
 }

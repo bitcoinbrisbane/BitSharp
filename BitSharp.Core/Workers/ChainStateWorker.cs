@@ -38,7 +38,7 @@ namespace BitSharp.Core.Workers
         private readonly ChainStateBuilder chainStateBuilder;
         private Chain currentChain;
 
-        //private readonly PruningWorker pruningWorker;
+        private readonly PruningWorker pruningWorker;
 
         public ChainStateWorker(TargetChainWorker targetChainWorker, ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, WorkerConfig workerConfig, Logger logger, IKernel kernel, IBlockchainRules rules, IStorageManager storageManager, InvalidBlockCache invalidBlockCache)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
@@ -57,9 +57,9 @@ namespace BitSharp.Core.Workers
             this.chainStateBuilder = chainStateBuilder;
             this.currentChain = this.chainStateBuilder.Chain;
 
-            //this.pruningWorker = kernel.Get<PruningWorker>(
-            //    new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromMinutes(5))),
-            //    new ConstructorArgument("getChainStateBuilder", (Func<ChainStateBuilder>)(() => this.chainStateBuilder)));
+            this.pruningWorker = new PruningWorker(
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromMinutes(5)),
+                this.chainStateBuilder, this.logger, this.rules);
         }
 
         public TimeSpan AverageBlockProcessingTime()
@@ -84,18 +84,18 @@ namespace BitSharp.Core.Workers
                 this.blockProcessingDurationMeasure,
                 this.blockMissRateMeasure,
                 this.chainStateBuilder,
-                //this.pruningWorker,
+                this.pruningWorker,
             }.DisposeList();
         }
 
         protected override void SubStart()
         {
-            //this.pruningWorker.Start();
+            this.pruningWorker.Start();
         }
 
         protected override void SubStop()
         {
-            //this.pruningWorker.Stop();
+            this.pruningWorker.Stop();
         }
 
         protected override void WorkAction()
@@ -134,7 +134,7 @@ namespace BitSharp.Core.Workers
                     blockStopwatch.Stop();
                     this.blockProcessingDurationMeasure.Tick(blockStopwatch.Elapsed);
 
-                    //this.pruningWorker.NotifyWork();
+                    this.pruningWorker.NotifyWork();
 
                     this.currentChain = this.chainStateBuilder.Chain;
 

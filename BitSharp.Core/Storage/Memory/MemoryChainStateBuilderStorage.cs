@@ -97,9 +97,14 @@ namespace BitSharp.Core.Storage.Memory
             this.unspentTransactions[txHash] = unspentTx;
         }
 
-        IEnumerable<KeyValuePair<UInt256, UnspentTx>> IChainStateBuilderStorage.ReadUnspentTransactions()
+        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions()
         {
             return this.unspentTransactions;
+        }
+
+        public void RemoveSpentTransactions(int spentBlockIndex)
+        {
+            throw new NotImplementedException();
         }
 
         public IChainStateStorage ToImmutable()

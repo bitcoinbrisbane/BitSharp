@@ -18,132 +18,60 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Workers
 {
-    //public class PruningWorker : Worker
-    //{
-    //    private readonly Func<ChainStateBuilder> getChainStateBuilder;
-    //    private readonly IBlockchainRules rules;
-    //    private readonly BlockTxHashesCache blockTxHashesCache;
-    //    private readonly TransactionCache transactionCache;
-    //    private readonly SpentTransactionsCache spentTransactionsCache;
-    //    private readonly SpentOutputsCache spentOutputsCache;
+    public class PruningWorker : Worker
+    {
+        private readonly Logger logger;
+        private readonly ChainStateBuilder chainStateBuilder;
+        private readonly IBlockchainRules rules;
 
-    //    public PruningWorker(WorkerConfig workerConfig, Func<ChainStateBuilder> getChainStateBuilder, Logger logger, IBlockchainRules rules, BlockTxHashesCache blockTxHashesCache, TransactionCache transactionCache, SpentTransactionsCache spentTransactionsCache, SpentOutputsCache spentOutputsCache)
-    //        : base("PruningWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
-    //    {
-    //        this.getChainStateBuilder = getChainStateBuilder;
-    //        this.rules = rules;
-    //        this.blockTxHashesCache = blockTxHashesCache;
-    //        this.transactionCache = transactionCache;
-    //        this.spentTransactionsCache = spentTransactionsCache;
-    //        this.spentOutputsCache = spentOutputsCache;
+        public PruningWorker(WorkerConfig workerConfig, ChainStateBuilder chainStateBuilder, Logger logger, IBlockchainRules rules)
+            : base("PruningWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
+        {
+            this.logger = logger;
+            this.chainStateBuilder = chainStateBuilder;
+            this.rules = rules;
 
-    //        this.Mode = PruningMode.SpentOnly;
-    //    }
+            this.Mode = PruningMode.RollbackOnly;
+        }
 
-    //    public PruningMode Mode { get; set; }
+        public PruningMode Mode { get; set; }
 
-    //    protected override void WorkAction()
-    //    {
-    //        var chainStateBuilder = this.getChainStateBuilder();
+        protected override void WorkAction()
+        {
+            var blocksPerDay = 144;
+            var pruneBuffer = blocksPerDay * 7;
 
-    //        // prune builder chain
-    //        if (chainStateBuilder != null)
-    //        {
-    //            var builderChain = chainStateBuilder.Chain.ToImmutable();
-    //            PruneChain(builderChain);
-    //        }
+            var chain = this.chainStateBuilder.Chain;
+            var minHeight = 0;
+            var maxHeight = chain.Blocks.Count - pruneBuffer;
 
-    //        this.transactionCache.Flush();
-    //        this.blockTxHashesCache.Flush();
-    //        this.spentTransactionsCache.Flush();
-    //        this.spentOutputsCache.Flush();
-    //    }
+            switch (this.Mode)
+            {
+                case PruningMode.RollbackOnly:
+                    for (var i = minHeight; i <= maxHeight; i++)
+                    {
+                        // cooperative loop
+                        this.ThrowIfCancelled();
 
-    //    private void PruneChain(Chain chain, int minHeight = 0)
-    //    {
-    //        var blocksPerDay = 144;
-    //        var pruneBuffer = blocksPerDay * 7;
+                        this.chainStateBuilder.RemoveSpentTransactions(i);
 
-    //        switch (this.Mode)
-    //        {
-    //            case PruningMode.PreserveUnspentTranscations:
-    //                for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
-    //                {
-    //                    // cooperative loop
-    //                    this.ThrowIfCancelled();
+                        if (i % 1000 == 0)
+                            this.logger.Info("Pruned to block: {0:#,##0}".Format2(i));
+                    }
 
-    //                    var block = chain.Blocks[i];
+                    this.logger.Info("Pruned to block: {0:#,##0}".Format2(maxHeight));
 
-    //                    IImmutableList<KeyValuePair<UInt256, SpentTx>> spentTransactions;
-    //                    if (this.spentTransactionsCache.TryGetValue(block.Hash, out spentTransactions))
-    //                    {
-    //                        foreach (var keyPair in spentTransactions)
-    //                            this.transactionCache.TryRemove(keyPair.Key);
-    //                    }
-    //                }
+                    break;
 
-    //                for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
-    //                {
-    //                    // cooperative loop
-    //                    this.ThrowIfCancelled();
+                case PruningMode.RollbackAndBlocks:
+                    break;
+            }
+        }
+    }
 
-    //                    var block = chain.Blocks[i];
-
-    //                    this.blockTxHashesCache.TryRemove(block.Hash);
-    //                    this.spentTransactionsCache.TryRemove(block.Hash);
-    //                    this.spentOutputsCache.TryRemove(block.Hash);
-    //                }
-    //                break;
-
-    //            case PruningMode.SpentOnly:
-    //                for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
-    //                {
-    //                    // cooperative loop
-    //                    this.ThrowIfCancelled();
-                        
-    //                    var block = chain.Blocks[i];
-
-    //                    this.spentTransactionsCache.TryRemove(block.Hash);
-    //                    this.spentOutputsCache.TryRemove(block.Hash);
-    //                }
-    //                break;
-
-    //            case PruningMode.Full:
-    //                for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
-    //                {
-    //                    // cooperative loop
-    //                    this.ThrowIfCancelled();
-
-    //                    var block = chain.Blocks[i];
-
-    //                    IImmutableList<UInt256> blockTxHashes;
-    //                    if (this.blockTxHashesCache.TryGetValue(block.Hash, out blockTxHashes))
-    //                    {
-    //                        foreach (var txHash in blockTxHashes)
-    //                            this.transactionCache.TryRemove(txHash);
-    //                    }
-    //                }
-
-    //                for (var i = minHeight; i < chain.Blocks.Count - pruneBuffer; i++)
-    //                {
-    //                    // cooperative loop
-    //                    this.ThrowIfCancelled();
-
-    //                    var block = chain.Blocks[i];
-
-    //                    this.blockTxHashesCache.TryRemove(block.Hash);
-    //                    this.spentTransactionsCache.TryRemove(block.Hash);
-    //                    this.spentOutputsCache.TryRemove(block.Hash);
-    //                }
-    //                break;
-    //        }
-    //    }
-    //}
-
-    //public enum PruningMode
-    //{
-    //    PreserveUnspentTranscations,
-    //    SpentOnly,
-    //    Full
-    //}
+    public enum PruningMode
+    {
+        RollbackOnly,
+        RollbackAndBlocks
+    }
 }
