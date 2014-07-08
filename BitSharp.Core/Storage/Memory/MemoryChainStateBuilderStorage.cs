@@ -107,6 +107,11 @@ namespace BitSharp.Core.Storage.Memory
             throw new NotImplementedException();
         }
 
+        public void RemoveSpentTransactionsToHeight(int spentBlockIndex)
+        {
+            throw new NotImplementedException();
+        }
+
         public IChainStateStorage ToImmutable()
         {
             //TODO figure out if creating clean dictionaries actually has any benefits

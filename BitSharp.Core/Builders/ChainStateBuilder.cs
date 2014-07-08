@@ -459,6 +459,11 @@ namespace BitSharp.Core.Builders
             this.chainStateBuilderStorage.RemoveSpentTransactions(spentBlockIndex);
         }
 
+        public void RemoveSpentTransactionsToHeight(int spentBlockIndex)
+        {
+            this.chainStateBuilderStorage.RemoveSpentTransactionsToHeight(spentBlockIndex);
+        }
+
         private UInt256 GetOutputScripHash(TxOutput txOutput)
         {
             return new UInt256(this.sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));

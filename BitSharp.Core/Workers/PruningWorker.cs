@@ -48,17 +48,18 @@ namespace BitSharp.Core.Workers
             switch (this.Mode)
             {
                 case PruningMode.RollbackOnly:
-                    for (var i = minHeight; i <= maxHeight; i++)
-                    {
-                        // cooperative loop
-                        this.ThrowIfCancelled();
+                    //for (var i = minHeight; i <= maxHeight; i++)
+                    //{
+                    //    // cooperative loop
+                    //    this.ThrowIfCancelled();
 
-                        this.chainStateBuilder.RemoveSpentTransactions(i);
+                    //    this.chainStateBuilder.RemoveSpentTransactions(i);
 
-                        if (i % 1000 == 0)
-                            this.logger.Info("Pruned to block: {0:#,##0}".Format2(i));
-                    }
+                    //    if (i % 1000 == 0)
+                    //        this.logger.Info("Pruned to block: {0:#,##0}".Format2(i));
+                    //}
 
+                    this.chainStateBuilder.RemoveSpentTransactionsToHeight(maxHeight);
                     this.logger.Info("Pruned to block: {0:#,##0}".Format2(maxHeight));
 
                     break;

@@ -249,13 +249,50 @@ namespace BitSharp.Esent
                     Api.JetSetCurrentIndex(pruneCursor.jetSession, pruneCursor.spentTxTableId, "IX_SpentBlockIndex");
 
                     Api.MakeKey(pruneCursor.jetSession, pruneCursor.spentTxTableId, spentBlockIndex, MakeKeyGrbit.NewKey);
-                    Api.MakeKey(pruneCursor.jetSession, pruneCursor.spentTxTableId, -1, MakeKeyGrbit.NewKey);
+                    Api.MakeKey(pruneCursor.jetSession, pruneCursor.spentTxTableId, -1, MakeKeyGrbit.None);
 
                     if (Api.TrySeek(pruneCursor.jetSession, pruneCursor.spentTxTableId, SeekGrbit.SeekGE))
                     {
                         do
                         {
                             if (spentBlockIndex == Api.RetrieveColumnAsInt32(pruneCursor.jetSession, pruneCursor.spentTxTableId, pruneCursor.spentSpentBlockIndexColumnId).Value)
+                            {
+                                Api.JetDelete(pruneCursor.jetSession, pruneCursor.spentTxTableId);
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        } while (Api.TryMove(pruneCursor.jetSession, pruneCursor.spentTxTableId, JET_Move.Next, MoveGrbit.None));
+                    }
+
+                    Api.JetCommitTransaction(pruneCursor.jetSession, CommitTransactionGrbit.LazyFlush);
+                }
+                catch (Exception)
+                {
+                    Api.JetRollback(pruneCursor.jetSession, RollbackTransactionGrbit.None);
+                    throw;
+                }
+            }
+        }
+
+        public void RemoveSpentTransactionsToHeight(int spentBlockIndex)
+        {
+            using (var pruneCursor = new ChainStateStorageCursor(this.jetDatabase, this.jetInstance, readOnly: false))
+            {
+                Api.JetBeginTransaction(pruneCursor.jetSession);
+                try
+                {
+                    Api.JetSetCurrentIndex(pruneCursor.jetSession, pruneCursor.spentTxTableId, "IX_SpentBlockIndex");
+
+                    Api.MakeKey(pruneCursor.jetSession, pruneCursor.spentTxTableId, -1, MakeKeyGrbit.NewKey);
+                    Api.MakeKey(pruneCursor.jetSession, pruneCursor.spentTxTableId, -1, MakeKeyGrbit.None);
+
+                    if (Api.TrySeek(pruneCursor.jetSession, pruneCursor.spentTxTableId, SeekGrbit.SeekGE))
+                    {
+                        do
+                        {
+                            if (spentBlockIndex >= Api.RetrieveColumnAsInt32(pruneCursor.jetSession, pruneCursor.spentTxTableId, pruneCursor.spentSpentBlockIndexColumnId).Value)
                             {
                                 Api.JetDelete(pruneCursor.jetSession, pruneCursor.spentTxTableId);
                             }
