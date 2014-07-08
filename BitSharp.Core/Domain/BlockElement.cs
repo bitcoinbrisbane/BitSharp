@@ -50,7 +50,7 @@ namespace BitSharp.Core.Domain
             return new BlockElement(Pair(this, right), pruned: true);
         }
 
-        public BlockElement PairWithSelf()
+        public new BlockElement PairWithSelf()
         {
             if (!this.pruned)
                 throw new InvalidOperationException();
