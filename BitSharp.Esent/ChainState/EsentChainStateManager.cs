@@ -201,7 +201,7 @@ namespace BitSharp.Esent
 
         private void OpenDatabase(string jetDatabase, Instance jetInstance)
         {
-            JET_DBID blockDbId;
+            JET_DBID chainStateDbId;
 
             var readOnly = false;
 
@@ -210,7 +210,7 @@ namespace BitSharp.Esent
                 Api.JetAttachDatabase(jetSession, jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
                 try
                 {
-                    Api.JetOpenDatabase(jetSession, jetDatabase, "", out blockDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
+                    Api.JetOpenDatabase(jetSession, jetDatabase, "", out chainStateDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
                     try
                     {
                         var cursor = new ChainStateStorageCursor(jetDatabase, jetInstance, readOnly: true);
@@ -218,7 +218,7 @@ namespace BitSharp.Esent
                     }
                     catch (Exception)
                     {
-                        Api.JetCloseDatabase(jetSession, blockDbId, CloseDatabaseGrbit.None);
+                        Api.JetCloseDatabase(jetSession, chainStateDbId, CloseDatabaseGrbit.None);
                         throw;
                     }
                 }
