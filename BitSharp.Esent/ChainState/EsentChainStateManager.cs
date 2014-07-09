@@ -188,7 +188,7 @@ namespace BitSharp.Esent
                         new JET_INDEXCREATE
                         {
                             cbKeyMost = 255,
-                            grbit = CreateIndexGrbit.IndexIgnoreAnyNull,
+                            grbit = CreateIndexGrbit.IndexDisallowNull,
                             szIndexName = "IX_SpentBlockIndex",
                             szKey = "+SpentBlockIndex\0+AddedBlockIndex\0\0",
                             cbKey = "+SpentBlockIndex\0+AddedBlockIndex\0\0".Length
