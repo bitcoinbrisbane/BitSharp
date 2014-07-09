@@ -33,6 +33,7 @@ namespace BitSharp.Core.Storage
 
         string Name { get; }
 
+        //TODO move onto ChainStateWorker, or in that area
         ImmutableHashSet<UInt256> MissingData { get; }
 
         bool ContainsKey(UInt256 blockHash);
