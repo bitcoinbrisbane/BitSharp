@@ -110,7 +110,7 @@ namespace BitSharp.Core.Test
 
         public void AddBlock(Block block)
         {
-            this.blockCache[block.Hash] = block;
+            this.blockCache.TryAdd(block.Hash, block);
         }
 
         public void WaitForDaemon()

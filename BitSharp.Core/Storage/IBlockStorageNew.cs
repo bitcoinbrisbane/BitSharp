@@ -11,34 +11,25 @@ namespace BitSharp.Core.Storage
 {
     public interface IBlockStorageNew : IDisposable
     {
+        //TODO remove events
+        event Action<UInt256, Block> OnAddition;
+        event Action<UInt256, Block> OnModification;
+        event Action<UInt256> OnRemoved;
+        event Action<UInt256> OnMissing;
+
         void AddBlock(Block block);
 
         bool TryGetTransaction(UInt256 blockHash, int txIndex, out Transaction transaction);
 
+        //TODO merkle check shouldn't be at this level
         IEnumerable<BlockTx> ReadBlock(UInt256 blockHash, UInt256 merkleRoot);
 
+        //TODO merkle check shouldn't be at this level
         IEnumerable<BlockElement> ReadBlockElements(UInt256 blockHash, UInt256 merkleRoot);
 
         void PruneElements(UInt256 blockHash, IEnumerable<int> indices);
 
-
-
-
-        event Action<UInt256, Block> OnAddition;
-        event Action<UInt256, Block> OnModification;
-        event Action<UInt256> OnRemoved;
-
         int Count { get; }
-
-        IEnumerable<UInt256> Keys { get; }
-
-        IEnumerable<Block> Values { get; }
-
-
-
-
-
-        event Action<UInt256> OnMissing;
 
         string Name { get; }
 
@@ -51,8 +42,6 @@ namespace BitSharp.Core.Storage
         bool TryAdd(UInt256 blockHash, Block block);
 
         bool TryRemove(UInt256 blockHash);
-
-        Block this[UInt256 blockHash] { get; set; }
 
         void Flush();
     }

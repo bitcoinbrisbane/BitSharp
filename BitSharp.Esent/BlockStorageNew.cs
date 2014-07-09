@@ -650,16 +650,6 @@ namespace BitSharp.Esent
             get { return 0; }
         }
 
-        public IEnumerable<UInt256> Keys
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        public IEnumerable<Block> Values
-        {
-            get { throw new NotImplementedException(); }
-        }
-
         public string Name
         {
             get { return "Blocks"; }
@@ -696,26 +686,6 @@ namespace BitSharp.Esent
         public bool TryRemove(UInt256 blockHash)
         {
             throw new NotImplementedException();
-        }
-
-        public Block this[UInt256 blockHash]
-        {
-            get
-            {
-                Block block;
-                if (TryGetBlock(blockHash, out block))
-                {
-                    return block;
-                }
-                else
-                {
-                    throw new MissingDataException(blockHash);
-                }
-            }
-            set
-            {
-                TryAdd(blockHash, value);
-            }
         }
 
         public void Flush()

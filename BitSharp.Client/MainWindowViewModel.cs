@@ -278,7 +278,8 @@ namespace BitSharp.Client
             {
                 if (chain.Height > 0)
                 {
-                    var block = this.blockCache[this.viewChain.LastBlockHash];
+                    Block block;
+                    this.blockCache.TryGetValue(this.viewChain.LastBlockHash, out block);
                     // TODO this is abusing rollback a bit just to get the transactions that exist in a target block that's already known
                     // TODO make a better api for get the net output of a block
                     //List<TxOutputKey> spendOutputs, receiveOutputs;

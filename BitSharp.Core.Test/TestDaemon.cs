@@ -73,7 +73,7 @@ namespace BitSharp.Core.Test
             this.blockCache = this.kernel.Get<IBlockStorageNew>();
 
             // store genesis block
-            this.blockCache[this.genesisBlock.Hash] = this.genesisBlock;
+            this.blockCache.TryAdd(this.genesisBlock.Hash, this.genesisBlock);
 
             // initialize unit test rules
             this.rules = this.kernel.Get<UnitTestRules>();
@@ -223,7 +223,7 @@ namespace BitSharp.Core.Test
 
         public void AddBlock(Block block)
         {
-            this.blockCache[block.Hash] = block;
+            this.blockCache.TryAdd(block.Hash, block);
         }
 
         public void WaitForDaemon()

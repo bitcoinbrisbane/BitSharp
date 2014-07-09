@@ -95,30 +95,6 @@ namespace BitSharp.Esent
             }
         }
 
-        public IEnumerable<UInt256> Keys
-        {
-            get
-            {
-                foreach (var blockHash in this.blockStorage1.Keys)
-                    yield return blockHash;
-
-                foreach (var blockHash in this.blockStorage2.Keys)
-                    yield return blockHash;
-            }
-        }
-
-        public IEnumerable<Block> Values
-        {
-            get
-            {
-                foreach (var block in this.blockStorage1.Values)
-                    yield return block;
-
-                foreach (var block in this.blockStorage2.Values)
-                    yield return block;
-            }
-        }
-
         public string Name
         {
             get { return "BlockStorageManager"; }
@@ -154,20 +130,6 @@ namespace BitSharp.Esent
         {
             var blockStorage = GetBlockStorage(blockHash);
             return blockStorage.TryRemove(blockHash);
-        }
-
-        public Block this[UInt256 blockHash]
-        {
-            get
-            {
-                var blockStorage = GetBlockStorage(blockHash);
-                return blockStorage[blockHash];
-            }
-            set
-            {
-                var blockStorage = GetBlockStorage(blockHash);
-                blockStorage[blockHash] = value;
-            }
         }
 
         public void Flush()

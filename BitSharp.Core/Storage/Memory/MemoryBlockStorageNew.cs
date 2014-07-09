@@ -91,16 +91,6 @@ namespace BitSharp.Core.Storage.Memory
             get { return this.blocks.Count; }
         }
 
-        public IEnumerable<UInt256> Keys
-        {
-            get { return this.blocks.Keys; }
-        }
-
-        public IEnumerable<Block> Values
-        {
-            get { return this.blocks.Values; }
-        }
-
         public string Name
         {
             get { return "MemoryBlockStorage"; }
@@ -130,18 +120,6 @@ namespace BitSharp.Core.Storage.Memory
         {
             Block block;
             return this.blocks.TryRemove(blockHash, out block);
-        }
-
-        public Block this[UInt256 blockHash]
-        {
-            get
-            {
-                return this.blocks[blockHash];
-            }
-            set
-            {
-                this.blocks[blockHash] = value;
-            }
         }
 
         public void Flush()
