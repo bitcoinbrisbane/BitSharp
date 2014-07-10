@@ -94,10 +94,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Builders\UtxoBuilder.cs" />
-    <Compile Include="Builders\PendingScript.cs" />
-    <Compile Include="Builders\PendingTxValid.cs" />
-    <Compile Include="Builders\PendingTx.cs" />
-    <Compile Include="Builders\BlockTxKey.cs" />
+    <Compile Include="Builders\TxInputWithPrevOutput.cs" />
+    <Compile Include="Builders\TxWithPrevOutputs.cs" />
+    <Compile Include="Builders\TxWithPrevOutputKeys.cs" />
+    <Compile Include="Domain\BlockTxKey.cs" />
     <Compile Include="Builders\TxValidator.cs" />
     <Compile Include="DataCalculatorNew.cs" />
     <Compile Include="BlockchainWalker.cs" />

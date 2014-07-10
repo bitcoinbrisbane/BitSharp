@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Builders
+namespace BitSharp.Core.Domain
 {
     internal class BlockTxKey
     {

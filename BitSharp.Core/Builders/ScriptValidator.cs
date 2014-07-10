@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Builders
 {
-    public class ScriptValidator : BlockingCollectionWorker<PendingScript>
+    public class ScriptValidator : BlockingCollectionWorker<TxInputWithPrevOutput>
     {
         private readonly IBlockchainRules rules;
         private ConcurrentBag<Exception> exceptions;
@@ -34,11 +34,11 @@ namespace BitSharp.Core.Builders
             this.exceptions = new ConcurrentBag<Exception>();
         }
 
-        protected override void ConsumeItem(PendingScript pendingScript)
+        protected override void ConsumeItem(TxInputWithPrevOutput item)
         {
             try
             {
-                this.rules.ValidationTransactionScript(pendingScript.chainedHeader, pendingScript.transaction, pendingScript.txIndex, pendingScript.txInput, pendingScript.inputIndex, pendingScript.prevTxOutput);
+                this.rules.ValidationTransactionScript(item.ChainedHeader, item.Transaction, item.TxIndex, item.TxInput, item.InputIndex, item.PrevTxOutput);
             }
             catch (Exception e)
             {

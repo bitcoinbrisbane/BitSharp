@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Builders
 {
-    public class TxValidator : BlockingCollectionWorker<PendingTxValid>
+    public class TxValidator : BlockingCollectionWorker<TxWithPrevOutputs>
     {
         private readonly ScriptValidator scriptValidator;
         private readonly IBlockchainRules rules;
@@ -36,27 +36,26 @@ namespace BitSharp.Core.Builders
             this.exceptions = new ConcurrentBag<Exception>();
         }
 
-        protected override void ConsumeItem(PendingTxValid pendingTx)
+        protected override void ConsumeItem(TxWithPrevOutputs item)
         {
             try
             {
                 //TODO validate transaction itself
 
-                var chainedHeader = pendingTx.chainedHeader;
-                var transaction = pendingTx.transaction;
-                var txIndex = pendingTx.txIndex;
-                var isCoinbase = pendingTx.isCoinbase;
-                var prevTxOutputs = pendingTx.prevTxOutputs;
+                var chainedHeader = item.ChainedHeader;
+                var transaction = item.Transaction;
+                var txIndex = item.TxIndex;
+                var prevTxOutputs = item.PrevTxOutputs;
 
-                if (!isCoinbase)
+                if (txIndex > 0)
                 {
                     for (var inputIndex = 0; inputIndex < transaction.Inputs.Length; inputIndex++)
                     {
                         var txInput = transaction.Inputs[inputIndex];
                         var prevTxOutput = prevTxOutputs[inputIndex];
 
-                        var pendingScript = new PendingScript(chainedHeader, transaction, txIndex, txInput, inputIndex, prevTxOutput);
-                        this.scriptValidator.Add(pendingScript);
+                        var txInputWithPrevOutput = new TxInputWithPrevOutput(chainedHeader, transaction, txIndex, txInput, inputIndex, prevTxOutput);
+                        this.scriptValidator.Add(txInputWithPrevOutput);
                     }
                 }
             }

@@ -45,66 +45,61 @@ namespace BitSharp.Core.Builders
             this.chainStateBuilderStorage = chainStateBuilderStorage;
         }
 
-        public IEnumerable<PendingTx> CalculateUtxo(ChainedHeader chainedHeader, IEnumerable<Transaction> blockTxes)
+        public IEnumerable<TxWithPrevOutputKeys> CalculateUtxo(ChainedHeader chainedHeader, IEnumerable<Transaction> blockTxes)
         {
             var chain = this.chainStateBuilderStorage.Chain;
 
             var txIndex = -1;
-            foreach (var transaction in blockTxes)
+            foreach (var tx in blockTxes)
             {
                 txIndex++;
 
+                // there exist two duplicate coinbases in the blockchain, which the design assumes to be impossible
+                // ignore the first occurrences of these duplicates so that they do not need to later be deleted from the utxo, an unsupported operation
+                // no other duplicates will occur again, it is now disallowed
+                if ((chainedHeader.Height == DUPE_COINBASE_1_HEIGHT && tx.Hash == DUPE_COINBASE_1_HASH)
+                    || (chainedHeader.Height == DUPE_COINBASE_2_HEIGHT && tx.Hash == DUPE_COINBASE_2_HASH))
+                {
+                    continue;
+                }
+
+                var prevOutputTxKeys = ImmutableArray.CreateBuilder<BlockTxKey>(tx.Inputs.Length);
+
                 //TODO apply real coinbase rule
                 // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
-                if (txIndex == 0)
+                if (txIndex > 0)
                 {
-                    var coinbaseTx = transaction;
-
-                    // there exist two duplicate coinbases in the blockchain, which the design assumes to be impossible
-                    // ignore the first occurrences of these duplicates so that they do not need to later be deleted from the utxo, an unsupported operation
-                    // no other duplicates will occur again, it is now disallowed
-                    if ((chainedHeader.Height == DUPE_COINBASE_1_HEIGHT && coinbaseTx.Hash == DUPE_COINBASE_1_HASH)
-                        || (chainedHeader.Height == DUPE_COINBASE_2_HEIGHT && coinbaseTx.Hash == DUPE_COINBASE_2_HASH))
-                    {
-                        continue;
-                    }
-
-                    // mint the transaction's outputs in the utxo
-                    yield return this.Mint(coinbaseTx, 0, chainedHeader, isCoinbase: true, spentTxes: ImmutableArray.Create<BlockTxKey>());
-                }
-                else
-                {
-                    var tx = transaction;
-                    var spentTxes = ImmutableArray.CreateBuilder<BlockTxKey>(tx.Inputs.Length);
-
                     // spend each of the transaction's inputs in the utxo
                     for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
                     {
                         var input = tx.Inputs[inputIndex];
-                        spentTxes.Add(this.Spend(txIndex, tx, inputIndex, input, chainedHeader, chain));
-                    }
+                        var unspentTx = this.Spend(txIndex, tx, inputIndex, input, chainedHeader);
 
-                    // mint the transaction's outputs in the utxo
-                    yield return this.Mint(tx, txIndex, chainedHeader, false /*isCoinbase*/, spentTxes.ToImmutable());
+                        var unspentTxBlockHash = chain.Blocks[unspentTx.BlockIndex].Hash;
+                        prevOutputTxKeys.Add(new BlockTxKey(unspentTxBlockHash, unspentTx.TxIndex));
+                    }
                 }
+
+                // mint the transaction's outputs in the utxo
+                this.Mint(tx, txIndex, chainedHeader);
+
+                yield return new TxWithPrevOutputKeys(txIndex, tx, chainedHeader, prevOutputTxKeys.ToImmutable());
             }
         }
 
-        private PendingTx Mint(Transaction tx, int txIndex, ChainedHeader chainedHeader, bool isCoinbase, ImmutableArray<BlockTxKey> spentTxes)
+        private void Mint(Transaction tx, int txIndex, ChainedHeader chainedHeader)
         {
             // add transaction to the utxo
-            var unspentTx = new UnspentTx(/*chainedHeader.Hash,*/ chainedHeader.Height, txIndex, tx.Outputs.Length, OutputState.Unspent);
+            var unspentTx = new UnspentTx(chainedHeader.Height, txIndex, tx.Outputs.Length, OutputState.Unspent);
             if (!this.chainStateBuilderStorage.TryAddTransaction(tx.Hash, unspentTx))
             {
                 // duplicate transaction
                 this.logger.Warn("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(chainedHeader.Height, chainedHeader.Hash.ToHexNumberString()));
                 throw new ValidationException(chainedHeader.Hash);
             }
-
-            return new PendingTx(txIndex, tx, chainedHeader, isCoinbase, spentTxes);
         }
 
-        private BlockTxKey Spend(int txIndex, Transaction tx, int inputIndex, TxInput input, ChainedHeader chainedHeader, Chain chain)
+        private UnspentTx Spend(int txIndex, Transaction tx, int inputIndex, TxInput input, ChainedHeader chainedHeader)
         {
             UnspentTx unspentTx;
             if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
@@ -113,7 +108,6 @@ namespace BitSharp.Core.Builders
                 throw new ValidationException(chainedHeader.Hash);
             }
 
-            var unspentTxBlockHash = chain.Blocks[unspentTx.BlockIndex].Hash;
             var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
 
             if (outputIndex < 0 || outputIndex >= unspentTx.OutputStates.Length)
@@ -140,7 +134,7 @@ namespace BitSharp.Core.Builders
                 this.chainStateBuilderStorage.RemoveTransaction(input.PreviousTxOutputKey.TxHash, chainedHeader.Height);
             }
 
-            return new BlockTxKey(unspentTxBlockHash, unspentTx.TxIndex);
+            return unspentTx;
         }
 
         //TODO with the rollback information that's now being stored, rollback could be down without needing the block

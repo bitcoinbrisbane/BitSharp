@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Builders
 {
-    internal class TxLoader : BlockingCollectionWorker<PendingTx>
+    internal class TxLoader : BlockingCollectionWorker<TxWithPrevOutputKeys>
     {
         private readonly IBlockStorageNew blockCache;
         private readonly TxValidator txValidator;
@@ -60,7 +60,7 @@ namespace BitSharp.Core.Builders
             this.inputCount = 0;
         }
 
-        protected override void ConsumeItem(PendingTx pendingTx)
+        protected override void ConsumeItem(TxWithPrevOutputKeys item)
         {
             try
             {
@@ -69,16 +69,15 @@ namespace BitSharp.Core.Builders
 
                 this.txCount++;
 
-                var txIndex = pendingTx.txIndex;
-                var transaction = pendingTx.transaction;
-                var chainedHeader = pendingTx.chainedHeader;
-                var isCoinbase = pendingTx.isCoinbase;
-                var spentTxes = pendingTx.spentTxes;
+                var txIndex = item.txIndex;
+                var transaction = item.transaction;
+                var chainedHeader = item.chainedHeader;
+                var spentTxes = item.prevOutputTxKeys;
 
                 var prevTxOutputs = ImmutableArray.CreateBuilder<TxOutput>(transaction.Inputs.Length);
 
                 // load previous transactions for each input, unless this is a coinbase transaction
-                if (!isCoinbase)
+                if (txIndex > 0)
                 {
                     this.inputCount += transaction.Inputs.Length;
 
@@ -119,8 +118,8 @@ namespace BitSharp.Core.Builders
 
                 if (!MainnetRules.IgnoreScripts)
                 {
-                    var pendingTxValid = new PendingTxValid(txIndex, transaction, chainedHeader, isCoinbase, prevTxOutputs.ToImmutableArray());
-                    this.txValidator.Add(pendingTxValid);
+                    var txWithPrevOutputs = new TxWithPrevOutputs(txIndex, transaction, chainedHeader, prevTxOutputs.ToImmutableArray());
+                    this.txValidator.Add(txWithPrevOutputs);
                 }
             }
             catch (Exception e)
