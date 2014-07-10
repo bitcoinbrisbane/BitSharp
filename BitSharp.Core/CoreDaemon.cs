@@ -85,7 +85,7 @@ namespace BitSharp.Core
 
             // create workers
             this.targetChainWorker = new TargetChainWorker(
-                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30)),
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30)),
                 this.logger, this.rules, this.coreStorage);
 
             this.chainStateWorker = new ChainStateWorker(

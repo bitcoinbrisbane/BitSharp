@@ -43,7 +43,7 @@ namespace BitSharp.Core.Workers
             this.rescanEvent = new AutoResetEvent(false);
 
             this.targetBlockWorker = new TargetBlockWorker(
-                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue),
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.MaxValue),
                 this.logger, this.coreStorage);
 
             this.targetBlockWorker.TargetBlockChanged += HandleTargetBlockChanged;
