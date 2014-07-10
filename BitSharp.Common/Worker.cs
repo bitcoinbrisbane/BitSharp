@@ -214,7 +214,7 @@ namespace BitSharp.Common
                     var workerTime = new Stopwatch();
                     var lastReportTime = DateTime.Now;
 
-                    while (!this.isStopping && !this.isDisposing)
+                    while (!this.isDisposing)
                     {
                         // notify worker is idle
                         this.idleEvent.Set();
@@ -223,7 +223,7 @@ namespace BitSharp.Common
                         this.startEvent.Wait();
 
                         // cooperative loop
-                        if (this.isStopping || !this.isStarted)
+                        if (!this.isStarted)
                             continue;
 
                         // delay for the requested wait time, unless forced
@@ -236,7 +236,7 @@ namespace BitSharp.Common
                             this.notifyEvent.WaitOne(this.MaxIdleTime - this.MinIdleTime); // subtract time already spent waiting
 
                         // cooperative loop
-                        if (this.isStopping || !this.isStarted)
+                        if (!this.isStarted)
                             continue;
 
                         // notify that work is starting
