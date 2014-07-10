@@ -37,7 +37,7 @@ namespace BitSharp.Core.Builders
         private readonly IBlockchainRules rules;
         private readonly IBlockStorageNew blockCache;
 
-        private readonly TxLoader txLoader;
+        private readonly TxPrevOutputLoader txPrevOutputLoader;
         private readonly TxValidator txValidator;
         private readonly ScriptValidator scriptValidator;
 
@@ -59,7 +59,7 @@ namespace BitSharp.Core.Builders
             var isConcurrent = true;
             this.scriptValidator = new ScriptValidator(this.logger, this.rules, isConcurrent);
             this.txValidator = new TxValidator(this.scriptValidator, this.logger, this.rules, isConcurrent);
-            this.txLoader = new TxLoader(this.blockCache, this.txValidator, this.logger, this.rules, isConcurrent);
+            this.txPrevOutputLoader = new TxPrevOutputLoader(this.blockCache, this.txValidator, this.logger, this.rules, isConcurrent);
 
             this.chainStateBuilderStorage = chainStateBuilderStorage;
             this.utxoBuilder = new UtxoBuilder(chainStateBuilderStorage, logger);
@@ -80,7 +80,7 @@ namespace BitSharp.Core.Builders
 
             new IDisposable[]
             {
-                this.txLoader,
+                this.txPrevOutputLoader,
                 this.txValidator,
                 this.scriptValidator,
                 this.stats,
@@ -93,7 +93,7 @@ namespace BitSharp.Core.Builders
 
         public void AddBlock(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
         {
-            using (this.txLoader.Start())
+            using (this.txPrevOutputLoader.Start())
             using (this.txValidator.Start())
             using (this.scriptValidator.Start(/*isConcurrent: chainedHeader.Height > 150.THOUSAND()*/))
             {
@@ -114,7 +114,7 @@ namespace BitSharp.Core.Builders
                     {
                         foreach (var pendingTx in this.utxoBuilder.CalculateUtxo(chainedHeader, blockTxes.Select(x => x.Transaction)))
                         {
-                            this.txLoader.Add(pendingTx);
+                            this.txPrevOutputLoader.Add(pendingTx);
 
                             // track stats
                             this.stats.txCount++;
@@ -123,7 +123,7 @@ namespace BitSharp.Core.Builders
                             this.stats.inputRateMeasure.Tick(pendingTx.transaction.Inputs.Length);
                         }
 
-                        this.txLoader.CompleteAdding();
+                        this.txPrevOutputLoader.CompleteAdding();
 
                         // track stats
                         this.stats.blockCount++;
@@ -131,10 +131,10 @@ namespace BitSharp.Core.Builders
                     });
 
                     // wait for transactions to load
-                    this.txLoader.WaitToComplete();
-                    if (this.txLoader.Exceptions.Count > 0)
+                    this.txPrevOutputLoader.WaitToComplete();
+                    if (this.txPrevOutputLoader.Exceptions.Count > 0)
                     {
-                        throw new AggregateException(this.txLoader.Exceptions);
+                        throw new AggregateException(this.txPrevOutputLoader.Exceptions);
                     }
 
                     // wait for transactions to validate

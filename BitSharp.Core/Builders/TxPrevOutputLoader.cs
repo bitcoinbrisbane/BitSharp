@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Builders
 {
-    internal class TxLoader : BlockingCollectionWorker<TxWithPrevOutputKeys>
+    internal class TxPrevOutputLoader : BlockingCollectionWorker<TxWithPrevOutputKeys>
     {
         private readonly IBlockStorageNew blockCache;
         private readonly TxValidator txValidator;
@@ -28,8 +28,8 @@ namespace BitSharp.Core.Builders
         private int txCount;
         private int inputCount;
 
-        public TxLoader(IBlockStorageNew blockCache, TxValidator txValidator, Logger logger, IBlockchainRules rules, bool isConcurrent)
-            : base("TxLoader", isConcurrent, logger: logger)
+        public TxPrevOutputLoader(IBlockStorageNew blockCache, TxValidator txValidator, Logger logger, IBlockchainRules rules, bool isConcurrent)
+            : base("TxPrevOutputLoader", isConcurrent, logger: logger)
         {
             this.blockCache = blockCache;
             this.txValidator = txValidator;

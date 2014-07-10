@@ -130,7 +130,7 @@
     <Compile Include="JsonRpc\CoreRpcServer.cs" />
     <Compile Include="Domain\MerkleTreeNode.cs" />
     <Compile Include="Monitor\ChainStateMonitor.cs" />
-    <Compile Include="Builders\TxLoader.cs" />
+    <Compile Include="Builders\TxPrevOutputLoader.cs" />
     <Compile Include="Builders\ScriptValidator.cs" />
     <Compile Include="Monitor\ChainPosition.cs" />
     <Compile Include="Monitor\ChainStateVisitorBase.cs" />
