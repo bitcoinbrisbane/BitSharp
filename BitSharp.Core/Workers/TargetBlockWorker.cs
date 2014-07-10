@@ -15,35 +15,24 @@ namespace BitSharp.Core.Workers
 {
     internal class TargetBlockWorker : Worker
     {
-        public event Action OnTargetBlockChanged;
+        public event Action TargetBlockChanged;
 
-        private readonly ChainedHeaderCache chainedHeaderCache;
-        private readonly InvalidBlockCache invalidBlockCache;
+        private readonly CoreStorage coreStorage;
 
         private ChainedHeader targetBlock;
         private readonly ReaderWriterLockSlim targetBlockLock;
 
-        private readonly ConcurrentQueue<ChainedHeader> chainedHeaderQueue;
-
-        private readonly AutoResetEvent rescanEvent;
-
-        public TargetBlockWorker(WorkerConfig workerConfig, Logger logger, ChainedHeaderCache chainedHeaderCache, InvalidBlockCache invalidBlockCache)
+        public TargetBlockWorker(WorkerConfig workerConfig, Logger logger, CoreStorage coreStorage)
             : base("TargetBlockWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
-            this.chainedHeaderCache = chainedHeaderCache;
-            this.invalidBlockCache = invalidBlockCache;
+            this.coreStorage = coreStorage;
 
             this.targetBlock = null;
             this.targetBlockLock = new ReaderWriterLockSlim();
 
-            this.chainedHeaderQueue = new ConcurrentQueue<ChainedHeader>();
-
-            this.rescanEvent = new AutoResetEvent(false);
-
             // wire up cache events
-            this.chainedHeaderCache.OnAddition += CheckChainedHeader;
-
-            this.invalidBlockCache.OnAddition += HandleInvalidBlock;
+            this.coreStorage.ChainedHeaderAdded += HandleChainedHeaderAdded;
+            this.coreStorage.BlockInvalidated += HandleBlockInvalidated;
         }
 
         public ChainedHeader TargetBlock { get { return this.targetBlock; } }
@@ -51,69 +40,36 @@ namespace BitSharp.Core.Workers
         protected override void SubDispose()
         {
             // cleanup events
-            this.chainedHeaderCache.OnAddition -= CheckChainedHeader;
-
-            this.invalidBlockCache.OnAddition -= HandleInvalidBlock;
-
-            this.rescanEvent.Dispose();
+            this.coreStorage.ChainedHeaderAdded -= HandleChainedHeaderAdded;
+            this.coreStorage.BlockInvalidated -= HandleBlockInvalidated;
         }
 
         protected override void SubStart()
         {
-            this.rescanEvent.Set();
-            this.NotifyWork();
-        }
-
-        private void CheckChainedHeader(UInt256 blockHash, ChainedHeader chainedHeader)
-        {
-            try
-            {
-                if (chainedHeader == null)
-                    chainedHeader = this.chainedHeaderCache[blockHash];
-            }
-            catch (MissingDataException) { return; }
-
-            this.chainedHeaderQueue.Enqueue(chainedHeader);
-
             this.NotifyWork();
         }
 
         protected override void WorkAction()
         {
-            var currentTargetBlock = this.targetBlock;
+            var maxTotalWorkHeader = this.coreStorage.FindMaxTotalWork();
 
-            if (this.rescanEvent.WaitOne(0))
+            if (maxTotalWorkHeader != this.targetBlock)
             {
-                currentTargetBlock = null;
-                this.chainedHeaderQueue.EnqueueRange(this.chainedHeaderCache.Values);
-            }
+                this.targetBlock = maxTotalWorkHeader;
 
-            ChainedHeader chainedHeader;
-            while (this.chainedHeaderQueue.TryDequeue(out chainedHeader))
-            {
-                if (this.invalidBlockCache.ContainsKey(chainedHeader.Hash))
-                    continue;
-
-                if (currentTargetBlock == null
-                    || chainedHeader.TotalWork > currentTargetBlock.TotalWork)
-                {
-                    currentTargetBlock = chainedHeader;
-                }
-            }
-
-            if (currentTargetBlock != this.targetBlock)
-            {
-                this.targetBlock = currentTargetBlock;
-
-                var handler = this.OnTargetBlockChanged;
+                var handler = this.TargetBlockChanged;
                 if (handler != null)
                     handler();
             }
         }
 
-        private void HandleInvalidBlock(UInt256 blockHash, string data)
+        private void HandleChainedHeaderAdded(ChainedHeader chainedHeader)
         {
-            this.rescanEvent.Set();
+            this.NotifyWork();
+        }
+
+        private void HandleBlockInvalidated(UInt256 blockHash)
+        {
             this.NotifyWork();
         }
     }

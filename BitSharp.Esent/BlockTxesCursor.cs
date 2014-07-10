@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Esent
 {
-    internal class BlockStorageCursor : IDisposable
+    internal class BlockTxesCursor : IDisposable
     {
         public readonly string jetDatabase;
         public readonly Instance jetInstance;
@@ -18,10 +18,6 @@ namespace BitSharp.Esent
         public readonly JET_TABLEID globalTableId;
         public readonly JET_COLUMNID flushColumnId;
 
-        public readonly JET_TABLEID blockHeadersTableId;
-        public readonly JET_COLUMNID blockHeaderHashColumnId;
-        public readonly JET_COLUMNID blockHeaderBytesColumnId;
-
         public readonly JET_TABLEID blocksTableId;
         public readonly JET_COLUMNID blockHashColumnId;
         public readonly JET_COLUMNID blockTxIndexColumnId;
@@ -29,7 +25,7 @@ namespace BitSharp.Esent
         public readonly JET_COLUMNID blockTxHashColumnId;
         public readonly JET_COLUMNID blockTxBytesColumnId;
 
-        public BlockStorageCursor(string jetDatabase, Instance jetInstance)
+        public BlockTxesCursor(string jetDatabase, Instance jetInstance)
         {
             this.jetDatabase = jetDatabase;
             this.jetInstance = jetInstance;
@@ -39,9 +35,6 @@ namespace BitSharp.Esent
                 out this.blockDbId,
                 out this.globalTableId,
                     out this.flushColumnId,
-                out this.blockHeadersTableId,
-                    out this.blockHeaderHashColumnId,
-                    out this.blockHeaderBytesColumnId,
                 out this.blocksTableId,
                     out this.blockHashColumnId,
                     out this.blockTxIndexColumnId,
@@ -60,9 +53,6 @@ namespace BitSharp.Esent
             out JET_DBID blockDbId,
             out JET_TABLEID globalTableId,
             out JET_COLUMNID flushColumnId,
-            out JET_TABLEID blockHeadersTableId,
-            out JET_COLUMNID blockHeaderHashColumnId,
-            out JET_COLUMNID blockHeaderBytesColumnId,
             out JET_TABLEID blocksTableId,
             out JET_COLUMNID blockHashColumnId,
             out JET_COLUMNID blockTxIndexColumnId,
@@ -78,10 +68,6 @@ namespace BitSharp.Esent
 
                 Api.JetOpenTable(jetSession, blockDbId, "global", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out globalTableId);
                 flushColumnId = Api.GetTableColumnid(jetSession, globalTableId, "Flush");
-
-                Api.JetOpenTable(jetSession, blockDbId, "BlockHeaders", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out blockHeadersTableId);
-                blockHeaderHashColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "BlockHash");
-                blockHeaderBytesColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "BlockHeaderBytes");
 
                 Api.JetOpenTable(jetSession, blockDbId, "Blocks", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out blocksTableId);
                 blockHashColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "BlockHash");

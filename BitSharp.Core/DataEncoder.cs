@@ -154,8 +154,9 @@ namespace BitSharp.Core
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
-                var totalWorkBytes = reader.ReadBytes(64);
-                return new BigInteger(totalWorkBytes);
+                var totalWorkBytesBigEndian = reader.ReadBytes(64);
+                var totalWorkBytesLittleEndian = totalWorkBytesBigEndian.Reverse().ToArray();
+                return new BigInteger(totalWorkBytesLittleEndian);
             }
         }
 
@@ -171,15 +172,17 @@ namespace BitSharp.Core
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                var totalWorkBytes = totalWork.ToByteArray();
-                if (totalWorkBytes.Length > 64)
+                var totalWorkBytesLittleEndian = totalWork.ToByteArray();
+                if (totalWorkBytesLittleEndian.Length > 64)
                     throw new ArgumentOutOfRangeException();
 
-                var totalWorkBytes64 = new byte[64];
-                Buffer.BlockCopy(totalWorkBytes, 0, totalWorkBytes64, 0, totalWorkBytes.Length);
+                var totalWorkBytesLittleEndian64 = new byte[64];
+                Buffer.BlockCopy(totalWorkBytesLittleEndian, 0, totalWorkBytesLittleEndian64, 0, totalWorkBytesLittleEndian.Length);
 
-                writer.WriteBytes(totalWorkBytes64);
-                Debug.Assert(new BigInteger(totalWorkBytes64) == totalWork);
+                var totalWorkBytesBigEndian = totalWorkBytesLittleEndian64.Reverse().ToArray();
+
+                writer.WriteBytes(totalWorkBytesBigEndian);
+                Debug.Assert(new BigInteger(totalWorkBytesLittleEndian64) == totalWork);
             }
         }
 

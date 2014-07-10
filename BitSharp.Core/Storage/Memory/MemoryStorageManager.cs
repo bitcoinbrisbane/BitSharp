@@ -9,41 +9,27 @@ namespace BitSharp.Core.Storage.Memory
 {
     public class MemoryStorageManager : IStorageManager
     {
-        private readonly MemoryBlockHeaderStorage blockHeaderStorage;
-        private readonly MemoryChainedHeaderStorage chainedHeaderStorage;
-        private readonly MemoryInvalidBlockStorage invalidBlockStorage;
-        private readonly MemoryBlockStorageNew blockStorage;
+        private readonly MemoryBlockStorage blockStorage;
+        private readonly MemoryBlockTxesStorage blockTxesStorage;
 
         public MemoryStorageManager()
         {
-            this.blockHeaderStorage = new MemoryBlockHeaderStorage();
-            this.chainedHeaderStorage = new MemoryChainedHeaderStorage();
-            this.invalidBlockStorage = new MemoryInvalidBlockStorage();
-            this.blockStorage = new MemoryBlockStorageNew();
+            this.blockStorage = new MemoryBlockStorage();
+            this.blockTxesStorage = new MemoryBlockTxesStorage();
         }
 
         public void Dispose()
         {
         }
 
-        public IBlockHeaderStorage BlockHeaderStorage
-        {
-            get { return this.blockHeaderStorage; }
-        }
-
-        public IChainedHeaderStorage ChainedHeaderStorage
-        {
-            get { return this.chainedHeaderStorage; }
-        }
-
-        public IInvalidBlockStorage InvalidBlockStorage
-        {
-            get { return this.invalidBlockStorage; }
-        }
-
-        public IBlockStorageNew BlockStorage
+        public IBlockStorage BlockStorage
         {
             get { return this.blockStorage; }
+        }
+
+        public IBlockTxesStorage BlockTxesStorage
+        {
+            get { return this.blockTxesStorage; }
         }
 
         public IChainStateBuilderStorage CreateOrLoadChainState(ChainedHeader genesisHeader)

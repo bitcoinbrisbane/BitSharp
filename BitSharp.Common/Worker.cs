@@ -12,7 +12,7 @@ namespace BitSharp.Common
 {
     public abstract class Worker : IDisposable
     {
-        private static readonly TimeSpan DEFAULT_STOP_TIMEOUT = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan DEFAULT_STOP_TIMEOUT = TimeSpan.FromSeconds(10);
 
         public event Action OnNotifyWork;
         public event Action OnWorkStarted;
@@ -27,6 +27,7 @@ namespace BitSharp.Common
         private readonly ManualResetEventSlim idleEvent;
 
         private bool isStarted;
+        private bool isStopping;
         private bool isDisposing;
         private bool isDisposed;
 
@@ -46,6 +47,7 @@ namespace BitSharp.Common
             this.idleEvent = new ManualResetEventSlim(false);
 
             this.isStarted = false;
+            this.isStopping = false;
             this.isDisposing = false;
             this.isDisposed = false;
 
@@ -66,6 +68,8 @@ namespace BitSharp.Common
 
             if (!this.isStarted)
             {
+                this.isStopping = false;
+
                 this.SubStart();
 
                 this.isStarted = true;
@@ -79,12 +83,19 @@ namespace BitSharp.Common
 
             if (this.isStarted)
             {
+                this.isStopping = true;
+
                 this.SubStop();
 
                 this.isStarted = false;
                 this.startEvent.Reset();
 
-                this.idleEvent.Wait(timeout ?? DEFAULT_STOP_TIMEOUT);
+                if (!this.idleEvent.Wait(timeout ?? DEFAULT_STOP_TIMEOUT))
+                {
+                    this.logger.Warn("Worker failed to stop: {0}".Format2(this.Name));
+                }
+
+                this.isStopping = false;
             }
         }
 
@@ -96,10 +107,10 @@ namespace BitSharp.Common
             // stop worker
             this.Stop();
 
-            this.isDisposing = true;
-
             // subclass dispose
             this.SubDispose();
+
+            this.isDisposing = true;
 
             // set events so that WorkerLoop() can unblock to discover it is being disposed
             this.startEvent.Set();
@@ -182,14 +193,14 @@ namespace BitSharp.Common
         {
             CheckDisposed();
 
-            if (!this.isStarted)
+            if (this.isStopping || !this.isStarted)
                 throw new OperationCanceledException();
         }
 
         private void CheckDisposed()
         {
             if (this.isDisposing || this.isDisposed)
-                throw new ObjectDisposedException("Worker");
+                throw new ObjectDisposedException("Worker access when disposed: {0}".Format2(this.Name));
         }
 
         private void WorkerLoop()
@@ -203,7 +214,7 @@ namespace BitSharp.Common
                     var workerTime = new Stopwatch();
                     var lastReportTime = DateTime.Now;
 
-                    while (!this.isDisposing)
+                    while (!this.isStopping && !this.isDisposing)
                     {
                         // notify worker is idle
                         this.idleEvent.Set();
@@ -212,7 +223,7 @@ namespace BitSharp.Common
                         this.startEvent.Wait();
 
                         // cooperative loop
-                        if (!this.isStarted)
+                        if (this.isStopping || !this.isStarted)
                             continue;
 
                         // delay for the requested wait time, unless forced
@@ -225,7 +236,7 @@ namespace BitSharp.Common
                             this.notifyEvent.WaitOne(this.MaxIdleTime - this.MinIdleTime); // subtract time already spent waiting
 
                         // cooperative loop
-                        if (!this.isStarted)
+                        if (this.isStopping || !this.isStarted)
                             continue;
 
                         // notify that work is starting
@@ -273,6 +284,12 @@ namespace BitSharp.Common
             catch (Exception e)
             {
                 this.logger.FatalException("Unhandled worker exception", e);
+            }
+            finally
+            {
+                // notify worker is idle
+                if (!this.isDisposing && !this.isDisposed)
+                    this.idleEvent.Set();
             }
         }
 

@@ -33,9 +33,9 @@ namespace BitSharp.Core.Test
         private readonly ECPublicKeyParameters coinbasePublicKey;
         private readonly Miner miner;
         private readonly Block genesisBlock;
-        private readonly IBlockStorageNew blockCache;
         private readonly UnitTestRules rules;
-        private readonly CoreDaemon blockchainDaemon;
+        private readonly CoreDaemon coreDaemon;
+        private readonly CoreStorage coreStorage;
 
         public TestDaemon(Block genesisBlock = null)
         {
@@ -66,15 +66,6 @@ namespace BitSharp.Core.Test
             // add storage module
             this.kernel.Load(new MemoryStorageModule());
 
-            // add cache module
-            this.kernel.Load(new CoreCacheModule());
-
-            // initialize block view
-            this.blockCache = this.kernel.Get<IStorageManager>().BlockStorage;
-
-            // store genesis block
-            this.blockCache.TryAdd(this.genesisBlock.Hash, this.genesisBlock);
-
             // initialize unit test rules
             this.rules = this.kernel.Get<UnitTestRules>();
             this.rules.SetGenesisBlock(this.genesisBlock);
@@ -83,18 +74,19 @@ namespace BitSharp.Core.Test
 
             // initialize the blockchain daemon
             this.kernel.Bind<CoreDaemon>().ToSelf().InSingletonScope();
-            this.blockchainDaemon = this.kernel.Get<CoreDaemon>();
+            this.coreDaemon = this.kernel.Get<CoreDaemon>();
+            this.coreStorage = this.coreDaemon.CoreStorage;
 
             // start the blockchain daemon
-            this.blockchainDaemon.Start();
+            this.coreDaemon.Start();
 
             // wait for initial work
-            this.blockchainDaemon.ForceWorkAndWait();
+            this.coreDaemon.ForceWorkAndWait();
 
             // verify initial state
-            Assert.AreEqual(0, this.blockchainDaemon.TargetBlock.Height);
-            Assert.AreEqual(this.genesisBlock.Hash, this.blockchainDaemon.TargetChain.LastBlockHash);
-            Assert.AreEqual(this.genesisBlock.Hash, this.blockchainDaemon.CurrentChain.LastBlockHash);
+            Assert.AreEqual(0, this.coreDaemon.TargetBlock.Height);
+            Assert.AreEqual(this.genesisBlock.Hash, this.coreDaemon.TargetChain.LastBlockHash);
+            Assert.AreEqual(this.genesisBlock.Hash, this.coreDaemon.CurrentChain.LastBlockHash);
         }
 
         public void Dispose()
@@ -114,11 +106,11 @@ namespace BitSharp.Core.Test
 
         public Block GenesisBlock { get { return this.genesisBlock; } }
 
-        public IBlockStorageNew BlockCache { get { return this.blockCache; } }
-
         public UnitTestRules Rules { get { return this.rules; } }
 
-        public CoreDaemon BlockchainDaemon { get { return this.blockchainDaemon; } }
+        public CoreDaemon CoreDaemon { get { return this.coreDaemon; } }
+
+        public CoreStorage CoreStorage { get { return this.coreStorage; } }
 
         public Block CreateEmptyBlock(UInt256 previousBlockHash, UInt256? target = null)
         {
@@ -223,12 +215,12 @@ namespace BitSharp.Core.Test
 
         public void AddBlock(Block block)
         {
-            this.blockCache.TryAdd(block.Hash, block);
+            this.coreStorage.TryAddBlock(block);
         }
 
         public void WaitForDaemon()
         {
-            this.blockchainDaemon.ForceWorkAndWait();
+            this.coreDaemon.ForceWorkAndWait();
         }
     }
 }

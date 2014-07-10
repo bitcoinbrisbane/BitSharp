@@ -24,26 +24,26 @@ namespace BitSharp.Node.Workers
 
         private readonly Logger logger;
         private readonly LocalClient localClient;
-        private readonly CoreDaemon blockchainDaemon;
-        private readonly BlockHeaderCache blockHeaderCache;
+        private readonly CoreDaemon coreDaemon;
+        private readonly CoreStorage coreStorage;
 
         private readonly ConcurrentDictionary<IPEndPoint, DateTime> headersRequestsByPeer;
 
         private readonly WorkerMethod flushWorker;
         private readonly ConcurrentQueue<Tuple<RemoteNode, IImmutableList<BlockHeader>>> flushQueue;
 
-        public HeadersRequestWorker(Logger logger, WorkerConfig workerConfig, LocalClient localClient, CoreDaemon blockchainDaemon, BlockHeaderCache blockHeaderCache)
+        public HeadersRequestWorker(WorkerConfig workerConfig, Logger logger, LocalClient localClient, CoreDaemon coreDaemon)
             : base("HeadersRequestWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.localClient = localClient;
-            this.blockchainDaemon = blockchainDaemon;
-            this.blockHeaderCache = blockHeaderCache;
+            this.coreDaemon = coreDaemon;
+            this.coreStorage = coreDaemon.CoreStorage;
 
             this.headersRequestsByPeer = new ConcurrentDictionary<IPEndPoint, DateTime>();
 
             this.localClient.OnBlockHeaders += HandleBlockHeaders;
-            this.blockchainDaemon.OnTargetChainChanged += HandleTargetChainChanged;
+            this.coreDaemon.OnTargetChainChanged += HandleTargetChainChanged;
 
             this.flushWorker = new WorkerMethod("HeadersRequestWorker.FlushWorker", FlushWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
             this.flushQueue = new ConcurrentQueue<Tuple<RemoteNode, IImmutableList<BlockHeader>>>();
@@ -52,7 +52,7 @@ namespace BitSharp.Node.Workers
         protected override void SubDispose()
         {
             this.localClient.OnBlockHeaders -= HandleBlockHeaders;
-            this.blockchainDaemon.OnTargetChainChanged -= HandleTargetChainChanged;
+            this.coreDaemon.OnTargetChainChanged -= HandleTargetChainChanged;
 
             this.flushWorker.Dispose();
         }
@@ -76,7 +76,7 @@ namespace BitSharp.Node.Workers
             if (peerCount == 0)
                 return;
 
-            var targetChainLocal = this.blockchainDaemon.TargetChain;
+            var targetChainLocal = this.coreDaemon.TargetChain;
             if (targetChainLocal == null)
                 return;
 
@@ -93,6 +93,9 @@ namespace BitSharp.Node.Workers
                 {
                     // send out the request for headers
                     requestTasks.Add(peer.Value.Sender.SendGetHeaders(blockLocatorHashes, hashStop: 0));
+                    
+                    // only send out a single header request at a time
+                    break;
                 }
             }
         }
@@ -102,11 +105,20 @@ namespace BitSharp.Node.Workers
             Tuple<RemoteNode, IImmutableList<BlockHeader>> tuple;
             while (this.flushQueue.TryDequeue(out tuple))
             {
+                // cooperative loop
+                this.ThrowIfCancelled();
+
                 var remoteNode = tuple.Item1;
                 var blockHeaders = tuple.Item2;
 
                 foreach (var blockHeader in blockHeaders)
-                    this.blockHeaderCache.TryAdd(blockHeader.Hash, blockHeader);
+                {
+                    // cooperative loop
+                    this.ThrowIfCancelled();
+                    
+                    ChainedHeader chainedHeader;
+                    this.coreStorage.TryChainHeader(blockHeader, out chainedHeader);
+                }
 
                 DateTime ignore;
                 this.headersRequestsByPeer.TryRemove(remoteNode.RemoteEndPoint, out ignore);
@@ -119,6 +131,11 @@ namespace BitSharp.Node.Workers
             {
                 this.flushQueue.Enqueue(Tuple.Create(remoteNode, blockHeaders));
                 this.flushWorker.NotifyWork();
+            }
+            else
+            {
+                DateTime ignore;
+                this.headersRequestsByPeer.TryRemove(remoteNode.RemoteEndPoint, out ignore);
             }
         }
 

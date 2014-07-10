@@ -13,16 +13,16 @@ using System.Threading.Tasks;
 namespace BitSharp.Core.Workers
 {
     //TODO
-    public class RevalidateWorker : Worker
+    internal class RevalidateWorker : Worker
     {
         private readonly Logger logger;
-        private readonly BlockHeaderCache blockHeaderCache;
+        private readonly CoreStorage coreStorage;
 
-        public RevalidateWorker(Logger logger, BlockHeaderCache blockHeaderCache)
+        public RevalidateWorker(Logger logger, CoreStorage coreStorage)
             : base("RevalidateWorker", initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: logger)
         {
             this.logger = logger;
-            this.blockHeaderCache = blockHeaderCache;
+            this.coreStorage = coreStorage;
         }
 
         protected override void WorkAction()
@@ -46,12 +46,14 @@ namespace BitSharp.Core.Workers
                     throw new ValidationException(blockchain.Blocks[0].Hash);
 
                 // get genesis block header
-                var chainGenesisBlockHeader = this.blockHeaderCache[blockchain.Blocks[0].Hash];
+                ChainedHeader chainGenesisBlockHeader;
+                if (!this.coreStorage.TryGetChainedHeader(blockchain.Blocks[0].Hash, out chainGenesisBlockHeader))
+                    throw new ValidationException(blockchain.Blocks[0].Hash);
 
                 // verify genesis block header
                 if (
                     genesisBlock.Header.Version != chainGenesisBlockHeader.Version
-                    || genesisBlock.Header.PreviousBlock != chainGenesisBlockHeader.PreviousBlock
+                    || genesisBlock.Header.PreviousBlock != chainGenesisBlockHeader.PreviousBlockHash
                     || genesisBlock.Header.MerkleRoot != chainGenesisBlockHeader.MerkleRoot
                     || genesisBlock.Header.Time != chainGenesisBlockHeader.Time
                     || genesisBlock.Header.Bits != chainGenesisBlockHeader.Bits
@@ -80,15 +82,8 @@ namespace BitSharp.Core.Workers
                     if (chainedHeader.PreviousBlockHash != expectedPreviousBlockHash)
                         throw new ValidationException(chainedHeader.Hash);
 
-                    // verify block exists
-                    var blockHeader = this.blockHeaderCache[chainedHeader.Hash];
-
-                    // verify block metadata matches header values
-                    if (blockHeader.PreviousBlock != chainedHeader.PreviousBlockHash)
-                        throw new ValidationException(chainedHeader.Hash);
-
                     // verify block header hash
-                    if (DataCalculator.CalculateBlockHash(blockHeader) != chainedHeader.Hash)
+                    if (DataCalculator.CalculateBlockHash(chainedHeader.BlockHeader) != chainedHeader.Hash)
                         throw new ValidationException(chainedHeader.Hash);
 
                     // next block metadata should have the current metadata's hash as its previous hash value

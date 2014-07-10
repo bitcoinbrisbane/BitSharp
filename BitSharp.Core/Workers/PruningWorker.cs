@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Workers
 {
-    public class PruningWorker : Worker
+    internal class PruningWorker : Worker
     {
         private readonly Logger logger;
         private readonly ChainStateBuilder chainStateBuilder;

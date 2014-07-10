@@ -29,7 +29,7 @@ namespace BitSharp.Core.Test
                 var block1 = daemon.MineAndAddEmptyBlock(daemon.GenesisBlock);
 
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(1, block1.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(1, block1.Hash, daemon.CoreDaemon);
             }
         }
 
@@ -54,7 +54,7 @@ namespace BitSharp.Core.Test
                 }
 
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(height, block.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(height, block.Hash, daemon.CoreDaemon);
             }
         }
 
@@ -74,7 +74,7 @@ namespace BitSharp.Core.Test
 
                 // check
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(2, block2.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(2, block2.Hash, daemon.CoreDaemon);
 
                 // attempt to spend block 2's coinbase in block 3
                 var spendTx = daemon.TxManager.CreateSpendTransaction(block2.Transactions[0], 0, (byte)ScriptHashType.SIGHASH_ALL, 50 * SATOSHI_PER_BTC, daemon.CoinbasePrivateKey, daemon.CoinbasePublicKey, toPublicKey);
@@ -84,14 +84,14 @@ namespace BitSharp.Core.Test
 
                 // check
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(3, block3.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(3, block3.Hash, daemon.CoreDaemon);
 
                 // add a simple block
                 var block4 = daemon.MineAndAddEmptyBlock(block3);
 
                 // check
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(4, block4.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(4, block4.Hash, daemon.CoreDaemon);
             }
         }
 
@@ -116,7 +116,7 @@ namespace BitSharp.Core.Test
 
                 // check
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(2, block2.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(2, block2.Hash, daemon.CoreDaemon);
 
                 // spend block 2's coinbase in block 3
                 var spendTx = daemon.TxManager.CreateSpendTransaction(block2.Transactions[0], 0, (byte)ScriptHashType.SIGHASH_ALL, 50 * SATOSHI_PER_BTC, daemon.CoinbasePrivateKey, daemon.CoinbasePublicKey, toPublicKey);
@@ -126,7 +126,7 @@ namespace BitSharp.Core.Test
 
                 // check
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(3, block3.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(3, block3.Hash, daemon.CoreDaemon);
 
                 // attempt to spend block 2's coinbase again in block 4
                 var doubleSpendTx = daemon.TxManager.CreateSpendTransaction(block2.Transactions[0], 0, (byte)ScriptHashType.SIGHASH_ALL, 50 * SATOSHI_PER_BTC, daemon.CoinbasePrivateKey, daemon.CoinbasePublicKey, toPublicKeyBad);
@@ -136,14 +136,14 @@ namespace BitSharp.Core.Test
 
                 // check that bad block wasn't added
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(3, block3.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(3, block3.Hash, daemon.CoreDaemon);
 
                 // add a simple block
                 var block4Good = daemon.MineAndAddEmptyBlock(block3);
 
                 // check
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(4, block4Good.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(4, block4Good.Hash, daemon.CoreDaemon);
             }
         }
 
@@ -163,7 +163,7 @@ namespace BitSharp.Core.Test
 
                 // check
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(2, block2.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(2, block2.Hash, daemon.CoreDaemon);
 
                 // attempt to spend block 2's coinbase in block 3, using twice its value
                 var spendTx = daemon.TxManager.CreateSpendTransaction(block2.Transactions[0], 0, (byte)ScriptHashType.SIGHASH_ALL, 100 * SATOSHI_PER_BTC, daemon.CoinbasePrivateKey, daemon.CoinbasePublicKey, toPublicKey);
@@ -173,14 +173,14 @@ namespace BitSharp.Core.Test
 
                 // check that bad block wasn't added
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(2, block2.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(2, block2.Hash, daemon.CoreDaemon);
 
                 // add a simple block
                 var block3Good = daemon.MineAndAddEmptyBlock(block2);
 
                 // check
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(3, block3Good.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(3, block3Good.Hash, daemon.CoreDaemon);
             }
         }
 
@@ -199,7 +199,7 @@ namespace BitSharp.Core.Test
 
                 // check that 3a is current as it was first
                 daemon1.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(3, block3a.Hash, daemon1.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(3, block3a.Hash, daemon1.CoreDaemon);
 
                 // continue split
                 var block4a = daemon1.MineAndAddEmptyBlock(block3a);
@@ -207,21 +207,21 @@ namespace BitSharp.Core.Test
 
                 // check that 4a is current as it was first
                 daemon1.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(4, block4a.Hash, daemon1.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(4, block4a.Hash, daemon1.CoreDaemon);
 
                 // resolve tie split, with other chain winning
                 var block5b = daemon1.MineAndAddEmptyBlock(block4b);
 
                 // check that blockchain reorged to the winning chain
                 daemon1.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(5, block5b.Hash, daemon1.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(5, block5b.Hash, daemon1.CoreDaemon);
 
                 // continue on winning fork
                 var block6b = daemon1.MineAndAddEmptyBlock(block5b);
 
                 // check that blockchain continued on the winning chain
                 daemon1.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(6, block6b.Hash, daemon1.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(6, block6b.Hash, daemon1.CoreDaemon);
 
                 // create a second blockchain, reusing the genesis from the first
                 using (var daemon2 = new TestDaemon(daemon1.GenesisBlock))
@@ -236,11 +236,11 @@ namespace BitSharp.Core.Test
 
                     // check second blockchain
                     daemon2.WaitForDaemon();
-                    AssertMethods.AssertDaemonAtBlock(6, block6b.Hash, daemon2.BlockchainDaemon);
+                    AssertMethods.AssertDaemonAtBlock(6, block6b.Hash, daemon2.CoreDaemon);
 
                     // verify that re-organized blockchain matches winning-only blockchain
-                    using (var expectedChainSate = daemon2.BlockchainDaemon.GetChainState())
-                    using (var actualChainSate = daemon1.BlockchainDaemon.GetChainState())
+                    using (var expectedChainSate = daemon2.CoreDaemon.GetChainState())
+                    using (var actualChainSate = daemon1.CoreDaemon.GetChainState())
                     {
                         var expectedUtxo = expectedChainSate.Utxo;
                         var expectedUnspentTransactions = ImmutableDictionary.CreateRange<UInt256, UnspentTx>(expectedUtxo.GetUnspentTransactions());
@@ -268,7 +268,7 @@ namespace BitSharp.Core.Test
 
                 // check
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(5, block5a.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(5, block5a.Hash, daemon.CoreDaemon);
 
                 // create a split with 3b, but do more work than current height 5 chain
                 daemon.Rules.SetHighestTarget(UnitTestRules.Target2);
@@ -276,7 +276,7 @@ namespace BitSharp.Core.Test
 
                 // check that blockchain reorganized to shorter chain
                 daemon.WaitForDaemon();
-                AssertMethods.AssertDaemonAtBlock(3, block3b.Hash, daemon.BlockchainDaemon);
+                AssertMethods.AssertDaemonAtBlock(3, block3b.Hash, daemon.CoreDaemon);
             }
         }
     }

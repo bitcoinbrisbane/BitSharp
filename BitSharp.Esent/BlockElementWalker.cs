@@ -22,10 +22,10 @@ namespace BitSharp.Esent
     internal class BlockElementWalker : IBlockElementWalker, IDisposable
     {
         private readonly UInt256 blockHash;
-        private readonly BlockStorageCursor cursor;
+        private readonly BlockTxesCursor cursor;
         private readonly Action disposeAction;
 
-        public BlockElementWalker(UInt256 blockHash, BlockStorageCursor cursor, Action disposeAction)
+        public BlockElementWalker(UInt256 blockHash, BlockTxesCursor cursor, Action disposeAction)
         {
             this.blockHash = blockHash;
             this.cursor = cursor;

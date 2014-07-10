@@ -25,7 +25,7 @@ namespace BitSharp.Blockchain.Test
         [TestInitialize]
         public void TestInitialize()
         {
-            this.kernel = new StandardKernel(new ConsoleLoggingModule(), new MemoryStorageModule(), new CoreCacheModule(), new RulesModule(RulesEnum.MainNet));
+            this.kernel = new StandardKernel(new ConsoleLoggingModule(), new MemoryStorageModule(), new RulesModule(RulesEnum.MainNet));
             this.rules = kernel.Get<MainnetRules>();
         }
 

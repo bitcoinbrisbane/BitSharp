@@ -45,10 +45,8 @@ namespace BitSharp.Node
         private readonly RulesEnum type;
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
-        private readonly CoreDaemon blockchainDaemon;
-        private readonly BlockHeaderCache blockHeaderCache;
-        private readonly ChainedHeaderCache chainedHeaderCache;
-        private readonly IBlockStorageNew blockCache;
+        private readonly CoreDaemon coreDaemon;
+        private readonly CoreStorage coreStorage;
         private readonly NetworkPeerCache networkPeerCache;
 
         private readonly WorkerMethod connectWorker;
@@ -69,7 +67,7 @@ namespace BitSharp.Node
 
         private Socket listenSocket;
 
-        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, CoreDaemon blockchainDaemon, IStorageManager storageManager, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache, NetworkPeerCache networkPeerCache)
+        public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, CoreDaemon coreDaemon, NetworkPeerCache networkPeerCache)
         {
             this.shutdownToken = new CancellationTokenSource();
 
@@ -77,21 +75,22 @@ namespace BitSharp.Node
             this.type = type;
             this.kernel = kernel;
             this.rules = rules;
-            this.blockchainDaemon = blockchainDaemon;
-            this.blockHeaderCache = blockHeaderCache;
-            this.chainedHeaderCache = chainedHeaderCache;
-            this.blockCache = storageManager.BlockStorage;
+            this.coreDaemon = coreDaemon;
+            this.coreStorage = coreDaemon.CoreStorage;
             this.networkPeerCache = networkPeerCache;
 
             this.messageRateMeasure = new RateMeasure();
 
             this.connectWorker = new WorkerMethod("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), this.logger);
-            this.headersRequestWorker = kernel.Get<HeadersRequestWorker>(
-                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30))),
-                new ConstructorArgument("localClient", this));
-            this.blockRequestWorker = kernel.Get<BlockRequestWorker>(
-                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30))),
-                new ConstructorArgument("localClient", this));
+            
+            this.headersRequestWorker = new HeadersRequestWorker(
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(5)),
+                this.logger, this, this.coreDaemon);
+            
+            this.blockRequestWorker = new BlockRequestWorker(
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30)),
+                this.logger, this, this.coreDaemon);
+            
             this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30), this.logger);
 
             switch (this.Type)
@@ -161,7 +160,7 @@ namespace BitSharp.Node
 
         public float GetBlockMissRate(TimeSpan perUnitTime)
         {
-            return this.blockchainDaemon.GetBlockMissRate(perUnitTime);
+            return this.coreDaemon.GetBlockMissRate(perUnitTime);
         }
 
         private void ConnectWorker(WorkerMethod instance)
@@ -503,7 +502,7 @@ namespace BitSharp.Node
                 foreach (var invVector in invVectors)
                 {
                     if (invVector.Type == InventoryVector.TYPE_MESSAGE_BLOCK
-                        && !this.blockCache.ContainsKey(invVector.Hash))
+                        && !this.coreStorage.ContainsBlockTxes(invVector.Hash))
                     {
                         responseInvVectors.Add(invVector);
                     }
@@ -574,7 +573,7 @@ namespace BitSharp.Node
 
         private void OnGetBlocks(RemoteNode remoteNode, GetBlocksPayload payload)
         {
-            var targetChainLocal = this.blockchainDaemon.TargetChain;
+            var targetChainLocal = this.coreDaemon.TargetChain;
             if (targetChainLocal == null)
                 return;
 
@@ -582,7 +581,7 @@ namespace BitSharp.Node
             foreach (var blockHash in payload.BlockLocatorHashes)
             {
                 ChainedHeader chainedHeader;
-                if (this.chainedHeaderCache.TryGetValue(blockHash, out chainedHeader))
+                if (this.coreStorage.TryGetChainedHeader(blockHash, out chainedHeader))
                 {
                     if (chainedHeader.Height < targetChainLocal.Blocks.Count
                         && chainedHeader.Hash == targetChainLocal.Blocks[chainedHeader.Height].Hash)
@@ -616,10 +615,10 @@ namespace BitSharp.Node
         {
             if (this.Type == RulesEnum.ComparisonToolTestNet)
             {
-                this.blockchainDaemon.ForceWorkAndWait();
+                this.coreDaemon.ForceWorkAndWait();
             }
 
-            var targetChainLocal = this.blockchainDaemon.TargetChain;
+            var targetChainLocal = this.coreDaemon.TargetChain;
             if (targetChainLocal == null)
                 return;
 
@@ -627,7 +626,7 @@ namespace BitSharp.Node
             foreach (var blockHash in payload.BlockLocatorHashes)
             {
                 ChainedHeader chainedHeader;
-                if (this.chainedHeaderCache.TryGetValue(blockHash, out chainedHeader))
+                if (this.coreStorage.TryGetChainedHeader(blockHash, out chainedHeader))
                 {
                     if (chainedHeader.Height < targetChainLocal.Blocks.Count
                         && chainedHeader.Hash == targetChainLocal.Blocks[chainedHeader.Height].Hash)
@@ -649,15 +648,7 @@ namespace BitSharp.Node
             {
                 var chainedHeader = targetChainLocal.Blocks[i];
 
-                BlockHeader blockHeader;
-                if (this.blockHeaderCache.TryGetValue(targetChainLocal.Blocks[i].Hash, out blockHeader))
-                {
-                    blockHeaders.Add(blockHeader);
-                }
-                else
-                {
-                    break;
-                }
+                blockHeaders.Add(chainedHeader.BlockHeader);
 
                 if (chainedHeader.Hash == payload.HashStop)
                     break;
@@ -673,11 +664,11 @@ namespace BitSharp.Node
                 switch (invVector.Type)
                 {
                     case InventoryVector.TYPE_MESSAGE_BLOCK:
-                        Block block;
-                        if (this.blockCache.TryGetValue(invVector.Hash, out block))
-                        {
-                            //remoteNode.Sender.SendBlock(block).Forget();
-                        }
+                        //Block block;
+                        //if (this.blockCache.TryGetValue(invVector.Hash, out block))
+                        //{
+                        //    remoteNode.Sender.SendBlock(block).Forget();
+                        //}
                         break;
 
                     case InventoryVector.TYPE_MESSAGE_TRANSACTION:
@@ -724,7 +715,7 @@ namespace BitSharp.Node
                 // send our local version
                 var nodeId = random.NextUInt64(); //TODO should be generated and verified on version message
 
-                var currentHeight = this.blockchainDaemon.CurrentChain.Height;
+                var currentHeight = this.coreDaemon.CurrentChain.Height;
                 await remoteNode.Sender.SendVersion(Messaging.GetExternalIPEndPoint(), remoteNode.RemoteEndPoint, nodeId, (UInt32)currentHeight);
 
                 // wait for our local version to be acknowledged by the remote peer

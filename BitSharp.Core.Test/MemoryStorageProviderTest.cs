@@ -40,9 +40,9 @@ namespace BitSharp.Esent.Test
             Directory.CreateDirectory(this.baseDirectory);
         }
 
-        public override IBlockStorageNew OpenBlockStorage()
+        public override IStorageManager OpenStorageManager(Logger logger)
         {
-            return new MemoryBlockStorageNew();
+            return new MemoryStorageManager();
         }
 
         public override IChainStateBuilderStorage OpenChainStateBuilderStorage(ChainedHeader genesisHeader, Logger logger)

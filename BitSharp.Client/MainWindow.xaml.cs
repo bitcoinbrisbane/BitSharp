@@ -84,7 +84,6 @@ namespace BitSharp.Client
 #endif
 
                 // add cache modules
-                modules.Add(new CoreCacheModule());
                 modules.Add(new NodeCacheModule());
 
                 // add rules module
@@ -95,7 +94,7 @@ namespace BitSharp.Client
 
                 // initialize the blockchain daemon
                 this.kernel.Bind<CoreDaemon>().ToSelf().InSingletonScope();
-                var blockchainDaemon = this.kernel.Get<CoreDaemon>();
+                var coreDaemon = this.kernel.Get<CoreDaemon>();
 
 #if DUMMY_MONITOR
                 var dummyMonitor = new DummyMonitor(this.logger);
@@ -116,7 +115,7 @@ namespace BitSharp.Client
                 this.viewModel.ViewBlockchainLast();
 
                 // start the blockchain daemon
-                blockchainDaemon.Start();
+                coreDaemon.Start();
 
                 // start p2p client
                 var startThread = new Thread(() => localClient.Start());

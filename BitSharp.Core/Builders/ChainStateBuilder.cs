@@ -25,7 +25,7 @@ using Ninject.Parameters;
 
 namespace BitSharp.Core.Builders
 {
-    public class ChainStateBuilder : IDisposable
+    internal class ChainStateBuilder : IDisposable
     {
         private static readonly int DUPE_COINBASE_1_HEIGHT = 91722;
         private static readonly UInt256 DUPE_COINBASE_1_HASH = UInt256.Parse("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468", NumberStyles.HexNumber);
@@ -35,7 +35,7 @@ namespace BitSharp.Core.Builders
         private readonly Logger logger;
         private readonly SHA256Managed sha256;
         private readonly IBlockchainRules rules;
-        private readonly IBlockStorageNew blockCache;
+        private readonly CoreStorage coreStorage;
 
         private readonly TxPrevOutputLoader txPrevOutputLoader;
         private readonly TxValidator txValidator;
@@ -49,17 +49,17 @@ namespace BitSharp.Core.Builders
 
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(IChainStateBuilderStorage chainStateBuilderStorage, Logger logger, IBlockchainRules rules, IBlockStorageNew blockCache)
+        public ChainStateBuilder(IChainStateBuilderStorage chainStateBuilderStorage, Logger logger, IBlockchainRules rules, CoreStorage coreStorage)
         {
             this.logger = logger;
             this.sha256 = new SHA256Managed();
             this.rules = rules;
-            this.blockCache = blockCache;
+            this.coreStorage = coreStorage;
 
             var isConcurrent = true;
             this.scriptValidator = new ScriptValidator(this.logger, this.rules, isConcurrent);
             this.txValidator = new TxValidator(this.scriptValidator, this.logger, this.rules, isConcurrent);
-            this.txPrevOutputLoader = new TxPrevOutputLoader(this.blockCache, this.txValidator, this.logger, this.rules, isConcurrent);
+            this.txPrevOutputLoader = new TxPrevOutputLoader(this.coreStorage, this.txValidator, this.logger, this.rules, isConcurrent);
 
             this.chainStateBuilderStorage = chainStateBuilderStorage;
             this.utxoBuilder = new UtxoBuilder(chainStateBuilderStorage, logger);

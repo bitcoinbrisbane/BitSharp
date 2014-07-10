@@ -1,5 +1,6 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
+using BitSharp.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Storage
+namespace BitSharp.Node.Storage
 {
     public class UnboundedCache<TKey, TValue> : IUnboundedCache<TKey, TValue>
     {

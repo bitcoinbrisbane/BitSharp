@@ -1,5 +1,6 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
+using BitSharp.Core;
 using NLog;
 using System;
 using System.Collections.Concurrent;
@@ -12,7 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Storage
+namespace BitSharp.Node.Storage
 {
     public class BoundedCache<TKey, TValue> : IBoundedCache<TKey, TValue>
     {

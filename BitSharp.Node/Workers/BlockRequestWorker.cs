@@ -28,9 +28,8 @@ namespace BitSharp.Node.Workers
 
         private readonly Logger logger;
         private readonly LocalClient localClient;
-        private readonly CoreDaemon blockchainDaemon;
-        private readonly ChainedHeaderCache chainedHeaderCache;
-        private readonly IBlockStorageNew blockCache;
+        private readonly CoreDaemon coreDaemon;
+        private readonly CoreStorage coreStorage;
 
         private readonly ConcurrentDictionary<UInt256, DateTime> allBlockRequests;
         private readonly ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>> blockRequestsByPeer;
@@ -54,23 +53,22 @@ namespace BitSharp.Node.Workers
 
         private readonly WorkerMethod diagnosticWorker;
 
-        public BlockRequestWorker(Logger logger, WorkerConfig workerConfig, LocalClient localClient, CoreDaemon blockchainDaemon, IStorageManager storageManager, ChainedHeaderCache chainedHeaderCache)
+        public BlockRequestWorker(WorkerConfig workerConfig, Logger logger, LocalClient localClient, CoreDaemon coreDaemon)
             : base("BlockRequestWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.localClient = localClient;
-            this.blockchainDaemon = blockchainDaemon;
-            this.chainedHeaderCache = chainedHeaderCache;
-            this.blockCache = storageManager.BlockStorage;
+            this.coreDaemon = coreDaemon;
+            this.coreStorage = coreDaemon.CoreStorage;
 
             this.allBlockRequests = new ConcurrentDictionary<UInt256, DateTime>();
             this.blockRequestsByPeer = new ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>>();
             this.missingBlockQueue = new SortedList<int, ChainedHeader>();
 
             this.localClient.OnBlock += HandleBlock;
-            this.blockchainDaemon.OnChainStateChanged += HandleChainStateChanged;
-            this.blockchainDaemon.OnTargetChainChanged += HandleTargetChainChanged;
-            this.blockCache.OnMissing += HandleBlockMissing;
+            this.coreDaemon.OnChainStateChanged += HandleChainStateChanged;
+            this.coreDaemon.OnTargetChainChanged += HandleTargetChainChanged;
+            this.coreStorage.BlockTxesMissed += HandleBlockTxesMissed;
 
             this.blockRequestDurationMeasure = new DurationMeasure(sampleCutoff: TimeSpan.FromMinutes(5));
             this.blockDownloadRateMeasure = new RateMeasure();
@@ -99,9 +97,9 @@ namespace BitSharp.Node.Workers
         protected override void SubDispose()
         {
             this.localClient.OnBlock -= HandleBlock;
-            this.blockchainDaemon.OnChainStateChanged -= HandleChainStateChanged;
-            this.blockchainDaemon.OnTargetChainChanged -= HandleTargetChainChanged;
-            this.blockCache.OnMissing -= HandleBlockMissing;
+            this.coreDaemon.OnChainStateChanged -= HandleChainStateChanged;
+            this.coreDaemon.OnTargetChainChanged -= HandleTargetChainChanged;
+            this.coreStorage.BlockTxesMissed -= HandleBlockTxesMissed;
 
             this.blockRequestDurationMeasure.Dispose();
             this.blockDownloadRateMeasure.Dispose();
@@ -148,7 +146,7 @@ namespace BitSharp.Node.Workers
         {
             //TODO this needs to work properly when the internet connection is slower than blocks can be processed
 
-            var blockProcessingTime = this.blockchainDaemon.AverageBlockProcessingTime();
+            var blockProcessingTime = this.coreDaemon.AverageBlockProcessingTime();
             if (blockProcessingTime == TimeSpan.Zero)
             {
                 this.targetChainLookAhead = 1;
@@ -180,12 +178,12 @@ namespace BitSharp.Node.Workers
 
         private void UpdateMissingBlockQueue()
         {
-            var currentChainLocal = this.blockchainDaemon.CurrentChain;
-            var targetChainLocal = this.blockchainDaemon.TargetChain;
+            var currentChainLocal = this.coreDaemon.CurrentChain;
+            var targetChainLocal = this.coreDaemon.TargetChain;
             var maxMissingHeight = currentChainLocal.Height + this.criticalTargetChainLookAhead;
 
             // remove any blocks that are no longer missing
-            this.missingBlockQueue.RemoveWhere(x => this.blockCache.ContainsKey(x.Value.Hash));
+            this.missingBlockQueue.RemoveWhere(x => this.coreStorage.ContainsBlockTxes(x.Value.Hash));
 
             // remove old missing blocks
             this.missingBlockQueue.RemoveWhere(x => x.Value.Height < currentChainLocal.Height);
@@ -194,10 +192,10 @@ namespace BitSharp.Node.Workers
             this.missingBlockQueue.RemoveWhere(x => x.Value.Height > maxMissingHeight);
 
             // add any blocks that are currently missing
-            foreach (var missingBlock in this.blockCache.MissingData)
+            foreach (var missingBlock in this.coreStorage.MissingBlockTxes)
             {
                 ChainedHeader missingBlockChained;
-                if (this.chainedHeaderCache.TryGetValue(missingBlock, out missingBlockChained)
+                if (this.coreStorage.TryGetChainedHeader(missingBlock, out missingBlockChained)
                     && missingBlockChained.Height <= maxMissingHeight)
                 {
                     this.missingBlockQueue[missingBlockChained.Height] = missingBlockChained;
@@ -214,7 +212,7 @@ namespace BitSharp.Node.Workers
                     .Where(x =>
                         x.Height <= maxMissingHeight
                         && !this.missingBlockQueue.ContainsKey(x.Height)
-                        && !this.blockCache.ContainsKey(x.Hash)))
+                        && !this.coreStorage.ContainsBlockTxes(x.Hash)))
                 {
                     this.missingBlockQueue[upcomingBlock.Height] = upcomingBlock;
                 }
@@ -223,8 +221,8 @@ namespace BitSharp.Node.Workers
 
         private void UpdateTargetChainQueue()
         {
-            var currentChainLocal = this.blockchainDaemon.CurrentChain;
-            var targetChainLocal = this.blockchainDaemon.TargetChain;
+            var currentChainLocal = this.coreDaemon.CurrentChain;
+            var targetChainLocal = this.coreDaemon.TargetChain;
 
             // update the target chain queue at most once per second
             if (this.targetChainQueueTime != null && DateTime.UtcNow - targetChainQueueTime < TimeSpan.FromSeconds(1))
@@ -239,7 +237,7 @@ namespace BitSharp.Node.Workers
                 this.targetChainQueue = currentChainLocal.NavigateTowards(targetChainLocal)
                     .Select(x => x.Item2)
                     .Take(this.targetChainLookAhead)
-                    .Where(x => !this.blockCache.ContainsKey(x.Hash))
+                    .Where(x => !this.coreStorage.ContainsBlockTxes(x.Hash))
                     .ToList();
                 this.targetChainQueueIndex = 0;
             }
@@ -349,7 +347,7 @@ namespace BitSharp.Node.Workers
                 if (!this.flushBlocks.Contains(missingBlock.Hash)
                     && !peerBlockRequests.ContainsKey(missingBlock.Hash)
                     && !this.allBlockRequests.ContainsKey(missingBlock.Hash)
-                    && !this.blockCache.ContainsKey(missingBlock.Hash))
+                    && !this.coreStorage.ContainsBlockTxes(missingBlock.Hash))
                 {
                     yield return missingBlock.Hash;
                     currentCount++;
@@ -364,7 +362,7 @@ namespace BitSharp.Node.Workers
                 if (!this.flushBlocks.Contains(requestBlock.Hash)
                     && !peerBlockRequests.ContainsKey(requestBlock.Hash)
                     && !this.allBlockRequests.ContainsKey(requestBlock.Hash)
-                    && !this.blockCache.ContainsKey(requestBlock.Hash))
+                    && !this.coreStorage.ContainsBlockTxes(requestBlock.Hash))
                 {
                     yield return requestBlock.Hash;
                     currentCount++;
@@ -386,7 +384,7 @@ namespace BitSharp.Node.Workers
                 var remoteNode = tuple.Item1;
                 var block = tuple.Item2;
 
-                if (!this.blockCache.ContainsKey(block.Hash) && this.blockCache.TryAdd(block.Hash, block))
+                if (!this.coreStorage.ContainsBlockTxes(block.Hash) && this.coreStorage.TryAddBlock(block))
                     this.blockDownloadRateMeasure.Tick();
                 else
                     this.duplicateBlockDownloadRateMeasure.Tick();
@@ -448,7 +446,7 @@ namespace BitSharp.Node.Workers
             this.NotifyWork();
         }
 
-        private void HandleBlockMissing(UInt256 blockHash)
+        private void HandleBlockTxesMissed(UInt256 blockHash)
         {
             this.NotifyWork();
         }

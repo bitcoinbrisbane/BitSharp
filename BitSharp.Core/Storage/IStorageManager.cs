@@ -10,13 +10,9 @@ namespace BitSharp.Core.Storage
 {
     public interface IStorageManager : IDisposable
     {
-        IBlockHeaderStorage BlockHeaderStorage { get; }
+        IBlockStorage BlockStorage { get; }
 
-        IChainedHeaderStorage ChainedHeaderStorage { get; }
-
-        IInvalidBlockStorage InvalidBlockStorage { get; }
-
-        IBlockStorageNew BlockStorage { get; }
+        IBlockTxesStorage BlockTxesStorage { get; }
 
         IChainStateBuilderStorage CreateOrLoadChainState(ChainedHeader genesisHeader);
     }

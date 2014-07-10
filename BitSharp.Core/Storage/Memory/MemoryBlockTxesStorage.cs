@@ -11,30 +11,17 @@ using System.Threading.Tasks;
 namespace BitSharp.Core.Storage.Memory
 {
     //TODO lots unimplemented in here while interfaces get cleaned up
-    public class MemoryBlockStorageNew : IBlockStorageNew
+    public class MemoryBlockTxesStorage : IBlockTxesStorage
     {
         private readonly ConcurrentDictionary<UInt256, Block> blocks;
 
-        public MemoryBlockStorageNew()
+        public MemoryBlockTxesStorage()
         {
             this.blocks = new ConcurrentDictionary<UInt256, Block>();
         }
 
         public void Dispose()
         {
-        }
-
-        public event Action<UInt256, Block> OnAddition;
-
-        public event Action<UInt256, Block> OnModification;
-
-        public event Action<UInt256> OnRemoved;
-
-        public event Action<UInt256> OnMissing;
-
-        public void AddBlock(Block block)
-        {
-            this.blocks.TryAdd(block.Hash, block);
         }
 
         public bool TryGetTransaction(UInt256 blockHash, int txIndex, out Transaction transaction)
@@ -53,13 +40,12 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
-        public IEnumerable<BlockTx> ReadBlock(UInt256 blockHash, UInt256 merkleRoot)
+        public IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash)
         {
             Block block;
             if (this.blocks.TryGetValue(blockHash, out block))
             {
-                return DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot,
-                    block.Transactions.Select((tx, txIndex) => new BlockTx(txIndex, 0, tx.Hash, tx)));
+                return block.Transactions.Select((tx, txIndex) => new BlockTx(txIndex, 0, tx.Hash, tx));
             }
             else
             {
@@ -67,13 +53,12 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
-        public IEnumerable<BlockElement> ReadBlockElements(UInt256 blockHash, UInt256 merkleRoot)
+        public IEnumerable<BlockElement> ReadBlockElements(UInt256 blockHash)
         {
             Block block;
             if (this.blocks.TryGetValue(blockHash, out block))
             {
-                return DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot,
-                    block.Transactions.Select((tx, txIndex) => new BlockElement(txIndex, 0, tx.Hash, false)));
+                return block.Transactions.Select((tx, txIndex) => new BlockElement(txIndex, 0, tx.Hash, false));
             }
             else
             {
@@ -96,32 +81,14 @@ namespace BitSharp.Core.Storage.Memory
             get { return "MemoryBlockStorage"; }
         }
 
-        public ImmutableHashSet<UInt256> MissingData
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        public bool ContainsKey(UInt256 blockHash)
+        public bool ContainsBlock(UInt256 blockHash)
         {
             return this.blocks.ContainsKey(blockHash);
         }
 
-        public bool TryGetValue(UInt256 blockHash, out Block block)
-        {
-            return this.blocks.TryGetValue(blockHash, out block);
-        }
-
         public bool TryAdd(UInt256 blockHash, Block block)
         {
-            var wasAdded = this.blocks.TryAdd(blockHash, block);
-
-            var handler = this.OnAddition;
-            if (wasAdded && handler != null)
-            {
-                handler(blockHash, block);
-            }
-
-            return wasAdded;
+            return this.blocks.TryAdd(blockHash, block);
         }
 
         public bool TryRemove(UInt256 blockHash)

@@ -18,7 +18,7 @@ namespace BitSharp.Core.Builders
 {
     internal class TxPrevOutputLoader : BlockingCollectionWorker<TxWithPrevOutputKeys>
     {
-        private readonly IBlockStorageNew blockCache;
+        private readonly CoreStorage coreStorage;
         private readonly TxValidator txValidator;
         private readonly IBlockchainRules rules;
         private readonly Logger logger;
@@ -28,10 +28,10 @@ namespace BitSharp.Core.Builders
         private int txCount;
         private int inputCount;
 
-        public TxPrevOutputLoader(IBlockStorageNew blockCache, TxValidator txValidator, Logger logger, IBlockchainRules rules, bool isConcurrent)
+        public TxPrevOutputLoader(CoreStorage coreStorage, TxValidator txValidator, Logger logger, IBlockchainRules rules, bool isConcurrent)
             : base("TxPrevOutputLoader", isConcurrent, logger: logger)
         {
-            this.blockCache = blockCache;
+            this.coreStorage = coreStorage;
             this.txValidator = txValidator;
             this.rules = rules;
             this.logger = logger;
@@ -96,7 +96,7 @@ namespace BitSharp.Core.Builders
                             var spentTx = spentTxes[inputIndex];
 
                             Transaction prevTx;
-                            if (this.blockCache.TryGetTransaction(spentTx.BlockHash, spentTx.TxIndex, out prevTx))
+                            if (this.coreStorage.TryGetTransaction(spentTx.BlockHash, spentTx.TxIndex, out prevTx))
                             {
                                 if (input.PreviousTxOutputKey.TxHash != prevTx.Hash)
                                     throw new Exception("TODO");

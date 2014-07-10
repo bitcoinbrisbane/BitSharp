@@ -25,10 +25,8 @@ namespace BitSharp.Core.Workers
 
         private readonly Logger logger;
         private readonly Func<Chain> getTargetChain;
-        private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
-        private readonly IBlockStorageNew blockCache;
-        private readonly InvalidBlockCache invalidBlockCache;
+        private readonly CoreStorage coreStorage;
 
         private readonly DurationMeasure blockProcessingDurationMeasure;
         private readonly RateMeasure blockMissRateMeasure;
@@ -40,15 +38,13 @@ namespace BitSharp.Core.Workers
 
         private readonly PruningWorker pruningWorker;
 
-        public ChainStateWorker(TargetChainWorker targetChainWorker, ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, WorkerConfig workerConfig, Logger logger, IKernel kernel, IBlockchainRules rules, IStorageManager storageManager, InvalidBlockCache invalidBlockCache)
+        public ChainStateWorker(WorkerConfig workerConfig, TargetChainWorker targetChainWorker, ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, Logger logger, IBlockchainRules rules, CoreStorage coreStorage)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.getTargetChain = getTargetChain;
-            this.kernel = kernel;
             this.rules = rules;
-            this.blockCache = storageManager.BlockStorage;
-            this.invalidBlockCache = invalidBlockCache;
+            this.coreStorage = coreStorage;
 
             this.blockProcessingDurationMeasure = new DurationMeasure(sampleCutoff: TimeSpan.FromMinutes(5));
             this.blockMissRateMeasure = new RateMeasure();
@@ -58,7 +54,7 @@ namespace BitSharp.Core.Workers
             this.currentChain = this.chainStateBuilder.Chain;
 
             this.pruningWorker = new PruningWorker(
-                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromMinutes(5)),
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMinutes(5), maxIdleTime: TimeSpan.FromMinutes(5)),
                 this.chainStateBuilder, this.logger, this.rules);
         }
 
@@ -114,7 +110,7 @@ namespace BitSharp.Core.Workers
                     // get block and metadata for next link in blockchain
                     var direction = pathElement.Item1;
                     var chainedHeader = pathElement.Item2;
-                    var blockTxes = this.blockCache.ReadBlock(chainedHeader.Hash, chainedHeader.MerkleRoot).LookAhead(100);
+                    var blockTxes = this.coreStorage.ReadBlock(chainedHeader.Hash, chainedHeader.MerkleRoot).LookAhead(100);
 
                     var blockStopwatch = Stopwatch.StartNew();
                     if (direction > 0)
@@ -145,6 +141,7 @@ namespace BitSharp.Core.Workers
                 if (didWork)
                     this.chainStateBuilder.LogBlockchainProgress();
             }
+            catch (OperationCanceledException) { }
             catch (Exception e)
             {
                 var missingException = e as MissingDataException;
@@ -157,13 +154,24 @@ namespace BitSharp.Core.Workers
 
                 if (!(e is MissingDataException))
                 {
-                    this.logger.WarnException("ChainStateWorker exception", e);
+                    var aggException = e as AggregateException;
+                    if (aggException != null)
+                    {
+                        foreach (var innerException in aggException.InnerExceptions)
+                        {
+                            this.logger.WarnException("ChainStateWorker exception.", innerException);
+                        }
+                    }
+                    else
+                    {
+                        this.logger.WarnException("ChainStateWorker exception.", e);
+                    }
                 }
 
                 if (e is ValidationException)
                 {
                     var validationException = (ValidationException)e;
-                    this.invalidBlockCache[validationException.BlockHash] = validationException.Message;
+                    this.coreStorage.MarkBlockInvalid(validationException.BlockHash);
 
                     // immediately update the target chain if there is a validation error
                     this.targetChainWorker.ForceWorkAndWait();
@@ -184,7 +192,7 @@ namespace BitSharp.Core.Workers
 
                             var direction = chainedHeaderTuple.Item1;
                             var chainedHeader = chainedHeaderTuple.Item2;
-                            var blockTxes = this.blockCache.ReadBlock(chainedHeader.Hash, chainedHeader.MerkleRoot).LookAhead(txLookAhead);
+                            var blockTxes = this.coreStorage.ReadBlock(chainedHeader.Hash, chainedHeader.MerkleRoot).LookAhead(txLookAhead);
 
                             return Tuple.Create(direction, chainedHeader, blockTxes);
                         }

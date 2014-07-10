@@ -21,8 +21,8 @@ namespace BitSharp.Core.Rules
         private readonly Block _genesisBlock;
         private readonly ChainedHeader _genesisChainedHeader;
 
-        public Testnet3Rules(Logger logger, BlockHeaderCache blockHeaderCache)
-            : base(logger, blockHeaderCache)
+        public Testnet3Rules(Logger logger)
+            : base(logger)
         {
             this._genesisBlock =
                 new Block

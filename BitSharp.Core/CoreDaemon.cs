@@ -47,9 +47,7 @@ namespace BitSharp.Core
         private readonly IKernel kernel;
         private readonly IBlockchainRules rules;
         private readonly IStorageManager storageManager;
-        private readonly BlockHeaderCache blockHeaderCache;
-        private readonly ChainedHeaderCache chainedHeaderCache;
-        private readonly IBlockStorageNew blockCache;
+        private readonly CoreStorage coreStorage;
 
         private readonly CancellationTokenSource shutdownToken;
 
@@ -59,13 +57,12 @@ namespace BitSharp.Core
         private ChainState chainState;
         private readonly ReaderWriterLockSlim chainStateLock;
 
-        private readonly ChainingWorker chainingWorker;
         private readonly TargetChainWorker targetChainWorker;
         private readonly ChainStateWorker chainStateWorker;
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
 
-        public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, IStorageManager storageManager, BlockHeaderCache blockHeaderCache, ChainedHeaderCache chainedHeaderCache)
+        public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, IStorageManager storageManager)
         {
             this.logger = logger;
             this.shutdownToken = new CancellationTokenSource();
@@ -73,40 +70,27 @@ namespace BitSharp.Core
             this.kernel = kernel;
             this.rules = rules;
             this.storageManager = storageManager;
-            this.blockHeaderCache = blockHeaderCache;
-            this.chainedHeaderCache = chainedHeaderCache;
-            this.blockCache = storageManager.BlockStorage;
+            this.coreStorage = new CoreStorage(storageManager, logger);
 
             // write genesis block out to storage
-            this.blockHeaderCache[this.rules.GenesisBlock.Hash] = this.rules.GenesisBlock.Header;
-            this.blockCache.TryAdd(this.rules.GenesisBlock.Hash, this.rules.GenesisBlock);
-            this.chainedHeaderCache[this.rules.GenesisChainedHeader.Hash] = this.rules.GenesisChainedHeader;
+            this.coreStorage.AddGenesisBlock(this.rules.GenesisChainedHeader);
 
             // wire up cache events
-            this.blockHeaderCache.OnAddition += OnBlockHeaderAddition;
-            this.blockHeaderCache.OnModification += OnBlockHeaderModification;
-            this.blockCache.OnAddition += OnBlockAddition;
-            this.blockCache.OnModification += OnBlockModification;
-            this.chainedHeaderCache.OnAddition += OnChainedHeaderAddition;
-            this.chainedHeaderCache.OnModification += OnChainedHeaderModification;
+            this.coreStorage.BlockTxesAdded += HandleBlockTxesAdded;
 
             // create chain state builder
             this.chainStateBuilderStorage = this.storageManager.CreateOrLoadChainState(this.rules.GenesisChainedHeader);
-            this.chainStateBuilder = new ChainStateBuilder(this.chainStateBuilderStorage, this.logger, this.rules, this.blockCache);
+            this.chainStateBuilder = new ChainStateBuilder(this.chainStateBuilderStorage, this.logger, this.rules, this.coreStorage);
             this.chainStateLock = new ReaderWriterLockSlim();
 
             // create workers
-            this.chainingWorker = kernel.Get<ChainingWorker>(
-                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))));
+            this.targetChainWorker = new TargetChainWorker(
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30)),
+                this.logger, this.rules, this.coreStorage);
 
-            this.targetChainWorker = kernel.Get<TargetChainWorker>(
-              new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(0), maxIdleTime: TimeSpan.FromSeconds(30))));
-
-            this.chainStateWorker = kernel.Get<ChainStateWorker>(
-                new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromSeconds(5))),
-                new ConstructorArgument("getTargetChain", (Func<Chain>)(() => this.targetChainWorker.TargetChain)),
-                new ConstructorArgument("targetChainWorker", this.targetChainWorker),
-                new ConstructorArgument("chainStateBuilder", this.chainStateBuilder));
+            this.chainStateWorker = new ChainStateWorker(
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromSeconds(5)),
+                this.targetChainWorker, this.chainStateBuilder, () => this.targetChainWorker.TargetChain, this.logger, this.rules, this.coreStorage);
 
             this.targetChainWorker.OnTargetBlockChanged +=
                 () =>
@@ -185,6 +169,31 @@ namespace BitSharp.Core
                 }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(60), maxIdleTime: TimeSpan.FromSeconds(60), logger: this.logger);
         }
 
+        public void Dispose()
+        {
+            this.Stop();
+
+            // cleanup events
+            this.coreStorage.BlockTxesAdded -= HandleBlockTxesAdded;
+
+            // notify threads to begin shutting down
+            this.shutdownToken.Cancel();
+
+            // cleanup workers
+            new IDisposable[]
+            {
+                this.chainStateWorker,
+                this.prevChainState,
+                this.chainState,
+                this.targetChainWorker,
+                this.gcWorker,
+                this.utxoScanWorker,
+                this.shutdownToken
+            }.DisposeList();
+        }
+
+        public CoreStorage CoreStorage { get { return this.coreStorage; } }
+
         public ChainedHeader TargetBlock { get { return this.targetChainWorker.TargetBlock; } }
 
         public int TargetBlockHeight
@@ -233,22 +242,7 @@ namespace BitSharp.Core
 
         public void Start()
         {
-            //var blockStorageNew = this.kernel.Get<IBlockStorageNew>();
-
-            //var blockIndex = 0;
-            //foreach (var block in this.blockCache.Values)
-            //{
-            //    this.logger.Info(blockIndex.ToString());
-
-            //    blockStorageNew.AddBlock(block);
-            //    blockIndex++;
-            //}
-
-            // start loading the existing state from storage
-            //TODO LoadExistingState();
-
             // startup workers
-            this.chainingWorker.Start();
             this.targetChainWorker.Start();
             this.chainStateWorker.Start();
             this.gcWorker.Start();
@@ -258,45 +252,14 @@ namespace BitSharp.Core
         public void Stop()
         {
             // startup workers
-            this.chainingWorker.Stop();
             this.targetChainWorker.Stop();
             this.chainStateWorker.Stop();
             this.gcWorker.Stop();
             this.utxoScanWorker.Stop();
         }
 
-        public void Dispose()
-        {
-            this.Stop();
-
-            // cleanup events
-            this.blockHeaderCache.OnAddition -= OnBlockHeaderAddition;
-            this.blockHeaderCache.OnModification -= OnBlockHeaderModification;
-            this.blockCache.OnAddition -= OnBlockAddition;
-            this.blockCache.OnModification -= OnBlockModification;
-            this.chainedHeaderCache.OnAddition -= OnChainedHeaderAddition;
-            this.chainedHeaderCache.OnModification -= OnChainedHeaderModification;
-
-            // notify threads to begin shutting down
-            this.shutdownToken.Cancel();
-
-            // cleanup workers
-            new IDisposable[]
-            {
-                this.chainStateWorker,
-                this.prevChainState,
-                this.chainState,
-                this.targetChainWorker,
-                this.chainingWorker,
-                this.gcWorker,
-                this.utxoScanWorker,
-                this.shutdownToken
-            }.DisposeList();
-        }
-
         public void ForceWorkAndWait()
         {
-            this.chainingWorker.ForceWorkAndWait();
             this.targetChainWorker.ForceWorkAndWait();
             this.chainStateWorker.ForceWorkAndWait();
         }
@@ -339,88 +302,9 @@ namespace BitSharp.Core
             throw new NotImplementedException();
         }
 
-        private void OnBlockHeaderAddition(UInt256 blockHash, BlockHeader blockHeader)
+        private void HandleBlockTxesAdded(ChainedHeader chainedHeader)
         {
             this.chainStateWorker.NotifyWork();
-        }
-
-        private void OnBlockHeaderModification(UInt256 blockHash, BlockHeader blockHeader)
-        {
-            OnBlockHeaderAddition(blockHash, blockHeader);
-        }
-
-        private void OnBlockAddition(UInt256 blockHash, Block block)
-        {
-            this.chainStateWorker.NotifyWork();
-        }
-
-        private void OnBlockModification(UInt256 blockHash, Block block)
-        {
-            OnBlockAddition(blockHash, block);
-        }
-
-        private void OnChainedHeaderAddition(UInt256 blockHash, ChainedHeader chainedHeader)
-        {
-            this.chainStateWorker.NotifyWork();
-        }
-
-        private void OnChainedHeaderModification(UInt256 blockHash, ChainedHeader chainedHeader)
-        {
-            OnChainedHeaderAddition(blockHash, chainedHeader);
-        }
-
-        private void LoadExistingState()
-        {
-            throw new NotImplementedException();
-
-            //var stopwatch = Stopwatch.StartNew();
-
-            ////TODO
-            //Tuple<BlockchainKey, BlockchainMetadata> winner = null;
-
-            //foreach (var tuple in this.StorageContext.BlockchainStorage.ListBlockchains())
-            //{
-            //    if (winner == null)
-            //        winner = tuple;
-
-            //    if (tuple.Item2.TotalWork > winner.Item2.TotalWork)
-            //    {
-            //        winner = tuple;
-            //    }
-            //}
-
-            //// check if an existing blockchain has been found
-            //if (winner != null)
-            //{
-            //    // read the winning blockchain
-            //    var blockchain = this.StorageContext.BlockchainStorage.ReadBlockchain(winner.Item1);
-            //    UpdateChainState(new ChainState(blockchain));
-
-            //    // collect after loading
-            //    GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
-
-            //    // clean up any old blockchains
-            //    this.StorageContext.BlockchainStorage.RemoveBlockchains(winner.Item2.TotalWork);
-
-            //    // log statistics
-            //    stopwatch.Stop();
-            //    Debug.WriteLine(
-            //        string.Join("\n",
-            //            new string('-', 80),
-            //            "Loaded blockchain on startup in {0:#,##0.000} seconds, height: {1:#,##0}, utxo size: {2:#,##0}",
-            //            "GC Memory:      {3,10:#,##0.00} MB",
-            //            "Process Memory: {4,10:#,##0.00} MB",
-            //            new string('-', 80)
-            //        )
-            //        .Format2
-            //        (
-            //            stopwatch.ElapsedSecondsFloat(),
-            //            blockchain.Height,
-            //            blockchain.Utxo.Count,
-            //            (float)GC.GetTotalMemory(false) / 1.MILLION(),
-            //            (float)Process.GetCurrentProcess().PrivateMemorySize64 / 1.MILLION()
-            //        ));
-            //}
         }
 
         private void ValidateCurrentChainWorker()

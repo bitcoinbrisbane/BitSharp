@@ -24,12 +24,14 @@ namespace BitSharp.Esent.Test
     //TODO i'd like a better way than an abstract base for providing tests that storage providers can plug into
     public abstract class StorageProviderTest
     {
-        public abstract IBlockStorageNew OpenBlockStorage();
+        public abstract IStorageManager OpenStorageManager(Logger logger);
 
         public abstract IChainStateBuilderStorage OpenChainStateBuilderStorage(ChainedHeader genesisHeader, Logger logger);
 
         public void TestPrune()
         {
+            var logger = LogManager.CreateNullLogger();
+
             var txCount = 100;
             var transactions = Enumerable.Range(0, txCount).Select(x => RandomData.RandomTransaction()).ToImmutableArray();
             var blockHeader = RandomData.RandomBlockHeader().With(MerkleRoot: DataCalculator.CalculateMerkleRoot(transactions));
@@ -50,20 +52,22 @@ namespace BitSharp.Esent.Test
                 pruneOrderSource.RemoveAt(randomIndex);
             }
 
-            using (var blockStorage = this.OpenBlockStorage())
+            using (var storageManager = this.OpenStorageManager(logger))
+            using (var coreStorage = new CoreStorage(storageManager, logger))
             {
-                blockStorage.AddBlock(block);
-                var blockTxes = blockStorage.ReadBlock(block.Hash, block.Header.MerkleRoot).ToList();
+                coreStorage.AddGenesisBlock(ChainedHeader.CreateForGenesisBlock(block.Header));
+                coreStorage.TryAddBlock(block);
+                var blockElements = coreStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
 
                 new MethodTimer().Time(() =>
                 {
                     foreach (var pruneIndex in pruneOrder)
                     {
-                        blockStorage.PruneElements(block.Hash, new[] { pruneIndex });
-                        blockStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
+                        coreStorage.PruneElements(block.Hash, new[] { pruneIndex });
+                        coreStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
                     }
 
-                    var finalBlockElements = blockStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
+                    var finalBlockElements = coreStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
 
                     Assert.AreEqual(1, finalBlockElements.Count);
                     Assert.AreEqual(expectedFinalElement, finalBlockElements[0]);
@@ -87,15 +91,17 @@ namespace BitSharp.Esent.Test
             var genesisChain = Chain.CreateForGenesisBlock(genesisHeader);
             var genesisUtxo = Utxo.CreateForGenesisBlock(genesisHeader);
 
-            var rules = new MainnetRules(logger, null);
+            var rules = new MainnetRules(logger);
 
-            using (var blockStorage = this.OpenBlockStorage())
+            using (var storageManager = this.OpenStorageManager(logger))
+            using (var coreStorage = new CoreStorage(storageManager, logger))
             using (var chainStateBuilderStorage = this.OpenChainStateBuilderStorage(genesisHeader, logger))
-            using (var chainStateBuilder = new ChainStateBuilder(chainStateBuilderStorage, logger, rules, blockStorage))
+            using (var chainStateBuilder = new ChainStateBuilder(chainStateBuilderStorage, logger, rules, coreStorage))
             {
                 // add blocks to storage
+                coreStorage.AddGenesisBlock(ChainedHeader.CreateForGenesisBlock(blocks[0].Header));
                 foreach (var block in blocks)
-                    blockStorage.AddBlock(block);
+                    coreStorage.TryAddBlock(block);
 
                 // store the genesis utxo state
                 var expectedUtxos = new List<List<KeyValuePair<UInt256, UnspentTx>>>();

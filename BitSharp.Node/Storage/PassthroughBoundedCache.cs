@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Storage
+namespace BitSharp.Node.Storage
 {
     public abstract class PassthroughBoundedCache<TKey, TValue> : PassthroughUnboundedCache<TKey, TValue>, IBoundedCache<TKey, TValue>
     {

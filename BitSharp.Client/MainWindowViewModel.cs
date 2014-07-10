@@ -25,9 +25,9 @@ namespace BitSharp.Client
         public event PropertyChangedEventHandler PropertyChanged;
 
         private readonly IKernel kernel;
-        private readonly CoreDaemon blockchainDaemon;
+        private readonly CoreDaemon coreDaemon;
+        private readonly CoreStorage coreStorage;
         private readonly LocalClient localClient;
-        private readonly IBlockStorageNew blockCache;
 
         private readonly DateTime startTime;
         private string runningTime;
@@ -56,9 +56,9 @@ namespace BitSharp.Client
             this.dispatcher = Dispatcher.CurrentDispatcher;
 
             this.kernel = kernel;
-            this.blockchainDaemon = kernel.Get<CoreDaemon>();
+            this.coreDaemon = kernel.Get<CoreDaemon>();
+            this.coreStorage = this.coreDaemon.CoreStorage;
             this.localClient = kernel.Get<LocalClient>();
-            this.blockCache = kernel.Get<IStorageManager>().BlockStorage;
 
             this.startTime = DateTime.UtcNow;
             this.runningTimeTimer = new DispatcherTimer();
@@ -73,9 +73,9 @@ namespace BitSharp.Client
             this.ratesTimer = new DispatcherTimer();
             ratesTimer.Tick += (sender, e) =>
             {
-                this.BlockRate = this.blockchainDaemon.GetBlockRate(TimeSpan.FromSeconds(1));
-                this.TransactionRate = this.blockchainDaemon.GetTxRate(TimeSpan.FromSeconds(1));
-                this.InputRate = this.blockchainDaemon.GetInputRate(TimeSpan.FromSeconds(1));
+                this.BlockRate = this.coreDaemon.GetBlockRate(TimeSpan.FromSeconds(1));
+                this.TransactionRate = this.coreDaemon.GetTxRate(TimeSpan.FromSeconds(1));
+                this.InputRate = this.coreDaemon.GetInputRate(TimeSpan.FromSeconds(1));
                 this.BlockDownloadRate = this.localClient.GetBlockDownloadRate(TimeSpan.FromSeconds(1));
                 this.DuplicateBlockDownloadRate = this.localClient.GetDuplicateBlockDownloadRate(TimeSpan.FromSeconds(1));
                 this.BlockMissRate = this.localClient.GetBlockMissRate(TimeSpan.FromSeconds(1));
@@ -83,27 +83,27 @@ namespace BitSharp.Client
             ratesTimer.Interval = TimeSpan.FromSeconds(1);
             ratesTimer.Start();
 
-            this.viewChain = this.blockchainDaemon.CurrentChain;
+            this.viewChain = this.coreDaemon.CurrentChain;
 
-            this.WinningBlockchainHeight = this.blockchainDaemon.TargetBlockHeight;
-            this.CurrentBlockchainHeight = this.blockchainDaemon.CurrentChain.Height;
-            this.DownloadedBlockCount = this.blockCache.Count;
+            this.WinningBlockchainHeight = this.coreDaemon.TargetBlockHeight;
+            this.CurrentBlockchainHeight = this.coreDaemon.CurrentChain.Height;
+            this.DownloadedBlockCount = this.coreStorage.BlockWithTxesCount;
 
-            this.blockCache.OnAddition +=
-                (blockHash, block) =>
-                    DownloadedBlockCount = this.blockCache.Count;
+            this.coreStorage.BlockTxesAdded +=
+                (chainedHeader) =>
+                    DownloadedBlockCount = this.coreStorage.BlockWithTxesCount;
 
-            this.blockCache.OnRemoved +=
+            this.coreStorage.BlockTxesRemoved +=
                 (blockHash) =>
-                    DownloadedBlockCount = this.blockCache.Count;
+                    DownloadedBlockCount = this.coreStorage.BlockWithTxesCount;
 
-            this.blockchainDaemon.OnTargetBlockChanged +=
+            this.coreDaemon.OnTargetBlockChanged +=
                 (sender, block) =>
-                    WinningBlockchainHeight = this.blockchainDaemon.TargetBlockHeight;
+                    WinningBlockchainHeight = this.coreDaemon.TargetBlockHeight;
 
-            this.blockchainDaemon.OnChainStateChanged +=
+            this.coreDaemon.OnChainStateChanged +=
                 (sender, chainState) =>
-                    CurrentBlockchainHeight = this.blockchainDaemon.CurrentChain.Height;
+                    CurrentBlockchainHeight = this.coreDaemon.CurrentChain.Height;
 
             if (walletMonitor != null)
             {
@@ -181,7 +181,7 @@ namespace BitSharp.Client
             }
             set
             {
-                var chainLocal = this.blockchainDaemon.CurrentChain;
+                var chainLocal = this.coreDaemon.CurrentChain;
 
                 var height = value;
                 if (height > chainLocal.Height)
@@ -206,7 +206,7 @@ namespace BitSharp.Client
 
         public void ViewBlockchainFirst()
         {
-            var chainLocal = this.blockchainDaemon.CurrentChain;
+            var chainLocal = this.coreDaemon.CurrentChain;
             if (chainLocal.Blocks.Count == 0)
                 return;
 
@@ -216,7 +216,7 @@ namespace BitSharp.Client
 
         public void ViewBlockchainPrevious()
         {
-            var chainLocal = this.blockchainDaemon.CurrentChain;
+            var chainLocal = this.coreDaemon.CurrentChain;
             if (chainLocal.Blocks.Count == 0)
                 return;
 
@@ -230,7 +230,7 @@ namespace BitSharp.Client
 
         public void ViewBlockchainNext()
         {
-            var chainLocal = this.blockchainDaemon.CurrentChain;
+            var chainLocal = this.coreDaemon.CurrentChain;
             if (chainLocal.Blocks.Count == 0)
                 return;
 
@@ -244,7 +244,7 @@ namespace BitSharp.Client
 
         public void ViewBlockchainLast()
         {
-            SetViewBlockchain(this.blockchainDaemon.CurrentChain);
+            SetViewBlockchain(this.coreDaemon.CurrentChain);
         }
 
         private void SetViewBlockchain(ChainedHeader targetBlock)
@@ -278,8 +278,8 @@ namespace BitSharp.Client
             {
                 if (chain.Height > 0)
                 {
-                    Block block;
-                    this.blockCache.TryGetValue(this.viewChain.LastBlockHash, out block);
+                    //Block block;
+                    //this.blockCache.TryGetValue(this.viewChain.LastBlockHash, out block);
                     // TODO this is abusing rollback a bit just to get the transactions that exist in a target block that's already known
                     // TODO make a better api for get the net output of a block
                     //List<TxOutputKey> spendOutputs, receiveOutputs;

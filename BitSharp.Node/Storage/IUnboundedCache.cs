@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BitSharp.Core.Storage
+namespace BitSharp.Node.Storage
 {
     public interface IUnboundedCache<TKey, TValue> : IDisposable
     {

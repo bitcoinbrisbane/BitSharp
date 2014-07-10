@@ -22,8 +22,9 @@ namespace BitSharp.Core.Test.Workers
         public void TestSimpleTargetBlock()
         {
             // prepare test kernel
-            var kernel = new StandardKernel(new ConsoleLoggingModule(), new MemoryStorageModule(), new CoreCacheModule());
-            var chainedHeaderCache = kernel.Get<ChainedHeaderCache>();
+            var kernel = new StandardKernel(new ConsoleLoggingModule(), new MemoryStorageModule());
+            kernel.Bind<CoreStorage>().ToSelf().InSingletonScope();
+            var coreStorage = kernel.Get<CoreStorage>();
 
             // initialize data
             var fakeHeaders = new FakeHeaders();
@@ -40,7 +41,7 @@ namespace BitSharp.Core.Test.Workers
 
                 targetBlockWorker.OnNotifyWork += () => workNotifyEvent.Set();
                 targetBlockWorker.OnWorkStopped += () => workStoppedEvent.Set();
-                targetBlockWorker.OnTargetBlockChanged += () => onTargetBlockChangedCount++;
+                targetBlockWorker.TargetBlockChanged += () => onTargetBlockChangedCount++;
 
                 // start worker and wait for intial target
                 targetBlockWorker.Start();
@@ -51,7 +52,7 @@ namespace BitSharp.Core.Test.Workers
                 Assert.IsNull(targetBlockWorker.TargetBlock);
 
                 // add block 0
-                chainedHeaderCache[chainedHeader0.Hash] = chainedHeader0;
+                coreStorage.AddGenesisBlock(chainedHeader0);
 
                 // wait for worker
                 workNotifyEvent.WaitOne();
@@ -62,7 +63,7 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(1, onTargetBlockChangedCount);
 
                 // add block 1
-                chainedHeaderCache[chainedHeader1.Hash] = chainedHeader1;
+                coreStorage.TryChainHeader(chainedHeader1.BlockHeader, out chainedHeader1);
 
                 // wait for worker
                 workNotifyEvent.WaitOne();
