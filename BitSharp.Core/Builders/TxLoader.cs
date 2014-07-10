@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Builders
 {
-    public class TxLoader : BlockingCollectionWorker<PendingTx>
+    internal class TxLoader : BlockingCollectionWorker<PendingTx>
     {
         private readonly IBlockStorageNew blockCache;
         private readonly TxValidator txValidator;
@@ -97,7 +97,7 @@ namespace BitSharp.Core.Builders
                             var spentTx = spentTxes[inputIndex];
 
                             Transaction prevTx;
-                            if (this.blockCache.TryGetTransaction(spentTx.blockHash, spentTx.txIndex, out prevTx))
+                            if (this.blockCache.TryGetTransaction(spentTx.BlockHash, spentTx.TxIndex, out prevTx))
                             {
                                 if (input.PreviousTxOutputKey.TxHash != prevTx.Hash)
                                     throw new Exception("TODO");

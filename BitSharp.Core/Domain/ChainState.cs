@@ -1,4 +1,6 @@
 ﻿using BitSharp.Common;
+using BitSharp.Core.Storage;
+using BitSharp.Core.Storage.Memory;
 using BitSharp.Domain;
 using System;
 using System.Collections.Generic;
@@ -11,13 +13,13 @@ namespace BitSharp.Core.Domain
 {
     public class ChainState : IDisposable
     {
-        private readonly Chain chain;
+        private readonly IChainStateStorage chainStateStorage;
         private readonly Utxo utxo;
 
-        public ChainState(Chain chain, Utxo utxo)
+        public ChainState(IChainStateBuilderStorage chainStateBuilderStorage)
         {
-            this.chain = chain;
-            this.utxo = utxo;
+            this.chainStateStorage = chainStateBuilderStorage.ToImmutable();
+            this.utxo = new Utxo(this.chainStateStorage);
         }
 
         ~ChainState()
@@ -28,33 +30,11 @@ namespace BitSharp.Core.Domain
         public void Dispose()
         {
             GC.SuppressFinalize(this);
-            this.utxo.Dispose();
+            this.chainStateStorage.Dispose();
         }
 
-        public Chain Chain { get { return this.chain; } }
+        public Chain Chain { get { return this.chainStateStorage.Chain; } }
 
         public Utxo Utxo { get { return this.utxo; } }
-
-        public ChainedHeader LastBlock { get { return this.chain.LastBlock; } }
-
-        public int Height
-        {
-            get
-            {
-                var lastBlockLocal = this.LastBlock;
-                if (lastBlockLocal != null)
-                    return this.LastBlock.Height;
-                else
-                    return -1;
-            }
-        }
-
-        public static ChainState CreateForGenesisBlock(ChainedHeader genesisBlock)
-        {
-            return new ChainState(
-                Chain.CreateForGenesisBlock(genesisBlock),
-                Utxo.CreateForGenesisBlock(genesisBlock)
-            );
-        }
     }
 }

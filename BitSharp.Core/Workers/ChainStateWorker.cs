@@ -123,8 +123,7 @@ namespace BitSharp.Core.Workers
                     }
                     else if (direction < 0)
                     {
-                        //TODO
-                        //this.chainStateBuilder.RollbackBlock(chainedBlock);
+                        this.chainStateBuilder.RollbackBlock(chainedHeader, blockTxes);
                     }
                     else
                     {

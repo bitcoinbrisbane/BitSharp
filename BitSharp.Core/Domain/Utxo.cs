@@ -9,18 +9,13 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Domain
 {
-    public class Utxo : IDisposable
+    public class Utxo
     {
         private readonly IChainStateStorage chainStateStorage;
 
         internal Utxo(IChainStateStorage chainStateStorage)
         {
             this.chainStateStorage = chainStateStorage;
-        }
-
-        public void Dispose()
-        {
-            this.chainStateStorage.Dispose();
         }
 
         public IChainStateStorage Storage

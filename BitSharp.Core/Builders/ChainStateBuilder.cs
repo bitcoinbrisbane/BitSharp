@@ -43,6 +43,7 @@ namespace BitSharp.Core.Builders
 
         private bool inTransaction;
         private readonly IChainStateBuilderStorage chainStateBuilderStorage;
+        private readonly UtxoBuilder utxoBuilder;
 
         private readonly ReaderWriterLockSlim commitLock;
 
@@ -61,6 +62,7 @@ namespace BitSharp.Core.Builders
             this.txLoader = new TxLoader(this.blockCache, this.txValidator, this.logger, this.rules, isConcurrent);
 
             this.chainStateBuilderStorage = chainStateBuilderStorage;
+            this.utxoBuilder = new UtxoBuilder(chainStateBuilderStorage, logger);
 
             this.commitLock = new ReaderWriterLockSlim();
 
@@ -76,47 +78,18 @@ namespace BitSharp.Core.Builders
         {
             GC.SuppressFinalize(this);
 
-            this.txLoader.Dispose();
-            this.txValidator.Dispose();
-            this.scriptValidator.Dispose();
-
-            this.stats.Dispose();
+            new IDisposable[]
+            {
+                this.txLoader,
+                this.txValidator,
+                this.scriptValidator,
+                this.stats,
+            }.DisposeList();
         }
 
         public Chain Chain { get { return this.chainStateBuilderStorage.Chain; } }
 
-        public ChainedHeader LastBlock { get { return this.Chain.LastBlock; } }
-
-        public UInt256 LastBlockHash
-        {
-            get
-            {
-                var lastBlockLocal = this.LastBlock;
-                if (lastBlockLocal != null)
-                    return this.LastBlock.Hash;
-                else
-                    return UInt256.Zero;
-            }
-        }
-
-        public int Height
-        {
-            get
-            {
-                var lastBlockLocal = this.LastBlock;
-                if (lastBlockLocal != null)
-                    return this.LastBlock.Height;
-                else
-                    return -1;
-            }
-        }
-
         public BuilderStats Stats { get { return this.stats; } }
-
-        public IDisposable Subscribe(IChainStateVisitor visitor)
-        {
-            throw new InvalidOperationException();
-        }
 
         public void AddBlock(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
         {
@@ -139,12 +112,22 @@ namespace BitSharp.Core.Builders
                     // calculate the new block utxo, double spends will be checked for
                     new MethodTimer(false).Time("CalculateUtxo", () =>
                     {
-                        foreach (var pendingTx in this.CalculateUtxo(chainedHeader, blockTxes))
+                        foreach (var pendingTx in this.utxoBuilder.CalculateUtxo(chainedHeader, blockTxes.Select(x => x.Transaction)))
                         {
                             this.txLoader.Add(pendingTx);
+
+                            // track stats
+                            this.stats.txCount++;
+                            this.stats.inputCount += pendingTx.transaction.Inputs.Length;
+                            this.stats.txRateMeasure.Tick();
+                            this.stats.inputRateMeasure.Tick(pendingTx.transaction.Inputs.Length);
                         }
 
                         this.txLoader.CompleteAdding();
+
+                        // track stats
+                        this.stats.blockCount++;
+                        this.stats.blockRateMeasure.Tick();
                     });
 
                     // wait for transactions to load
@@ -204,7 +187,7 @@ namespace BitSharp.Core.Builders
                 this.chainStateBuilderStorage.RemoveChainedHeader(chainedHeader);
 
                 // rollback the utxo
-                this.RollbackUtxo(chainedHeader, blockTxes);
+                this.utxoBuilder.RollbackUtxo(chainedHeader, blockTxes);
 
                 // commit the chain state
                 this.CommitTransaction();
@@ -231,7 +214,7 @@ namespace BitSharp.Core.Builders
                 )
                 .Format2
                 (
-                /*0*/ this.Height.ToString("#,##0"),
+                /*0*/ this.Chain.Height.ToString("#,##0"),
                 /*1*/ this.Stats.durationStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
                 /*2*/ this.Stats.validateStopwatch.Elapsed.ToString(@"hh\:mm\:ss"),
                 /*3*/ blockRate.ToString("#,##0"),
@@ -246,212 +229,6 @@ namespace BitSharp.Core.Builders
         public int TransactionCount
         {
             get { return this.chainStateBuilderStorage.TransactionCount; }
-        }
-
-        private IEnumerable<PendingTx> CalculateUtxo(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
-        {
-            // don't include genesis block coinbase in utxo
-            if (chainedHeader.Height <= 0)
-                throw new InvalidOperationException();
-
-            foreach (var blockTx in blockTxes)
-            {
-                var txIndex = blockTx.Index;
-                this.stats.txCount++;
-
-                //TODO apply real coinbase rule
-                // https://github.com/bitcoin/bitcoin/blob/481d89979457d69da07edd99fba451fd42a47f5c/src/core.h#L219
-                if (txIndex == 0)
-                {
-                    var coinbaseTx = blockTx.Transaction;
-
-                    // there exist two duplicate coinbases in the blockchain, which the design assumes to be impossible
-                    // ignore the first occurrences of these duplicates so that they do not need to later be deleted from the utxo, an unsupported operation
-                    // no other duplicates will occur again, it is now disallowed
-                    if ((chainedHeader.Height == DUPE_COINBASE_1_HEIGHT && coinbaseTx.Hash == DUPE_COINBASE_1_HASH)
-                        || (chainedHeader.Height == DUPE_COINBASE_2_HEIGHT && coinbaseTx.Hash == DUPE_COINBASE_2_HASH))
-                    {
-                        continue;
-                    }
-
-                    // mint the transaction's outputs in the utxo
-                    yield return this.Mint(coinbaseTx, 0, chainedHeader, isCoinbase: true, spentTxes: ImmutableArray.Create<BlockTxKey>());
-                }
-                else
-                {
-                    var tx = blockTx.Transaction;
-                    var spentTxes = ImmutableArray.CreateBuilder<BlockTxKey>();
-
-                    // spend each of the transaction's inputs in the utxo
-                    for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
-                    {
-                        this.stats.inputCount++;
-
-                        var input = tx.Inputs[inputIndex];
-                        spentTxes.Add(this.Spend(txIndex, tx, inputIndex, input, chainedHeader));
-
-                        // MEASURE: Input Rate
-                        this.stats.inputRateMeasure.Tick();
-                    }
-
-                    // mint the transaction's outputs in the utxo
-                    yield return this.Mint(tx, txIndex, chainedHeader, false /*isCoinbase*/, spentTxes.ToImmutable());
-
-                    // MEASURE: Transaction Rate
-                    this.stats.txRateMeasure.Tick();
-                }
-            }
-        }
-
-        public PendingTx Mint(Transaction tx, int txIndex, ChainedHeader chainedHeader, bool isCoinbase, ImmutableArray<BlockTxKey> spentTxes)
-        {
-            // add transaction to the utxo
-            var unspentTx = new UnspentTx(/*chainedHeader.Hash,*/ chainedHeader.Height, txIndex, tx.Outputs.Length, OutputState.Unspent);
-            if (!this.chainStateBuilderStorage.TryAddTransaction(tx.Hash, unspentTx))
-            {
-                // duplicate transaction
-                this.logger.Warn("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(chainedHeader.Height, chainedHeader.Hash.ToHexNumberString()));
-                throw new ValidationException(chainedHeader.Hash);
-            }
-
-            return new PendingTx(txIndex, tx, chainedHeader, isCoinbase, spentTxes);
-        }
-
-        public BlockTxKey Spend(int txIndex, Transaction tx, int inputIndex, TxInput input, ChainedHeader chainedHeader)
-        {
-            UnspentTx unspentTx;
-            if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
-            {
-                // output wasn't present in utxo, invalid block
-                throw new ValidationException(chainedHeader.Hash);
-            }
-
-            var unspentTxBlockHash = this.Chain.Blocks[unspentTx.BlockIndex].Hash;
-            var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
-
-            if (outputIndex < 0 || outputIndex >= unspentTx.OutputStates.Length)
-            {
-                // output was out of bounds
-                throw new ValidationException(chainedHeader.Hash);
-            }
-
-            if (unspentTx.OutputStates[outputIndex] == OutputState.Spent)
-            {
-                // output was already spent
-                throw new ValidationException(chainedHeader.Hash);
-            }
-
-            // update output states
-            unspentTx = unspentTx.SetOutputState(outputIndex, OutputState.Spent);
-
-            // update transaction output states in the utxo
-            this.chainStateBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
-
-            // remove fully spent transaction from the utxo
-            if (unspentTx.OutputStates.All(x => x == OutputState.Spent))
-            {
-                this.chainStateBuilderStorage.RemoveTransaction(input.PreviousTxOutputKey.TxHash, chainedHeader.Height);
-
-                if (false)
-                {
-                    this.blockCache.PruneElements(unspentTxBlockHash, new[] { unspentTx.TxIndex });
-                }
-            }
-
-            return new BlockTxKey(unspentTxBlockHash, unspentTx.TxIndex);
-        }
-
-        //TODO with the rollback information that's now being stored, rollback could be down without needing the block
-        private void RollbackUtxo(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
-        {
-            //TODO don't reverse here, storage should be read in reverse
-            foreach (var blockTx in blockTxes.Reverse())
-            {
-                var txIndex = blockTx.Index;
-
-                if (txIndex == 0)
-                {
-                    var coinbaseTx = blockTx.Transaction;
-
-                    // remove coinbase outputs
-                    this.Unmint(coinbaseTx, chainedHeader, isCoinbase: true);
-                }
-                else
-                {
-                    var tx = blockTx.Transaction;
-
-                    // remove outputs
-                    this.Unmint(tx, chainedHeader, isCoinbase: false);
-
-                    // remove inputs in reverse order
-                    for (var inputIndex = tx.Inputs.Length - 1; inputIndex >= 0; inputIndex--)
-                    {
-                        var input = tx.Inputs[inputIndex];
-                        this.Unspend(input, chainedHeader);
-                    }
-                }
-            }
-        }
-
-        public void Unmint(Transaction tx, ChainedHeader chainedHeader, bool isCoinbase)
-        {
-            // ignore duplicate coinbases
-            if ((chainedHeader.Height == DUPE_COINBASE_1_HEIGHT && tx.Hash == DUPE_COINBASE_1_HASH)
-                || (chainedHeader.Height == DUPE_COINBASE_2_HEIGHT && tx.Hash == DUPE_COINBASE_2_HASH))
-            {
-                return;
-            }
-
-            // check that transaction exists
-            UnspentTx unspentTx;
-            if (!this.chainStateBuilderStorage.TryGetTransaction(tx.Hash, out unspentTx))
-            {
-                // missing transaction output
-                this.logger.Warn("Missing transaction at block {0:#,##0}, {1}, tx {2}".Format2(chainedHeader.Height, chainedHeader.Hash.ToHexNumberString(), tx.Hash));
-                throw new ValidationException(chainedHeader.Hash);
-            }
-
-            //TODO verify blockheight
-
-            // verify all outputs are unspent before unminting
-            if (!unspentTx.OutputStates.All(x => x == OutputState.Unspent))
-            {
-                throw new ValidationException(chainedHeader.Hash);
-            }
-
-            // remove the transaction
-            this.chainStateBuilderStorage.RemoveTransaction(tx.Hash, spentBlockIndex: -1);
-        }
-
-        public void Unspend(TxInput input, ChainedHeader chainedHeader)
-        {
-            UnspentTx unspentTx;
-            if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
-            {
-                if (this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, chainedHeader.Height, out unspentTx))
-                {
-                    // restore fully spent transaction
-                    if (!this.chainStateBuilderStorage.TryAddTransaction(input.PreviousTxOutputKey.TxHash, unspentTx))
-                        throw new ValidationException(chainedHeader.Hash);
-                }
-                else
-                {
-                    // output wasn't present in utxo, invalid block
-                    throw new ValidationException(chainedHeader.Hash);
-                }
-            }
-
-            // retrieve previous output index
-            var outputIndex = unchecked((int)input.PreviousTxOutputKey.TxOutputIndex);
-            if (outputIndex < 0 || outputIndex >= unspentTx.OutputStates.Length)
-                throw new Exception("TODO - corruption");
-
-            // check that output isn't already considered unspent
-            if (unspentTx.OutputStates[outputIndex] == OutputState.Unspent)
-                throw new ValidationException(chainedHeader.Hash);
-
-            // mark output as unspent
-            this.chainStateBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx.SetOutputState(outputIndex, OutputState.Unspent));
         }
 
         public void RemoveSpentTransactions(int spentBlockIndex)
@@ -472,7 +249,7 @@ namespace BitSharp.Core.Builders
         public ChainState ToImmutable()
         {
             return this.commitLock.DoRead(() =>
-                new ChainState(this.chainStateBuilderStorage.Chain, new Utxo(this.chainStateBuilderStorage.ToImmutable())));
+                new ChainState(this.chainStateBuilderStorage));
         }
 
         private void BeginTransaction()

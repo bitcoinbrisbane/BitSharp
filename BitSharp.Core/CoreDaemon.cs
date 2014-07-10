@@ -336,7 +336,7 @@ namespace BitSharp.Core
 
         public IDisposable SubscribeChainStateVisitor(IChainStateVisitor visitor)
         {
-            return this.chainStateBuilder.Subscribe(visitor);
+            throw new NotImplementedException();
         }
 
         private void OnBlockHeaderAddition(UInt256 blockHash, BlockHeader blockHeader)

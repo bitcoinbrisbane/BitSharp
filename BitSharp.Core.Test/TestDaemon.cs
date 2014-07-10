@@ -70,7 +70,7 @@ namespace BitSharp.Core.Test
             this.kernel.Load(new CoreCacheModule());
 
             // initialize block view
-            this.blockCache = this.kernel.Get<IBlockStorageNew>();
+            this.blockCache = this.kernel.Get<IStorageManager>().BlockStorage;
 
             // store genesis block
             this.blockCache.TryAdd(this.genesisBlock.Hash, this.genesisBlock);

@@ -113,7 +113,15 @@ namespace BitSharp.Core.Storage.Memory
 
         public bool TryAdd(UInt256 blockHash, Block block)
         {
-            return this.blocks.TryAdd(blockHash, block);
+            var wasAdded = this.blocks.TryAdd(blockHash, block);
+
+            var handler = this.OnAddition;
+            if (wasAdded && handler != null)
+            {
+                handler(blockHash, block);
+            }
+
+            return wasAdded;
         }
 
         public bool TryRemove(UInt256 blockHash)

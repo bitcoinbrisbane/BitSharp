@@ -49,6 +49,11 @@ namespace BitSharp.Common
             Interlocked.Increment(ref this.tickCount);
         }
 
+        public void Tick(int count)
+        {
+            Interlocked.Add(ref this.tickCount, count);
+        }
+
         public float GetAverage(TimeSpan perUnitTime)
         {
             return this.rwLock.DoRead(() =>

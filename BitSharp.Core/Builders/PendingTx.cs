@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Builders
 {
-    public class PendingTx
+    internal class PendingTx
     {
         public readonly Transaction transaction;
         public readonly int txIndex;

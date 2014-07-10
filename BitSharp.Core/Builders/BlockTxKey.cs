@@ -7,15 +7,19 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Builders
 {
-    public class BlockTxKey
+    internal class BlockTxKey
     {
-        public readonly UInt256 blockHash;
-        public readonly int txIndex;
+        private readonly UInt256 blockHash;
+        private readonly int txIndex;
 
         public BlockTxKey(UInt256 blockHash, int txIndex)
         {
             this.blockHash = blockHash;
             this.txIndex = txIndex;
         }
+
+        public UInt256 BlockHash { get { return this.blockHash; } }
+
+        public int TxIndex { get { return this.txIndex; } }
     }
 }

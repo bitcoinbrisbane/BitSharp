@@ -93,6 +93,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Builders\UtxoBuilder.cs" />
     <Compile Include="Builders\PendingScript.cs" />
     <Compile Include="Builders\PendingTxValid.cs" />
     <Compile Include="Builders\PendingTx.cs" />

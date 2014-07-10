@@ -19,7 +19,7 @@ using System.Threading;
 namespace BitSharp.Core.Test.Builders
 {
     [TestClass]
-    public class ChainStateBuilderTest
+    public class UtxoBuilderTest
     {
         [TestMethod]
         public void TestSimpleSpend()
@@ -27,31 +27,31 @@ namespace BitSharp.Core.Test.Builders
             // prepare block
             var fakeHeaders = new FakeHeaders();
             var chainedHeader = new ChainedHeader(fakeHeaders.Genesis(), height: 0, totalWork: 0);
+            var chain = Chain.CreateForGenesisBlock(chainedHeader);
+            var emptyCoinbaseTx = new Transaction(0, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
+
+            // initialize memory utxo builder storage
+            var memoryChainStateBuilderStorage = new MemoryChainStateBuilderStorage(chainedHeader);
+
+            // initialize utxo builder
+            var utxoBuilder = new UtxoBuilder(memoryChainStateBuilderStorage, LogManager.CreateNullLogger());
 
             // prepare an unspent transaction
             var txHash = new UInt256(100);
-            var unspentTx = new UnspentTx(/*chainedHeader.Hash*/ chainedHeader.Height, 0, 3, OutputState.Unspent);
+            var unspentTx = new UnspentTx(chainedHeader.Height, 0, 3, OutputState.Unspent);
 
             // prepare unspent output
             var unspentTransactions = ImmutableDictionary.Create<UInt256, UnspentTx>().Add(txHash, unspentTx);
 
-            // mock a parent utxo containing the unspent transaction
-            var mockParentChainStateStorage = new Mock<IChainStateStorage>();
-            mockParentChainStateStorage.Setup(utxo => utxo.ReadUnspentTransactions()).Returns(unspentTransactions);
-            var parentUtxo = new Utxo(mockParentChainStateStorage.Object);
-
-            // initialize memory utxo builder storage
-            var memoryChainStateBuilderStorage = new MemoryChainStateBuilderStorage(mockParentChainStateStorage.Object);
-
-            // initialize utxo builder
-            var chainStateBuilder = new ChainStateBuilder(memoryChainStateBuilderStorage, LogManager.CreateNullLogger(), null, null);
+            // add the unspent transaction
+            memoryChainStateBuilderStorage.UnspentTransactionsDictionary.Add(txHash, unspentTx);
 
             // create an input to spend the unspent transaction's first output
             var input0 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
             var tx0 = new Transaction(0, ImmutableArray.Create(input0), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            chainStateBuilder.Spend(0, tx0, 0, input0, chainedHeader);
+            utxoBuilder.CalculateUtxo(chainedHeader, new[] { emptyCoinbaseTx, tx0 }).ToList();
 
             // verify utxo storage
             Assert.IsTrue(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
@@ -65,7 +65,7 @@ namespace BitSharp.Core.Test.Builders
             var tx1 = new Transaction(0, ImmutableArray.Create(input1), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            chainStateBuilder.Spend(1, tx1, 1, input1, chainedHeader);
+            utxoBuilder.CalculateUtxo(chainedHeader, new[] { emptyCoinbaseTx, tx1 }).ToList();
 
             // verify utxo storage
             Assert.IsTrue(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
@@ -79,7 +79,7 @@ namespace BitSharp.Core.Test.Builders
             var tx2 = new Transaction(0, ImmutableArray.Create(input2), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            chainStateBuilder.Spend(2, tx2, 2, input2, chainedHeader);
+            utxoBuilder.CalculateUtxo(chainedHeader, new[] { emptyCoinbaseTx, tx2 }).ToList();
 
             // verify utxo storage
             Assert.IsFalse(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
@@ -92,35 +92,34 @@ namespace BitSharp.Core.Test.Builders
             // prepare block
             var fakeHeaders = new FakeHeaders();
             var chainedHeader = new ChainedHeader(fakeHeaders.Genesis(), height: 0, totalWork: 0);
+            var chain = Chain.CreateForGenesisBlock(chainedHeader);
+            var emptyCoinbaseTx = new Transaction(0, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
+
+            // initialize memory utxo builder storage
+            var memoryChainStateBuilderStorage = new MemoryChainStateBuilderStorage(chainedHeader);
+
+            // initialize utxo builder
+            var utxoBuilder = new UtxoBuilder(memoryChainStateBuilderStorage, LogManager.CreateNullLogger());
 
             // prepare an unspent transaction
             var txHash = new UInt256(100);
-            var unspentTx = new UnspentTx(/*chainedHeader.Hash,*/ chainedHeader.Height, 0, 1, OutputState.Unspent);
+            var unspentTx = new UnspentTx(chainedHeader.Height, 0, 1, OutputState.Unspent);
 
-            // mock a parent utxo containing the unspent transaction
-            var unspentTransactions = ImmutableDictionary.Create<UInt256, UnspentTx>().Add(txHash, unspentTx);
-            var mockParentChainStateStorage = new Mock<IChainStateStorage>();
-            mockParentChainStateStorage.Setup(utxo => utxo.ReadUnspentTransactions()).Returns(unspentTransactions);
-            var parentUtxo = new Utxo(mockParentChainStateStorage.Object);
-
-            // initialize memory utxo builder storage
-            var memoryChainStateBuilderStorage = new MemoryChainStateBuilderStorage(mockParentChainStateStorage.Object);
-
-            // initialize utxo builder
-            var chainStateBuilder = new ChainStateBuilder(memoryChainStateBuilderStorage, LogManager.CreateNullLogger(), null, null);
+            // add the unspent transaction
+            memoryChainStateBuilderStorage.UnspentTransactionsDictionary.Add(txHash, unspentTx);
 
             // create an input to spend the unspent transaction
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
             var tx = new Transaction(0, ImmutableArray.Create(input), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            chainStateBuilder.Spend(0, tx, 0, input, chainedHeader);
+            utxoBuilder.CalculateUtxo(chainedHeader, new[] { emptyCoinbaseTx, tx }).ToList();
 
             // verify utxo storage
             Assert.IsFalse(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
 
             // attempt to spend the input again
-            chainStateBuilder.Spend(0, tx, 0, input, chainedHeader);
+            utxoBuilder.CalculateUtxo(chainedHeader, new[] { emptyCoinbaseTx, tx }).ToList();
 
             // validation exception should be thrown
         }
