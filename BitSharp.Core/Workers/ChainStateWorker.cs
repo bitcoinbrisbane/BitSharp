@@ -55,7 +55,7 @@ namespace BitSharp.Core.Workers
 
             this.pruningWorker = new PruningWorker(
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMinutes(5), maxIdleTime: TimeSpan.FromMinutes(5)),
-                this.chainStateBuilder, this.logger, this.rules);
+                this.coreStorage, this.chainStateBuilder, this.logger, this.rules);
         }
 
         public TimeSpan AverageBlockProcessingTime()
