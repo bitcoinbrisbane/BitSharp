@@ -85,7 +85,7 @@ namespace BitSharp.Esent.Test
             var sha256 = new SHA256Managed();
 
             var blockProvider = new MainnetBlockProvider();
-            var blocks = Enumerable.Range(0, 1000).Select(x => blockProvider.GetBlock(x)).ToList();
+            var blocks = Enumerable.Range(0, 100).Select(x => blockProvider.GetBlock(x)).ToList();
 
             var genesisBlock = blocks[0];
             var genesisHeader = new ChainedHeader(genesisBlock.Header, height: 0, totalWork: 0);
@@ -128,7 +128,7 @@ namespace BitSharp.Esent.Test
 
                 // verify the utxo state before rolling back
                 //TODO verify the UTXO hash hard-coded here is correct
-                var expectedUtxoHash = UInt256.Parse("7e155a373c9a97d6d6f7f985e4d43f31a80833e9b4fce865c85552a650dd630e", NumberStyles.HexNumber);
+                var expectedUtxoHash = UInt256.Parse("9d3f21dc0cd2255bc3c6ad084861697cd94403d925869d68601bd1d4a0915fd3", NumberStyles.HexNumber);
                 using (var utxoStream = new UtxoStream(logger, expectedUtxos.Last()))
                 {
                     var utxoHash = new UInt256(sha256.ComputeDoubleHash(utxoStream));
