@@ -49,6 +49,8 @@ namespace BitSharp.Core.Builders
         {
             var chain = this.chainStateBuilderStorage.Chain;
 
+            this.chainStateBuilderStorage.PrepareSpentTransactions(chainedHeader.Height);
+
             var txIndex = -1;
             foreach (var tx in blockTxes)
             {

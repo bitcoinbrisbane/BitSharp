@@ -21,15 +21,22 @@ namespace BitSharp.Core.Workers
     internal class PruningWorker : Worker
     {
         private readonly Logger logger;
+        private readonly CoreStorage coreStorage;
         private readonly ChainStateBuilder chainStateBuilder;
         private readonly IBlockchainRules rules;
 
-        public PruningWorker(WorkerConfig workerConfig, ChainStateBuilder chainStateBuilder, Logger logger, IBlockchainRules rules)
+        //TODO
+        private int lastPruneHeight;
+
+        public PruningWorker(WorkerConfig workerConfig, CoreStorage coreStorage, ChainStateBuilder chainStateBuilder, Logger logger, IBlockchainRules rules)
             : base("PruningWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
+            this.coreStorage = coreStorage;
             this.chainStateBuilder = chainStateBuilder;
             this.rules = rules;
+
+            this.lastPruneHeight = 0;
 
             this.Mode = PruningMode.RollbackOnly;
         }
@@ -42,27 +49,55 @@ namespace BitSharp.Core.Workers
             var pruneBuffer = blocksPerDay * 7;
 
             var chain = this.chainStateBuilder.Chain;
-            var minHeight = 0;
+            var minHeight = this.lastPruneHeight;
             var maxHeight = chain.Blocks.Count - pruneBuffer;
+
+            if (maxHeight < minHeight)
+                return;
 
             switch (this.Mode)
             {
                 case PruningMode.RollbackOnly:
-                    //for (var i = minHeight; i <= maxHeight; i++)
-                    //{
-                    //    // cooperative loop
-                    //    this.ThrowIfCancelled();
-
-                    //    this.chainStateBuilder.RemoveSpentTransactions(i);
-
-                    //    if (i % 1000 == 0)
-                    //        this.logger.Info("Pruned to block: {0:#,##0}".Format2(i));
-                    //}
-
                     var stopwatch = Stopwatch.StartNew();
-                    this.chainStateBuilder.RemoveSpentTransactionsToHeight(maxHeight);
-                    stopwatch.Stop();
+                    for (var i = minHeight; i <= maxHeight; i++)
+                    {
+                        // cooperative loop
+                        this.ThrowIfCancelled();
 
+                        var pruneData = new Dictionary<UInt256, List<int>>();
+
+                        foreach (var tuple in this.chainStateBuilder.ReadSpentTransactions(i))
+                        {
+                            var addedBlockIndex = tuple.Item1;
+                            var txIndex = tuple.Item2;
+                            var addedBlockHash = chain.Blocks[addedBlockIndex].Hash;
+
+                            if (!pruneData.ContainsKey(addedBlockHash))
+                                pruneData[addedBlockHash] = new List<int>();
+
+                            pruneData[addedBlockHash].Add(txIndex);
+                        }
+
+                        foreach (var keyPair in pruneData)
+                        {
+                            var addedBlockHash = keyPair.Key;
+                            var txIndices = keyPair.Value;
+
+                            this.coreStorage.PruneElements(addedBlockHash, txIndices);
+                        }
+
+                        //TODO properly sync commits before removing
+                        this.chainStateBuilder.RemoveSpentTransactions(i);
+
+                        //if (i % 1000 == 0)
+                        //    this.logger.Info("Pruned to block: {0:#,##0}, took: {1:#,##0.000}s".Format2(i, stopwatch.Elapsed.TotalSeconds));
+                    }
+
+                    //var stopwatch = Stopwatch.StartNew();
+                    //this.chainStateBuilder.RemoveSpentTransactionsToHeight(maxHeight);
+                    //stopwatch.Stop();
+
+                    this.lastPruneHeight = maxHeight;
                     this.logger.Info("Pruned to block: {0:#,##0}, took: {1:#,##0.000}s".Format2(maxHeight, stopwatch.Elapsed.TotalSeconds));
 
                     break;

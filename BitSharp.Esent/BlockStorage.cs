@@ -74,24 +74,35 @@ namespace BitSharp.Esent
                 var cursor = this.OpenCursor();
                 try
                 {
-                    Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Insert);
+                    Api.JetBeginTransaction(cursor.jetSession);
                     try
                     {
-                        Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderHashColumnId, chainedHeader.Hash.ToByteArray());
-                        Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderPreviousHashColumnId, chainedHeader.PreviousBlockHash.ToByteArray());
-                        Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderHeightColumnId, chainedHeader.Height);
-                        Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderTotalWorkColumnId, DataEncoder.EncodeTotalWork(chainedHeader.TotalWork));
-                        Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderBytesColumnId, DataEncoder.EncodeChainedHeader(chainedHeader));
+                        Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Insert);
+                        try
+                        {
+                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderHashColumnId, chainedHeader.Hash.ToByteArray());
+                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderPreviousHashColumnId, chainedHeader.PreviousBlockHash.ToByteArray());
+                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderHeightColumnId, chainedHeader.Height);
+                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderTotalWorkColumnId, DataEncoder.EncodeTotalWork(chainedHeader.TotalWork));
+                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderBytesColumnId, DataEncoder.EncodeChainedHeader(chainedHeader));
 
-                        Api.JetUpdate(cursor.jetSession, cursor.blockHeadersTableId);
+                            Api.JetUpdate(cursor.jetSession, cursor.blockHeadersTableId);
+                        }
+                        catch (Exception)
+                        {
+                            Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Cancel);
+                            throw;
+                        }
+
+                        Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
+
+                        return true;
                     }
                     catch (Exception)
                     {
-                        Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Cancel);
+                        Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
                         throw;
                     }
-
-                    return true;
                 }
                 finally
                 {
@@ -165,7 +176,7 @@ namespace BitSharp.Esent
             var cursor = this.OpenCursor();
             try
             {
-                Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockHeadersTableId, "IX_BlockHash");
+                Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockHeadersTableId, null);
 
                 if (Api.TryMoveFirst(cursor.jetSession, cursor.blockHeadersTableId))
                 {
@@ -254,7 +265,7 @@ namespace BitSharp.Esent
                 Api.JetAddColumn(jetSession, blockHeadersTableId, "Height", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out blockHeaderHeightColumnId);
                 Api.JetAddColumn(jetSession, blockHeadersTableId, "TotalWork", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out blockHeaderTotalWorkColumnId);
                 Api.JetAddColumn(jetSession, blockHeadersTableId, "Valid", new JET_COLUMNDEF { coltyp = JET_coltyp.Bit, }, null, 0, out blockHeaderValidColumnId);
-                Api.JetAddColumn(jetSession, blockHeadersTableId, "BlockHeaderBytes", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary }, null, 0, out blockHeaderBytesColumnId);
+                Api.JetAddColumn(jetSession, blockHeadersTableId, "BlockHeaderBytes", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out blockHeaderBytesColumnId);
 
                 Api.JetCreateIndex2(jetSession, blockHeadersTableId,
                     new JET_INDEXCREATE[]
@@ -262,7 +273,7 @@ namespace BitSharp.Esent
                         new JET_INDEXCREATE
                         {
                             cbKeyMost = 255,
-                            grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                            grbit = CreateIndexGrbit.IndexUnique | CreateIndexGrbit.IndexDisallowNull,
                             szIndexName = "IX_BlockHash",
                             szKey = "+BlockHash\0\0",
                             cbKey = "+BlockHash\0\0".Length
@@ -328,18 +339,8 @@ namespace BitSharp.Esent
                 Api.JetAttachDatabase(jetSession, this.jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
                 try
                 {
-                    JET_DBID blockDbId;
-                    Api.JetOpenDatabase(jetSession, this.jetDatabase, "", out blockDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
-                    try
-                    {
-                        var cursor = this.OpenCursor();
-                        this.FreeCursor(cursor);
-                    }
-                    catch (Exception)
-                    {
-                        Api.JetCloseDatabase(jetSession, blockDbId, CloseDatabaseGrbit.None);
-                        throw;
-                    }
+                    var cursor = this.OpenCursor();
+                    this.FreeCursor(cursor);
                 }
                 catch (Exception)
                 {

@@ -102,6 +102,16 @@ namespace BitSharp.Core.Storage.Memory
             return this.unspentTransactions;
         }
 
+        public void PrepareSpentTransactions(int spentBlockIndex)
+        {
+            throw new NotImplementedException();
+        }
+        
+        public IEnumerable<Tuple<int, int>> ReadSpentTransactions(int spentBlockIndex)
+        {
+            throw new NotImplementedException();
+        }
+
         public void RemoveSpentTransactions(int spentBlockIndex)
         {
             throw new NotImplementedException();

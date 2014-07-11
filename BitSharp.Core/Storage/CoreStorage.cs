@@ -39,7 +39,7 @@ namespace BitSharp.Core.Storage
             this.missingHeaders = new ConcurrentSetBuilder<UInt256>();
             this.missingBlockTxes = new ConcurrentSetBuilder<UInt256>();
 
-            foreach (var chainedHeader in this.blockStorage.ReadChainedHeaders().LookAhead(1))
+            foreach (var chainedHeader in this.blockStorage.ReadChainedHeaders())
             {
                 this.cachedHeaders[chainedHeader.Hash] = chainedHeader;
             }

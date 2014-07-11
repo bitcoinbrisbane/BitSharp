@@ -167,14 +167,14 @@ namespace BitSharp.Esent
 
         internal static bool ContainsTransaction(ChainStateStorageCursor cursor, UInt256 txHash)
         {
-            //Api.JetSetCurrentIndex(cursor.jetSession, cursor.unspentTxTableId, "IX_TxHash");
+            Api.JetSetCurrentIndex(cursor.jetSession, cursor.unspentTxTableId, "IX_TxHash");
             Api.MakeKey(cursor.jetSession, cursor.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
             return Api.TrySeek(cursor.jetSession, cursor.unspentTxTableId, SeekGrbit.SeekEQ);
         }
 
         internal static bool TryGetTransaction(ChainStateStorageCursor cursor, UInt256 txHash, out UnspentTx unspentTx)
         {
-            //Api.JetSetCurrentIndex(cursor.jetSession, cursor.unspentTxTableId, "IX_TxHash");
+            Api.JetSetCurrentIndex(cursor.jetSession, cursor.unspentTxTableId, "IX_TxHash");
             Api.MakeKey(cursor.jetSession, cursor.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
             if (Api.TrySeek(cursor.jetSession, cursor.unspentTxTableId, SeekGrbit.SeekEQ))
             {
@@ -192,7 +192,7 @@ namespace BitSharp.Esent
 
         internal static bool TryGetTransaction(ChainStateStorageCursor cursor, UInt256 txHash, int spentBlockIndex, out UnspentTx unspentTx)
         {
-            //Api.JetSetCurrentIndex(cursor.jetSession, cursor.spentTxTableId, "IX_TxHash");
+            Api.JetSetCurrentIndex(cursor.jetSession, cursor.spentTxTableId, "IX_TxHash");
             Api.MakeKey(cursor.jetSession, cursor.spentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
             if (Api.TrySeek(cursor.jetSession, cursor.spentTxTableId, SeekGrbit.SeekEQ))
             {
@@ -214,7 +214,7 @@ namespace BitSharp.Esent
 
         internal static IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions(ChainStateStorageCursor cursor)
         {
-            //Api.JetSetCurrentIndex(cursor.jetSession, cursor.unspentTxTableId, "IX_TxHash");
+            Api.JetSetCurrentIndex(cursor.jetSession, cursor.unspentTxTableId, "IX_TxHash");
             Api.MoveBeforeFirst(cursor.jetSession, cursor.unspentTxTableId);
             while (Api.TryMoveNext(cursor.jetSession, cursor.unspentTxTableId))
             {

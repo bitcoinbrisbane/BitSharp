@@ -46,6 +46,7 @@ namespace BitSharp.Esent
 
         public void Dispose()
         {
+            Api.JetCloseDatabase(this.jetSession, this.blockDbId, CloseDatabaseGrbit.None);
             this.jetSession.Dispose();
         }
 
@@ -64,7 +65,6 @@ namespace BitSharp.Esent
             jetSession = new Session(jetInstance);
             try
             {
-                Api.JetAttachDatabase(jetSession, jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
                 Api.JetOpenDatabase(jetSession, jetDatabase, "", out blockDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
 
                 Api.JetOpenTable(jetSession, blockDbId, "global", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out globalTableId);

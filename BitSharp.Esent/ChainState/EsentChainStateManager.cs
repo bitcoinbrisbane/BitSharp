@@ -103,6 +103,7 @@ namespace BitSharp.Esent
             JET_COLUMNID spentAddedBlockIndexColumnId;
             JET_COLUMNID spentTxIndexColumnId;
             JET_COLUMNID spentOutputCountColumnId;
+            JET_COLUMNID spentDataColumnId;
 
             using (var jetSession = new Session(jetInstance))
             {
@@ -153,7 +154,7 @@ namespace BitSharp.Esent
                         new JET_INDEXCREATE
                         {
                             cbKeyMost = 255,
-                            grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                            grbit = CreateIndexGrbit.IndexUnique | CreateIndexGrbit.IndexDisallowNull,
                             szIndexName = "IX_TxHash",
                             szKey = "+TxHash\0\0",
                             cbKey = "+TxHash\0\0".Length
@@ -163,11 +164,25 @@ namespace BitSharp.Esent
                 Api.JetCloseTable(jetSession, unspentTxTableId);
 
                 Api.JetCreateTable(jetSession, utxoDbId, "SpentTx", 0, 0, out spentTxTableId);
-                Api.JetAddColumn(jetSession, spentTxTableId, "TxHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out spentTxHashColumnId);
+                //Api.JetAddColumn(jetSession, spentTxTableId, "TxHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out spentTxHashColumnId);
                 Api.JetAddColumn(jetSession, spentTxTableId, "SpentBlockIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out spentSpentBlockIndexColumnId);
-                Api.JetAddColumn(jetSession, spentTxTableId, "AddedBlockIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out spentAddedBlockIndexColumnId);
-                Api.JetAddColumn(jetSession, spentTxTableId, "TxIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out spentTxIndexColumnId);
-                Api.JetAddColumn(jetSession, spentTxTableId, "OutputCount", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out spentOutputCountColumnId);
+                //Api.JetAddColumn(jetSession, spentTxTableId, "AddedBlockIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out spentAddedBlockIndexColumnId);
+                //Api.JetAddColumn(jetSession, spentTxTableId, "TxIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out spentTxIndexColumnId);
+                //Api.JetAddColumn(jetSession, spentTxTableId, "OutputCount", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out spentOutputCountColumnId);
+                Api.JetAddColumn(jetSession, spentTxTableId, "SpentData", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out spentDataColumnId);
+
+                //Api.JetCreateIndex2(jetSession, spentTxTableId,
+                //    new JET_INDEXCREATE[]
+                //    {
+                //        new JET_INDEXCREATE
+                //        {
+                //            cbKeyMost = 255,
+                //            grbit = CreateIndexGrbit.IndexUnique | CreateIndexGrbit.IndexDisallowNull,
+                //            szIndexName = "IX_TxHash",
+                //            szKey = "+TxHash\0\0",
+                //            cbKey = "+TxHash\0\0".Length
+                //        }
+                //    }, 1);
 
                 Api.JetCreateIndex2(jetSession, spentTxTableId,
                     new JET_INDEXCREATE[]
@@ -176,22 +191,9 @@ namespace BitSharp.Esent
                         {
                             cbKeyMost = 255,
                             grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
-                            szIndexName = "IX_TxHash",
-                            szKey = "+TxHash\0\0",
-                            cbKey = "+TxHash\0\0".Length
-                        }
-                    }, 1);
-
-                Api.JetCreateIndex2(jetSession, spentTxTableId,
-                    new JET_INDEXCREATE[]
-                    {
-                        new JET_INDEXCREATE
-                        {
-                            cbKeyMost = 255,
-                            grbit = CreateIndexGrbit.IndexDisallowNull,
                             szIndexName = "IX_SpentBlockIndex",
-                            szKey = "+SpentBlockIndex\0+AddedBlockIndex\0\0",
-                            cbKey = "+SpentBlockIndex\0+AddedBlockIndex\0\0".Length
+                            szKey = "+SpentBlockIndex\0\0",
+                            cbKey = "+SpentBlockIndex\0\0".Length
                         }
                     }, 1);
 
@@ -210,17 +212,8 @@ namespace BitSharp.Esent
                 Api.JetAttachDatabase(jetSession, jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
                 try
                 {
-                    Api.JetOpenDatabase(jetSession, jetDatabase, "", out chainStateDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
-                    try
-                    {
-                        var cursor = new ChainStateStorageCursor(jetDatabase, jetInstance, readOnly: true);
-                        cursor.Dispose();
-                    }
-                    catch (Exception)
-                    {
-                        Api.JetCloseDatabase(jetSession, chainStateDbId, CloseDatabaseGrbit.None);
-                        throw;
-                    }
+                    var cursor = new ChainStateStorageCursor(jetDatabase, jetInstance, readOnly: true);
+                    cursor.Dispose();
                 }
                 catch (Exception)
                 {
@@ -245,7 +238,7 @@ namespace BitSharp.Esent
             instance.Parameters.CheckpointDepthMax = 64 * 1024 * 1024;
             instance.Parameters.LogFileSize = 1024 * 32;
             instance.Parameters.LogBuffers = 1024 * 32;
-            instance.Parameters.MaxTemporaryTables = 0;
+            instance.Parameters.MaxTemporaryTables = 1;
             instance.Parameters.MaxVerPages = 1024 * 256;
             instance.Parameters.NoInformationEvent = true;
             instance.Parameters.WaypointLatency = 1;
