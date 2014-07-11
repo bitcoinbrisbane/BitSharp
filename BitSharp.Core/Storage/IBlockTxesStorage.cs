@@ -11,7 +11,10 @@ namespace BitSharp.Core.Storage
 {
     public interface IBlockTxesStorage : IDisposable
     {
-        int Count { get; }
+        /// <summary>
+        /// Retrieves the number of blocks with transaction data stored. Pruned blocks are included.
+        /// </summary>
+        int BlockCount { get; }
 
         /// <summary>
         /// Determines whether transaction data exists for a block. Pruned blocks are included.

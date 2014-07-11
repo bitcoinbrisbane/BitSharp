@@ -1,6 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Domain;
+using BitSharp.Core.Storage.Memory;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -12,112 +13,6 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Test
 {
-    public class MemoryMerkleTreePruningCursor : IMerkleTreePruningCursor
-    {
-        private readonly List<MerkleTreeNode> nodes;
-        private int index;
-
-        public MemoryMerkleTreePruningCursor(IEnumerable<MerkleTreeNode> nodes)
-        {
-            this.nodes = new List<MerkleTreeNode>(nodes);
-            this.index = -1;
-        }
-
-        public void Dispose()
-        {
-        }
-
-        public void BeginTransaction()
-        {
-        }
-
-        public void CommitTransaction()
-        {
-        }
-
-        public bool TryMoveToIndex(int index, out MerkleTreeNode node)
-        {
-            this.index = this.nodes.FindIndex(x => x.Index == index);
-
-            if (this.index >= 0 && this.index < this.nodes.Count)
-            {
-                node = this.nodes[this.index];
-                return true;
-            }
-            else
-            {
-                node = default(MerkleTreeNode);
-                return false;
-            }
-        }
-
-        public bool TryMoveLeft(out MerkleTreeNode node)
-        {
-            if (this.index >= 0 && this.index < this.nodes.Count)
-            {
-                var newIndex = this.index - 1;
-                if (newIndex >= 0 && newIndex < this.nodes.Count)
-                {
-                    this.index = newIndex;
-                    node = this.nodes[newIndex];
-                    return true;
-                }
-            }
-
-            node = default(MerkleTreeNode);
-            return false;
-        }
-
-        public bool TryMoveRight(out MerkleTreeNode node)
-        {
-            if (this.index >= 0 && this.index < this.nodes.Count)
-            {
-                var newIndex = this.index + 1;
-                if (newIndex >= 0 && newIndex < this.nodes.Count)
-                {
-                    this.index = newIndex;
-                    node = this.nodes[newIndex];
-                    return true;
-                }
-            }
-
-            node = default(MerkleTreeNode);
-            return false;
-        }
-
-        public void WriteNode(MerkleTreeNode node)
-        {
-            if (this.index < 0 || this.index >= this.nodes.Count)
-                throw new InvalidOperationException();
-
-            this.nodes[this.index] = node;
-        }
-
-        public void MoveLeft()
-        {
-            MerkleTreeNode node;
-            if (!this.TryMoveLeft(out node))
-                throw new InvalidOperationException();
-        }
-
-        public void DeleteNodeToRight()
-        {
-            if (this.index < 0 || this.index >= this.nodes.Count)
-                throw new InvalidOperationException();
-
-            var removeIndex = this.index + 1;
-            if (removeIndex < 0 || removeIndex >= this.nodes.Count)
-                throw new InvalidOperationException();
-
-            this.nodes.RemoveAt(removeIndex);
-        }
-
-        public IEnumerable<MerkleTreeNode> StreamNodes()
-        {
-            return this.nodes;
-        }
-    }
-
     [TestClass]
     public class DataCalculatorNewTest
     {
@@ -151,7 +46,7 @@ namespace BitSharp.Core.Test
             //////////////////////////////////////////////////
 
             var expectedNodes1 = nodes;
-            var actualNodes1 = cursor.StreamNodes().ToList();
+            var actualNodes1 = cursor.ReadNodes().ToList();
             CollectionAssert.AreEqual(expectedNodes1, actualNodes1);
 
             //////////////////////////////////////////////////
@@ -159,7 +54,7 @@ namespace BitSharp.Core.Test
             DataCalculatorNew.PruneNode(cursor, 2);
 
             var expectedNodes2 = new List<MerkleTreeNode> { node1, node2, node3.AsPruned(), node4, node5, node6, node7 };
-            var actualNodes2 = cursor.StreamNodes().ToList();
+            var actualNodes2 = cursor.ReadNodes().ToList();
             CollectionAssert.AreEqual(expectedNodes2, actualNodes2);
 
             //////////////////////////////////////////////////
@@ -167,7 +62,7 @@ namespace BitSharp.Core.Test
             DataCalculatorNew.PruneNode(cursor, 0);
 
             var expectedNodes3 = new List<MerkleTreeNode> { node1.AsPruned(), node2, node3.AsPruned(), node4, node5, node6, node7 };
-            var actualNodes3 = cursor.StreamNodes().ToList();
+            var actualNodes3 = cursor.ReadNodes().ToList();
             CollectionAssert.AreEqual(expectedNodes3, actualNodes3);
 
             //////////////////////////////////////////////////
@@ -175,7 +70,7 @@ namespace BitSharp.Core.Test
             DataCalculatorNew.PruneNode(cursor, 1);
 
             var expectedNodes4 = new List<MerkleTreeNode> { depth1Node1, node3.AsPruned(), node4, node5, node6, node7 };
-            var actualNodes4 = cursor.StreamNodes().ToList();
+            var actualNodes4 = cursor.ReadNodes().ToList();
             CollectionAssert.AreEqual(expectedNodes4, actualNodes4);
 
             //////////////////////////////////////////////////
@@ -183,7 +78,7 @@ namespace BitSharp.Core.Test
             DataCalculatorNew.PruneNode(cursor, 3);
 
             var expectedNodes5 = new List<MerkleTreeNode> { depth2Node1, node5, node6, node7 };
-            var actualNodes5 = cursor.StreamNodes().ToList();
+            var actualNodes5 = cursor.ReadNodes().ToList();
             CollectionAssert.AreEqual(expectedNodes5, actualNodes5);
 
             //////////////////////////////////////////////////
@@ -191,7 +86,7 @@ namespace BitSharp.Core.Test
             DataCalculatorNew.PruneNode(cursor, 5);
 
             var expectedNodes6 = new List<MerkleTreeNode> { depth2Node1, node5, node6.AsPruned(), node7 };
-            var actualNodes6 = cursor.StreamNodes().ToList();
+            var actualNodes6 = cursor.ReadNodes().ToList();
             CollectionAssert.AreEqual(expectedNodes6, actualNodes6);
 
             //////////////////////////////////////////////////
@@ -199,7 +94,7 @@ namespace BitSharp.Core.Test
             DataCalculatorNew.PruneNode(cursor, 6);
 
             var expectedNodes8 = new List<MerkleTreeNode> { depth2Node1, node5, node6.AsPruned(), depth1Node4 };
-            var actualNodes8 = cursor.StreamNodes().ToList();
+            var actualNodes8 = cursor.ReadNodes().ToList();
             CollectionAssert.AreEqual(expectedNodes8, actualNodes8);
 
             //////////////////////////////////////////////////
@@ -207,7 +102,7 @@ namespace BitSharp.Core.Test
             DataCalculatorNew.PruneNode(cursor, 4);
 
             var expectedNodes9 = new List<MerkleTreeNode> { merkleRoot };
-            var actualNodes9 = cursor.StreamNodes().ToList();
+            var actualNodes9 = cursor.ReadNodes().ToList();
             CollectionAssert.AreEqual(expectedNodes9, actualNodes9);
         }
 

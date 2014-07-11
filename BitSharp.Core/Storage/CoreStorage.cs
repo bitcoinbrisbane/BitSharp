@@ -239,9 +239,9 @@ namespace BitSharp.Core.Storage
             }
         }
 
-        public void PruneElements(UInt256 blockHash, IEnumerable<int> indices)
+        public void PruneElements(UInt256 blockHash, IEnumerable<int> txIndices)
         {
-            this.blockTxesStorage.PruneElements(blockHash, indices);
+            this.blockTxesStorage.PruneElements(blockHash, txIndices);
         }
 
         public void MarkBlockInvalid(UInt256 blockHash)

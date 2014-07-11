@@ -10,27 +10,48 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Storage.Memory
 {
-    //TODO lots unimplemented in here while interfaces get cleaned up
     public class MemoryBlockTxesStorage : IBlockTxesStorage
     {
-        private readonly ConcurrentDictionary<UInt256, Block> blocks;
+        private readonly ConcurrentDictionary<UInt256, ImmutableSortedDictionary<int, BlockTx>> allBlockTxes;
 
         public MemoryBlockTxesStorage()
         {
-            this.blocks = new ConcurrentDictionary<UInt256, Block>();
+            this.allBlockTxes = new ConcurrentDictionary<UInt256, ImmutableSortedDictionary<int, BlockTx>>();
         }
 
         public void Dispose()
         {
         }
 
+        public int BlockCount
+        {
+            get { return this.allBlockTxes.Count; }
+        }
+
+        public bool ContainsBlock(UInt256 blockHash)
+        {
+            return this.allBlockTxes.ContainsKey(blockHash);
+        }
+
+        public bool TryAdd(UInt256 blockHash, Block block)
+        {
+            var blockTxes =
+                ImmutableSortedDictionary.CreateRange<int, BlockTx>(
+                    block.Transactions.Select((tx, txIndex) =>
+                        new KeyValuePair<int, BlockTx>(txIndex, new BlockTx(txIndex, 0, tx.Hash, false, tx))));
+
+            return this.allBlockTxes.TryAdd(blockHash, blockTxes);
+        }
+
         public bool TryGetTransaction(UInt256 blockHash, int txIndex, out Transaction transaction)
         {
-            Block block;
-            if (this.blocks.TryGetValue(blockHash, out block)
-                && txIndex < block.Transactions.Length)
+            ImmutableSortedDictionary<int, BlockTx> blockTxes;
+            BlockTx blockTx;
+
+            if (this.allBlockTxes.TryGetValue(blockHash, out blockTxes)
+                && blockTxes.TryGetValue(txIndex, out blockTx))
             {
-                transaction = block.Transactions[txIndex];
+                transaction = blockTx.Transaction;
                 return true;
             }
             else
@@ -40,12 +61,18 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
+        public bool TryRemove(UInt256 blockHash)
+        {
+            ImmutableSortedDictionary<int, BlockTx> blockTxes;
+            return this.allBlockTxes.TryRemove(blockHash, out blockTxes);
+        }
+
         public IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash)
         {
-            Block block;
-            if (this.blocks.TryGetValue(blockHash, out block))
+            ImmutableSortedDictionary<int, BlockTx> blockTxes;
+            if (this.allBlockTxes.TryGetValue(blockHash, out blockTxes))
             {
-                return block.Transactions.Select((tx, txIndex) => new BlockTx(txIndex, 0, tx.Hash, /*pruned:*/false, tx));
+                return blockTxes.Values;
             }
             else
             {
@@ -53,35 +80,24 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
-        public void PruneElements(UInt256 blockHash, IEnumerable<int> indices)
+        public void PruneElements(UInt256 blockHash, IEnumerable<int> txIndices)
         {
-            throw new NotImplementedException();
-        }
+            ImmutableSortedDictionary<int, BlockTx> blockTxes;
+            if (this.allBlockTxes.TryGetValue(blockHash, out blockTxes))
+            {
+                using (var pruningCursor = new MemoryMerkleTreePruningCursor(blockTxes.Values))
+                {
+                    foreach (var index in txIndices)
+                        DataCalculatorNew.PruneNode(pruningCursor, index);
 
-        public int Count
-        {
-            get { return this.blocks.Count; }
-        }
+                    var prunedBlockTxes =
+                        ImmutableSortedDictionary.CreateRange<int, BlockTx>(
+                            pruningCursor.ReadNodes().Select(blockTx =>
+                                new KeyValuePair<int, BlockTx>(blockTx.Index, blockTx)));
 
-        public string Name
-        {
-            get { return "MemoryBlockStorage"; }
-        }
-
-        public bool ContainsBlock(UInt256 blockHash)
-        {
-            return this.blocks.ContainsKey(blockHash);
-        }
-
-        public bool TryAdd(UInt256 blockHash, Block block)
-        {
-            return this.blocks.TryAdd(blockHash, block);
-        }
-
-        public bool TryRemove(UInt256 blockHash)
-        {
-            Block block;
-            return this.blocks.TryRemove(blockHash, out block);
+                    this.allBlockTxes[blockHash] = prunedBlockTxes;
+                }
+            }
         }
 
         public void Flush()

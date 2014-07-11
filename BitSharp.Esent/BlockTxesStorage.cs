@@ -137,20 +137,20 @@ namespace BitSharp.Esent
             }
         }
 
-        public void PruneElements(UInt256 blockHash, IEnumerable<int> indices)
+        public void PruneElements(UInt256 blockHash, IEnumerable<int> txIndices)
         {
-            using (var merkleWalker = OpenWalker(blockHash))
+            using (var pruningCursor = OpenPruningCursor(blockHash))
             {
-                merkleWalker.BeginTransaction();
+                pruningCursor.BeginTransaction();
 
-                foreach (var index in indices)
-                    DataCalculatorNew.PruneNode(merkleWalker, index);
+                foreach (var index in txIndices)
+                    DataCalculatorNew.PruneNode(pruningCursor, index);
 
-                merkleWalker.CommitTransaction();
+                pruningCursor.CommitTransaction();
             }
         }
 
-        public IMerkleTreePruningCursor OpenWalker(UInt256 blockHash)
+        public IMerkleTreePruningCursor OpenPruningCursor(UInt256 blockHash)
         {
             var cursor = this.OpenCursor();
             try
@@ -443,7 +443,7 @@ namespace BitSharp.Esent
             }
         }
 
-        public int Count
+        public int BlockCount
         {
             get { return 0; }
         }
