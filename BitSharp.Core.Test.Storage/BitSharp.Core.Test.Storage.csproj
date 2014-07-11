@@ -78,6 +78,11 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="IChainStateBuilderStorageTest.cs" />
+    <Compile Include="IChainStateStorageTest.cs" />
+    <Compile Include="IBlockTxesStorageTest.cs" />
+    <Compile Include="IBlockStorageTest.cs" />
+    <Compile Include="StorageIntegrationTest.cs" />
     <Compile Include="StorageProviderTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
