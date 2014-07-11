@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Domain
 {
-    public class BlockTx : BlockElement
+    public class BlockTx : MerkleTreeNode
     {
         private readonly Transaction transaction;
 

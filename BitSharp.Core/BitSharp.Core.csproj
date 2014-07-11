@@ -113,7 +113,6 @@
     <Compile Include="Builders\ChainBuilder.cs" />
     <Compile Include="Builders\ChainStateBuilder.cs" />
     <Compile Include="Domain\BlockTx.cs" />
-    <Compile Include="Domain\BlockElement.cs" />
     <Compile Include="Domain\Chain.cs" />
     <Compile Include="Domain\ChainedBlock.cs" />
     <Compile Include="Domain\ChainedHeader.cs" />
@@ -127,7 +126,7 @@
     <Compile Include="Domain\UnspentTx.cs" />
     <Compile Include="Domain\Utxo.cs" />
     <Compile Include="Domain\UtxoStream.cs" />
-    <Compile Include="IBlockElementWalker.cs" />
+    <Compile Include="IMerkleTreePruningCursor.cs" />
     <Compile Include="JsonRpc\CoreRpcServer.cs" />
     <Compile Include="Domain\MerkleTreeNode.cs" />
     <Compile Include="Monitor\ChainStateMonitor.cs" />

@@ -68,10 +68,10 @@ namespace BitSharp.Esent.Test
                         coreStorage.ReadBlockTransactions(block.Hash, block.Header.MerkleRoot).ToList();
                     }
 
-                    var finalBlockElements = coreStorage.ReadBlockTransactions(block.Hash, block.Header.MerkleRoot).ToList();
+                    var finalNodes = coreStorage.ReadBlockTransactions(block.Hash, block.Header.MerkleRoot).ToList();
 
-                    Assert.AreEqual(1, finalBlockElements.Count);
-                    Assert.AreEqual(expectedFinalElement, finalBlockElements[0]);
+                    Assert.AreEqual(1, finalNodes.Count);
+                    Assert.AreEqual(expectedFinalElement, finalNodes[0]);
                 });
             }
         }

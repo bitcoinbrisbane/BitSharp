@@ -15,19 +15,19 @@ namespace BitSharp.Core
     //TODO organize and name properly
     public static class DataCalculatorNew
     {
-        public static void PruneNode(IBlockElementWalker merkleWalker, int index)
+        public static void PruneNode(IMerkleTreePruningCursor cursor, int index)
         {
-            BlockElement element;
-            if (!merkleWalker.TryMoveToIndex(index, out element))
+            MerkleTreeNode node;
+            if (!cursor.TryMoveToIndex(index, out node))
                 throw new InvalidOperationException();
 
-            if (element.Depth != 0)
+            if (node.Depth != 0)
                 throw new InvalidOperationException();
 
-            if (!element.Pruned)
+            if (!node.Pruned)
             {
-                element = element.AsPruned();
-                merkleWalker.WriteElement(element);
+                node = node.AsPruned();
+                cursor.WriteNode(node);
             }
 
             bool didWork;
@@ -35,46 +35,46 @@ namespace BitSharp.Core
             {
                 didWork = false;
 
-                if (element.IsLeft)
+                if (node.IsLeft)
                 {
-                    BlockElement rightElement;
-                    if (merkleWalker.TryMoveRight(out rightElement))
+                    MerkleTreeNode rightNode;
+                    if (cursor.TryMoveRight(out rightNode))
                     {
-                        if (element.Pruned && rightElement.Pruned && element.Depth == rightElement.Depth)
+                        if (node.Pruned && rightNode.Pruned && node.Depth == rightNode.Depth)
                         {
-                            var newElement = element.PairWith(rightElement);
-                            merkleWalker.MoveLeft();
-                            merkleWalker.WriteElement(newElement);
-                            merkleWalker.DeleteElementToRight();
+                            var newNode = node.PairWith(rightNode);
+                            cursor.MoveLeft();
+                            cursor.WriteNode(newNode);
+                            cursor.DeleteNodeToRight();
 
-                            element = newElement;
+                            node = newNode;
                             didWork = true;
                         }
                     }
                     else
                     {
-                        if (element.Index != 0 && element.Pruned)
+                        if (node.Index != 0 && node.Pruned)
                         {
-                            var newElement = element.PairWithSelf();
-                            merkleWalker.WriteElement(newElement);
+                            var newNode = node.PairWithSelf();
+                            cursor.WriteNode(newNode);
 
-                            element = newElement;
+                            node = newNode;
                             didWork = true;
                         }
                     }
                 }
                 else
                 {
-                    BlockElement leftElement;
-                    if (merkleWalker.TryMoveLeft(out leftElement))
+                    MerkleTreeNode leftNode;
+                    if (cursor.TryMoveLeft(out leftNode))
                     {
-                        if (element.Pruned && leftElement.Pruned && element.Depth == leftElement.Depth)
+                        if (node.Pruned && leftNode.Pruned && node.Depth == leftNode.Depth)
                         {
-                            var newElement = leftElement.PairWith(element);
-                            merkleWalker.WriteElement(newElement);
-                            merkleWalker.DeleteElementToRight();
+                            var newNode = leftNode.PairWith(node);
+                            cursor.WriteNode(newNode);
+                            cursor.DeleteNodeToRight();
 
-                            element = newElement;
+                            node = newNode;
                             didWork = true;
                         }
                     }
@@ -93,7 +93,7 @@ namespace BitSharp.Core
             {
                 if (node.Index != expectedIndex)
                 {
-                    throw new ValidationException(0 /*TODO blockHash*/);
+                    throw new InvalidOperationException();
                 }
 
                 merkleStream.AddNode(node);
@@ -107,7 +107,7 @@ namespace BitSharp.Core
 
             if (merkleStream.RootNode.Hash != merkleRoot)
             {
-                throw new ValidationException(0 /*TODO blockHash*/);
+                throw new InvalidOperationException();
             }
         }
 
@@ -136,6 +136,9 @@ namespace BitSharp.Core
 
             public void AddNode(MerkleTreeNode newNode)
             {
+                // when streamining nodes, treat them as being pruned so they can be paired together
+                newNode = newNode.AsPruned();
+
                 if (this.leftNodes.Count == 0)
                 {
                     this.leftNodes.Add(newNode);
@@ -169,7 +172,7 @@ namespace BitSharp.Core
                 while (this.leftNodes.Count > 1)
                 {
                     var leftNode = this.leftNodes.Last();
-                    var rightNode = new MerkleTreeNode(leftNode.Index + (1 << leftNode.Depth), leftNode.Depth, leftNode.Hash);
+                    var rightNode = new MerkleTreeNode(leftNode.Index + (1 << leftNode.Depth), leftNode.Depth, leftNode.Hash, pruned: true);
                     AddNode(rightNode);
                 }
             }

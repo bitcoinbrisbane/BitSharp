@@ -150,12 +150,12 @@ namespace BitSharp.Esent
             }
         }
 
-        public IBlockElementWalker OpenWalker(UInt256 blockHash)
+        public IMerkleTreePruningCursor OpenWalker(UInt256 blockHash)
         {
             var cursor = this.OpenCursor();
             try
             {
-                return new BlockElementWalker(blockHash, cursor,
+                return new MerkleTreePruningCursor(blockHash, cursor,
                     disposeAction: () => this.FreeCursor(cursor));
             }
             catch (Exception)

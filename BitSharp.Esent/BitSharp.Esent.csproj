@@ -85,7 +85,7 @@
   <ItemGroup>
     <Compile Include="BlockCursor.cs" />
     <Compile Include="BlockTxesCursor.cs" />
-    <Compile Include="BlockElementWalker.cs" />
+    <Compile Include="MerkleTreePruningCursor.cs" />
     <Compile Include="BlockStorage.cs" />
     <Compile Include="BlockTxesStorage.cs" />
     <Compile Include="ChainState\ChainStateStorageCursor.cs" />

@@ -19,13 +19,13 @@ using System.Security.Cryptography;
 
 namespace BitSharp.Esent
 {
-    internal class BlockElementWalker : IBlockElementWalker, IDisposable
+    internal class MerkleTreePruningCursor : IMerkleTreePruningCursor, IDisposable
     {
         private readonly UInt256 blockHash;
         private readonly BlockTxesCursor cursor;
         private readonly Action disposeAction;
 
-        public BlockElementWalker(UInt256 blockHash, BlockTxesCursor cursor, Action disposeAction)
+        public MerkleTreePruningCursor(UInt256 blockHash, BlockTxesCursor cursor, Action disposeAction)
         {
             this.blockHash = blockHash;
             this.cursor = cursor;
@@ -49,66 +49,67 @@ namespace BitSharp.Esent
             Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
         }
 
-        public bool TryMoveToIndex(int index, out BlockElement element)
+        public bool TryMoveToIndex(int index, out MerkleTreeNode node)
         {
             Api.MakeKey(cursor.jetSession, cursor.blocksTableId, this.blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
             Api.MakeKey(cursor.jetSession, cursor.blocksTableId, index, MakeKeyGrbit.None);
 
             if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekEQ))
             {
-                element = ReadElement();
+                node = ReadNode();
                 return true;
             }
             else
             {
-                element = default(BlockElement);
+                node = default(MerkleTreeNode);
                 return false;
             }
         }
 
-        public bool TryMoveLeft(out BlockElement element)
+        public bool TryMoveLeft(out MerkleTreeNode node)
         {
             if (Api.TryMovePrevious(cursor.jetSession, cursor.blocksTableId)
                 && this.blockHash == new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
             {
-                element = ReadElement();
+                node = ReadNode();
                 return true;
             }
             else
             {
-                element = default(BlockElement);
+                node = default(MerkleTreeNode);
                 return false;
             }
         }
 
-        public bool TryMoveRight(out BlockElement element)
+        public bool TryMoveRight(out MerkleTreeNode node)
         {
             if (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId)
                 && this.blockHash == new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
             {
-                element = ReadElement();
+                node = ReadNode();
                 return true;
             }
             else
             {
                 MoveLeft();
-                element = default(BlockElement);
+                node = default(MerkleTreeNode);
                 return false;
             }
         }
 
-        public void WriteElement(BlockElement element)
+        public void WriteNode(MerkleTreeNode node)
         {
+            if (!node.Pruned)
+                throw new ArgumentException();
+
             Api.JetPrepareUpdate(cursor.jetSession, cursor.blocksTableId, JET_prep.Replace);
             try
             {
-                Debug.Assert(element.Index == Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value);
+                Debug.Assert(node.Index == Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value);
 
-                //TODO i'm using -1 depth to mean not pruned, this should be interpreted as depth 0
-                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId, !element.Pruned ? -1 : element.Depth);
-                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId, element.Hash.ToByteArray());
-                if (element.Pruned)
-                    Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId, null);
+                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId, node.Depth);
+                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId, node.Hash.ToByteArray());
+                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId, null);
 
                 Api.JetUpdate(cursor.jetSession, cursor.blocksTableId);
             }
@@ -121,34 +122,32 @@ namespace BitSharp.Esent
 
         public void MoveLeft()
         {
-            BlockElement element;
-            if (!this.TryMoveLeft(out element))
+            MerkleTreeNode node;
+            if (!this.TryMoveLeft(out node))
                 throw new InvalidOperationException();
         }
 
-        public void DeleteElementToRight()
+        public void DeleteNodeToRight()
         {
-            var origElement = ReadElement();
-
-            BlockElement element;
-            if (!this.TryMoveRight(out element))
+            MerkleTreeNode node;
+            if (!this.TryMoveRight(out node))
                 throw new InvalidOperationException();
 
             Api.JetDelete(cursor.jetSession, cursor.blocksTableId);
 
             MoveLeft();
-            var newElement = ReadElement();
-            Debug.Assert(origElement == newElement);
         }
 
-        private BlockElement ReadElement()
+        private MerkleTreeNode ReadNode()
         {
             var index = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
             var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
             var txHash = new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
-            var pruned = depth >= 0;
 
-            return new BlockElement(index, Math.Max(0, depth), txHash, pruned);
+            var pruned = depth >= 0;
+            depth = Math.Max(0, depth);
+
+            return new MerkleTreeNode(index, depth, txHash, pruned);
         }
     }
 }
