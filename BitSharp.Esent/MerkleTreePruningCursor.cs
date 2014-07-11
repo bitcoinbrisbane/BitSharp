@@ -51,7 +51,7 @@ namespace BitSharp.Esent
 
         public bool TryMoveToIndex(int index, out MerkleTreeNode node)
         {
-            Api.MakeKey(cursor.jetSession, cursor.blocksTableId, this.blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
+            Api.MakeKey(cursor.jetSession, cursor.blocksTableId, DbEncoder.EncodeUInt256(this.blockHash), MakeKeyGrbit.NewKey);
             Api.MakeKey(cursor.jetSession, cursor.blocksTableId, index, MakeKeyGrbit.None);
 
             if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekEQ))
@@ -69,7 +69,7 @@ namespace BitSharp.Esent
         public bool TryMoveLeft(out MerkleTreeNode node)
         {
             if (Api.TryMovePrevious(cursor.jetSession, cursor.blocksTableId)
-                && this.blockHash == new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
+                && this.blockHash == DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
             {
                 node = ReadNode();
                 return true;
@@ -84,7 +84,7 @@ namespace BitSharp.Esent
         public bool TryMoveRight(out MerkleTreeNode node)
         {
             if (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId)
-                && this.blockHash == new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
+                && this.blockHash == DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
             {
                 node = ReadNode();
                 return true;
@@ -108,7 +108,7 @@ namespace BitSharp.Esent
                 Debug.Assert(node.Index == Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value);
 
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId, node.Depth);
-                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId, node.Hash.ToByteArray());
+                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId, DbEncoder.EncodeUInt256(node.Hash));
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId, null);
 
                 Api.JetUpdate(cursor.jetSession, cursor.blocksTableId);
@@ -142,7 +142,7 @@ namespace BitSharp.Esent
         {
             var index = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
             var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
-            var txHash = new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
+            var txHash = DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
 
             var pruned = depth >= 0;
             depth = Math.Max(0, depth);

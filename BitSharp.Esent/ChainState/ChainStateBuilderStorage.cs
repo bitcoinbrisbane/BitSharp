@@ -151,7 +151,7 @@ namespace BitSharp.Esent
                 Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId, JET_prep.Insert);
                 try
                 {
-                    Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.txHashColumnId, txHash.ToByteArray());
+                    Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.txHashColumnId, DbEncoder.EncodeUInt256(txHash));
                     Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.blockIndexColumnId, unspentTx.BlockIndex);
                     Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.txIndexColumnId, unspentTx.TxIndex);
                     Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
@@ -203,7 +203,7 @@ namespace BitSharp.Esent
                 throw new InvalidOperationException();
 
             Api.JetSetCurrentIndex(this.cursor.jetSession, this.cursor.unspentTxTableId, "IX_TxHash");
-            Api.MakeKey(this.cursor.jetSession, this.cursor.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
+            Api.MakeKey(this.cursor.jetSession, this.cursor.unspentTxTableId, DbEncoder.EncodeUInt256(txHash), MakeKeyGrbit.NewKey);
             if (!Api.TrySeek(this.cursor.jetSession, this.cursor.unspentTxTableId, SeekGrbit.SeekEQ))
                 throw new KeyNotFoundException();
 
@@ -243,7 +243,7 @@ namespace BitSharp.Esent
                 throw new InvalidOperationException();
 
             Api.JetSetCurrentIndex(this.cursor.jetSession, this.cursor.unspentTxTableId, "IX_TxHash");
-            Api.MakeKey(this.cursor.jetSession, this.cursor.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
+            Api.MakeKey(this.cursor.jetSession, this.cursor.unspentTxTableId, DbEncoder.EncodeUInt256(txHash), MakeKeyGrbit.NewKey);
             if (!Api.TrySeek(this.cursor.jetSession, this.cursor.unspentTxTableId, SeekGrbit.SeekEQ))
                 throw new KeyNotFoundException();
 
@@ -337,7 +337,7 @@ namespace BitSharp.Esent
                             {
                                 break;
                             }
-                        } while (Api.TryMove(pruneCursor.jetSession, pruneCursor.spentTxTableId, JET_Move.Next, MoveGrbit.None));
+                        } while (Api.TryMoveNext(pruneCursor.jetSession, pruneCursor.spentTxTableId));
                     }
 
                     Api.JetCommitTransaction(pruneCursor.jetSession, CommitTransactionGrbit.LazyFlush);

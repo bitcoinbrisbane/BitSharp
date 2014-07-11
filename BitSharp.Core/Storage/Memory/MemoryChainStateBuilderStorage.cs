@@ -4,6 +4,7 @@ using BitSharp.Core.Domain;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -84,7 +85,8 @@ namespace BitSharp.Core.Storage.Memory
             if (!this.unspentTransactions.TryGetValue(txHash, out unspentTx))
                 return false;
 
-            this.unspentTransactions.Remove(txHash);
+            var removed = this.unspentTransactions.Remove(txHash);
+            Debug.Assert(removed);
 
             if (spentBlockIndex >= 0)
             {

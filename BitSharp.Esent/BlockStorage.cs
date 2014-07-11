@@ -57,7 +57,7 @@ namespace BitSharp.Esent
             try
             {
                 Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockHeadersTableId, "IX_BlockHash");
-                Api.MakeKey(cursor.jetSession, cursor.blockHeadersTableId, blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
+                Api.MakeKey(cursor.jetSession, cursor.blockHeadersTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
 
                 return Api.TrySeek(cursor.jetSession, cursor.blockHeadersTableId, SeekGrbit.SeekEQ);
             }
@@ -80,8 +80,8 @@ namespace BitSharp.Esent
                         Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Insert);
                         try
                         {
-                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderHashColumnId, chainedHeader.Hash.ToByteArray());
-                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderPreviousHashColumnId, chainedHeader.PreviousBlockHash.ToByteArray());
+                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderHashColumnId, DbEncoder.EncodeUInt256(chainedHeader.Hash));
+                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderPreviousHashColumnId, DbEncoder.EncodeUInt256(chainedHeader.PreviousBlockHash));
                             Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderHeightColumnId, chainedHeader.Height);
                             Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderTotalWorkColumnId, DataEncoder.EncodeTotalWork(chainedHeader.TotalWork));
                             Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderBytesColumnId, DataEncoder.EncodeChainedHeader(chainedHeader));
@@ -121,7 +121,7 @@ namespace BitSharp.Esent
             try
             {
                 Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockHeadersTableId, "IX_BlockHash");
-                Api.MakeKey(cursor.jetSession, cursor.blockHeadersTableId, blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
+                Api.MakeKey(cursor.jetSession, cursor.blockHeadersTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
                 if (Api.TrySeek(cursor.jetSession, cursor.blockHeadersTableId, SeekGrbit.SeekEQ))
                 {
                     chainedHeader = DataEncoder.DecodeChainedHeader(Api.RetrieveColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderBytesColumnId));
@@ -159,7 +159,7 @@ namespace BitSharp.Esent
                             var chainedHeader = DataEncoder.DecodeChainedHeader(Api.RetrieveColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderBytesColumnId));
                             return chainedHeader;
                         }
-                    } while (Api.TryMove(cursor.jetSession, cursor.blockHeadersTableId, JET_Move.Next, MoveGrbit.None));
+                    } while (Api.TryMoveNext(cursor.jetSession, cursor.blockHeadersTableId));
                 }
 
                 // no valid chained header found
@@ -185,7 +185,7 @@ namespace BitSharp.Esent
                         // decode chained header and return
                         var chainedHeader = DataEncoder.DecodeChainedHeader(Api.RetrieveColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderBytesColumnId));
                         yield return chainedHeader;
-                    } while (Api.TryMove(cursor.jetSession, cursor.blockHeadersTableId, JET_Move.Next, MoveGrbit.None));
+                    } while (Api.TryMoveNext(cursor.jetSession, cursor.blockHeadersTableId));
                 }
             }
             finally
@@ -200,7 +200,7 @@ namespace BitSharp.Esent
             try
             {
                 Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockHeadersTableId, "IX_BlockHash");
-                Api.MakeKey(cursor.jetSession, cursor.blockHeadersTableId, blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
+                Api.MakeKey(cursor.jetSession, cursor.blockHeadersTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
 
                 if (!Api.TrySeek(cursor.jetSession, cursor.blockHeadersTableId, SeekGrbit.SeekEQ))
                     throw new MissingDataException(blockHash);

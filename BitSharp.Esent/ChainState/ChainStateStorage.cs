@@ -168,14 +168,14 @@ namespace BitSharp.Esent
         internal static bool ContainsTransaction(ChainStateStorageCursor cursor, UInt256 txHash)
         {
             Api.JetSetCurrentIndex(cursor.jetSession, cursor.unspentTxTableId, "IX_TxHash");
-            Api.MakeKey(cursor.jetSession, cursor.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
+            Api.MakeKey(cursor.jetSession, cursor.unspentTxTableId, DbEncoder.EncodeUInt256(txHash), MakeKeyGrbit.NewKey);
             return Api.TrySeek(cursor.jetSession, cursor.unspentTxTableId, SeekGrbit.SeekEQ);
         }
 
         internal static bool TryGetTransaction(ChainStateStorageCursor cursor, UInt256 txHash, out UnspentTx unspentTx)
         {
             Api.JetSetCurrentIndex(cursor.jetSession, cursor.unspentTxTableId, "IX_TxHash");
-            Api.MakeKey(cursor.jetSession, cursor.unspentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
+            Api.MakeKey(cursor.jetSession, cursor.unspentTxTableId, DbEncoder.EncodeUInt256(txHash), MakeKeyGrbit.NewKey);
             if (Api.TrySeek(cursor.jetSession, cursor.unspentTxTableId, SeekGrbit.SeekEQ))
             {
                 var blockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.blockIndexColumnId).Value;
@@ -193,7 +193,7 @@ namespace BitSharp.Esent
         internal static bool TryGetTransaction(ChainStateStorageCursor cursor, UInt256 txHash, int spentBlockIndex, out UnspentTx unspentTx)
         {
             Api.JetSetCurrentIndex(cursor.jetSession, cursor.spentTxTableId, "IX_TxHash");
-            Api.MakeKey(cursor.jetSession, cursor.spentTxTableId, txHash.ToByteArray(), MakeKeyGrbit.NewKey);
+            Api.MakeKey(cursor.jetSession, cursor.spentTxTableId, DbEncoder.EncodeUInt256(txHash), MakeKeyGrbit.NewKey);
             if (Api.TrySeek(cursor.jetSession, cursor.spentTxTableId, SeekGrbit.SeekEQ))
             {
                 var addedBlockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.spentTxTableId, cursor.spentAddedBlockIndexColumnId).Value;
@@ -215,15 +215,18 @@ namespace BitSharp.Esent
         internal static IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions(ChainStateStorageCursor cursor)
         {
             Api.JetSetCurrentIndex(cursor.jetSession, cursor.unspentTxTableId, "IX_TxHash");
-            Api.MoveBeforeFirst(cursor.jetSession, cursor.unspentTxTableId);
-            while (Api.TryMoveNext(cursor.jetSession, cursor.unspentTxTableId))
-            {
-                var txHash = new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.txHashColumnId));
-                var blockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.blockIndexColumnId).Value;
-                var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.txIndexColumnId).Value;
-                var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.outputStatesColumnId));
 
-                yield return new KeyValuePair<UInt256, UnspentTx>(txHash, new UnspentTx(blockIndex, txIndex, outputStates));
+            if (Api.TryMoveFirst(cursor.jetSession, cursor.unspentTxTableId))
+            {
+                do
+                {
+                    var txHash = DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.txHashColumnId));
+                    var blockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.blockIndexColumnId).Value;
+                    var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.txIndexColumnId).Value;
+                    var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.outputStatesColumnId));
+
+                    yield return new KeyValuePair<UInt256, UnspentTx>(txHash, new UnspentTx(blockIndex, txIndex, outputStates));
+                } while (Api.TryMoveNext(cursor.jetSession, cursor.unspentTxTableId));
             }
         }
 
@@ -232,15 +235,14 @@ namespace BitSharp.Esent
             var chainBuilder = new ChainBuilder();
 
             Api.JetSetCurrentIndex(cursor.jetSession, cursor.chainTableId, "IX_BlockHeight");
-
-            Api.MakeKey(cursor.jetSession, cursor.chainTableId, 0, MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(cursor.jetSession, cursor.chainTableId, SeekGrbit.SeekGE))
+            
+            if (Api.TryMoveFirst(cursor.jetSession, cursor.chainTableId))
             {
                 do
                 {
                     var chainedHeader = DataEncoder.DecodeChainedHeader(Api.RetrieveColumn(cursor.jetSession, cursor.chainTableId, cursor.chainedHeaderBytesColumnId));
                     chainBuilder.AddBlock(chainedHeader);
-                } while (Api.TryMove(cursor.jetSession, cursor.chainTableId, JET_Move.Next, MoveGrbit.None));
+                } while (Api.TryMoveNext(cursor.jetSession, cursor.chainTableId));
             }
             else
             {

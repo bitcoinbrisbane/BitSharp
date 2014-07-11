@@ -164,7 +164,7 @@ namespace BitSharp.Core.Test.Storage
 
                 // verify the utxo state before rolling back
                 //TODO verify the UTXO hash hard-coded here is correct
-                var expectedUtxoHash = UInt256.Parse("9d3f21dc0cd2255bc3c6ad084861697cd94403d925869d68601bd1d4a0915fd3", NumberStyles.HexNumber);
+                var expectedUtxoHash = UInt256.Parse("fb2fb329cc04794676374b4324205a786ea925d855b0b6211d11e709d7f4c807", NumberStyles.HexNumber);
                 using (var utxoStream = new UtxoStream(logger, expectedUtxos.Last()))
                 {
                     var utxoHash = new UInt256(sha256.ComputeDoubleHash(utxoStream));

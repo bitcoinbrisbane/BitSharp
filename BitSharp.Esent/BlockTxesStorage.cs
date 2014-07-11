@@ -69,11 +69,11 @@ namespace BitSharp.Esent
             try
             {
                 Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockHashTxIndex");
-                Api.MakeKey(cursor.jetSession, cursor.blocksTableId, blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
+                Api.MakeKey(cursor.jetSession, cursor.blocksTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
                 Api.MakeKey(cursor.jetSession, cursor.blocksTableId, -1, MakeKeyGrbit.None);
 
                 if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekGE)
-                    && blockHash == new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
+                    && blockHash == DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
                 {
                     return true;
                 }
@@ -121,11 +121,11 @@ namespace BitSharp.Esent
             Api.JetPrepareUpdate(cursor.jetSession, cursor.blocksTableId, JET_prep.Insert);
             try
             {
-                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId, blockHash.ToByteArray());
+                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId, DbEncoder.EncodeUInt256(blockHash));
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId, txIndex);
                 //TODO i'm using -1 depth to mean not pruned, this should be interpreted as depth 0
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId, -1);
-                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId, txHash.ToByteArray());
+                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId, DbEncoder.EncodeUInt256(txHash));
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId, txBytes);
 
                 Api.JetUpdate(cursor.jetSession, cursor.blocksTableId);
@@ -176,22 +176,22 @@ namespace BitSharp.Esent
                 try
                 {
                     Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockHashTxIndex");
-                    Api.MakeKey(cursor.jetSession, cursor.blocksTableId, blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
+                    Api.MakeKey(cursor.jetSession, cursor.blocksTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
                     Api.MakeKey(cursor.jetSession, cursor.blocksTableId, -1, MakeKeyGrbit.None);
                     if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekGE))
                     {
                         // perform an initial block hash check to see if at least one element was found
-                        if (blockHash != new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
+                        if (blockHash != DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
                             throw new MissingDataException(blockHash);
 
                         do
                         {
-                            if (blockHash != new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
+                            if (blockHash != DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
                                 break;
 
                             var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
                             var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
-                            var txHash = new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
+                            var txHash = DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
                             var txBytes = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId);
 
                             // determine if transaction is pruned by its depth
@@ -242,7 +242,7 @@ namespace BitSharp.Esent
                 try
                 {
                     Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockHashTxIndex");
-                    Api.MakeKey(cursor.jetSession, cursor.blocksTableId, blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
+                    Api.MakeKey(cursor.jetSession, cursor.blocksTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
                     Api.MakeKey(cursor.jetSession, cursor.blocksTableId, txIndex, MakeKeyGrbit.None);
                     if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekEQ))
                     {
