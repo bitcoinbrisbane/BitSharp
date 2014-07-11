@@ -129,9 +129,13 @@ namespace BitSharp.Core.Storage
                 ChainedHeader previousChainedHeader;
                 if (this.blockStorage.TryGetChainedHeader(blockHeader.PreviousBlock, out previousChainedHeader))
                 {
+                    var headerWork = blockHeader.CalculateWork();
+                    if (headerWork < 0)
+                        return false;
+
                     chainedHeader = new ChainedHeader(blockHeader,
                         previousChainedHeader.Height + 1,
-                        previousChainedHeader.TotalWork + blockHeader.CalculateWork());
+                        previousChainedHeader.TotalWork + headerWork);
 
                     if (this.blockStorage.TryAddChainedHeader(chainedHeader))
                     {
@@ -281,6 +285,7 @@ namespace BitSharp.Core.Storage
 
         public void MarkBlockInvalid(UInt256 blockHash)
         {
+            this.blockStorage.MarkBlockInvalid(blockHash);
             RaiseBlockInvalidated(blockHash);
         }
 

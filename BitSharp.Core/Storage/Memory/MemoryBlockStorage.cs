@@ -13,10 +13,12 @@ namespace BitSharp.Core.Storage.Memory
     public class MemoryBlockStorage : IBlockStorage
     {
         private readonly ConcurrentDictionary<UInt256, ChainedHeader> chainedHeaders;
+        private readonly ConcurrentSet<UInt256> invalidBlocks;
 
         public MemoryBlockStorage()
         {
             this.chainedHeaders = new ConcurrentDictionary<UInt256, ChainedHeader>();
+            this.invalidBlocks = new ConcurrentSet<UInt256>();
         }
 
         public void Dispose()
@@ -44,7 +46,8 @@ namespace BitSharp.Core.Storage.Memory
 
             foreach (var chainedHeader in this.chainedHeaders.Values)
             {
-                if (maxTotalWorkHeader == null || chainedHeader.TotalWork > maxTotalWorkHeader.TotalWork)
+                if (!invalidBlocks.Contains(chainedHeader.Hash)
+                    && (maxTotalWorkHeader == null || chainedHeader.TotalWork > maxTotalWorkHeader.TotalWork))
                 {
                     maxTotalWorkHeader = chainedHeader;
                 }
@@ -56,6 +59,11 @@ namespace BitSharp.Core.Storage.Memory
         public IEnumerable<ChainedHeader> ReadChainedHeaders()
         {
             return this.chainedHeaders.Values;
+        }
+
+        public void MarkBlockInvalid(UInt256 blockHash)
+        {
+            this.invalidBlocks.Add(blockHash);
         }
     }
 }

@@ -31,16 +31,12 @@ namespace BitSharp.Core.Workers
         private readonly TargetBlockWorker targetBlockWorker;
         private Chain targetChain;
 
-        private readonly AutoResetEvent rescanEvent;
-
         public TargetChainWorker(WorkerConfig workerConfig, Logger logger, IBlockchainRules rules, CoreStorage coreStorage)
             : base("TargetChainWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.rules = rules;
             this.coreStorage = coreStorage;
-
-            this.rescanEvent = new AutoResetEvent(false);
 
             this.targetBlockWorker = new TargetBlockWorker(
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.MaxValue),
@@ -99,20 +95,15 @@ namespace BitSharp.Core.Workers
         private bool WorkActionInner()
         {
             var targetBlockLocal = this.targetBlockWorker.TargetBlock;
-
-            Chain targetChainLocal;
-            if (this.rescanEvent.WaitOne(0))
-                targetChainLocal = null;
-            else
-                targetChainLocal = this.targetChain;
+            var targetChainLocal = this.targetChain;
 
             if (targetBlockLocal != null &&
                 (targetChainLocal == null || targetBlockLocal.Hash != targetChainLocal.LastBlock.Hash))
             {
                 var newTargetChain =
                     targetChainLocal != null
-                    ? targetChainLocal.ToBuilder()
-                    : new ChainBuilder(Chain.CreateForGenesisBlock(this.rules.GenesisChainedHeader));
+                        ? targetChainLocal.ToBuilder()
+                        : new ChainBuilder(Chain.CreateForGenesisBlock(this.rules.GenesisChainedHeader));
 
                 var deltaBlockPath = new MethodTimer(false).Time("deltaBlockPath", () =>
                     new BlockchainWalker().GetBlockchainPath(newTargetChain.LastBlock, targetBlockLocal, blockHash => this.coreStorage.GetChainedHeader(blockHash)));

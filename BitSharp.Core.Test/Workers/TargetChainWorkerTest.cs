@@ -5,6 +5,7 @@ using BitSharp.Core.Domain;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Storage;
 using BitSharp.Core.Storage.Memory;
+using BitSharp.Core.Test.Rules;
 using BitSharp.Core.Workers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -23,31 +24,28 @@ namespace BitSharp.Core.Test.Workers
     [TestClass]
     public class TargetChainWorkerTest
     {
-        //TODO
-        // where i have:
-        //      wait for worker (chained block addition)
-        //      wait for worker (target block changed)
-        // these two notifications could potentially complete in one loop, and then the second wait will hang forever
-
         [TestMethod]
         public void TestSimpleChain()
         {
             // prepare test kernel
             var kernel = new StandardKernel(new ConsoleLoggingModule(), new MemoryStorageModule());
+            kernel.Bind<CoreStorage>().ToSelf().InSingletonScope();
+            var coreStorage = kernel.Get<CoreStorage>();
 
             // initialize data
             var fakeHeaders = new FakeHeaders();
-            var chainedHeader0 = new ChainedHeader(fakeHeaders.Genesis(), height: 0, totalWork: 0);
-            var chainedHeader1 = new ChainedHeader(fakeHeaders.Next(), height: 1, totalWork: 1);
-            var chainedHeader2 = new ChainedHeader(fakeHeaders.Next(), height: 2, totalWork: 2);
+            var header0 = fakeHeaders.Genesis();
+            var header1 = fakeHeaders.Next();
+            var header2 = fakeHeaders.Next();
+
+            // store genesis block
+            var chainedHeader0 = ChainedHeader.CreateForGenesisBlock(header0);
+            coreStorage.AddGenesisBlock(chainedHeader0);
 
             // mock rules
             var mockRules = new Mock<IBlockchainRules>();
             mockRules.Setup(rules => rules.GenesisChainedHeader).Returns(chainedHeader0);
             kernel.Bind<IBlockchainRules>().ToConstant(mockRules.Object);
-
-            kernel.Bind<CoreStorage>().ToSelf().InSingletonScope();
-            var coreStorage = kernel.Get<CoreStorage>();
 
             // initialize the target chain worker
             using (var targetChainWorker = kernel.Get<TargetChainWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue))))
@@ -57,21 +55,13 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(null, targetChainWorker.TargetChain);
 
                 // monitor event firing
-                var workNotifyEvent = new AutoResetEvent(false);
-                var workStoppedEvent = new AutoResetEvent(false);
+                var targetChainChangedEvent = new AutoResetEvent(false);
                 var onTargetChainChangedCount = 0;
-
-                targetChainWorker.OnNotifyWork += () => workNotifyEvent.Set();
-                targetChainWorker.OnWorkStopped += () => workStoppedEvent.Set();
-                targetChainWorker.OnTargetChainChanged += () => onTargetChainChangedCount++;
-
-                // store genesis block
-                coreStorage.AddGenesisBlock(chainedHeader0);
+                targetChainWorker.OnTargetChainChanged += () => { targetChainChangedEvent.Set(); onTargetChainChangedCount++; };
 
                 // start worker and wait for initial chain
                 targetChainWorker.Start();
-                workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
+                targetChainChangedEvent.WaitOne();
 
                 // verify chained to block 0
                 Assert.AreEqual(chainedHeader0, targetChainWorker.TargetBlock);
@@ -79,14 +69,11 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(1, onTargetChainChangedCount);
 
                 // add block 1
-                coreStorage.TryChainHeader(chainedHeader1.BlockHeader, out chainedHeader1);
+                ChainedHeader chainedHeader1;
+                coreStorage.TryChainHeader(header1, out chainedHeader1);
 
-                // wait for worker (chained block addition)
-                workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
-                // wait for worker (target block changed)
-                workNotifyEvent.WaitOneOrFail(1000);
-                workStoppedEvent.WaitOneOrFail(1000);
+                // wait for worker
+                targetChainChangedEvent.WaitOne();
 
                 // verify chained to block 1
                 Assert.AreEqual(chainedHeader1, targetChainWorker.TargetBlock);
@@ -94,14 +81,11 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(2, onTargetChainChangedCount);
 
                 // add block 2
-                coreStorage.TryChainHeader(chainedHeader2.BlockHeader, out chainedHeader2);
+                ChainedHeader chainedHeader2;
+                coreStorage.TryChainHeader(header2, out chainedHeader2);
 
-                // wait for worker (chained block addition)
-                workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
-                // wait for worker (target block changed)
-                workNotifyEvent.WaitOneOrFail(1000);
-                workStoppedEvent.WaitOneOrFail(1000);
+                // wait for worker
+                targetChainChangedEvent.WaitOne();
 
                 // verify chained to block 2
                 Assert.AreEqual(chainedHeader2, targetChainWorker.TargetBlock);
@@ -109,8 +93,7 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(3, onTargetChainChangedCount);
 
                 // verify no other work was done
-                Assert.IsFalse(workNotifyEvent.WaitOne(0));
-                Assert.IsFalse(workStoppedEvent.WaitOne(0));
+                Assert.IsFalse(targetChainChangedEvent.WaitOne(50));
             }
         }
 
@@ -119,29 +102,33 @@ namespace BitSharp.Core.Test.Workers
         {
             // prepare test kernel
             var kernel = new StandardKernel(new ConsoleLoggingModule(), new MemoryStorageModule());
+            kernel.Bind<CoreStorage>().ToSelf().InSingletonScope();
+            var coreStorage = kernel.Get<CoreStorage>();
 
             // initialize data
             var fakeHeaders = new FakeHeaders();
-            var chainedHeader0 = new ChainedHeader(fakeHeaders.Genesis(), height: 0, totalWork: 0);
-            var chainedHeader1 = new ChainedHeader(fakeHeaders.Next(), height: 1, totalWork: 1);
-            var chainedHeader2 = new ChainedHeader(fakeHeaders.Next(), height: 2, totalWork: 2);
+            var header0 = fakeHeaders.Genesis();
+            var header1 = fakeHeaders.Next();
+            var header2 = fakeHeaders.Next();
 
             var fakeHeadersA = new FakeHeaders(fakeHeaders);
-            var chainedHeader3A = new ChainedHeader(fakeHeadersA.Next(), height: 3, totalWork: 3);
-            var chainedHeader4A = new ChainedHeader(fakeHeadersA.Next(), height: 4, totalWork: 4);
-            var chainedHeader5A = new ChainedHeader(fakeHeadersA.Next(), height: 5, totalWork: 5);
+            var header3A = fakeHeadersA.Next();
+            var header4A = fakeHeadersA.Next();
+            var header5A = fakeHeadersA.Next();
 
             var fakeHeadersB = new FakeHeaders(fakeHeaders);
-            var chainedHeader3B = new ChainedHeader(fakeHeadersB.Next(), height: 3, totalWork: 3);
-            var chainedHeader4B = new ChainedHeader(fakeHeadersB.Next(), height: 4, totalWork: 10);
+            var header3B = fakeHeadersB.Next();
+            var header4B = fakeHeadersB.Next(DataCalculator.TargetToBits(UnitTestRules.Target2));
+
+            // store genesis block
+            var chainedHeader0 = ChainedHeader.CreateForGenesisBlock(header0);
+            coreStorage.AddGenesisBlock(chainedHeader0);
 
             // mock rules
             var mockRules = new Mock<IBlockchainRules>();
             mockRules.Setup(rules => rules.GenesisChainedHeader).Returns(chainedHeader0);
             kernel.Bind<IBlockchainRules>().ToConstant(mockRules.Object);
 
-            kernel.Bind<CoreStorage>().ToSelf().InSingletonScope();
-            var coreStorage = kernel.Get<CoreStorage>();
 
             // initialize the target chain worker
             using (var targetChainWorker = kernel.Get<TargetChainWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue))))
@@ -151,21 +138,13 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(null, targetChainWorker.TargetChain);
 
                 // monitor event firing
-                var workNotifyEvent = new AutoResetEvent(false);
-                var workStoppedEvent = new AutoResetEvent(false);
+                var targetChainChangedEvent = new AutoResetEvent(false);
                 var onTargetChainChangedCount = 0;
-
-                targetChainWorker.OnNotifyWork += () => workNotifyEvent.Set();
-                targetChainWorker.OnWorkStopped += () => workStoppedEvent.Set();
-                targetChainWorker.OnTargetChainChanged += () => onTargetChainChangedCount++;
-
-                // store genesis block
-                coreStorage.AddGenesisBlock(chainedHeader0);
+                targetChainWorker.OnTargetChainChanged += () => { targetChainChangedEvent.Set(); onTargetChainChangedCount++; };
 
                 // start worker and wait for initial chain
                 targetChainWorker.Start();
-                workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
+                targetChainChangedEvent.WaitOne();
 
                 // verify chained to block 0
                 Assert.AreEqual(chainedHeader0, targetChainWorker.TargetBlock);
@@ -173,14 +152,11 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(1, onTargetChainChangedCount);
 
                 // add block 1
-                coreStorage.TryChainHeader(chainedHeader1.BlockHeader, out chainedHeader1);
+                ChainedHeader chainedHeader1;
+                coreStorage.TryChainHeader(header1, out chainedHeader1);
 
-                // wait for worker (chained block addition)
-                workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
-                // wait for worker (target block changed)
-                workNotifyEvent.WaitOneOrFail(1000);
-                workStoppedEvent.WaitOneOrFail(1000);
+                // wait for worker
+                targetChainChangedEvent.WaitOne();
 
                 // verify chained to block 1
                 Assert.AreEqual(chainedHeader1, targetChainWorker.TargetBlock);
@@ -188,14 +164,11 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(2, onTargetChainChangedCount);
 
                 // add block 2
-                coreStorage.TryChainHeader(chainedHeader2.BlockHeader, out chainedHeader2);
+                ChainedHeader chainedHeader2;
+                coreStorage.TryChainHeader(header2, out chainedHeader2);
 
-                // wait for worker (chained block addition)
-                workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
-                // wait for worker (target block changed)
-                workNotifyEvent.WaitOneOrFail(1000);
-                workStoppedEvent.WaitOneOrFail(1000);
+                // wait for worker
+                targetChainChangedEvent.WaitOne();
 
                 // verify chained to block 2
                 Assert.AreEqual(chainedHeader2, targetChainWorker.TargetBlock);
@@ -203,14 +176,11 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(3, onTargetChainChangedCount);
 
                 // add block 3A
-                coreStorage.TryChainHeader(chainedHeader3A.BlockHeader, out chainedHeader3A);
+                ChainedHeader chainedHeader3A;
+                coreStorage.TryChainHeader(header3A, out chainedHeader3A);
 
-                // wait for worker (chained block addition)
-                workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
-                // wait for worker (target block changed)
-                workNotifyEvent.WaitOneOrFail(1000);
-                workStoppedEvent.WaitOneOrFail(1000);
+                // wait for worker
+                targetChainChangedEvent.WaitOne();
 
                 // verify chained to block 3A
                 Assert.AreEqual(chainedHeader3A, targetChainWorker.TargetBlock);
@@ -218,14 +188,11 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(4, onTargetChainChangedCount);
 
                 // add block 4A
-                coreStorage.TryChainHeader(chainedHeader4A.BlockHeader, out chainedHeader4A);
+                ChainedHeader chainedHeader4A;
+                coreStorage.TryChainHeader(header4A, out chainedHeader4A);
 
-                // wait for worker (chained block addition)
-                workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
-                // wait for worker (target block changed)
-                workNotifyEvent.WaitOneOrFail(1000);
-                workStoppedEvent.WaitOneOrFail(1000);
+                // wait for worker
+                targetChainChangedEvent.WaitOne();
 
                 // verify chained to block 4A
                 Assert.AreEqual(chainedHeader4A, targetChainWorker.TargetBlock);
@@ -233,14 +200,11 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(5, onTargetChainChangedCount);
 
                 // add block 5A
-                coreStorage.TryChainHeader(chainedHeader5A.BlockHeader, out chainedHeader5A);
+                ChainedHeader chainedHeader5A;
+                coreStorage.TryChainHeader(header5A, out chainedHeader5A);
 
-                // wait for worker (chained block addition)
-                workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
-                // wait for worker (target block changed)
-                workNotifyEvent.WaitOneOrFail(1000);
-                workStoppedEvent.WaitOneOrFail(1000);
+                // wait for worker
+                targetChainChangedEvent.WaitOne();
 
                 // verify chained to block 5A
                 Assert.AreEqual(chainedHeader5A, targetChainWorker.TargetBlock);
@@ -248,11 +212,11 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(6, onTargetChainChangedCount);
 
                 // add block 3B
-                coreStorage.TryChainHeader(chainedHeader3B.BlockHeader, out chainedHeader3B);
+                ChainedHeader chainedHeader3B;
+                coreStorage.TryChainHeader(header3B, out chainedHeader3B);
 
-                // wait for worker (chained block addition)
-                workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
+                // wait for worker, it should not fire
+                Assert.IsFalse(targetChainChangedEvent.WaitOne(50));
 
                 // verify no chaining done
                 Assert.AreEqual(chainedHeader5A, targetChainWorker.TargetBlock);
@@ -260,14 +224,11 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(6, onTargetChainChangedCount);
 
                 // add block 4B
-                coreStorage.TryChainHeader(chainedHeader4B.BlockHeader, out chainedHeader4B);
+                ChainedHeader chainedHeader4B;
+                coreStorage.TryChainHeader(header4B, out chainedHeader4B);
 
-                // wait for worker (chained block addition)
-                workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
-                // wait for worker (target block changed)
-                workNotifyEvent.WaitOneOrFail(1000);
-                workStoppedEvent.WaitOneOrFail(1000);
+                // wait for worker
+                targetChainChangedEvent.WaitOne();
 
                 // verify chained to block 4B
                 Assert.AreEqual(chainedHeader4B, targetChainWorker.TargetBlock);
@@ -275,8 +236,7 @@ namespace BitSharp.Core.Test.Workers
                 Assert.AreEqual(7, onTargetChainChangedCount);
 
                 // verify no other work was done
-                Assert.IsFalse(workNotifyEvent.WaitOne(0));
-                Assert.IsFalse(workStoppedEvent.WaitOne(0));
+                Assert.IsFalse(targetChainChangedEvent.WaitOne(50));
             }
         }
 

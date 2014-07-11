@@ -74,34 +74,24 @@ namespace BitSharp.Esent
                 var cursor = this.OpenCursor();
                 try
                 {
-                    Api.JetBeginTransaction(cursor.jetSession);
+                    Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Insert);
                     try
                     {
-                        Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Insert);
-                        try
-                        {
-                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderHashColumnId, chainedHeader.Hash.ToByteArray());
-                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderPreviousHashColumnId, chainedHeader.PreviousBlockHash.ToByteArray());
-                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderHeightColumnId, chainedHeader.Height);
-                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderTotalWorkColumnId, DataEncoder.EncodeTotalWork(chainedHeader.TotalWork));
-                            Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderBytesColumnId, DataEncoder.EncodeChainedHeader(chainedHeader));
+                        Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderHashColumnId, chainedHeader.Hash.ToByteArray());
+                        Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderPreviousHashColumnId, chainedHeader.PreviousBlockHash.ToByteArray());
+                        Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderHeightColumnId, chainedHeader.Height);
+                        Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderTotalWorkColumnId, DataEncoder.EncodeTotalWork(chainedHeader.TotalWork));
+                        Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderBytesColumnId, DataEncoder.EncodeChainedHeader(chainedHeader));
 
-                            Api.JetUpdate(cursor.jetSession, cursor.blockHeadersTableId);
-                        }
-                        catch (Exception)
-                        {
-                            Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Cancel);
-                            throw;
-                        }
-
-                        Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
-                        return true;
+                        Api.JetUpdate(cursor.jetSession, cursor.blockHeadersTableId);
                     }
                     catch (Exception)
                     {
-                        Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
+                        Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Cancel);
                         throw;
                     }
+
+                    return true;
                 }
                 finally
                 {
@@ -185,6 +175,36 @@ namespace BitSharp.Esent
                         var chainedHeader = DataEncoder.DecodeChainedHeader(Api.RetrieveColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderBytesColumnId));
                         yield return chainedHeader;
                     } while (Api.TryMove(cursor.jetSession, cursor.blockHeadersTableId, JET_Move.Next, MoveGrbit.None));
+                }
+            }
+            finally
+            {
+                this.FreeCursor(cursor);
+            }
+        }
+
+        public void MarkBlockInvalid(UInt256 blockHash)
+        {
+            var cursor = this.OpenCursor();
+            try
+            {
+                Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockHeadersTableId, "IX_BlockHash");
+                Api.MakeKey(cursor.jetSession, cursor.blockHeadersTableId, blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
+
+                if (!Api.TrySeek(cursor.jetSession, cursor.blockHeadersTableId, SeekGrbit.SeekEQ))
+                    throw new MissingDataException(blockHash);
+
+                Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Replace);
+                try
+                {
+                    Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderValidColumnId, true);
+
+                    Api.JetUpdate(cursor.jetSession, cursor.blockHeadersTableId);
+                }
+                catch (Exception)
+                {
+                    Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Cancel);
+                    throw;
                 }
             }
             finally

@@ -43,5 +43,11 @@ namespace BitSharp.Core.Storage
         /// </summary>
         /// <returns>An enumerable of all headers.</returns>
         IEnumerable<ChainedHeader> ReadChainedHeaders();
+
+        /// <summary>
+        /// Mark a block as being invalid, either due to an invalid header or block contents.
+        /// </summary>
+        /// <param name="blockHash">The block's hash.</param>
+        void MarkBlockInvalid(UInt256 blockHash);
     }
 }

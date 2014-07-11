@@ -6,6 +6,7 @@ using BitSharp.Core.Domain;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Storage;
 using BitSharp.Core.Test;
+using BitSharp.Core.Test.Rules;
 using BitSharp.Domain;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NLog;
@@ -34,7 +35,7 @@ namespace BitSharp.Esent.Test
 
             var txCount = 100;
             var transactions = Enumerable.Range(0, txCount).Select(x => RandomData.RandomTransaction()).ToImmutableArray();
-            var blockHeader = RandomData.RandomBlockHeader().With(MerkleRoot: DataCalculator.CalculateMerkleRoot(transactions));
+            var blockHeader = RandomData.RandomBlockHeader().With(MerkleRoot: DataCalculator.CalculateMerkleRoot(transactions), Bits: DataCalculator.TargetToBits(UnitTestRules.Target0));
             var block = new Block(blockHeader, transactions);
 
             var expectedFinalDepth = (int)Math.Ceiling(Math.Log(txCount, 2));

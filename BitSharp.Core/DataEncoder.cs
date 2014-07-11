@@ -172,6 +172,9 @@ namespace BitSharp.Core
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
+                if (totalWork < 0)
+                    throw new ArgumentOutOfRangeException();
+
                 var totalWorkBytesLittleEndian = totalWork.ToByteArray();
                 if (totalWorkBytesLittleEndian.Length > 64)
                     throw new ArgumentOutOfRangeException();
