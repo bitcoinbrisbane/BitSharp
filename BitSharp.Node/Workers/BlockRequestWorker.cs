@@ -313,7 +313,8 @@ namespace BitSharp.Node.Workers
                     }
 
                     // send out the request for blocks
-                    requestTasks.Add(peer.Value.Sender.SendGetData(invVectors.ToImmutable()));
+                    if (invVectors.Count > 0)
+                        requestTasks.Add(peer.Value.Sender.SendGetData(invVectors.ToImmutable()));
                 }
             }
 
