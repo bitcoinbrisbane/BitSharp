@@ -20,10 +20,10 @@ namespace BitSharp.Core.Domain
         private readonly int outputCount;
         private readonly int spentBlockIndex;
 
-        public SpentTx(UInt256 txHash, int confirmedBlockINdex, int txIndex, int outputCount, int spentBlockIndex)
+        public SpentTx(UInt256 txHash, int confirmedBlockIndex, int txIndex, int outputCount, int spentBlockIndex)
         {
             this.txHash = txHash;
-            this.confirmedBlockIndex = confirmedBlockINdex;
+            this.confirmedBlockIndex = confirmedBlockIndex;
             this.txIndex = txIndex;
             this.outputCount = outputCount;
             this.spentBlockIndex = spentBlockIndex;

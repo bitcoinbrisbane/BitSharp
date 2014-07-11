@@ -249,10 +249,5 @@ namespace BitSharp.Esent
 
             return chainBuilder.ToImmutable();
         }
-
-        public IChainStateBuilderStorage ToBuilder()
-        {
-            throw new NotSupportedException();
-        }
     }
 }

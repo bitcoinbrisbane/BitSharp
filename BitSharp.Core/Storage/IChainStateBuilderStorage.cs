@@ -40,7 +40,7 @@ namespace BitSharp.Core.Storage
 
         IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions();
 
-        IEnumerable<Tuple<int, int>> ReadSpentTransactions(int spentBlockIndex);
+        IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex);
 
         void RemoveSpentTransactions(int spentBlockIndex);
 

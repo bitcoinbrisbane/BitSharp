@@ -266,7 +266,7 @@ namespace BitSharp.Esent
             return ChainStateStorage.ReadUnspentTransactions(this.cursor);
         }
 
-        public IEnumerable<Tuple<int, int>> ReadSpentTransactions(int spentBlockIndex)
+        public IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex)
         {
             using (var readCursor = new ChainStateStorageCursor(this.jetDatabase, this.jetInstance, readOnly: true))
             {
@@ -281,8 +281,7 @@ namespace BitSharp.Esent
                     {
                         while (stream.Position < stream.Length)
                         {
-                            var spentTx = DataEncoder.DecodeSpentTx(stream);
-                            yield return Tuple.Create(spentTx.ConfirmedBlockIndex, spentTx.TxIndex);
+                            yield return DataEncoder.DecodeSpentTx(stream);
                         }
                     }
                 }

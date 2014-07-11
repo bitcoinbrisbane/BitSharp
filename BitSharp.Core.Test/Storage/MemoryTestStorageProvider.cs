@@ -24,10 +24,5 @@ namespace BitSharp.Core.Test.Storage
         {
             return new MemoryStorageManager();
         }
-
-        public IChainStateBuilderStorage OpenChainStateBuilderStorage(ChainedHeader genesisHeader, Logger logger)
-        {
-            return new MemoryChainStateBuilderStorage(genesisHeader);
-        }
     }
 }

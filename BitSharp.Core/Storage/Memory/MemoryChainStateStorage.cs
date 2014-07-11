@@ -46,14 +46,9 @@ namespace BitSharp.Core.Storage.Memory
             return this.unspentTransactions.TryGetValue(txHash, out unspentTx);
         }
 
-        IEnumerable<KeyValuePair<UInt256, UnspentTx>> IChainStateStorage.ReadUnspentTransactions()
+        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions()
         {
             return this.unspentTransactions;
-        }
-
-        public IChainStateBuilderStorage ToBuilder()
-        {
-            return new MemoryChainStateBuilderStorage(this);
         }
     }
 }

@@ -48,10 +48,5 @@ namespace BitSharp.Core.Storage
         {
             return Enumerable.Empty<KeyValuePair<UInt256, UnspentTx>>();
         }
-
-        public IChainStateBuilderStorage ToBuilder()
-        {
-            throw new NotSupportedException();
-        }
     }
 }

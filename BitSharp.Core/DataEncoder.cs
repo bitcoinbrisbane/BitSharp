@@ -426,7 +426,7 @@ namespace BitSharp.Core
             {
                 return new SpentTx(
                     txHash: reader.ReadUInt256(),
-                    confirmedBlockINdex: reader.ReadInt32(),
+                    confirmedBlockIndex: reader.ReadInt32(),
                     txIndex: reader.ReadInt32(),
                     outputCount: reader.ReadInt32(),
                     spentBlockIndex: reader.ReadInt32()

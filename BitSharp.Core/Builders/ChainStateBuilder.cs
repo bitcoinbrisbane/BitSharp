@@ -231,7 +231,7 @@ namespace BitSharp.Core.Builders
             get { return this.chainStateBuilderStorage.TransactionCount; }
         }
 
-        public IEnumerable<Tuple<int, int>> ReadSpentTransactions(int spentBlockIndex)
+        public IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex)
         {
             return this.chainStateBuilderStorage.ReadSpentTransactions(spentBlockIndex);
         }

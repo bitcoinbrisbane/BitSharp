@@ -47,7 +47,6 @@ namespace BitSharp.Esent
         public void Dispose()
         {
             new IDisposable[] {
-                this.chainStateBuilderStorage,
                 this.jetInstance
             }.DisposeList();
         }

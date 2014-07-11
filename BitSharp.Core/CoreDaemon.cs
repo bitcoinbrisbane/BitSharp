@@ -188,6 +188,8 @@ namespace BitSharp.Core
                 this.targetChainWorker,
                 this.gcWorker,
                 this.utxoScanWorker,
+                this.chainStateBuilder,
+                this.chainStateBuilderStorage,
                 this.shutdownToken
             }.DisposeList();
         }

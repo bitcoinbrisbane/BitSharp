@@ -19,7 +19,5 @@ namespace BitSharp.Core.Test.Storage
         void TestCleanup();
 
         IStorageManager OpenStorageManager(Logger logger);
-
-        IChainStateBuilderStorage OpenChainStateBuilderStorage(ChainedHeader genesisHeader, Logger logger);
     }
 }

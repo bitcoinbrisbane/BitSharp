@@ -59,35 +59,32 @@ namespace BitSharp.Core.Workers
             {
                 case PruningMode.RollbackOnly:
                     var stopwatch = Stopwatch.StartNew();
-                    for (var i = minHeight; i <= maxHeight; i++)
+                    for (var blockHeight = minHeight; blockHeight <= maxHeight; blockHeight++)
                     {
                         // cooperative loop
                         this.ThrowIfCancelled();
 
-                        var pruneData = new Dictionary<UInt256, List<int>>();
+                        var pruneData = new Dictionary<int, List<SpentTx>>();
 
-                        foreach (var tuple in this.chainStateBuilder.ReadSpentTransactions(i))
+                        foreach (var spentTx in this.chainStateBuilder.ReadSpentTransactions(blockHeight))
                         {
-                            var addedBlockIndex = tuple.Item1;
-                            var txIndex = tuple.Item2;
-                            var addedBlockHash = chain.Blocks[addedBlockIndex].Hash;
+                            if (!pruneData.ContainsKey(spentTx.ConfirmedBlockIndex))
+                                pruneData[spentTx.ConfirmedBlockIndex] = new List<SpentTx>();
 
-                            if (!pruneData.ContainsKey(addedBlockHash))
-                                pruneData[addedBlockHash] = new List<int>();
-
-                            pruneData[addedBlockHash].Add(txIndex);
+                            pruneData[spentTx.ConfirmedBlockIndex].Add(spentTx);
                         }
 
                         foreach (var keyPair in pruneData)
                         {
-                            var addedBlockHash = keyPair.Key;
-                            var txIndices = keyPair.Value;
+                            var confirmedBlockIndex = keyPair.Key;
+                            var confirmedBlockHash = chain.Blocks[confirmedBlockIndex].Hash;
+                            var spentTxes = keyPair.Value;
 
-                            this.coreStorage.PruneElements(addedBlockHash, txIndices);
+                            this.coreStorage.PruneElements(confirmedBlockHash, spentTxes.Select(x => x.TxIndex));
                         }
 
                         //TODO properly sync commits before removing
-                        this.chainStateBuilder.RemoveSpentTransactions(i);
+                        this.chainStateBuilder.RemoveSpentTransactions(blockHeight);
 
                         //if (i % 1000 == 0)
                         //    this.logger.Info("Pruned to block: {0:#,##0}, took: {1:#,##0.000}s".Format2(i, stopwatch.Elapsed.TotalSeconds));
