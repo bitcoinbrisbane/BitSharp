@@ -8,28 +8,64 @@ using BitSharp.Core.Storage;
 using BitSharp.Core.Test;
 using BitSharp.Core.Test.Rules;
 using BitSharp.Domain;
+using BitSharp.Esent.Test;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NLog;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitSharp.Esent.Test
+namespace BitSharp.Core.Test.Storage
 {
-    //TODO i'd like a better way than an abstract base for providing tests that storage providers can plug into
-    public abstract class StorageProviderTest
+    [TestClass]
+    public class StorageProviderTest
     {
-        public abstract IStorageManager OpenStorageManager(Logger logger);
+        private readonly List<ITestStorageProvider> testStorageProviders =
+            new List<ITestStorageProvider>
+            {
+                new MemoryTestStorageProvider(),
+                new EsentTestStorageProvider(),
+            };
 
-        public abstract IChainStateBuilderStorage OpenChainStateBuilderStorage(ChainedHeader genesisHeader, Logger logger);
-
+        [TestMethod]
         public void TestPrune()
+        {
+            RunTest(TestPrune);
+        }
+
+        [TestMethod]
+        public void TestRollback()
+        {
+            RunTest(TestRollback);
+        }
+
+        // Run the specified test method against all providers
+        private void RunTest(Action<ITestStorageProvider> testMethod)
+        {
+            foreach (var provider in testStorageProviders)
+            {
+                Debug.WriteLine("Testing provider: {0}".Format2(provider.Name));
+
+                provider.TestInitialize();
+                try
+                {
+                    testMethod(provider);
+                }
+                finally
+                {
+                    provider.TestCleanup();
+                }
+            }
+        }
+
+        private void TestPrune(ITestStorageProvider provider)
         {
             var logger = LogManager.CreateNullLogger();
 
@@ -53,7 +89,7 @@ namespace BitSharp.Esent.Test
                 pruneOrderSource.RemoveAt(randomIndex);
             }
 
-            using (var storageManager = this.OpenStorageManager(logger))
+            using (var storageManager = provider.OpenStorageManager(logger))
             using (var coreStorage = new CoreStorage(storageManager, logger))
             {
                 coreStorage.AddGenesisBlock(ChainedHeader.CreateForGenesisBlock(block.Header));
@@ -76,7 +112,7 @@ namespace BitSharp.Esent.Test
             }
         }
 
-        public void TestRollback()
+        private void TestRollback(ITestStorageProvider provider)
         {
             //TODO
             MainnetRules.BypassValidation = true;
@@ -94,9 +130,9 @@ namespace BitSharp.Esent.Test
 
             var rules = new MainnetRules(logger);
 
-            using (var storageManager = this.OpenStorageManager(logger))
+            using (var storageManager = provider.OpenStorageManager(logger))
             using (var coreStorage = new CoreStorage(storageManager, logger))
-            using (var chainStateBuilderStorage = this.OpenChainStateBuilderStorage(genesisHeader, logger))
+            using (var chainStateBuilderStorage = provider.OpenChainStateBuilderStorage(genesisHeader, logger))
             using (var chainStateBuilder = new ChainStateBuilder(chainStateBuilderStorage, logger, rules, coreStorage))
             {
                 // add blocks to storage
@@ -157,11 +193,6 @@ namespace BitSharp.Esent.Test
                     CollectionAssert.AreEqual(expectedUtxo, actualUtxo, new UtxoComparer(), "UTXO differs at height: {0}".Format2(blockIndex));
                 }
             }
-        }
-
-        public void TestChainStateSaveLoad()
-        {
-
         }
 
         private class UtxoComparer : IComparer, IComparer<KeyValuePair<UInt256, UnspentTx>>

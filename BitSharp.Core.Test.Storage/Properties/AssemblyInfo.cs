@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("BitSharp.Core")]
+[assembly: AssemblyTitle("BitSharp.Core.Test.Storage")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("BitSharp.Core")]
+[assembly: AssemblyProduct("BitSharp.Core.Test.Storage")]
 [assembly: AssemblyCopyright("Copyright ©  2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("65d99f3a-0d3b-45e2-913f-e97e21c681d3")]
+[assembly: Guid("af82881a-74b4-4e0f-b85f-bdf5d5f89c32")]
 
 // Version information for an assembly consists of the following four values:
 //
@@ -34,7 +34,3 @@ using System.Runtime.InteropServices;
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.0.0.0")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
-
-// Allow unit testing of internals
-[assembly: InternalsVisibleTo("BitSharp.Core.Test")]
-[assembly: InternalsVisibleTo("BitSharp.Core.Test.Storage")]

@@ -91,8 +91,8 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="EsentTestStorageProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="EsentStorageProviderTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
