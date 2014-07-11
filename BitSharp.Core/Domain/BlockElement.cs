@@ -31,7 +31,7 @@ namespace BitSharp.Core.Domain
             if (this.Depth != 0 || this.Pruned)
                 throw new InvalidOperationException();
 
-            return new BlockTx(this.Index, this.Depth, this.Hash, transaction);
+            return new BlockTx(this.Index, this.Depth, this.Hash, /*pruned:*/transaction == null, transaction);
         }
 
         public BlockElement AsPruned()

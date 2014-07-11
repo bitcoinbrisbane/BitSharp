@@ -194,66 +194,27 @@ namespace BitSharp.Esent
                             var txHash = new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
                             var txBytes = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId);
 
-                            // missing data if any transactions are pruned
-                            if (depth >= 0)
-                                throw new MissingDataException(blockHash);
+                            // determine if transaction is pruned by its depth
+                            var pruned = depth >= 0;
+                            depth = Math.Max(0, depth);
 
-                            // verify transaction is not corrupt
-                            if (txHash != new UInt256(sha256.ComputeDoubleHash(txBytes)))
-                                throw new MissingDataException(blockHash);
+                            BitSharp.Core.Domain.Transaction tx;
+                            if (!pruned)
+                            {
+                                // verify transaction is not corrupt
+                                if (txHash != new UInt256(sha256.ComputeDoubleHash(txBytes)))
+                                    throw new MissingDataException(blockHash);
 
-                            var tx = DataEncoder.DecodeTransaction(txBytes);
-                            var blockTx = new BlockTx(txIndex, 0 /*depth*/, txHash, tx);
+                                tx = DataEncoder.DecodeTransaction(txBytes);
+                            }
+                            else
+                            {
+                                tx = null;
+                            }
+
+                            var blockTx = new BlockTx(txIndex, depth, txHash, pruned, tx);
 
                             yield return blockTx;
-                        } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));
-                    }
-                    else
-                    {
-                        throw new MissingDataException(blockHash);
-                    }
-                }
-                finally
-                {
-                    Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
-                }
-            }
-            finally
-            {
-                this.FreeCursor(cursor);
-            }
-        }
-
-        public IEnumerable<BlockElement> ReadBlockElements(UInt256 blockHash)
-        {
-            var cursor = this.OpenCursor();
-            try
-            {
-                Api.JetBeginTransaction2(cursor.jetSession, BeginTransactionGrbit.ReadOnly);
-                try
-                {
-                    Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockHashTxIndex");
-                    Api.MakeKey(cursor.jetSession, cursor.blocksTableId, blockHash.ToByteArray(), MakeKeyGrbit.NewKey);
-                    Api.MakeKey(cursor.jetSession, cursor.blocksTableId, -1, MakeKeyGrbit.None);
-                    if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekGE))
-                    {
-                        // perform an initial block hash check to see if at least one element was found
-                        if (blockHash != new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
-                            throw new MissingDataException(blockHash);
-
-                        do
-                        {
-                            if (blockHash != new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
-                                break;
-
-                            var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
-                            var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
-                            var txHash = new UInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
-                            var pruned = depth >= 0;
-
-                            var blockElement = new BlockElement(txIndex, Math.Max(0, depth), txHash, pruned);
-
-                            yield return blockElement;
                         } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));
                     }
                     else

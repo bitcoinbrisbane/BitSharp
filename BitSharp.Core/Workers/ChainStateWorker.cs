@@ -110,7 +110,7 @@ namespace BitSharp.Core.Workers
                     // get block and metadata for next link in blockchain
                     var direction = pathElement.Item1;
                     var chainedHeader = pathElement.Item2;
-                    var blockTxes = this.coreStorage.ReadBlock(chainedHeader.Hash, chainedHeader.MerkleRoot).LookAhead(100);
+                    var blockTxes = this.coreStorage.ReadBlockTransactions(chainedHeader.Hash, chainedHeader.MerkleRoot).LookAhead(100);
 
                     var blockStopwatch = Stopwatch.StartNew();
                     if (direction > 0)
@@ -192,7 +192,7 @@ namespace BitSharp.Core.Workers
 
                             var direction = chainedHeaderTuple.Item1;
                             var chainedHeader = chainedHeaderTuple.Item2;
-                            var blockTxes = this.coreStorage.ReadBlock(chainedHeader.Hash, chainedHeader.MerkleRoot).LookAhead(txLookAhead);
+                            var blockTxes = this.coreStorage.ReadBlockTransactions(chainedHeader.Hash, chainedHeader.MerkleRoot).LookAhead(txLookAhead);
 
                             return Tuple.Create(direction, chainedHeader, blockTxes);
                         }

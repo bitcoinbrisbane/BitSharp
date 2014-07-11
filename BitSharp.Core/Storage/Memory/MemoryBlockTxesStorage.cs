@@ -45,20 +45,7 @@ namespace BitSharp.Core.Storage.Memory
             Block block;
             if (this.blocks.TryGetValue(blockHash, out block))
             {
-                return block.Transactions.Select((tx, txIndex) => new BlockTx(txIndex, 0, tx.Hash, tx));
-            }
-            else
-            {
-                throw new MissingDataException(blockHash);
-            }
-        }
-
-        public IEnumerable<BlockElement> ReadBlockElements(UInt256 blockHash)
-        {
-            Block block;
-            if (this.blocks.TryGetValue(blockHash, out block))
-            {
-                return block.Transactions.Select((tx, txIndex) => new BlockElement(txIndex, 0, tx.Hash, false));
+                return block.Transactions.Select((tx, txIndex) => new BlockTx(txIndex, 0, tx.Hash, /*pruned:*/false, tx));
             }
             else
             {

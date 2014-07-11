@@ -12,8 +12,8 @@ namespace BitSharp.Core.Domain
     {
         private readonly Transaction transaction;
 
-        public BlockTx(int index, int depth, UInt256 hash, Transaction transaction)
-            : base(index, depth, hash, pruned: false)
+        public BlockTx(int index, int depth, UInt256 hash, bool pruned, Transaction transaction)
+            : base(index, depth, hash, pruned)
         {
             this.transaction = transaction;
         }

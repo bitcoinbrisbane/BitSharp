@@ -28,7 +28,7 @@ namespace BitSharp.Core.Storage
         /// Retrieve a chained header from storage.
         /// </summary>
         /// <param name="blockHash">The header's hash.</param>
-        /// <param name="chainedHeader">Contains the retrieved header when successful; otherwise, null</param>
+        /// <param name="chainedHeader">Contains the retrieved header when successful; otherwise, null.</param>
         /// <returns>true if the header was retrieved; otherwise, false</returns>
         bool TryGetChainedHeader(UInt256 blockHash, out ChainedHeader chainedHeader);
 

@@ -39,7 +39,7 @@ namespace BitSharp.Esent.Test
             var block = new Block(blockHeader, transactions);
 
             var expectedFinalDepth = (int)Math.Ceiling(Math.Log(txCount, 2));
-            var expectedFinalElement = new BlockElement(index: 0, depth: expectedFinalDepth, hash: blockHeader.MerkleRoot, pruned: true);
+            var expectedFinalElement = new BlockTx(index: 0, depth: expectedFinalDepth, hash: blockHeader.MerkleRoot, pruned: true, transaction: null);
 
             var pruneOrderSource = Enumerable.Range(0, txCount).ToList();
             var pruneOrder = new List<int>(txCount);
@@ -58,17 +58,17 @@ namespace BitSharp.Esent.Test
             {
                 coreStorage.AddGenesisBlock(ChainedHeader.CreateForGenesisBlock(block.Header));
                 coreStorage.TryAddBlock(block);
-                var blockElements = coreStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
+                var blockTxes = coreStorage.ReadBlockTransactions(block.Hash, block.Header.MerkleRoot).ToList();
 
                 new MethodTimer().Time(() =>
                 {
                     foreach (var pruneIndex in pruneOrder)
                     {
                         coreStorage.PruneElements(block.Hash, new[] { pruneIndex });
-                        coreStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
+                        coreStorage.ReadBlockTransactions(block.Hash, block.Header.MerkleRoot).ToList();
                     }
 
-                    var finalBlockElements = coreStorage.ReadBlockElements(block.Hash, block.Header.MerkleRoot).ToList();
+                    var finalBlockElements = coreStorage.ReadBlockTransactions(block.Hash, block.Header.MerkleRoot).ToList();
 
                     Assert.AreEqual(1, finalBlockElements.Count);
                     Assert.AreEqual(expectedFinalElement, finalBlockElements[0]);
@@ -116,7 +116,7 @@ namespace BitSharp.Esent.Test
                 {
                     var block = blocks[blockIndex];
                     var chainedHeader = new ChainedHeader(block.Header, blockIndex, 0);
-                    var blockTxes = block.Transactions.Select((x, i) => new BlockTx(i, 0, x.Hash, x));
+                    var blockTxes = block.Transactions.Select((tx, txIndex) => new BlockTx(txIndex, 0, tx.Hash, /*pruned:*/false, tx));
 
                     chainStateBuilder.AddBlock(chainedHeader, blockTxes);
 
@@ -141,7 +141,7 @@ namespace BitSharp.Esent.Test
                 {
                     var block = blocks[blockIndex];
                     var chainedHeader = new ChainedHeader(block.Header, blockIndex, 0);
-                    var blockTxes = block.Transactions.Select((x, i) => new BlockTx(i, 0, x.Hash, x));
+                    var blockTxes = block.Transactions.Select((tx, txIndex) => new BlockTx(txIndex, 0, tx.Hash, /*pruned:*/false, tx));
 
                     chainStateBuilder.RollbackBlock(chainedHeader, blockTxes);
 

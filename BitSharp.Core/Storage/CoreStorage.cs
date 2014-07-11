@@ -200,7 +200,7 @@ namespace BitSharp.Core.Storage
             return this.blockTxesStorage.TryGetTransaction(blockHash, txIndex, out transaction);
         }
 
-        public IEnumerable<BlockTx> ReadBlock(UInt256 blockHash, UInt256 merkleRoot)
+        public IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash, UInt256 merkleRoot)
         {
             IEnumerator<BlockTx> blockTxes;
             try
@@ -235,45 +235,6 @@ namespace BitSharp.Core.Storage
                         break;
 
                     yield return blockTxes.Current;
-                }
-            }
-        }
-
-        public IEnumerable<BlockElement> ReadBlockElements(UInt256 blockHash, UInt256 merkleRoot)
-        {
-            IEnumerator<BlockElement> blockElements;
-            try
-            {
-                blockElements = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, this.blockTxesStorage.ReadBlockElements(blockHash)).GetEnumerator();
-            }
-            catch (Exception)
-            {
-                this.containsBlockTxes[blockHash] = false;
-                this.missingBlockTxes.Add(blockHash);
-                RaiseBlockTxesMissed(blockHash);
-                throw;
-            }
-            using (blockElements)
-            {
-                while (true)
-                {
-                    bool result;
-                    try
-                    {
-                        result = blockElements.MoveNext();
-                    }
-                    catch (Exception)
-                    {
-                        this.containsBlockTxes[blockHash] = false;
-                        this.missingBlockTxes.Add(blockHash);
-                        RaiseBlockTxesMissed(blockHash);
-                        throw;
-                    }
-
-                    if (!result)
-                        break;
-
-                    yield return blockElements.Current;
                 }
             }
         }
