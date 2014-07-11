@@ -220,18 +220,10 @@ namespace BitSharp.Esent
                 Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.spentTxTableId, JET_prep.Replace);
                 try
                 {
-                    byte[] data;
-                    using (var stream = new MemoryStream())
-                    using (var writer = new BinaryWriter(stream))
-                    {
-                        writer.WriteUInt256(txHash);
-                        writer.WriteInt32(addedBlockIndex);
-                        writer.WriteInt32(txIndex);
-                        writer.WriteInt32(outputStates.Length);
-                        data = stream.ToArray();
-                    }
+                    var spentTx = new SpentTx(txHash, addedBlockIndex, txIndex, outputStates.Length, spentBlockIndex);
+                    var spentTxBytes = DataEncoder.EncodeSpentTx(spentTx);
 
-                    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentDataColumnId, data, SetColumnGrbit.AppendLV);
+                    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentDataColumnId, spentTxBytes, SetColumnGrbit.AppendLV);
 
                     Api.JetUpdate(this.cursor.jetSession, this.cursor.spentTxTableId);
                 }
@@ -240,23 +232,6 @@ namespace BitSharp.Esent
                     Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.spentTxTableId, JET_prep.Cancel);
                     throw;
                 }
-
-                //Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.spentTxTableId, JET_prep.Insert);
-                //try
-                //{
-                //    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentTxHashColumnId, txHash.ToByteArray());
-                //    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentSpentBlockIndexColumnId, spentBlockIndex);
-                //    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentAddedBlockIndexColumnId, addedBlockIndex);
-                //    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentTxIndexColumnId, txIndex);
-                //    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentOutputCountColumnId, outputStates.Length);
-
-                //    Api.JetUpdate(this.cursor.jetSession, this.cursor.spentTxTableId);
-                //}
-                //catch (Exception)
-                //{
-                //    Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.spentTxTableId, JET_prep.Cancel);
-                //    throw;
-                //}
             }
 
             return true;
@@ -302,18 +277,12 @@ namespace BitSharp.Esent
                 if (Api.TrySeek(readCursor.jetSession, readCursor.spentTxTableId, SeekGrbit.SeekEQ))
                 {
                     var spentData = Api.RetrieveColumn(readCursor.jetSession, readCursor.spentTxTableId, readCursor.spentDataColumnId);
-
                     using (var stream = new MemoryStream(spentData))
-                    using (var reader = new BinaryReader(stream))
                     {
                         while (stream.Position < stream.Length)
                         {
-                            var txHash = reader.ReadUInt256();
-                            var addedBlockIndex = reader.ReadInt32();
-                            var txIndex = reader.ReadInt32();
-                            var outputStatesLength = reader.ReadInt32();
-
-                            yield return Tuple.Create(addedBlockIndex, txIndex);
+                            var spentTx = DataEncoder.DecodeSpentTx(stream);
+                            yield return Tuple.Create(spentTx.ConfirmedBlockIndex, spentTx.TxIndex);
                         }
                     }
                 }

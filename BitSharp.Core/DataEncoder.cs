@@ -425,9 +425,11 @@ namespace BitSharp.Core
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
                 return new SpentTx(
-                    blockIndex: reader.ReadInt32(),
+                    txHash: reader.ReadUInt256(),
+                    confirmedBlockINdex: reader.ReadInt32(),
                     txIndex: reader.ReadInt32(),
-                    outputCount: reader.ReadInt32()
+                    outputCount: reader.ReadInt32(),
+                    spentBlockIndex: reader.ReadInt32()
                 );
             }
         }
@@ -444,9 +446,11 @@ namespace BitSharp.Core
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
-                writer.WriteInt32(spentTx.BlockIndex);
+                writer.WriteUInt256(spentTx.TxHash);
+                writer.WriteInt32(spentTx.ConfirmedBlockIndex);
                 writer.WriteInt32(spentTx.TxIndex);
                 writer.WriteInt32(spentTx.OutputCount);
+                writer.WriteInt32(spentTx.SpentBlockIndex);
             }
         }
 

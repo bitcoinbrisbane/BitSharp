@@ -38,11 +38,6 @@ namespace BitSharp.Core.Domain
             return new UnspentTx(this.blockIndex, this.txIndex, this.outputStates.Set(index, value));
         }
 
-        public SpentTx ToSpent()
-        {
-            return new SpentTx(this.blockIndex, this.txIndex, this.outputStates.Length);
-        }
-
         public override bool Equals(object obj)
         {
             if (!(obj is UnspentTx))
