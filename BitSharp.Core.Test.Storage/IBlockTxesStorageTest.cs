@@ -133,7 +133,23 @@ namespace BitSharp.Core.Test.Storage
             {
                 var blockTxesStorage = storageManager.BlockTxesStorage;
 
-                Assert.Inconclusive("TODO");
+                // create a block
+                var block = CreateFakeBlock();
+
+                // block should not be present
+                Assert.IsFalse(blockTxesStorage.ContainsBlock(block.Hash));
+
+                // add the block
+                blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions);
+
+                // block should be present
+                Assert.IsTrue(blockTxesStorage.ContainsBlock(block.Hash)); ;
+
+                // remove the block
+                blockTxesStorage.TryRemoveBlockTransactions(block.Hash);
+
+                // block should not be present
+                Assert.IsFalse(blockTxesStorage.ContainsBlock(block.Hash)); ;
             }
         }
 
