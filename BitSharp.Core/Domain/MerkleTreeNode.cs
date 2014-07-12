@@ -26,7 +26,7 @@ namespace BitSharp.Core.Domain
                 throw new ArgumentException("pruned");
 
             // ensure no non-zero bits are present in the index below the node's depth
-            // i.e. the index is a valid for a left or right node at its depth
+            // i.e. the index is valid for a left or right node at its depth
             if (index % (1 << depth) != 0)
                 throw new ArgumentException("depth");
 
