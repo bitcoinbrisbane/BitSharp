@@ -182,7 +182,7 @@ namespace BitSharp.Core.Storage
                 ChainedHeader chainedHeader;
                 if (TryChainHeader(block.Header, out chainedHeader))
                 {
-                    if (this.blockTxesStorage.TryAdd(block.Hash, block))
+                    if (this.blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions))
                     {
                         this.containsBlockTxes[block.Hash] = true;
                         this.missingBlockTxes.Remove(block.Hash);

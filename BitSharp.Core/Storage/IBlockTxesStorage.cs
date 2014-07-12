@@ -23,8 +23,13 @@ namespace BitSharp.Core.Storage
         /// <returns>true if transacton data is present; otherwise, false</returns>
         bool ContainsBlock(UInt256 blockHash);
 
-        //TODO this should use IEnumerable
-        bool TryAdd(UInt256 blockHash, Block block);
+        /// <summary>
+        /// Add a block's transactions to storage.
+        /// </summary>
+        /// <param name="blockHash">The block's hash.</param>
+        /// <param name="transactions">An enumerable of the block's transactions.</param>
+        /// <returns>true if the transaction data was added; otherwise, false</returns>
+        bool TryAddBlockTransactions(UInt256 blockHash, IEnumerable<Transaction> transactions);
 
         /// <summary>
         /// Retrieve a transaction from a block.
@@ -40,7 +45,7 @@ namespace BitSharp.Core.Storage
         /// </summary>
         /// <param name="blockHash">The block's hash.</param>
         /// <returns>true if transaction data was removed; otherwise, false</returns>
-        bool TryRemove(UInt256 blockHash);
+        bool TryRemoveBlockTransactions(UInt256 blockHash);
 
         /// <summary>
         /// Read the transaction data for a block, including pruning information.

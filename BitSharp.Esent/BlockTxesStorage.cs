@@ -88,34 +88,6 @@ namespace BitSharp.Esent
             }
         }
 
-        public void AddBlock(Block block)
-        {
-            var cursor = this.OpenCursor();
-            try
-            {
-                Api.JetBeginTransaction(cursor.jetSession);
-                try
-                {
-                    for (var txIndex = 0; txIndex < block.Transactions.Length; txIndex++)
-                    {
-                        var tx = block.Transactions[txIndex];
-                        AddTransaction(block.Hash, txIndex, tx.Hash, DataEncoder.EncodeTransaction(tx), cursor);
-                    }
-
-                    Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
-                }
-                catch (Exception)
-                {
-                    Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
-                    throw;
-                }
-            }
-            finally
-            {
-                this.FreeCursor(cursor);
-            }
-        }
-
         private void AddTransaction(UInt256 blockHash, int txIndex, UInt256 txHash, byte[] txBytes, BlockTxesCursor cursor)
         {
             Api.JetPrepareUpdate(cursor.jetSession, cursor.blocksTableId, JET_prep.Insert);
@@ -453,12 +425,47 @@ namespace BitSharp.Esent
             get { return "Blocks"; }
         }
 
-        public bool TryAdd(UInt256 blockHash, Block block)
+        public bool TryAddBlockTransactions(UInt256 blockHash, IEnumerable<BitSharp.Core.Domain.Transaction> blockTxes)
         {
             try
             {
-                AddBlock(block);
-                return true;
+                var cursor = this.OpenCursor();
+                try
+                {
+                    Api.JetBeginTransaction(cursor.jetSession);
+                    try
+                    {
+                        Api.MakeKey(cursor.jetSession, cursor.blocksTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
+                        Api.MakeKey(cursor.jetSession, cursor.blocksTableId, -1, MakeKeyGrbit.None);
+
+                        if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekGE)
+                            && blockHash == DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
+                        {
+                            // transactions are already present
+                            return false;
+                        }
+
+                        var txIndex = 0;
+                        foreach (var tx in blockTxes)
+                        {
+                            AddTransaction(blockHash, txIndex, tx.Hash, DataEncoder.EncodeTransaction(tx), cursor);
+                            txIndex++;
+                        }
+
+                        Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
+
+                        return true;
+                    }
+                    catch (Exception)
+                    {
+                        Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
+                        throw;
+                    }
+                }
+                finally
+                {
+                    this.FreeCursor(cursor);
+                }
             }
             catch (EsentKeyDuplicateException)
             {
@@ -466,7 +473,7 @@ namespace BitSharp.Esent
             }
         }
 
-        public bool TryRemove(UInt256 blockHash)
+        public bool TryRemoveBlockTransactions(UInt256 blockHash)
         {
             throw new NotImplementedException();
         }
@@ -507,7 +514,7 @@ namespace BitSharp.Esent
                 this.FreeCursor(cursor);
             }
         }
-        
+
         private BlockTxesCursor OpenCursor()
         {
             BlockTxesCursor cursor = null;

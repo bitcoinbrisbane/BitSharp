@@ -33,14 +33,12 @@ namespace BitSharp.Core.Storage.Memory
             return this.allBlockTxes.ContainsKey(blockHash);
         }
 
-        public bool TryAdd(UInt256 blockHash, Block block)
+        public bool TryAddBlockTransactions(UInt256 blockHash, IEnumerable<Transaction> blockTxes)
         {
-            var blockTxes =
+            return this.allBlockTxes.TryAdd(blockHash,
                 ImmutableSortedDictionary.CreateRange<int, BlockTx>(
-                    block.Transactions.Select((tx, txIndex) =>
-                        new KeyValuePair<int, BlockTx>(txIndex, new BlockTx(txIndex, 0, tx.Hash, false, tx))));
-
-            return this.allBlockTxes.TryAdd(blockHash, blockTxes);
+                    blockTxes.Select((tx, txIndex) =>
+                        new KeyValuePair<int, BlockTx>(txIndex, new BlockTx(txIndex, 0, tx.Hash, false, tx)))));
         }
 
         public bool TryGetTransaction(UInt256 blockHash, int txIndex, out Transaction transaction)
@@ -61,7 +59,7 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
-        public bool TryRemove(UInt256 blockHash)
+        public bool TryRemoveBlockTransactions(UInt256 blockHash)
         {
             ImmutableSortedDictionary<int, BlockTx> blockTxes;
             return this.allBlockTxes.TryRemove(blockHash, out blockTxes);
