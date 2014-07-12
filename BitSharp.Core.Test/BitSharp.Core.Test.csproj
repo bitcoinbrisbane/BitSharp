@@ -131,7 +131,7 @@
     <Compile Include="Workers\TargetChainWorkerTest.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Blocks.TestNet3.zip" />
+    <EmbeddedResource Include="Blocks.zip" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
