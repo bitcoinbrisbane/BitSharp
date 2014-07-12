@@ -129,8 +129,20 @@ namespace BitSharp.Core.Test.Storage
             {
                 var blockStorage = storageManager.BlockStorage;
 
+                // create a chained header
+                var fakeHeaders = new FakeHeaders();
+                var expectedChainedHeader = fakeHeaders.GenesisChained();
+
+                // add header
+                blockStorage.TryAddChainedHeader(expectedChainedHeader);
+
+                // retrieve header
+                ChainedHeader actualChainedHeader;
+                Assert.IsTrue(blockStorage.TryGetChainedHeader(expectedChainedHeader.Hash, out actualChainedHeader));
+
+                // verify retrieved header matches stored header
+                Assert.AreEqual(expectedChainedHeader, actualChainedHeader);
             }
-            Assert.Inconclusive("TODO");
         }
 
         // IBlockStorage.FindMaxTotalWork
