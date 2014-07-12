@@ -261,22 +261,33 @@ namespace BitSharp.Esent
             var cursor = this.OpenCursor();
             try
             {
-                Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockHeadersTableId, "IX_BlockHash");
-                Api.MakeKey(cursor.jetSession, cursor.blockHeadersTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
-
-                if (!Api.TrySeek(cursor.jetSession, cursor.blockHeadersTableId, SeekGrbit.SeekEQ))
-                    throw new MissingDataException(blockHash);
-
-                Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Replace);
+                Api.JetBeginTransaction(cursor.jetSession);
                 try
                 {
-                    Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderValidColumnId, true);
+                    Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockHeadersTableId, "IX_BlockHash");
+                    Api.MakeKey(cursor.jetSession, cursor.blockHeadersTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
 
-                    Api.JetUpdate(cursor.jetSession, cursor.blockHeadersTableId);
+                    if (!Api.TrySeek(cursor.jetSession, cursor.blockHeadersTableId, SeekGrbit.SeekEQ))
+                        throw new MissingDataException(blockHash);
+
+                    Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Replace);
+                    try
+                    {
+                        Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderValidColumnId, false);
+
+                        Api.JetUpdate(cursor.jetSession, cursor.blockHeadersTableId);
+                    }
+                    catch (Exception)
+                    {
+                        Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Cancel);
+                        throw;
+                    }
+
+                    Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
                 }
                 catch (Exception)
                 {
-                    Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Cancel);
+                    Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
                     throw;
                 }
             }

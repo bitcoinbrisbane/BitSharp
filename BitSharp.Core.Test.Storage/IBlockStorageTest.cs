@@ -58,12 +58,6 @@ namespace BitSharp.Core.Test.Storage
         }
 
         [TestMethod]
-        public void TestIsBlockInvalid()
-        {
-            RunTest(TestIsBlockInvalid);
-        }
-
-        [TestMethod]
         public void TestMarkBlockInvalid()
         {
             RunTest(TestMarkBlockInvalid);
@@ -152,7 +146,7 @@ namespace BitSharp.Core.Test.Storage
             {
                 var blockStorage = storageManager.BlockStorage;
 
-                // create a chained headers
+                // create chained headers
                 var fakeHeaders = new FakeHeaders();
                 var chainedHeader0 = fakeHeaders.GenesisChained();
                 var chainedHeader1 = fakeHeaders.NextChained();
@@ -198,7 +192,7 @@ namespace BitSharp.Core.Test.Storage
             {
                 var blockStorage = storageManager.BlockStorage;
 
-                // create a chained headers
+                // create chained headers
                 var fakeHeaders = new FakeHeaders();
                 var chainedHeader0 = fakeHeaders.GenesisChained();
                 var chainedHeader1 = fakeHeaders.NextChained();
@@ -238,16 +232,6 @@ namespace BitSharp.Core.Test.Storage
         }
 
         // IBlockStorage.IsBlockInvalid
-        private void TestIsBlockInvalid(ITestStorageProvider provider)
-        {
-            using (var storageManager = provider.OpenStorageManager())
-            {
-                var blockStorage = storageManager.BlockStorage;
-
-            }
-            Assert.Inconclusive("TODO");
-        }
-
         // IBlockStorage.MarkBlockInvalid
         private void TestMarkBlockInvalid(ITestStorageProvider provider)
         {
@@ -255,8 +239,31 @@ namespace BitSharp.Core.Test.Storage
             {
                 var blockStorage = storageManager.BlockStorage;
 
+                // create chained headers
+                var fakeHeaders = new FakeHeaders();
+                var chainedHeader0 = fakeHeaders.GenesisChained();
+                var chainedHeader1 = fakeHeaders.NextChained();
+
+                // add headers
+                blockStorage.TryAddChainedHeader(chainedHeader0);
+                blockStorage.TryAddChainedHeader(chainedHeader1);
+
+                // verify no blocks invalid
+                Assert.IsFalse(blockStorage.IsBlockInvalid(chainedHeader0.Hash));
+                Assert.IsFalse(blockStorage.IsBlockInvalid(chainedHeader1.Hash));
+
+                // mark blocks invalid and verify
+
+                // 0
+                blockStorage.MarkBlockInvalid(chainedHeader0.Hash);
+                Assert.IsTrue(blockStorage.IsBlockInvalid(chainedHeader0.Hash));
+                Assert.IsFalse(blockStorage.IsBlockInvalid(chainedHeader1.Hash));
+
+                // 1
+                blockStorage.MarkBlockInvalid(chainedHeader1.Hash);
+                Assert.IsTrue(blockStorage.IsBlockInvalid(chainedHeader0.Hash));
+                Assert.IsTrue(blockStorage.IsBlockInvalid(chainedHeader1.Hash));
             }
-            Assert.Inconclusive("TODO");
         }
     }
 }

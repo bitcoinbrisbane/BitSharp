@@ -41,6 +41,7 @@ namespace BitSharp.Esent
                     out this.blockHeaderPreviousHashColumnId,
                     out this.blockHeaderHeightColumnId,
                     out this.blockHeaderTotalWorkColumnId,
+                    out this.blockHeaderValidColumnId,
                     out this.blockHeaderBytesColumnId);
         }
 
@@ -60,6 +61,7 @@ namespace BitSharp.Esent
             out JET_COLUMNID blockHeaderPreviousHashColumnId,
             out JET_COLUMNID blockHeaderHeightColumnId,
             out JET_COLUMNID blockHeaderTotalWorkColumnId,
+            out JET_COLUMNID blockHeaderValidColumnId,
             out JET_COLUMNID blockHeaderBytesColumnId)
         {
             jetSession = new Session(jetInstance);
@@ -75,6 +77,7 @@ namespace BitSharp.Esent
                 blockHeaderPreviousHashColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "PreviousBlockHash");
                 blockHeaderHeightColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "Height");
                 blockHeaderTotalWorkColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "TotalWork");
+                blockHeaderValidColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "Valid");
                 blockHeaderBytesColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "BlockHeaderBytes");
             }
             catch (Exception)
