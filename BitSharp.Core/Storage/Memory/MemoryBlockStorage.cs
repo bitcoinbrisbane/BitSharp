@@ -61,6 +61,11 @@ namespace BitSharp.Core.Storage.Memory
             return this.chainedHeaders.Values;
         }
 
+        public bool IsBlockInvalid(UInt256 blockHash)
+        {
+            return this.invalidBlocks.Contains(blockHash);
+        }
+
         public void MarkBlockInvalid(UInt256 blockHash)
         {
             this.invalidBlocks.Add(blockHash);
