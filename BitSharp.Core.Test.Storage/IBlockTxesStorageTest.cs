@@ -189,7 +189,25 @@ namespace BitSharp.Core.Test.Storage
             {
                 var blockTxesStorage = storageManager.BlockTxesStorage;
 
-                Assert.Inconclusive("TODO");
+                // create a block
+                var block = CreateFakeBlock();
+
+                // add block transactions
+                blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions);
+
+                // verify missing transactions
+                Transaction transaction;
+                Assert.IsFalse(blockTxesStorage.TryGetTransaction(0, 0, out transaction));
+                Assert.IsFalse(blockTxesStorage.TryGetTransaction(block.Hash, -1, out transaction));
+                Assert.IsFalse(blockTxesStorage.TryGetTransaction(block.Hash, block.Transactions.Length, out transaction));
+
+                // verify transactions
+                for (var txIndex = 0; txIndex < block.Transactions.Length; txIndex++)
+                {
+                    Assert.IsTrue(blockTxesStorage.TryGetTransaction(block.Hash, txIndex, out transaction));
+                    Assert.AreEqual(block.Transactions[txIndex].Hash, transaction.Hash);
+                    Assert.AreEqual(transaction.Hash, DataCalculator.CalculateTransactionHash(transaction));
+                }
             }
         }
 
