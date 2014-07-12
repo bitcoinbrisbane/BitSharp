@@ -195,6 +195,9 @@ namespace BitSharp.Core.Builders
                 // rollback the utxo
                 this.utxoBuilder.RollbackUtxo(chainedHeader, blockTxes, spentTxes);
 
+                // remove the rollback information
+                this.chainStateBuilderStorage.RemoveSpentTransactions(chainedHeader.Height);
+
                 // commit the chain state
                 this.CommitTransaction();
             }
