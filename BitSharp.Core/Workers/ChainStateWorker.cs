@@ -142,35 +142,38 @@ namespace BitSharp.Core.Workers
                     this.chainStateBuilder.LogBlockchainProgress();
             }
             catch (OperationCanceledException) { }
+            catch (AggregateException e)
+            {
+                foreach (var innerException in e.InnerExceptions)
+                {
+                    HandleException(innerException);
+                }
+            }
             catch (Exception e)
             {
-                var missingException = e as MissingDataException;
-                if (missingException != null &&
-                    (this.lastBlockMissHash == null || this.lastBlockMissHash.Value != (UInt256)missingException.Key))
+                HandleException(e);
+            }
+        }
+
+        private void HandleException(Exception e)
+        {
+            var missingException = e as MissingDataException;
+            if (missingException != null)
+            {
+                if (this.lastBlockMissHash == null || this.lastBlockMissHash.Value != (UInt256)missingException.Key)
                 {
                     this.lastBlockMissHash = (UInt256)missingException.Key;
                     this.blockMissRateMeasure.Tick();
                 }
+            }
+            else
+            {
+                this.logger.WarnException("ChainStateWorker exception.", e);
 
-                if (!(e is MissingDataException))
+                var validationException = e as ValidationException;
+                if (validationException != null)
                 {
-                    var aggException = e as AggregateException;
-                    if (aggException != null)
-                    {
-                        foreach (var innerException in aggException.InnerExceptions)
-                        {
-                            this.logger.WarnException("ChainStateWorker exception.", innerException);
-                        }
-                    }
-                    else
-                    {
-                        this.logger.WarnException("ChainStateWorker exception.", e);
-                    }
-                }
-
-                if (e is ValidationException)
-                {
-                    var validationException = (ValidationException)e;
+                    // mark block as invalid
                     this.coreStorage.MarkBlockInvalid(validationException.BlockHash);
 
                     // immediately update the target chain if there is a validation error

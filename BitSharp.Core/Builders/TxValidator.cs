@@ -40,12 +40,12 @@ namespace BitSharp.Core.Builders
         {
             try
             {
-                //TODO validate transaction itself
-
                 var chainedHeader = item.ChainedHeader;
                 var transaction = item.Transaction;
                 var txIndex = item.TxIndex;
                 var prevTxOutputs = item.PrevTxOutputs;
+
+                this.rules.ValidateTransaction(chainedHeader, transaction, txIndex, prevTxOutputs);
 
                 if (txIndex > 0)
                 {

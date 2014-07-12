@@ -276,49 +276,52 @@ namespace BitSharp.Core.Rules
         //    // all validation has passed
         //}
 
-        //TODO
-        ////TODO utxo needs to be as-at transaction, with regards to a transaction being fully spent and added back in in the same block
-        //public virtual void ValidateTransaction(ChainedBlock chainedBlock, Transaction tx, int txIndex, ChainStateBuilder chainStateBuilder, out long unspentValue, Dictionary<UInt256, int> blockTxIndices)
-        //{
-        //    unspentValue = -1;
+        public virtual void ValidateTransaction(ChainedHeader chainedHeader, Transaction tx, int txIndex, ImmutableArray<TxOutput> prevTxOutputs)
+        {
+            if (txIndex == 0)
+            {
+                // TODO coinbase tx validation
+            }
+            else
+            {
+                // verify spend amounts
+                var txInputValue = (UInt64)0;
+                var txOutputValue = (UInt64)0;
 
-        //    // verify spend amounts
-        //    var txInputValue = (UInt64)0;
-        //    var txOutputValue = (UInt64)0;
+                for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+                {
+                    var input = tx.Inputs[inputIndex];
+                    var prevOutput = prevTxOutputs[inputIndex];
 
-        //    for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
-        //    {
-        //        var input = tx.Inputs[inputIndex];
-        //        var prevOutput = LookupPreviousOutput(input.PreviousTxOutputKey, chainedBlock, blockTxIndices, chainStateBuilder);
+                    // add transactions previous value to unspent amount (used to calculate allowed coinbase reward)
+                    txInputValue += prevOutput.Value;
+                }
 
-        //        // add transactions previous value to unspent amount (used to calculate allowed coinbase reward)
-        //        txInputValue += prevOutput.Value;
-        //    }
+                for (var outputIndex = 0; outputIndex < tx.Outputs.Length; outputIndex++)
+                {
+                    // remove transactions spend value from unspent amount (used to calculate allowed coinbase reward)
+                    var output = tx.Outputs[outputIndex];
+                    txOutputValue += output.Value;
+                }
 
-        //    for (var outputIndex = 0; outputIndex < tx.Outputs.Length; outputIndex++)
-        //    {
-        //        // remove transactions spend value from unspent amount (used to calculate allowed coinbase reward)
-        //        var output = tx.Outputs[outputIndex];
-        //        txOutputValue += output.Value;
-        //    }
+                // ensure that amount being output from transaction isn't greater than amount being input
+                if (txOutputValue > txInputValue)
+                {
+                    throw new ValidationException(chainedHeader.Hash, "Failing tx {0}: Transaction output value is greater than input value".Format2(tx.Hash.ToHexNumberString()));
+                }
 
-        //    // ensure that amount being output from transaction isn't greater than amount being input
-        //    if (txOutputValue > txInputValue)
-        //    {
-        //        throw new ValidationException(chainedBlock.Hash, "Failing tx {0}: Transaction output value is greater than input value".Format2(tx.Hash.ToHexNumberString()));
-        //    }
+                // calculate fee value (unspent amount)
+                var feeValue = (long)(txInputValue - txOutputValue);
 
-        //    // calculate unspent value
-        //    unspentValue = (long)(txInputValue - txOutputValue);
+                // sanity check
+                if (feeValue < 0)
+                {
+                    throw new ValidationException(chainedHeader.Hash);
+                }
+            }
 
-        //    // sanity check
-        //    if (unspentValue < 0)
-        //    {
-        //        throw new ValidationException(chainedBlock.Hash);
-        //    }
-
-        //    // all validation has passed
-        //}
+            // all validation has passed
+        }
 
         public virtual void ValidationTransactionScript(ChainedHeader chainedHeader, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput)
         {
@@ -331,38 +334,6 @@ namespace BitSharp.Core.Rules
                 this.logger.Debug("Script did not pass in block: {0}, tx: {1}, {2}, input: {3}".Format2(chainedHeader.Hash, txIndex, tx.Hash, txInputIndex));
                 throw new ValidationException(chainedHeader.Hash);
             }
-        }
-
-        private TxOutput LookupPreviousOutput(TxOutputKey txOutputKey, ChainedBlock chainedBlock, Dictionary<UInt256, int> blockTxIndices, ChainStateBuilder chainStateBuilder)
-        {
-            throw new NotImplementedException();
-
-            //TxOutput prevOutput;
-            //if (chainStateBuilder.TryGetOutput(txOutputKey, out prevOutput))
-            //{
-            //    return prevOutput;
-            //}
-            //else
-            //{
-            //    Transaction prevTx;
-            //    int prevTxIndex;
-            //    if (blockTxIndices.TryGetValue(txOutputKey.TxHash, out prevTxIndex))
-            //    {
-            //        Debug.Assert(prevTxIndex >= 0 && prevTxIndex < chainedBlock.Transactions.Length);
-            //        prevTx = chainedBlock.Transactions[prevTxIndex];
-            //        Debug.Assert(prevTx.Hash == txOutputKey.TxHash);
-            //    }
-            //    else
-            //    {
-            //        throw new ValidationException(chainedBlock.Hash);
-            //    }
-
-            //    var outputIndex = unchecked((int)txOutputKey.TxOutputIndex);
-            //    if (outputIndex < 0 || outputIndex >= prevTx.Outputs.Length)
-            //        throw new ValidationException(chainedBlock.Hash);
-
-            //    return prevTx.Outputs[outputIndex];
-            //}
         }
     }
 }
