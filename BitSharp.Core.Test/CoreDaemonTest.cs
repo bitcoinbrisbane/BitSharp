@@ -192,20 +192,31 @@ namespace BitSharp.Core.Test
                 // add some simple blocks
                 var block1 = daemon1.MineAndAddEmptyBlock(daemon1.GenesisBlock);
                 var block2 = daemon1.MineAndAddEmptyBlock(block1);
-
-                // introduce a tie split
                 var block3a = daemon1.MineAndAddEmptyBlock(block2);
-                var block3b = daemon1.MineAndAddEmptyBlock(block2);
+                daemon1.WaitForDaemon();
 
-                // check that 3a is current as it was first
+                // wait for daemon
                 daemon1.WaitForDaemon();
                 AssertMethods.AssertDaemonAtBlock(3, block3a.Hash, daemon1.CoreDaemon);
 
-                // continue split
+                // introduce a tie split
+                var block3b = daemon1.MineAndAddEmptyBlock(block2);
+
+                // check that 3a is still current as it was first
+                daemon1.WaitForDaemon();
+                AssertMethods.AssertDaemonAtBlock(3, block3a.Hash, daemon1.CoreDaemon);
+
+                // continue with currently winning branch
                 var block4a = daemon1.MineAndAddEmptyBlock(block3a);
+
+                // wait for daemon
+                daemon1.WaitForDaemon();
+                AssertMethods.AssertDaemonAtBlock(4, block4a.Hash, daemon1.CoreDaemon);
+
+                // continue with tied branch
                 var block4b = daemon1.MineAndAddEmptyBlock(block3b);
 
-                // check that 4a is current as it was first
+                // check that 4a is still current as it was first
                 daemon1.WaitForDaemon();
                 AssertMethods.AssertDaemonAtBlock(4, block4a.Hash, daemon1.CoreDaemon);
 
