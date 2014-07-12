@@ -40,9 +40,9 @@ namespace BitSharp.Core.Test.Storage
         }
 
         [TestMethod]
-        public void TestTryAdd()
+        public void TestTryAddBlockTransactions()
         {
-            RunTest(TestTryAdd);
+            RunTest(TestTryAddBlockTransactions);
         }
 
         [TestMethod]
@@ -153,14 +153,27 @@ namespace BitSharp.Core.Test.Storage
             }
         }
 
-        // IBlockTxesStorage.TryAdd
-        private void TestTryAdd(ITestStorageProvider provider)
+        // IBlockTxesStorage.TryAddBlockTransactions
+        private void TestTryAddBlockTransactions(ITestStorageProvider provider)
         {
             using (var storageManager = provider.OpenStorageManager())
             {
                 var blockTxesStorage = storageManager.BlockTxesStorage;
 
-                Assert.Inconclusive("TODO");
+                // create a block
+                var block = CreateFakeBlock();
+
+                // verify block can be added
+                Assert.IsTrue(blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions));
+
+                // verify block cannot be added again
+                Assert.IsFalse(blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions));
+
+                // remove the block
+                blockTxesStorage.TryRemoveBlockTransactions(block.Hash);
+
+                // verify block can be added again, after being removed
+                Assert.IsTrue(blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions));
             }
         }
 
