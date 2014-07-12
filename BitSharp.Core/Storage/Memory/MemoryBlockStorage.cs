@@ -40,6 +40,12 @@ namespace BitSharp.Core.Storage.Memory
             return this.chainedHeaders.TryGetValue(blockHash, out chainedHeader);
         }
 
+        public bool TryRemoveChainedHeader(UInt256 blockHash)
+        {
+            ChainedHeader chainedHeader;
+            return this.chainedHeaders.TryRemove(blockHash, out chainedHeader);
+        }
+
         public ChainedHeader FindMaxTotalWork()
         {
             ChainedHeader maxTotalWorkHeader = null;

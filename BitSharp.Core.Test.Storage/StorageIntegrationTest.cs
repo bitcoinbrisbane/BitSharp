@@ -63,7 +63,7 @@ namespace BitSharp.Core.Test.Storage
                 pruneOrderSource.RemoveAt(randomIndex);
             }
 
-            using (var storageManager = provider.OpenStorageManager(logger))
+            using (var storageManager = provider.OpenStorageManager())
             using (var coreStorage = new CoreStorage(storageManager, logger))
             {
                 coreStorage.AddGenesisBlock(ChainedHeader.CreateForGenesisBlock(block.Header));
@@ -101,7 +101,7 @@ namespace BitSharp.Core.Test.Storage
 
             var rules = new MainnetRules(logger);
 
-            using (var storageManager = provider.OpenStorageManager(logger))
+            using (var storageManager = provider.OpenStorageManager())
             using (var coreStorage = new CoreStorage(storageManager, logger))
             using (var chainStateBuilderStorage = storageManager.CreateOrLoadChainState(genesisHeader))
             using (var chainStateBuilder = new ChainStateBuilder(chainStateBuilderStorage, logger, rules, coreStorage))

@@ -18,6 +18,6 @@ namespace BitSharp.Core.Test.Storage
 
         void TestCleanup();
 
-        IStorageManager OpenStorageManager(Logger logger);
+        IStorageManager OpenStorageManager();
     }
 }

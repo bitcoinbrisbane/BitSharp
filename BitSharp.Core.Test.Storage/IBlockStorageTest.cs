@@ -69,9 +69,32 @@ namespace BitSharp.Core.Test.Storage
             RunTest(TestMarkBlockInvalid);
         }
 
+        // IBlockStorage.ContainsChainedHeader
         private void TestContainsChainedHeader(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            using (var storageManager = provider.OpenStorageManager())
+            {
+                var blockStorage = storageManager.BlockStorage;
+
+                // create a chained header
+                var fakeHeaders = new FakeHeaders();
+                var chainedHeader = fakeHeaders.GenesisChained();
+
+                // header should not be present
+                Assert.IsFalse(blockStorage.ContainsChainedHeader(chainedHeader.Hash));
+
+                // add the header
+                blockStorage.TryAddChainedHeader(chainedHeader);
+
+                // header should be present
+                Assert.IsTrue(blockStorage.ContainsChainedHeader(chainedHeader.Hash)); ;
+
+                // remove the header
+                blockStorage.TryRemoveChainedHeader(chainedHeader.Hash);
+
+                // header should not be present
+                Assert.IsFalse(blockStorage.ContainsChainedHeader(chainedHeader.Hash)); ;
+            }
         }
 
         private void TestTryAddChainedHeader(ITestStorageProvider provider)

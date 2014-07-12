@@ -33,6 +33,13 @@ namespace BitSharp.Core.Storage
         bool TryGetChainedHeader(UInt256 blockHash, out ChainedHeader chainedHeader);
 
         /// <summary>
+        /// Remove a chained header to storage.
+        /// </summary>
+        /// <param name="blockHash">The header's hash.</param>
+        /// <returns>true if the header was removed; otherwise, false</returns>
+        bool TryRemoveChainedHeader(UInt256 blockHash);
+        
+        /// <summary>
         /// Find the chained header with the highest total work value for its chain. Only valid blocks will be returned.
         /// </summary>
         /// <returns>The header with the most work.</returns>

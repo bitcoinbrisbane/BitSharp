@@ -485,6 +485,7 @@ namespace BitSharp.Esent
                 catch (Exception)
                 {
                     Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
+                    throw;
                 }
             }
             finally

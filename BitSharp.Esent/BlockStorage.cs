@@ -139,6 +139,43 @@ namespace BitSharp.Esent
             }
         }
 
+        public bool TryRemoveChainedHeader(UInt256 blockHash)
+        {
+            var cursor = this.OpenCursor();
+            try
+            {
+                Api.JetBeginTransaction(cursor.jetSession);
+                try
+                {
+                    bool removed;
+
+                    Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockHeadersTableId, "IX_BlockHash");
+                    Api.MakeKey(cursor.jetSession, cursor.blockHeadersTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
+                    if (Api.TrySeek(cursor.jetSession, cursor.blockHeadersTableId, SeekGrbit.SeekEQ))
+                    {
+                        Api.JetDelete(cursor.jetSession, cursor.blockHeadersTableId);
+                        removed = true;
+                    }
+                    else
+                    {
+                        removed = false;
+                    }
+
+                    Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
+                    return removed;
+                }
+                catch (Exception)
+                {
+                    Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
+                    throw;
+                }
+            }
+            finally
+            {
+                this.FreeCursor(cursor);
+            }
+        }
+
         public ChainedHeader FindMaxTotalWork()
         {
             var cursor = this.OpenCursor();
@@ -404,6 +441,7 @@ namespace BitSharp.Esent
                 catch (Exception)
                 {
                     Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
+                    throw;
                 }
             }
             finally

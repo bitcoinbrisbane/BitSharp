@@ -33,9 +33,9 @@ namespace BitSharp.Esent.Test
                 Directory.Delete(this.baseDirectory, recursive: true);
         }
 
-        public IStorageManager OpenStorageManager(Logger logger)
+        public IStorageManager OpenStorageManager()
         {
-            return new EsentStorageManager(this.baseDirectory, logger);
+            return new EsentStorageManager(this.baseDirectory, LogManager.CreateNullLogger());
         }
     }
 }
