@@ -49,6 +49,11 @@ namespace BitSharp.Esent
             Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
         }
 
+        public void RollbackTransaction()
+        {
+            Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
+        }
+
         public bool TryMoveToIndex(int index, out MerkleTreeNode node)
         {
             Api.MakeKey(cursor.jetSession, cursor.blocksTableId, blockId, MakeKeyGrbit.NewKey);

@@ -30,10 +30,17 @@ namespace BitSharp.Core.Storage.Memory
 
         public void BeginTransaction()
         {
+            //TODO
         }
 
         public void CommitTransaction()
         {
+            //TODO
+        }
+
+        public void RollbackTransaction()
+        {
+            //TODO
         }
 
         public bool TryMoveToIndex(int index, out MerkleTreeNode node)

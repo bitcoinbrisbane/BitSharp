@@ -438,9 +438,8 @@ namespace BitSharp.Esent
                         catch (Exception)
                         {
                             Api.JetPrepareUpdate(cursor.jetSession, cursor.globalsTableId, JET_prep.Cancel);
+                            throw;
                         }
-
-                        this.FreeCursor(cursor);
                     }
                     finally
                     {

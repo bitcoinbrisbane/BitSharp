@@ -103,11 +103,17 @@ namespace BitSharp.Esent
             using (var pruningCursor = OpenPruningCursor(blockHash))
             {
                 pruningCursor.BeginTransaction();
+                try
+                {
+                    foreach (var index in txIndices)
+                        MerkleTree.PruneNode(pruningCursor, index);
 
-                foreach (var index in txIndices)
-                    MerkleTree.PruneNode(pruningCursor, index);
-
-                pruningCursor.CommitTransaction();
+                    pruningCursor.CommitTransaction();
+                }
+                catch (Exception)
+                {
+                    pruningCursor.RollbackTransaction();
+                }
             }
         }
 
@@ -420,9 +426,8 @@ namespace BitSharp.Esent
                             catch (Exception)
                             {
                                 Api.JetPrepareUpdate(cursor.jetSession, cursor.globalsTableId, JET_prep.Cancel);
+                                throw;
                             }
-
-                            this.FreeCursor(cursor);
                         }
                         finally
                         {

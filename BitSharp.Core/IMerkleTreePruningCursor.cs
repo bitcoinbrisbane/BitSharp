@@ -13,6 +13,8 @@ namespace BitSharp.Core
 
         void CommitTransaction();
 
+        void RollbackTransaction();
+
         bool TryMoveToIndex(int index, out MerkleTreeNode node);
 
         bool TryMoveLeft(out MerkleTreeNode node);
