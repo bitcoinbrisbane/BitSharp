@@ -29,8 +29,8 @@ namespace BitSharp.Core.Test
         private readonly MainnetBlockProvider blockProvider;
         private readonly IKernel kernel;
         private readonly Logger logger;
-        private readonly IBlockTxesStorage blockCache;
         private readonly CoreDaemon coreDaemon;
+        private readonly CoreStorage coreStorage;
 
         public MainnetSimulator()
         {
@@ -50,9 +50,6 @@ namespace BitSharp.Core.Test
             // add storage module
             this.kernel.Load(new MemoryStorageModule());
 
-            // initialize block view
-            this.blockCache = this.kernel.Get<IBlockTxesStorage>();
-
             // add rules module
             this.kernel.Load(new RulesModule(RulesEnum.MainNet));
             MainnetRules.IgnoreScriptErrors = true;
@@ -60,6 +57,7 @@ namespace BitSharp.Core.Test
             // initialize the blockchain daemon
             this.kernel.Bind<CoreDaemon>().ToSelf().InSingletonScope();
             this.coreDaemon = this.kernel.Get<CoreDaemon>();
+            this.coreStorage = this.coreDaemon.CoreStorage;
 
             // start the blockchain daemon
             this.coreDaemon.Start();
@@ -107,7 +105,7 @@ namespace BitSharp.Core.Test
 
         public void AddBlock(Block block)
         {
-            this.blockCache.TryAdd(block.Hash, block);
+            this.coreStorage.TryAddBlock(block);
         }
 
         public void WaitForDaemon()
