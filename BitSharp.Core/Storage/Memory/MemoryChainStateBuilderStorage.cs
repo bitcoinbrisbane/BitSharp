@@ -184,6 +184,8 @@ namespace BitSharp.Core.Storage.Memory
             this.savedChain = null;
             this.savedUnspentTransactions = null;
             this.savedSpentTransactions = null;
+
+            this.inTransaction = false;
         }
     }
 }
