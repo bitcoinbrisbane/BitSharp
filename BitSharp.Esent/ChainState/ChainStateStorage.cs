@@ -190,28 +190,6 @@ namespace BitSharp.Esent
             return false;
         }
 
-        internal static bool TryGetTransaction(ChainStateStorageCursor cursor, UInt256 txHash, int spentBlockIndex, out UnspentTx unspentTx)
-        {
-            Api.JetSetCurrentIndex(cursor.jetSession, cursor.spentTxTableId, "IX_TxHash");
-            Api.MakeKey(cursor.jetSession, cursor.spentTxTableId, DbEncoder.EncodeUInt256(txHash), MakeKeyGrbit.NewKey);
-            if (Api.TrySeek(cursor.jetSession, cursor.spentTxTableId, SeekGrbit.SeekEQ))
-            {
-                var addedBlockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.spentTxTableId, cursor.spentAddedBlockIndexColumnId).Value;
-                var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.spentTxTableId, cursor.spentTxIndexColumnId).Value;
-                var outputCount = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.spentTxTableId, cursor.spentOutputCountColumnId).Value;
-                var storedSpentBlockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.spentTxTableId, cursor.spentSpentBlockIndexColumnId).Value;
-
-                if (storedSpentBlockIndex == spentBlockIndex)
-                {
-                    unspentTx = new UnspentTx(addedBlockIndex, txIndex, new OutputStates(outputCount, OutputState.Spent));
-                    return true;
-                }
-            }
-
-            unspentTx = default(UnspentTx);
-            return false;
-        }
-
         internal static IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions(ChainStateStorageCursor cursor)
         {
             Api.JetSetCurrentIndex(cursor.jetSession, cursor.unspentTxTableId, "IX_TxHash");

@@ -140,7 +140,7 @@ namespace BitSharp.Core.Builders
         }
 
         //TODO with the rollback information that's now being stored, rollback could be down without needing the block
-        public void RollbackUtxo(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
+        public void RollbackUtxo(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes, ImmutableDictionary<UInt256, SpentTx> spentTxes)
         {
             //TODO don't reverse here, storage should be read in reverse
             foreach (var blockTx in blockTxes.Reverse())
@@ -165,7 +165,7 @@ namespace BitSharp.Core.Builders
                     for (var inputIndex = tx.Inputs.Length - 1; inputIndex >= 0; inputIndex--)
                     {
                         var input = tx.Inputs[inputIndex];
-                        this.Unspend(input, chainedHeader);
+                        this.Unspend(input, chainedHeader, spentTxes);
                     }
                 }
             }
@@ -201,22 +201,25 @@ namespace BitSharp.Core.Builders
             this.chainStateBuilderStorage.RemoveTransaction(tx.Hash, spentBlockIndex: -1);
         }
 
-        private void Unspend(TxInput input, ChainedHeader chainedHeader)
+        private void Unspend(TxInput input, ChainedHeader chainedHeader, ImmutableDictionary<UInt256, SpentTx> spentTxes)
         {
+            bool wasRestored;
+
             UnspentTx unspentTx;
-            if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
+            if (this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
             {
-                if (this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, chainedHeader.Height, out unspentTx))
-                {
-                    // restore fully spent transaction
-                    if (!this.chainStateBuilderStorage.TryAddTransaction(input.PreviousTxOutputKey.TxHash, unspentTx))
-                        throw new ValidationException(chainedHeader.Hash);
-                }
-                else
-                {
-                    // output wasn't present in utxo, invalid block
+                wasRestored = false;
+            }
+            else
+            {
+                // lookup fully spent transaction
+                SpentTx spentTx;
+                if (!spentTxes.TryGetValue(input.PreviousTxOutputKey.TxHash, out spentTx))
                     throw new ValidationException(chainedHeader.Hash);
-                }
+
+                // restore fully spent transaction
+                unspentTx = new UnspentTx(spentTx.ConfirmedBlockIndex, spentTx.TxIndex, new OutputStates(spentTx.OutputCount, OutputState.Spent));
+                wasRestored = true;
             }
 
             // retrieve previous output index
@@ -229,7 +232,20 @@ namespace BitSharp.Core.Builders
                 throw new ValidationException(chainedHeader.Hash);
 
             // mark output as unspent
-            this.chainStateBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx.SetOutputState(outputIndex, OutputState.Unspent));
+            unspentTx = unspentTx.SetOutputState(outputIndex, OutputState.Unspent);
+
+            // update storage
+            if (!wasRestored)
+            {
+                this.chainStateBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
+            }
+            else
+            {
+                // a restored fully spent transaction must be added back
+                var wasAdded = this.chainStateBuilderStorage.TryAddTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
+                if (!wasAdded)
+                    throw new ValidationException(chainedHeader.Hash);
+            }
         }
     }
 }

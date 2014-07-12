@@ -136,11 +136,6 @@ namespace BitSharp.Esent
             return ChainStateStorage.TryGetTransaction(this.cursor, txHash, out unspentTx);
         }
 
-        public bool TryGetTransaction(UInt256 txHash, int spentBlockIndex, out UnspentTx unspentTx)
-        {
-            return ChainStateStorage.TryGetTransaction(this.cursor, txHash, spentBlockIndex, out unspentTx);
-        }
-
         public bool TryAddTransaction(UInt256 txHash, UnspentTx unspentTx)
         {
             if (!this.inTransaction)

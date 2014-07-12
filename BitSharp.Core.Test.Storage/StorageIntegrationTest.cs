@@ -88,14 +88,11 @@ namespace BitSharp.Core.Test.Storage
 
         private void TestRollback(ITestStorageProvider provider)
         {
-            //TODO
-            MainnetRules.BypassValidation = true;
-
             var logger = LogManager.CreateNullLogger();
             var sha256 = new SHA256Managed();
 
             var blockProvider = new MainnetBlockProvider();
-            var blocks = Enumerable.Range(0, 100).Select(x => blockProvider.GetBlock(x)).ToList();
+            var blocks = Enumerable.Range(0, 500).Select(x => blockProvider.GetBlock(x)).ToList();
 
             var genesisBlock = blocks[0];
             var genesisHeader = new ChainedHeader(genesisBlock.Header, height: 0, totalWork: 0);
@@ -138,7 +135,7 @@ namespace BitSharp.Core.Test.Storage
 
                 // verify the utxo state before rolling back
                 //TODO verify the UTXO hash hard-coded here is correct
-                var expectedUtxoHash = UInt256.Parse("fb2fb329cc04794676374b4324205a786ea925d855b0b6211d11e709d7f4c807", NumberStyles.HexNumber);
+                var expectedUtxoHash = UInt256.Parse("609eb5882e0b71a707fb876c844fbfe6b4579e04eb27c7c0cefbb7478bac737b", NumberStyles.HexNumber);
                 using (var utxoStream = new UtxoStream(logger, expectedUtxos.Last()))
                 {
                     var utxoHash = new UInt256(sha256.ComputeDoubleHash(utxoStream));

@@ -186,8 +186,14 @@ namespace BitSharp.Core.Builders
                 // remove the block from the chain
                 this.chainStateBuilderStorage.RemoveChainedHeader(chainedHeader);
 
+                // read spent transaction rollback information
+                var spentTxes =
+                    ImmutableDictionary.CreateRange(
+                        this.chainStateBuilderStorage.ReadSpentTransactions(chainedHeader.Height)
+                            .Select(spentTx => new KeyValuePair<UInt256, SpentTx>(spentTx.TxHash, spentTx)));
+
                 // rollback the utxo
-                this.utxoBuilder.RollbackUtxo(chainedHeader, blockTxes);
+                this.utxoBuilder.RollbackUtxo(chainedHeader, blockTxes, spentTxes);
 
                 // commit the chain state
                 this.CommitTransaction();
