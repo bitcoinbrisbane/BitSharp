@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -32,6 +33,8 @@ namespace BitSharp.Core.Domain
         public UInt256 LastBlockHash { get { return this.LastBlock.Hash; } }
 
         public int Height { get { return this.blocks.Count() - 1; } }
+
+        public BigInteger TotalWork { get { return this.LastBlock.TotalWork; } }
 
         public ImmutableList<ChainedHeader> Blocks { get { return this.blocks; } }
 
