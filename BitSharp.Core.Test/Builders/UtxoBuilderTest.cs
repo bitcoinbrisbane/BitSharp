@@ -30,7 +30,9 @@ namespace BitSharp.Core.Test.Builders
             var chainedHeader1 = fakeHeaders.NextChained();
             var chainedHeader2 = fakeHeaders.NextChained();
             var chain = Chain.CreateForGenesisBlock(chainedHeader0);
-            var emptyCoinbaseTx = new Transaction(0, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
+            var emptyCoinbaseTx0 = new Transaction(0, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
+            var emptyCoinbaseTx1 = new Transaction(1, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
+            var emptyCoinbaseTx2 = new Transaction(2, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
 
             // initialize memory utxo builder storage
             var memoryChainStateBuilderStorage = new MemoryChainStateBuilderStorage(chainedHeader0);
@@ -53,7 +55,7 @@ namespace BitSharp.Core.Test.Builders
             var tx0 = new Transaction(0, ImmutableArray.Create(input0), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            utxoBuilder.CalculateUtxo(chainedHeader0, new[] { emptyCoinbaseTx, tx0 }).ToList();
+            utxoBuilder.CalculateUtxo(chainedHeader0, new[] { emptyCoinbaseTx0, tx0 }).ToList();
 
             // verify utxo storage
             Assert.IsTrue(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
@@ -67,7 +69,7 @@ namespace BitSharp.Core.Test.Builders
             var tx1 = new Transaction(0, ImmutableArray.Create(input1), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            utxoBuilder.CalculateUtxo(chainedHeader1, new[] { emptyCoinbaseTx, tx1 }).ToList();
+            utxoBuilder.CalculateUtxo(chainedHeader1, new[] { emptyCoinbaseTx1, tx1 }).ToList();
 
             // verify utxo storage
             Assert.IsTrue(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
@@ -81,7 +83,7 @@ namespace BitSharp.Core.Test.Builders
             var tx2 = new Transaction(0, ImmutableArray.Create(input2), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            utxoBuilder.CalculateUtxo(chainedHeader2, new[] { emptyCoinbaseTx, tx2 }).ToList();
+            utxoBuilder.CalculateUtxo(chainedHeader2, new[] { emptyCoinbaseTx2, tx2 }).ToList();
 
             // verify utxo storage
             Assert.IsFalse(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
@@ -96,7 +98,8 @@ namespace BitSharp.Core.Test.Builders
             var chainedHeader0 = fakeHeaders.GenesisChained();
             var chainedHeader1 = fakeHeaders.NextChained();
             var chain = Chain.CreateForGenesisBlock(chainedHeader0);
-            var emptyCoinbaseTx = new Transaction(0, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
+            var emptyCoinbaseTx0 = new Transaction(0, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
+            var emptyCoinbaseTx1 = new Transaction(1, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
 
             // initialize memory utxo builder storage
             var memoryChainStateBuilderStorage = new MemoryChainStateBuilderStorage(chainedHeader0);
@@ -116,13 +119,13 @@ namespace BitSharp.Core.Test.Builders
             var tx = new Transaction(0, ImmutableArray.Create(input), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            utxoBuilder.CalculateUtxo(chainedHeader0, new[] { emptyCoinbaseTx, tx }).ToList();
+            utxoBuilder.CalculateUtxo(chainedHeader0, new[] { emptyCoinbaseTx0, tx }).ToList();
 
             // verify utxo storage
             Assert.IsFalse(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
 
             // attempt to spend the input again
-            utxoBuilder.CalculateUtxo(chainedHeader1, new[] { emptyCoinbaseTx, tx }).ToList();
+            utxoBuilder.CalculateUtxo(chainedHeader1, new[] { emptyCoinbaseTx1, tx }).ToList();
 
             // validation exception should be thrown
         }
