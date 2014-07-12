@@ -82,15 +82,15 @@ namespace BitSharp.Node
             this.messageRateMeasure = new RateMeasure();
 
             this.connectWorker = new WorkerMethod("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), this.logger);
-            
+
             this.headersRequestWorker = new HeadersRequestWorker(
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(5)),
                 this.logger, this, this.coreDaemon);
-            
+
             this.blockRequestWorker = new BlockRequestWorker(
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30)),
                 this.logger, this, this.coreDaemon);
-            
+
             this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30), this.logger);
 
             switch (this.Type)
@@ -361,7 +361,7 @@ namespace BitSharp.Node
                             {
                                 IPEndPoint = new IPEndPoint(ipAddress, Messaging.Port),
                                 Time = DateTime.UtcNow,
-                                IsSeed = true
+                                IsSeed = this.Type == RulesEnum.MainNet ? true : false
                             });
                     }
                     catch (SocketException e)

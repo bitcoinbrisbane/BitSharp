@@ -76,6 +76,7 @@ namespace BitSharp.Core
 
             // write genesis block out to storage
             this.coreStorage.AddGenesisBlock(this.rules.GenesisChainedHeader);
+            this.coreStorage.TryAddBlock(this.rules.GenesisBlock);
 
             // wire up cache events
             this.coreStorage.BlockTxesAdded += HandleBlockTxesAdded;

@@ -113,7 +113,7 @@
     <Compile Include="Storage\Memory\MemoryStorage.cs" />
     <Compile Include="Storage\NodeCacheModule.cs" />
     <Compile Include="Storage\Memory\MemoryNetworkPeerStorage.cs" />
-    <Compile Include="Storage\Memory\MemoryStorageModule.cs" />
+    <Compile Include="Storage\Memory\NodeMemoryStorageModule.cs" />
     <Compile Include="Storage\PassthroughBoundedCache.cs" />
     <Compile Include="Storage\PassthroughUnboundedCache.cs" />
     <Compile Include="Storage\StorageInterfaces.cs" />

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Node.Storage.Memory
 {
-    public class MemoryStorageModule : NinjectModule
+    public class NodeMemoryStorageModule : NinjectModule
     {
         public override void Load()
         {
