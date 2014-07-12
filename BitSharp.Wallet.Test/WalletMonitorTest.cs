@@ -23,6 +23,7 @@ using BitSharp.Core.Test;
 
 namespace BitSharp.Wallet.Test
 {
+    [Ignore]
     [TestClass]
     public class WalletMonitorTest
     {
