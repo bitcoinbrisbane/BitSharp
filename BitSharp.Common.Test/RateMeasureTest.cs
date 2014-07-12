@@ -14,7 +14,7 @@ namespace BitSharp.Common.Test
         [TestMethod]
         public void TestRateMeasure()
         {
-            var sampleCutoff = TimeSpan.FromMilliseconds(250);
+            var sampleCutoff = TimeSpan.FromSeconds(1);
             var sampleResolution = TimeSpan.FromMilliseconds(10);
             using (var rateMeasure = new RateMeasure(sampleCutoff, sampleResolution))
             {
@@ -31,7 +31,7 @@ namespace BitSharp.Common.Test
                 Assert.AreEqual(1, rateMeasure.GetAverage(duration), 0.1);
 
                 // wait for the cutoff time to pass and verify the rate dropped to 0
-                Thread.Sleep(rateMeasure.SampleCutoff);
+                Thread.Sleep(duration + rateMeasure.SampleCutoff);
                 Assert.AreEqual(0, rateMeasure.GetAverage(duration));
             }
         }
