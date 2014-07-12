@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 namespace BitSharp.Core.Test
 {
     [TestClass]
-    public class DataCalculatorNewTest
+    public class MerkleTreeTest
     {
         [TestMethod]
         public void TestPruneMerkleTreeNodes()
@@ -51,7 +51,7 @@ namespace BitSharp.Core.Test
 
             //////////////////////////////////////////////////
 
-            DataCalculatorNew.PruneNode(cursor, 2);
+            MerkleTree.PruneNode(cursor, 2);
 
             var expectedNodes2 = new List<MerkleTreeNode> { node1, node2, node3.AsPruned(), node4, node5, node6, node7 };
             var actualNodes2 = cursor.ReadNodes().ToList();
@@ -59,7 +59,7 @@ namespace BitSharp.Core.Test
 
             //////////////////////////////////////////////////
 
-            DataCalculatorNew.PruneNode(cursor, 0);
+            MerkleTree.PruneNode(cursor, 0);
 
             var expectedNodes3 = new List<MerkleTreeNode> { node1.AsPruned(), node2, node3.AsPruned(), node4, node5, node6, node7 };
             var actualNodes3 = cursor.ReadNodes().ToList();
@@ -67,7 +67,7 @@ namespace BitSharp.Core.Test
 
             //////////////////////////////////////////////////
 
-            DataCalculatorNew.PruneNode(cursor, 1);
+            MerkleTree.PruneNode(cursor, 1);
 
             var expectedNodes4 = new List<MerkleTreeNode> { depth1Node1, node3.AsPruned(), node4, node5, node6, node7 };
             var actualNodes4 = cursor.ReadNodes().ToList();
@@ -75,7 +75,7 @@ namespace BitSharp.Core.Test
 
             //////////////////////////////////////////////////
 
-            DataCalculatorNew.PruneNode(cursor, 3);
+            MerkleTree.PruneNode(cursor, 3);
 
             var expectedNodes5 = new List<MerkleTreeNode> { depth2Node1, node5, node6, node7 };
             var actualNodes5 = cursor.ReadNodes().ToList();
@@ -83,7 +83,7 @@ namespace BitSharp.Core.Test
 
             //////////////////////////////////////////////////
 
-            DataCalculatorNew.PruneNode(cursor, 5);
+            MerkleTree.PruneNode(cursor, 5);
 
             var expectedNodes6 = new List<MerkleTreeNode> { depth2Node1, node5, node6.AsPruned(), node7 };
             var actualNodes6 = cursor.ReadNodes().ToList();
@@ -91,7 +91,7 @@ namespace BitSharp.Core.Test
 
             //////////////////////////////////////////////////
 
-            DataCalculatorNew.PruneNode(cursor, 6);
+            MerkleTree.PruneNode(cursor, 6);
 
             var expectedNodes8 = new List<MerkleTreeNode> { depth2Node1, node5, node6.AsPruned(), depth1Node4 };
             var actualNodes8 = cursor.ReadNodes().ToList();
@@ -99,7 +99,7 @@ namespace BitSharp.Core.Test
 
             //////////////////////////////////////////////////
 
-            DataCalculatorNew.PruneNode(cursor, 4);
+            MerkleTree.PruneNode(cursor, 4);
 
             var expectedNodes9 = new List<MerkleTreeNode> { merkleRoot };
             var actualNodes9 = cursor.ReadNodes().ToList();
@@ -116,13 +116,13 @@ namespace BitSharp.Core.Test
             var node3 = new MerkleTreeNode(index: 2, depth: 0, hash: 3, pruned: false);
             var node4 = new MerkleTreeNode(index: 3, depth: 0, hash: 4, pruned: false);
 
-            var depth1Hash1 = DataCalculatorNew.PairHashes(node1.Hash, node2.Hash);
-            var depth1Hash2 = DataCalculatorNew.PairHashes(node3.Hash, node4.Hash);
-            var merkleRoot = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
+            var depth1Hash1 = MerkleTree.PairHashes(node1.Hash, node2.Hash);
+            var depth1Hash2 = MerkleTree.PairHashes(node3.Hash, node4.Hash);
+            var merkleRoot = MerkleTree.PairHashes(depth1Hash1, depth1Hash2);
 
             var nodes = new List<MerkleTreeNode> { node1, node2, node3, node4 };
 
-            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
+            var actualNodes = MerkleTree.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
 
             CollectionAssert.AreEqual(nodes, actualNodes);
         }
@@ -136,10 +136,10 @@ namespace BitSharp.Core.Test
             var depth0Hash2 = (UInt256)2;
             var depth0Hash3 = (UInt256)3;
 
-            var depth1Hash1 = DataCalculatorNew.PairHashes(depth0Hash1, depth0Hash2);
-            var depth1Hash2 = DataCalculatorNew.PairHashes(depth0Hash3, depth0Hash3);
+            var depth1Hash1 = MerkleTree.PairHashes(depth0Hash1, depth0Hash2);
+            var depth1Hash2 = MerkleTree.PairHashes(depth0Hash3, depth0Hash3);
 
-            var merkleRoot = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
+            var merkleRoot = MerkleTree.PairHashes(depth1Hash1, depth1Hash2);
 
             var nodes = new List<MerkleTreeNode> { 
                 new MerkleTreeNode(index: 0, depth: 0, hash: depth0Hash1, pruned: false),
@@ -147,7 +147,7 @@ namespace BitSharp.Core.Test
                 new MerkleTreeNode(index: 2, depth: 0, hash: depth0Hash3, pruned: false),
             };
 
-            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
+            var actualNodes = MerkleTree.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
 
             CollectionAssert.AreEqual(nodes, actualNodes);
         }
@@ -173,24 +173,24 @@ namespace BitSharp.Core.Test
             var depth0Hash14 = (UInt256)14;
             var depth0Hash15 = (UInt256)15;
 
-            var depth1Hash1 = DataCalculatorNew.PairHashes(depth0Hash1, depth0Hash2);
-            var depth1Hash2 = DataCalculatorNew.PairHashes(depth0Hash3, depth0Hash4);
-            var depth1Hash3 = DataCalculatorNew.PairHashes(depth0Hash5, depth0Hash6);
-            var depth1Hash4 = DataCalculatorNew.PairHashes(depth0Hash7, depth0Hash8);
-            var depth1Hash5 = DataCalculatorNew.PairHashes(depth0Hash9, depth0Hash10);
-            var depth1Hash6 = DataCalculatorNew.PairHashes(depth0Hash11, depth0Hash12);
-            var depth1Hash7 = DataCalculatorNew.PairHashes(depth0Hash13, depth0Hash14);
-            var depth1Hash8 = DataCalculatorNew.PairHashes(depth0Hash15, depth0Hash15);
+            var depth1Hash1 = MerkleTree.PairHashes(depth0Hash1, depth0Hash2);
+            var depth1Hash2 = MerkleTree.PairHashes(depth0Hash3, depth0Hash4);
+            var depth1Hash3 = MerkleTree.PairHashes(depth0Hash5, depth0Hash6);
+            var depth1Hash4 = MerkleTree.PairHashes(depth0Hash7, depth0Hash8);
+            var depth1Hash5 = MerkleTree.PairHashes(depth0Hash9, depth0Hash10);
+            var depth1Hash6 = MerkleTree.PairHashes(depth0Hash11, depth0Hash12);
+            var depth1Hash7 = MerkleTree.PairHashes(depth0Hash13, depth0Hash14);
+            var depth1Hash8 = MerkleTree.PairHashes(depth0Hash15, depth0Hash15);
 
-            var depth2Hash1 = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
-            var depth2Hash2 = DataCalculatorNew.PairHashes(depth1Hash3, depth1Hash4);
-            var depth2Hash3 = DataCalculatorNew.PairHashes(depth1Hash5, depth1Hash6);
-            var depth2Hash4 = DataCalculatorNew.PairHashes(depth1Hash7, depth1Hash8);
+            var depth2Hash1 = MerkleTree.PairHashes(depth1Hash1, depth1Hash2);
+            var depth2Hash2 = MerkleTree.PairHashes(depth1Hash3, depth1Hash4);
+            var depth2Hash3 = MerkleTree.PairHashes(depth1Hash5, depth1Hash6);
+            var depth2Hash4 = MerkleTree.PairHashes(depth1Hash7, depth1Hash8);
 
-            var depth3Hash1 = DataCalculatorNew.PairHashes(depth2Hash1, depth2Hash2);
-            var depth3Hash2 = DataCalculatorNew.PairHashes(depth2Hash3, depth2Hash4);
+            var depth3Hash1 = MerkleTree.PairHashes(depth2Hash1, depth2Hash2);
+            var depth3Hash2 = MerkleTree.PairHashes(depth2Hash3, depth2Hash4);
 
-            var merkleRoot = DataCalculatorNew.PairHashes(depth3Hash1, depth3Hash2);
+            var merkleRoot = MerkleTree.PairHashes(depth3Hash1, depth3Hash2);
 
             var nodes = new List<MerkleTreeNode> { 
                 new MerkleTreeNode(index: 0, depth: 0, hash: depth0Hash1, pruned: false),
@@ -206,7 +206,7 @@ namespace BitSharp.Core.Test
                     new MerkleTreeNode(index: 14, depth: 1, hash: depth1Hash8, pruned: true),
             };
 
-            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
+            var actualNodes = MerkleTree.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
 
             CollectionAssert.AreEqual(nodes, actualNodes);
         }
@@ -227,7 +227,7 @@ namespace BitSharp.Core.Test
                 DataCalculator.CalculateMerkleRoot(nodes.Select(x => x.Hash).ToImmutableList()));
 
             var actualNodes = new MethodTimer().Time(() =>
-                DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList());
+                MerkleTree.ReadMerkleTreeNodes(merkleRoot, nodes).ToList());
 
             CollectionAssert.AreEqual(nodes, actualNodes);
         }
@@ -242,10 +242,10 @@ namespace BitSharp.Core.Test
             var depth0Hash2 = (UInt256)2;
             var depth0Hash3 = (UInt256)3;
 
-            var depth1Hash1 = DataCalculatorNew.PairHashes(depth0Hash1, depth0Hash2);
-            var depth1Hash2 = DataCalculatorNew.PairHashes(depth0Hash3, depth0Hash3);
+            var depth1Hash1 = MerkleTree.PairHashes(depth0Hash1, depth0Hash2);
+            var depth1Hash2 = MerkleTree.PairHashes(depth0Hash3, depth0Hash3);
 
-            var merkleRoot = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
+            var merkleRoot = MerkleTree.PairHashes(depth1Hash1, depth1Hash2);
 
             var nodes = new List<MerkleTreeNode> { 
                 new MerkleTreeNode(index: 0, depth: 0, hash: depth0Hash1, pruned: false),
@@ -253,7 +253,7 @@ namespace BitSharp.Core.Test
                 new MerkleTreeNode(index: 2, depth: 1, hash: depth0Hash3, pruned: true),
             };
 
-            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
+            var actualNodes = MerkleTree.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
 
             CollectionAssert.AreEqual(nodes, actualNodes);
         }
@@ -268,10 +268,10 @@ namespace BitSharp.Core.Test
             var depth0Hash2 = (UInt256)2;
             var depth0Hash3 = (UInt256)3;
 
-            var depth1Hash1 = DataCalculatorNew.PairHashes(depth0Hash1, depth0Hash2);
-            var depth1Hash2 = DataCalculatorNew.PairHashes(depth0Hash3, depth0Hash3);
+            var depth1Hash1 = MerkleTree.PairHashes(depth0Hash1, depth0Hash2);
+            var depth1Hash2 = MerkleTree.PairHashes(depth0Hash3, depth0Hash3);
 
-            var merkleRoot = DataCalculatorNew.PairHashes(depth1Hash1, depth1Hash2);
+            var merkleRoot = MerkleTree.PairHashes(depth1Hash1, depth1Hash2);
 
             var nodes = new List<MerkleTreeNode> { 
                 new MerkleTreeNode(index: 0, depth: 0, hash: depth0Hash1, pruned: false),
@@ -279,7 +279,7 @@ namespace BitSharp.Core.Test
                 new MerkleTreeNode(index: 3, depth: 0, hash: depth0Hash3, pruned: false),
             };
 
-            var actualNodes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
+            var actualNodes = MerkleTree.ReadMerkleTreeNodes(merkleRoot, nodes).ToList();
 
             CollectionAssert.AreEqual(nodes, actualNodes);
         }

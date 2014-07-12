@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace BitSharp.Core
 {
     //TODO organize and name properly
-    public static class DataCalculatorNew
+    public static class MerkleTree
     {
         public static void PruneNode(IMerkleTreePruningCursor cursor, int index)
         {

@@ -100,7 +100,7 @@
     <Compile Include="Storage\CoreStorage.cs" />
     <Compile Include="Domain\BlockTxKey.cs" />
     <Compile Include="Builders\TxValidator.cs" />
-    <Compile Include="DataCalculatorNew.cs" />
+    <Compile Include="MerkleTree.cs" />
     <Compile Include="BlockchainWalker.cs" />
     <Compile Include="CoreDaemon.cs" />
     <Compile Include="DataCalculator.cs" />

@@ -99,7 +99,7 @@
   <ItemGroup>
     <Compile Include="AssertMethods.cs" />
     <Compile Include="BlockchainWalkerTest.cs" />
-    <Compile Include="DataCalculatorNewTest.cs" />
+    <Compile Include="MerkleTreeTest.cs" />
     <Compile Include="FakeHeaders.cs" />
     <Compile Include="MainnetTestData.cs" />
     <Compile Include="CoreDaemonTest.cs" />

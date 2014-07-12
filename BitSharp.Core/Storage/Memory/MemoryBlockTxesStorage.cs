@@ -88,7 +88,7 @@ namespace BitSharp.Core.Storage.Memory
                 using (var pruningCursor = new MemoryMerkleTreePruningCursor(blockTxes.Values))
                 {
                     foreach (var index in txIndices)
-                        DataCalculatorNew.PruneNode(pruningCursor, index);
+                        MerkleTree.PruneNode(pruningCursor, index);
 
                     var prunedBlockTxes =
                         ImmutableSortedDictionary.CreateRange<int, BlockTx>(

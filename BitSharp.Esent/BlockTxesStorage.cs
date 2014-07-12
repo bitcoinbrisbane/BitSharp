@@ -144,7 +144,7 @@ namespace BitSharp.Esent
                 pruningCursor.BeginTransaction();
 
                 foreach (var index in txIndices)
-                    DataCalculatorNew.PruneNode(pruningCursor, index);
+                    MerkleTree.PruneNode(pruningCursor, index);
 
                 pruningCursor.CommitTransaction();
             }

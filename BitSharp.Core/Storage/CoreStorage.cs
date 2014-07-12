@@ -205,7 +205,7 @@ namespace BitSharp.Core.Storage
             IEnumerator<BlockTx> blockTxes;
             try
             {
-                blockTxes = DataCalculatorNew.ReadMerkleTreeNodes(merkleRoot, this.blockTxesStorage.ReadBlockTransactions(blockHash)).GetEnumerator();
+                blockTxes = MerkleTree.ReadMerkleTreeNodes(merkleRoot, this.blockTxesStorage.ReadBlockTransactions(blockHash)).GetEnumerator();
             }
             catch (Exception)
             {
