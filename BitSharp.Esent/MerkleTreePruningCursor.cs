@@ -21,13 +21,13 @@ namespace BitSharp.Esent
 {
     internal class MerkleTreePruningCursor : IMerkleTreePruningCursor, IDisposable
     {
-        private readonly UInt256 blockHash;
+        private readonly int blockId;
         private readonly BlockTxesCursor cursor;
         private readonly Action disposeAction;
 
-        public MerkleTreePruningCursor(UInt256 blockHash, BlockTxesCursor cursor, Action disposeAction)
+        public MerkleTreePruningCursor(int blockId, BlockTxesCursor cursor, Action disposeAction)
         {
-            this.blockHash = blockHash;
+            this.blockId = blockId;
             this.cursor = cursor;
             this.disposeAction = disposeAction;
 
@@ -41,7 +41,7 @@ namespace BitSharp.Esent
         public void BeginTransaction()
         {
             Api.JetBeginTransaction2(cursor.jetSession, BeginTransactionGrbit.None);
-            Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockHashTxIndex");
+            Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockIdTxIndex");
         }
 
         public void CommitTransaction()
@@ -51,7 +51,7 @@ namespace BitSharp.Esent
 
         public bool TryMoveToIndex(int index, out MerkleTreeNode node)
         {
-            Api.MakeKey(cursor.jetSession, cursor.blocksTableId, DbEncoder.EncodeUInt256(this.blockHash), MakeKeyGrbit.NewKey);
+            Api.MakeKey(cursor.jetSession, cursor.blocksTableId, blockId, MakeKeyGrbit.NewKey);
             Api.MakeKey(cursor.jetSession, cursor.blocksTableId, index, MakeKeyGrbit.None);
 
             if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekEQ))
@@ -69,7 +69,7 @@ namespace BitSharp.Esent
         public bool TryMoveLeft(out MerkleTreeNode node)
         {
             if (Api.TryMovePrevious(cursor.jetSession, cursor.blocksTableId)
-                && this.blockHash == DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
+                && this.blockId == Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value)
             {
                 node = ReadNode();
                 return true;
@@ -84,7 +84,7 @@ namespace BitSharp.Esent
         public bool TryMoveRight(out MerkleTreeNode node)
         {
             if (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId)
-                && this.blockHash == DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
+                && this.blockId == Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value)
             {
                 node = ReadNode();
                 return true;

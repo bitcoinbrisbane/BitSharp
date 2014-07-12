@@ -19,8 +19,12 @@ namespace BitSharp.Esent
         public readonly JET_COLUMNID blockCountColumnId;
         public readonly JET_COLUMNID flushColumnId;
 
+        public readonly JET_TABLEID blockIdsTableId;
+        public readonly JET_COLUMNID blockIdsHashColumnId;
+        public readonly JET_COLUMNID blockIdsIdColumnId;
+
         public readonly JET_TABLEID blocksTableId;
-        public readonly JET_COLUMNID blockHashColumnId;
+        public readonly JET_COLUMNID blockIdColumnId;
         public readonly JET_COLUMNID blockTxIndexColumnId;
         public readonly JET_COLUMNID blockDepthColumnId;
         public readonly JET_COLUMNID blockTxHashColumnId;
@@ -37,8 +41,11 @@ namespace BitSharp.Esent
                 out this.globalsTableId,
                     out this.blockCountColumnId,
                     out this.flushColumnId,
+                out this.blockIdsTableId,
+                    out this.blockIdsHashColumnId,
+                    out this.blockIdsIdColumnId,
                 out this.blocksTableId,
-                    out this.blockHashColumnId,
+                    out this.blockIdColumnId,
                     out this.blockTxIndexColumnId,
                     out this.blockDepthColumnId,
                     out this.blockTxHashColumnId,
@@ -56,8 +63,11 @@ namespace BitSharp.Esent
             out JET_TABLEID globalsTableId,
             out JET_COLUMNID blockCountColumnId,
             out JET_COLUMNID flushColumnId,
+            out JET_TABLEID blockIdsTableId,
+            out JET_COLUMNID blockIdsHashColumnId,
+            out JET_COLUMNID blockIdsIdColumnId,
             out JET_TABLEID blocksTableId,
-            out JET_COLUMNID blockHashColumnId,
+            out JET_COLUMNID blockIdColumnId,
             out JET_COLUMNID blockTxIndexColumnId,
             out JET_COLUMNID blockDepthColumnId,
             out JET_COLUMNID blockTxHashColumnId,
@@ -76,8 +86,12 @@ namespace BitSharp.Esent
                 if (!Api.TryMoveFirst(jetSession, globalsTableId))
                     throw new InvalidOperationException();
 
+                Api.JetOpenTable(jetSession, blockDbId, "BlockIds", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out blockIdsTableId);
+                blockIdsHashColumnId = Api.GetTableColumnid(jetSession, blockIdsTableId, "BlockHash");
+                blockIdsIdColumnId = Api.GetTableColumnid(jetSession, blockIdsTableId, "BlockId");
+
                 Api.JetOpenTable(jetSession, blockDbId, "Blocks", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out blocksTableId);
-                blockHashColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "BlockHash");
+                blockIdColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "BlockId");
                 blockTxIndexColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxIndex");
                 blockDepthColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "Depth");
                 blockTxHashColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxHash");
