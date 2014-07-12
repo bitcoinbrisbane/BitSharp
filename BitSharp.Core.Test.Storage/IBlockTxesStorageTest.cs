@@ -40,21 +40,15 @@ namespace BitSharp.Core.Test.Storage
         }
 
         [TestMethod]
-        public void TestTryAddBlockTransactions()
+        public void TestTryAddRemoveBlockTransactions()
         {
-            RunTest(TestTryAddBlockTransactions);
+            RunTest(TestTryAddRemoveBlockTransactions);
         }
 
         [TestMethod]
         public void TestTryGetTransaction()
         {
             RunTest(TestTryGetTransaction);
-        }
-
-        [TestMethod]
-        public void TestTryRemove()
-        {
-            RunTest(TestTryRemove);
         }
 
         [TestMethod]
@@ -153,8 +147,9 @@ namespace BitSharp.Core.Test.Storage
             }
         }
 
-        // IBlockTxesStorage.TryAddBlockTransactions
-        private void TestTryAddBlockTransactions(ITestStorageProvider provider)
+        // IBlockTxesStorage.TryAddRemoveBlockTransactions
+        // IBlockTxesStorage.TryRemoveRemoveBlockTransactions
+        private void TestTryAddRemoveBlockTransactions(ITestStorageProvider provider)
         {
             using (var storageManager = provider.OpenStorageManager())
             {
@@ -165,31 +160,30 @@ namespace BitSharp.Core.Test.Storage
 
                 // verify block can be added
                 Assert.IsTrue(blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions));
+                Assert.IsTrue(blockTxesStorage.ContainsBlock(block.Hash));
 
                 // verify block cannot be added again
                 Assert.IsFalse(blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions));
 
                 // remove the block
-                blockTxesStorage.TryRemoveBlockTransactions(block.Hash);
+                Assert.IsTrue(blockTxesStorage.TryRemoveBlockTransactions(block.Hash));
+                Assert.IsFalse(blockTxesStorage.ContainsBlock(block.Hash));
+
+                // verify block cannot be removed again
+                Assert.IsFalse(blockTxesStorage.TryRemoveBlockTransactions(block.Hash));
 
                 // verify block can be added again, after being removed
                 Assert.IsTrue(blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions));
+                Assert.IsTrue(blockTxesStorage.ContainsBlock(block.Hash));
+
+                // verify block can be removed again, after being added again
+                Assert.IsTrue(blockTxesStorage.TryRemoveBlockTransactions(block.Hash));
+                Assert.IsFalse(blockTxesStorage.ContainsBlock(block.Hash));
             }
         }
 
         // IBlockTxesStorage.TryGetTransaction
         private void TestTryGetTransaction(ITestStorageProvider provider)
-        {
-            using (var storageManager = provider.OpenStorageManager())
-            {
-                var blockTxesStorage = storageManager.BlockTxesStorage;
-
-                Assert.Inconclusive("TODO");
-            }
-        }
-
-        // IBlockTxesStorage.TryRemove
-        private void TestTryRemove(ITestStorageProvider provider)
         {
             using (var storageManager = provider.OpenStorageManager())
             {

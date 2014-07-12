@@ -34,9 +34,9 @@ namespace BitSharp.Core.Test.Storage
         }
 
         [TestMethod]
-        public void TestTryAddChainedHeader()
+        public void TestTryAddRemoveChainedHeader()
         {
-            RunTest(TestTryAddChainedHeader);
+            RunTest(TestTryAddRemoveChainedHeader);
         }
 
         [TestMethod]
@@ -92,7 +92,8 @@ namespace BitSharp.Core.Test.Storage
         }
 
         // IBlockStorage.TryAddChainedHeader
-        private void TestTryAddChainedHeader(ITestStorageProvider provider)
+        // IBlockStorage.TryRemoveChainedHeader
+        private void TestTryAddRemoveChainedHeader(ITestStorageProvider provider)
         {
             using (var storageManager = provider.OpenStorageManager())
             {
@@ -104,15 +105,25 @@ namespace BitSharp.Core.Test.Storage
 
                 // verify header can be added
                 Assert.IsTrue(blockStorage.TryAddChainedHeader(chainedHeader));
+                Assert.IsTrue(blockStorage.ContainsChainedHeader(chainedHeader.Hash));
 
                 // verify header cannot be added again
                 Assert.IsFalse(blockStorage.TryAddChainedHeader(chainedHeader));
 
                 // remove the header
-                blockStorage.TryRemoveChainedHeader(chainedHeader.Hash);
+                Assert.IsTrue(blockStorage.TryRemoveChainedHeader(chainedHeader.Hash));
+                Assert.IsFalse(blockStorage.ContainsChainedHeader(chainedHeader.Hash));
+
+                // verify header cannot be removed again
+                Assert.IsFalse(blockStorage.TryRemoveChainedHeader(chainedHeader.Hash));
 
                 // verify header can be added again, after being removed
                 Assert.IsTrue(blockStorage.TryAddChainedHeader(chainedHeader));
+                Assert.IsTrue(blockStorage.ContainsChainedHeader(chainedHeader.Hash));
+
+                // verify header can be removed again, after being added again
+                Assert.IsTrue(blockStorage.TryRemoveChainedHeader(chainedHeader.Hash));
+                Assert.IsFalse(blockStorage.ContainsChainedHeader(chainedHeader.Hash));
             }
         }
 
