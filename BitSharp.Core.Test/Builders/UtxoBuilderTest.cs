@@ -91,19 +91,20 @@ namespace BitSharp.Core.Test.Builders
         {
             // prepare block
             var fakeHeaders = new FakeHeaders();
-            var chainedHeader = new ChainedHeader(fakeHeaders.Genesis(), height: 0, totalWork: 0);
-            var chain = Chain.CreateForGenesisBlock(chainedHeader);
+            var chainedHeader0 = new ChainedHeader(fakeHeaders.Genesis(), height: 0, totalWork: 0);
+            var chainedHeader1 = new ChainedHeader(fakeHeaders.Next(), height: 1, totalWork: 1);
+            var chain = Chain.CreateForGenesisBlock(chainedHeader0);
             var emptyCoinbaseTx = new Transaction(0, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
 
             // initialize memory utxo builder storage
-            var memoryChainStateBuilderStorage = new MemoryChainStateBuilderStorage(chainedHeader);
+            var memoryChainStateBuilderStorage = new MemoryChainStateBuilderStorage(chainedHeader0);
 
             // initialize utxo builder
             var utxoBuilder = new UtxoBuilder(memoryChainStateBuilderStorage, LogManager.CreateNullLogger());
 
             // prepare an unspent transaction
             var txHash = new UInt256(100);
-            var unspentTx = new UnspentTx(chainedHeader.Height, 0, 1, OutputState.Unspent);
+            var unspentTx = new UnspentTx(chainedHeader0.Height, 0, 1, OutputState.Unspent);
 
             // add the unspent transaction
             memoryChainStateBuilderStorage.UnspentTransactionsDictionary.Add(txHash, unspentTx);
@@ -113,13 +114,13 @@ namespace BitSharp.Core.Test.Builders
             var tx = new Transaction(0, ImmutableArray.Create(input), ImmutableArray.Create<TxOutput>(), 0);
 
             // spend the input
-            utxoBuilder.CalculateUtxo(chainedHeader, new[] { emptyCoinbaseTx, tx }).ToList();
+            utxoBuilder.CalculateUtxo(chainedHeader0, new[] { emptyCoinbaseTx, tx }).ToList();
 
             // verify utxo storage
             Assert.IsFalse(memoryChainStateBuilderStorage.UnspentTransactionsDictionary.ContainsKey(txHash));
 
             // attempt to spend the input again
-            utxoBuilder.CalculateUtxo(chainedHeader, new[] { emptyCoinbaseTx, tx }).ToList();
+            utxoBuilder.CalculateUtxo(chainedHeader1, new[] { emptyCoinbaseTx, tx }).ToList();
 
             // validation exception should be thrown
         }
