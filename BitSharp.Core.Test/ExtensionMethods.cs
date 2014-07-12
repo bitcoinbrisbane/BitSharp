@@ -16,7 +16,7 @@ namespace BitSharp.Core.Test
             block = block.With(Transactions: block.Transactions.AddRange(transactions));
 
             // update merkle root
-            block = block.With(block.Header.With(MerkleRoot: DataCalculator.CalculateMerkleRoot(block.Transactions.Select(x => x.Hash).ToImmutableList())));
+            block = block.With(block.Header.With(MerkleRoot: MerkleTree.CalculateMerkleRoot(block.Transactions)));
 
             return block;
         }

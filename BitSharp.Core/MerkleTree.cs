@@ -82,25 +82,52 @@ namespace BitSharp.Core
             } while (didWork);
         }
 
-        public static IEnumerable<T> ReadMerkleTreeNodes<T>(UInt256 merkleRoot, IEnumerable<T> merkleTreeNodes)
+        public static UInt256 CalculateMerkleRoot(IEnumerable<Transaction> transactions)
+        {
+            return CalculateMerkleRoot(transactions.Select(x => x.Hash));
+        }
+
+        public static UInt256 CalculateMerkleRoot(IEnumerable<UInt256> hashes)
+        {
+            var merkleStream = new MerkleStream();
+
+            var index = 0;
+            foreach (var hash in hashes)
+            {
+                var node = new MerkleTreeNode(index, 0, hash, true);
+                merkleStream.AddNode(node);
+                index++;
+            }
+
+            merkleStream.FinishPairing();
+
+            return merkleStream.RootNode.Hash;
+        }
+
+        public static UInt256 CalculateMerkleRoot<T>(IEnumerable<T> merkleTreeNodes)
             where T : MerkleTreeNode
         {
-            var expectedIndex = 0;
-
             var merkleStream = new MerkleStream();
 
             foreach (var node in merkleTreeNodes)
             {
-                if (node.Index != expectedIndex)
-                {
-                    throw new InvalidOperationException();
-                }
-
                 merkleStream.AddNode(node);
+            }
 
+            merkleStream.FinishPairing();
+
+            return merkleStream.RootNode.Hash;
+        }
+
+        public static IEnumerable<T> ReadMerkleTreeNodes<T>(UInt256 merkleRoot, IEnumerable<T> merkleTreeNodes)
+            where T : MerkleTreeNode
+        {
+            var merkleStream = new MerkleStream();
+
+            foreach (var node in merkleTreeNodes)
+            {
+                merkleStream.AddNode(node);
                 yield return node;
-
-                expectedIndex += 1 << node.Depth;
             }
 
             merkleStream.FinishPairing();
@@ -122,6 +149,7 @@ namespace BitSharp.Core
         private class MerkleStream
         {
             private readonly List<MerkleTreeNode> leftNodes = new List<MerkleTreeNode>();
+            private int expectedIndex = 0;
 
             public MerkleTreeNode RootNode
             {
@@ -136,6 +164,13 @@ namespace BitSharp.Core
 
             public void AddNode(MerkleTreeNode newNode)
             {
+                // verify index is as expected
+                if (newNode.Index != this.expectedIndex)
+                    throw new InvalidOperationException();
+
+                // determine the index the next node should be
+                this.expectedIndex += 1 << newNode.Depth;
+
                 // when streamining nodes, treat them as being pruned so they can be paired together
                 newNode = newNode.AsPruned();
 

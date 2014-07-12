@@ -144,8 +144,7 @@ namespace BitSharp.Core.Test
             //Debug.WriteLine("Coinbase Tx Created: {0}".Format2(coinbaseTx.Hash.ToHexNumberString()));
 
             var transactions = ImmutableArray.Create(coinbaseTx);
-            var txHashes = ImmutableList.Create(coinbaseTx.Hash);
-            var merkleRoot = DataCalculator.CalculateMerkleRoot(txHashes);
+            var merkleRoot = MerkleTree.CalculateMerkleRoot(transactions);
 
             var block = new Block
             (

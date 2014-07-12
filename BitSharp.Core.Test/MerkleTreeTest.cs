@@ -212,27 +212,6 @@ namespace BitSharp.Core.Test
         }
 
         [TestMethod]
-        public void TestReadMerkleTreeNodesPerformance()
-        {
-            var sha256 = new SHA256Managed();
-
-            var count = 10.THOUSAND();
-            var nodes = new List<MerkleTreeNode>(count);
-            for (var i = 0; i < count; i++)
-            {
-                nodes.Add(new MerkleTreeNode(i, depth: 0, hash: i, pruned: false));
-            }
-
-            var merkleRoot = new MethodTimer().Time(() =>
-                DataCalculator.CalculateMerkleRoot(nodes.Select(x => x.Hash).ToImmutableList()));
-
-            var actualNodes = new MethodTimer().Time(() =>
-                MerkleTree.ReadMerkleTreeNodes(merkleRoot, nodes).ToList());
-
-            CollectionAssert.AreEqual(nodes, actualNodes);
-        }
-
-        [TestMethod]
         [ExpectedException(typeof(InvalidOperationException))]
         public void TestReadMerkleTreeNodesBadDepth()
         {
@@ -289,6 +268,26 @@ namespace BitSharp.Core.Test
         public void TestMerkleTreeNodeBadIndex()
         {
             new MerkleTreeNode(index: 3, depth: 1, hash: 0, pruned: false);
+        }
+
+        [TestMethod]
+        public void TestCalculateMerkleRoot()
+        {
+            var sha256 = new SHA256Managed();
+
+            var node1 = new MerkleTreeNode(index: 0, depth: 0, hash: 1, pruned: false);
+            var node2 = new MerkleTreeNode(index: 1, depth: 0, hash: 2, pruned: false);
+            var node3 = new MerkleTreeNode(index: 2, depth: 0, hash: 3, pruned: false);
+
+            var depth1Hash1 = MerkleTree.PairHashes(node1.Hash, node2.Hash);
+            var depth1Hash2 = MerkleTree.PairHashes(node3.Hash, node3.Hash);
+            
+            var expectedMerkleRoot = MerkleTree.PairHashes(depth1Hash1, depth1Hash2);
+
+            var hashes = new List<UInt256> { node1.Hash, node2.Hash, node3.Hash };
+            var actualMerkleRoot = MerkleTree.CalculateMerkleRoot(hashes); ;
+
+            Assert.AreEqual(expectedMerkleRoot, actualMerkleRoot);
         }
     }
 }

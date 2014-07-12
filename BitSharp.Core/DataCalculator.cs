@@ -40,49 +40,6 @@ namespace BitSharp.Core
             return new UInt256(sha256.ComputeDoubleHash(DataEncoder.EncodeTransaction(Version, Inputs, Outputs, LockTime)));
         }
 
-        public static UInt256 CalculateMerkleRoot(IEnumerable<Transaction> transactions)
-        {
-            ImmutableList<ImmutableArray<byte>> merkleTree;
-            return CalculateMerkleRoot(transactions.Select(x => x.Hash), out merkleTree);
-        }
-
-        public static UInt256 CalculateMerkleRoot(IEnumerable<UInt256> txHashes)
-        {
-            ImmutableList<ImmutableArray<byte>> merkleTree;
-            return CalculateMerkleRoot(txHashes, out merkleTree);
-        }
-
-        public static UInt256 CalculateMerkleRoot(IEnumerable<UInt256> txHashes, out ImmutableList<ImmutableArray<byte>> merkleTree)
-        {
-            var sha256 = new SHA256Managed();
-            var workingMerkleTree = ImmutableList.CreateBuilder<ImmutableArray<byte>>();
-
-            var hashes = txHashes.Select(txHash => txHash.ToByteArray().ToImmutableArray()).ToList();
-
-            workingMerkleTree.AddRange(hashes);
-            while (hashes.Count > 1)
-            {
-                workingMerkleTree.AddRange(hashes);
-
-                // ensure row is even length
-                if (hashes.Count % 2 != 0)
-                    hashes.Add(hashes.Last());
-
-                // pair up hashes in row ({1, 2, 3, 4} into {{1, 2}, {3, 4}}) and then hash the pairs
-                // the result is the next row, which will be half the size of the current row
-                hashes =
-                    Enumerable.Range(0, hashes.Count / 2)
-                    .Select(i => hashes[i * 2].AddRange(hashes[i * 2 + 1]))
-                    //.AsParallel().AsOrdered().WithExecutionMode(ParallelExecutionMode.ForceParallelism).WithDegreeOfParallelism(10)
-                    .Select(pair => sha256.ComputeDoubleHash(pair.ToArray()).ToImmutableArray())
-                    .ToList();
-            }
-            Debug.Assert(hashes.Count == 1);
-
-            merkleTree = workingMerkleTree.ToImmutable();
-            return new UInt256(hashes[0].ToArray());
-        }
-
         //TDOO name...
         private static readonly BigInteger Max256BitTarget = BigInteger.Pow(2, 256);
         public static BigInteger CalculateWork(BlockHeader blockHeader)
