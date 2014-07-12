@@ -198,8 +198,43 @@ namespace BitSharp.Core.Test.Storage
             {
                 var blockStorage = storageManager.BlockStorage;
 
+                // create a chained headers
+                var fakeHeaders = new FakeHeaders();
+                var chainedHeader0 = fakeHeaders.GenesisChained();
+                var chainedHeader1 = fakeHeaders.NextChained();
+                var chainedHeader2 = fakeHeaders.NextChained();
+
+                // verify initial empty state
+                Assert.AreEqual(0, blockStorage.ReadChainedHeaders().ToList().Count);
+
+                // add headers and verify reading them
+
+                // 0
+                blockStorage.TryAddChainedHeader(chainedHeader0);
+                CollectionAssert.AreEquivalent(new[] { chainedHeader0 }, blockStorage.ReadChainedHeaders().ToList());
+
+                // 1
+                blockStorage.TryAddChainedHeader(chainedHeader1);
+                CollectionAssert.AreEquivalent(new[] { chainedHeader0, chainedHeader1 }, blockStorage.ReadChainedHeaders().ToList());
+
+                // 2
+                blockStorage.TryAddChainedHeader(chainedHeader2);
+                CollectionAssert.AreEquivalent(new[] { chainedHeader0, chainedHeader1, chainedHeader2 }, blockStorage.ReadChainedHeaders().ToList());
+
+                // remove headers and verify reading them
+
+                // 2
+                blockStorage.TryRemoveChainedHeader(chainedHeader2.Hash);
+                CollectionAssert.AreEquivalent(new[] { chainedHeader0, chainedHeader1 }, blockStorage.ReadChainedHeaders().ToList());
+
+                // 1
+                blockStorage.TryRemoveChainedHeader(chainedHeader1.Hash);
+                CollectionAssert.AreEquivalent(new[] { chainedHeader0 }, blockStorage.ReadChainedHeaders().ToList());
+
+                // 0
+                blockStorage.TryRemoveChainedHeader(chainedHeader0.Hash);
+                Assert.AreEqual(0, blockStorage.ReadChainedHeaders().ToList().Count);
             }
-            Assert.Inconclusive("TODO");
         }
 
         // IBlockStorage.IsBlockInvalid
