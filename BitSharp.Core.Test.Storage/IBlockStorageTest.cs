@@ -152,8 +152,43 @@ namespace BitSharp.Core.Test.Storage
             {
                 var blockStorage = storageManager.BlockStorage;
 
+                // create a chained headers
+                var fakeHeaders = new FakeHeaders();
+                var chainedHeader0 = fakeHeaders.GenesisChained();
+                var chainedHeader1 = fakeHeaders.NextChained();
+                var chainedHeader2 = fakeHeaders.NextChained();
+
+                // verify initial null state
+                Assert.IsNull(blockStorage.FindMaxTotalWork());
+
+                // add headers and verify max total work
+
+                // 0
+                blockStorage.TryAddChainedHeader(chainedHeader0);
+                Assert.AreEqual(chainedHeader0, blockStorage.FindMaxTotalWork());
+
+                // 1
+                blockStorage.TryAddChainedHeader(chainedHeader1);
+                Assert.AreEqual(chainedHeader1, blockStorage.FindMaxTotalWork());
+
+                // 2
+                blockStorage.TryAddChainedHeader(chainedHeader2);
+                Assert.AreEqual(chainedHeader2, blockStorage.FindMaxTotalWork());
+
+                // remove headers and verify max total work
+
+                // 2
+                blockStorage.TryRemoveChainedHeader(chainedHeader2.Hash);
+                Assert.AreEqual(chainedHeader1, blockStorage.FindMaxTotalWork());
+
+                // 1
+                blockStorage.TryRemoveChainedHeader(chainedHeader1.Hash);
+                Assert.AreEqual(chainedHeader0, blockStorage.FindMaxTotalWork());
+
+                // 0
+                blockStorage.TryRemoveChainedHeader(chainedHeader0.Hash);
+                Assert.IsNull(blockStorage.FindMaxTotalWork());
             }
-            Assert.Inconclusive("TODO");
         }
 
         // IBlockStorage.ReadChainedHeaders
