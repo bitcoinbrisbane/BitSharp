@@ -28,6 +28,6 @@ namespace BitSharp.Core.Test.Storage
     public class IBlockTxesStorageTest : StorageProviderTest
     {
         [TestMethod]
-        public void TODO() { Assert.Fail("TODO"); }
+        public void TODO() { Assert.Inconclusive("TODO"); }
     }
 }
