@@ -51,15 +51,25 @@ namespace BitSharp.Core.Workers
 
         protected override void WorkAction()
         {
+            var targetBlockLocal = this.targetBlock;
+            
             var maxTotalWorkHeader = this.coreStorage.FindMaxTotalWork();
-
-            if (maxTotalWorkHeader != this.targetBlock)
+            if (maxTotalWorkHeader != targetBlockLocal)
             {
-                this.targetBlock = maxTotalWorkHeader;
+                if (targetBlockLocal != null
+                    && targetBlockLocal.TotalWork == maxTotalWorkHeader.TotalWork
+                    && !this.coreStorage.IsBlockInvalid(targetBlockLocal.Hash))
+                {
+                    // ensure that current winning block remains the same when there is a tie for total work
+                }
+                else
+                {
+                    this.targetBlock = maxTotalWorkHeader;
 
-                var handler = this.TargetBlockChanged;
-                if (handler != null)
-                    handler();
+                    var handler = this.TargetBlockChanged;
+                    if (handler != null)
+                        handler();
+                }
             }
         }
 

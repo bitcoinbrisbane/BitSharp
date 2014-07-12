@@ -244,6 +244,11 @@ namespace BitSharp.Core.Storage
             this.blockTxesStorage.PruneElements(blockHash, txIndices);
         }
 
+        public bool IsBlockInvalid(UInt256 blockHash)
+        {
+            return this.blockStorage.IsBlockInvalid(blockHash);
+        }
+
         public void MarkBlockInvalid(UInt256 blockHash)
         {
             this.blockStorage.MarkBlockInvalid(blockHash);

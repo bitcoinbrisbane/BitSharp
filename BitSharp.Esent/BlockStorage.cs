@@ -194,6 +194,31 @@ namespace BitSharp.Esent
             }
         }
 
+        public bool IsBlockInvalid(UInt256 blockHash)
+        {
+            var cursor = this.OpenCursor();
+            try
+            {
+                Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockHeadersTableId, "IX_BlockHash");
+                Api.MakeKey(cursor.jetSession, cursor.blockHeadersTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
+
+                if (Api.TrySeek(cursor.jetSession, cursor.blockHeadersTableId, SeekGrbit.SeekEQ))
+                {
+                    var valid = Api.RetrieveColumnAsBoolean(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderValidColumnId)
+                        ?? true;
+                    return !valid;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            finally
+            {
+                this.FreeCursor(cursor);
+            }
+        }
+
         public void MarkBlockInvalid(UInt256 blockHash)
         {
             var cursor = this.OpenCursor();

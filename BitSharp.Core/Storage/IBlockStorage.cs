@@ -45,6 +45,13 @@ namespace BitSharp.Core.Storage
         IEnumerable<ChainedHeader> ReadChainedHeaders();
 
         /// <summary>
+        /// Query if a block has been marked invalid, either due to an invalid header or block contents.
+        /// </summary>
+        /// <param name="blockHash">The block's hash.</param>
+        /// <returns>true if the block is invalid; otherwise, false</returns>
+        bool IsBlockInvalid(UInt256 blockHash);
+
+        /// <summary>
         /// Mark a block as being invalid, either due to an invalid header or block contents.
         /// </summary>
         /// <param name="blockHash">The block's hash.</param>
