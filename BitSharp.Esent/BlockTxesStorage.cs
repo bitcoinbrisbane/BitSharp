@@ -493,6 +493,20 @@ namespace BitSharp.Esent
             }
         }
 
+        public void Defragment()
+        {
+            var cursor = this.OpenCursor();
+            try
+            {
+                int passes = -1, seconds = -1;
+                Api.JetDefragment(cursor.jetSession, cursor.blockDbId, "BlockTxes", ref passes, ref seconds, DefragGrbit.BatchStart);
+            }
+            finally
+            {
+                this.FreeCursor(cursor);
+            }
+        }
+        
         private BlockTxesCursor OpenCursor()
         {
             BlockTxesCursor cursor = null;

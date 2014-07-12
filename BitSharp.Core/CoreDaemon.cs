@@ -59,6 +59,8 @@ namespace BitSharp.Core
 
         private readonly TargetChainWorker targetChainWorker;
         private readonly ChainStateWorker chainStateWorker;
+        private readonly PruningWorker pruningWorker;
+        private readonly DefragWorker defragWorker;
         private readonly WorkerMethod gcWorker;
         private readonly WorkerMethod utxoScanWorker;
 
@@ -92,6 +94,17 @@ namespace BitSharp.Core
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromSeconds(5)),
                 this.targetChainWorker, this.chainStateBuilder, () => this.targetChainWorker.TargetChain, this.logger, this.rules, this.coreStorage);
 
+            this.pruningWorker = new PruningWorker(
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMinutes(15), maxIdleTime: TimeSpan.FromMinutes(15)),
+                this.coreStorage, this.chainStateBuilder, this.logger, this.rules);
+
+            this.defragWorker = new DefragWorker(
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMinutes(15), maxIdleTime: TimeSpan.FromMinutes(60)),
+                this.coreStorage, this.chainStateBuilderStorage, this.logger);
+            
+            // notify defrag worker after pruning
+            this.pruningWorker.OnWorkFinished += this.defragWorker.NotifyWork;
+
             this.targetChainWorker.OnTargetBlockChanged +=
                 () =>
                 {
@@ -113,6 +126,7 @@ namespace BitSharp.Core
             this.chainStateWorker.OnChainStateChanged +=
                 () =>
                 {
+                    this.pruningWorker.NotifyWork();
                     this.utxoScanWorker.NotifyWork();
 
                     //TODO once fully synced, this should save off the immutable snapshot immediately
@@ -175,6 +189,7 @@ namespace BitSharp.Core
 
             // cleanup events
             this.coreStorage.BlockTxesAdded -= HandleBlockTxesAdded;
+            this.pruningWorker.OnWorkFinished -= this.defragWorker.NotifyWork;
 
             // notify threads to begin shutting down
             this.shutdownToken.Cancel();
@@ -182,6 +197,8 @@ namespace BitSharp.Core
             // cleanup workers
             new IDisposable[]
             {
+                this.defragWorker,
+                this.pruningWorker,
                 this.chainStateWorker,
                 this.prevChainState,
                 this.chainState,
@@ -247,6 +264,8 @@ namespace BitSharp.Core
             // startup workers
             this.targetChainWorker.Start();
             this.chainStateWorker.Start();
+            this.pruningWorker.Start();
+            this.defragWorker.Start();
             this.gcWorker.Start();
             //this.utxoScanWorker.Start();
         }
@@ -256,6 +275,8 @@ namespace BitSharp.Core
             // startup workers
             this.targetChainWorker.Stop();
             this.chainStateWorker.Stop();
+            this.pruningWorker.Stop();
+            this.defragWorker.Stop();
             this.gcWorker.Stop();
             this.utxoScanWorker.Stop();
         }

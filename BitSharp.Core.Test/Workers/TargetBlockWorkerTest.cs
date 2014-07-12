@@ -36,17 +36,17 @@ namespace BitSharp.Core.Test.Workers
             {
                 // monitor event firing
                 var workNotifyEvent = new AutoResetEvent(false);
-                var workStoppedEvent = new AutoResetEvent(false);
+                var workFinishedEvent = new AutoResetEvent(false);
                 var onTargetBlockChangedCount = 0;
 
                 targetBlockWorker.OnNotifyWork += () => workNotifyEvent.Set();
-                targetBlockWorker.OnWorkStopped += () => workStoppedEvent.Set();
+                targetBlockWorker.OnWorkFinished += () => workFinishedEvent.Set();
                 targetBlockWorker.TargetBlockChanged += () => onTargetBlockChangedCount++;
 
                 // start worker and wait for intial target
                 targetBlockWorker.Start();
                 workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
+                workFinishedEvent.WaitOne();
 
                 // verify initial state
                 Assert.IsNull(targetBlockWorker.TargetBlock);
@@ -56,7 +56,7 @@ namespace BitSharp.Core.Test.Workers
 
                 // wait for worker
                 workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
+                workFinishedEvent.WaitOne();
 
                 // verify block 0
                 Assert.AreEqual(chainedHeader0, targetBlockWorker.TargetBlock);
@@ -67,7 +67,7 @@ namespace BitSharp.Core.Test.Workers
 
                 // wait for worker
                 workNotifyEvent.WaitOne();
-                workStoppedEvent.WaitOne();
+                workFinishedEvent.WaitOne();
 
                 // verify block 1
                 Assert.AreEqual(chainedHeader1, targetBlockWorker.TargetBlock);
@@ -75,7 +75,7 @@ namespace BitSharp.Core.Test.Workers
 
                 // verify no other work was done
                 Assert.IsFalse(workNotifyEvent.WaitOne(0));
-                Assert.IsFalse(workStoppedEvent.WaitOne(0));
+                Assert.IsFalse(workFinishedEvent.WaitOne(0));
             }
         }
     }

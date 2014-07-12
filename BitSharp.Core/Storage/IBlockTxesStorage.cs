@@ -58,5 +58,8 @@ namespace BitSharp.Core.Storage
 
         //TODO keep this around? pruning will probably need it
         void Flush();
+
+        //TODO keep this here? IStorageManager?
+        void Defragment();
     }
 }

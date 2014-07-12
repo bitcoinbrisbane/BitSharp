@@ -45,5 +45,7 @@ namespace BitSharp.Core.Storage
         void RemoveSpentTransactionsToHeight(int spentBlockIndex);
 
         IChainStateStorage ToImmutable();
+
+        void Defragment();
     }
 }

@@ -70,5 +70,9 @@ namespace BitSharp.Core.Storage.Memory
         {
             this.invalidBlocks.Add(blockHash);
         }
+
+        public void Defragment()
+        {
+        }
     }
 }

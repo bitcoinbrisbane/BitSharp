@@ -385,5 +385,15 @@ namespace BitSharp.Esent
 
             this.inTransaction = false;
         }
+
+        public void Defragment()
+        {
+            using (var defragCursor = new ChainStateStorageCursor(this.jetDatabase, this.jetInstance, readOnly: false))
+            {
+                int passes = -1, seconds = -1;
+                Api.JetDefragment(defragCursor.jetSession, defragCursor.chainStateDbId, "Chain", ref passes, ref seconds, DefragGrbit.BatchStart);
+                Api.JetDefragment(defragCursor.jetSession, defragCursor.chainStateDbId, "ChainState", ref passes, ref seconds, DefragGrbit.BatchStart);
+            }
+        }
     }
 }

@@ -249,10 +249,16 @@ namespace BitSharp.Core.Storage
             return this.blockStorage.IsBlockInvalid(blockHash);
         }
 
-        public void MarkBlockInvalid(UInt256 blockHash)
+        internal void MarkBlockInvalid(UInt256 blockHash)
         {
             this.blockStorage.MarkBlockInvalid(blockHash);
             RaiseBlockInvalidated(blockHash);
+        }
+
+        internal void Defragment()
+        {
+            this.blockStorage.Defragment();
+            this.blockTxesStorage.Defragment();
         }
 
         private void RaiseChainedHeaderAdded(ChainedHeader chainedHeader)

@@ -16,7 +16,7 @@ namespace BitSharp.Common
 
         public event Action OnNotifyWork;
         public event Action OnWorkStarted;
-        public event Action OnWorkStopped;
+        public event Action OnWorkFinished;
 
         private readonly Logger logger;
 
@@ -264,7 +264,7 @@ namespace BitSharp.Common
                         working = false;
 
                         // notify
-                        var stopHandler = this.OnWorkStopped;
+                        var stopHandler = this.OnWorkFinished;
                         if (stopHandler != null)
                             stopHandler();
 

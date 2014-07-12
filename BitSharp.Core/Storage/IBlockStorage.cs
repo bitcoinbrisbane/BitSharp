@@ -56,5 +56,8 @@ namespace BitSharp.Core.Storage
         /// </summary>
         /// <param name="blockHash">The block's hash.</param>
         void MarkBlockInvalid(UInt256 blockHash);
+
+        //TODO keep this here? IStorageManager?
+        void Defragment();
     }
 }

@@ -187,5 +187,9 @@ namespace BitSharp.Core.Storage.Memory
 
             this.inTransaction = false;
         }
+
+        public void Defragment()
+        {
+        }
     }
 }
