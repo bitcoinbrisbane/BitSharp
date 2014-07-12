@@ -28,62 +28,9 @@ namespace BitSharp.Core.Test.Storage
     public class StorageIntegrationTest : StorageProviderTest
     {
         [TestMethod]
-        public void TestPrune()
-        {
-            RunTest(TestPrune);
-        }
-
-        [TestMethod]
         public void TestRollback()
         {
             RunTest(TestRollback);
-        }
-
-        private void TestPrune(ITestStorageProvider provider)
-        {
-            var logger = LogManager.CreateNullLogger();
-
-            var txCount = 100;
-            var transactions = Enumerable.Range(0, txCount).Select(x => RandomData.RandomTransaction()).ToImmutableArray();
-            var blockHeader = RandomData.RandomBlockHeader().With(MerkleRoot: MerkleTree.CalculateMerkleRoot(transactions), Bits: DataCalculator.TargetToBits(UnitTestRules.Target0));
-            var block = new Block(blockHeader, transactions);
-
-            var expectedFinalDepth = (int)Math.Ceiling(Math.Log(txCount, 2));
-            var expectedFinalElement = new BlockTx(index: 0, depth: expectedFinalDepth, hash: blockHeader.MerkleRoot, pruned: true, transaction: null);
-
-            var pruneOrderSource = Enumerable.Range(0, txCount).ToList();
-            var pruneOrder = new List<int>(txCount);
-
-            var random = new Random();
-            while (pruneOrderSource.Count > 0)
-            {
-                var randomIndex = random.Next(pruneOrderSource.Count);
-
-                pruneOrder.Add(pruneOrderSource[randomIndex]);
-                pruneOrderSource.RemoveAt(randomIndex);
-            }
-
-            using (var storageManager = provider.OpenStorageManager())
-            using (var coreStorage = new CoreStorage(storageManager, logger))
-            {
-                coreStorage.AddGenesisBlock(ChainedHeader.CreateForGenesisBlock(block.Header));
-                coreStorage.TryAddBlock(block);
-                var blockTxes = coreStorage.ReadBlockTransactions(block.Hash, block.Header.MerkleRoot).ToList();
-
-                new MethodTimer().Time(() =>
-                {
-                    foreach (var pruneIndex in pruneOrder)
-                    {
-                        coreStorage.PruneElements(block.Hash, new[] { pruneIndex });
-                        coreStorage.ReadBlockTransactions(block.Hash, block.Header.MerkleRoot).ToList();
-                    }
-
-                    var finalNodes = coreStorage.ReadBlockTransactions(block.Hash, block.Header.MerkleRoot).ToList();
-
-                    Assert.AreEqual(1, finalNodes.Count);
-                    Assert.AreEqual(expectedFinalElement, finalNodes[0]);
-                });
-            }
         }
 
         private void TestRollback(ITestStorageProvider provider)

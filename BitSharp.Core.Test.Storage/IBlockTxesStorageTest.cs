@@ -245,7 +245,44 @@ namespace BitSharp.Core.Test.Storage
             {
                 var blockTxesStorage = storageManager.BlockTxesStorage;
 
-                Assert.Inconclusive("TODO");
+                // create a block
+                var block = CreateFakeBlock();
+                var txCount = block.Transactions.Length;
+
+                // determine expected merkle root node when fully pruned
+                var expectedFinalDepth = (int)Math.Ceiling(Math.Log(txCount, 2));
+                var expectedFinalElement = new BlockTx(index: 0, depth: expectedFinalDepth, hash: block.Header.MerkleRoot, pruned: true, transaction: null);
+
+                // pick a random pruning order
+                var random = new Random();
+                var pruneOrderSource = Enumerable.Range(0, txCount).ToList();
+                var pruneOrder = new List<int>(txCount);
+                while (pruneOrderSource.Count > 0)
+                {
+                    var randomIndex = random.Next(pruneOrderSource.Count);
+
+                    pruneOrder.Add(pruneOrderSource[randomIndex]);
+                    pruneOrderSource.RemoveAt(randomIndex);
+                }
+
+                // add the block
+                blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions);
+
+                // prune the block
+                foreach (var pruneIndex in pruneOrder)
+                {
+                    // prune a transaction
+                    blockTxesStorage.PruneElements(block.Hash, new[] { pruneIndex });
+
+                    // verify block transactions, exception will be fired if invalid
+                    MerkleTree.ReadMerkleTreeNodes(block.Header.MerkleRoot, blockTxesStorage.ReadBlockTransactions(block.Hash))
+                        .ToList();
+                }
+
+                // read fully pruned block and verify
+                var finalNodes = MerkleTree.ReadMerkleTreeNodes(block.Header.MerkleRoot, blockTxesStorage.ReadBlockTransactions(block.Hash)).ToList();
+                Assert.AreEqual(1, finalNodes.Count);
+                Assert.AreEqual(expectedFinalElement, finalNodes[0]);
             }
         }
 
