@@ -65,7 +65,7 @@ namespace BitSharp.Core.Storage
 
         public int ChainedHeaderCount { get { return -1; } }
 
-        public int BlockWithTxesCount { get { return -1; } }
+        public int BlockWithTxesCount { get { return this.blockTxesStorage.BlockCount; } }
 
         public bool ContainsChainedHeader(UInt256 blockHash)
         {
