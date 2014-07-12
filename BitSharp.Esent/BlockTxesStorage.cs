@@ -307,6 +307,7 @@ namespace BitSharp.Esent
         {
             JET_DBID blockDbId;
             JET_TABLEID globalsTableId;
+            JET_COLUMNID blockCountColumnId;
             JET_COLUMNID flushColumnId;
             JET_TABLEID blocksTableId;
             JET_COLUMNID blockHashColumnId;
@@ -320,8 +321,24 @@ namespace BitSharp.Esent
                 Api.JetCreateDatabase(jetSession, this.jetDatabase, "", out blockDbId, CreateDatabaseGrbit.None);
 
                 var defaultValue = BitConverter.GetBytes(0);
-                Api.JetCreateTable(jetSession, blockDbId, "global", 0, 0, out globalsTableId);
+                Api.JetCreateTable(jetSession, blockDbId, "Globals", 0, 0, out globalsTableId);
+                Api.JetAddColumn(jetSession, globalsTableId, "BlockCount", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnEscrowUpdate }, defaultValue, defaultValue.Length, out blockCountColumnId);
                 Api.JetAddColumn(jetSession, globalsTableId, "Flush", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnEscrowUpdate }, defaultValue, defaultValue.Length, out flushColumnId);
+
+                // initialize global data
+                Api.JetPrepareUpdate(jetSession, globalsTableId, JET_prep.Insert);
+                try
+                {
+                    Api.SetColumn(jetSession, globalsTableId, blockCountColumnId, 0);
+                    Api.SetColumn(jetSession, globalsTableId, flushColumnId, 0);
+
+                    Api.JetUpdate(jetSession, globalsTableId);
+                }
+                catch (Exception)
+                {
+                    Api.JetPrepareUpdate(jetSession, globalsTableId, JET_prep.Cancel);
+                }
+
                 Api.JetCloseTable(jetSession, globalsTableId);
 
                 Api.JetCreateTable(jetSession, blockDbId, "Blocks", 0, 0, out blocksTableId);
@@ -371,30 +388,19 @@ namespace BitSharp.Esent
                         var cursor = this.OpenCursor();
                         try
                         {
-                            Api.JetBeginTransaction(cursor.jetSession);
+                            // reset flush column
+                            Api.JetPrepareUpdate(cursor.jetSession, cursor.globalsTableId, JET_prep.Replace);
                             try
                             {
-                                if (Api.TryMoveFirst(cursor.jetSession, cursor.globalTableId))
-                                    Api.JetPrepareUpdate(cursor.jetSession, cursor.globalTableId, JET_prep.Replace);
-                                else
-                                    Api.JetPrepareUpdate(cursor.jetSession, cursor.globalTableId, JET_prep.Insert);
-                                try
-                                {
-                                    Api.SetColumn(cursor.jetSession, cursor.globalTableId, cursor.flushColumnId, 0);
-                                    Api.JetUpdate(cursor.jetSession, cursor.globalTableId);
-
-                                    Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.None);
-                                }
-                                catch (Exception)
-                                {
-                                    Api.JetPrepareUpdate(cursor.jetSession, cursor.globalTableId, JET_prep.Cancel);
-                                    throw;
-                                }
+                                Api.SetColumn(cursor.jetSession, cursor.globalsTableId, cursor.flushColumnId, 0);
+                                Api.JetUpdate(cursor.jetSession, cursor.globalsTableId);
                             }
                             catch (Exception)
                             {
-                                Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
+                                Api.JetPrepareUpdate(cursor.jetSession, cursor.globalsTableId, JET_prep.Cancel);
                             }
+
+                            this.FreeCursor(cursor);
                         }
                         finally
                         {
@@ -417,7 +423,18 @@ namespace BitSharp.Esent
 
         public int BlockCount
         {
-            get { return 0; }
+            get
+            {
+                var cursor = this.OpenCursor();
+                try
+                {
+                    return Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.globalsTableId, cursor.blockCountColumnId).Value;
+                }
+                finally
+                {
+                    this.FreeCursor(cursor);
+                }
+            }
         }
 
         public string Name
@@ -435,6 +452,7 @@ namespace BitSharp.Esent
                     Api.JetBeginTransaction(cursor.jetSession);
                     try
                     {
+                        Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockHashTxIndex");
                         Api.MakeKey(cursor.jetSession, cursor.blocksTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
                         Api.MakeKey(cursor.jetSession, cursor.blocksTableId, -1, MakeKeyGrbit.None);
 
@@ -451,6 +469,9 @@ namespace BitSharp.Esent
                             AddTransaction(blockHash, txIndex, tx.Hash, DataEncoder.EncodeTransaction(tx), cursor);
                             txIndex++;
                         }
+
+                        // increase block count
+                        Api.EscrowUpdate(cursor.jetSession, cursor.globalsTableId, cursor.blockCountColumnId, +1);
 
                         Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
 
@@ -475,7 +496,48 @@ namespace BitSharp.Esent
 
         public bool TryRemoveBlockTransactions(UInt256 blockHash)
         {
-            throw new NotImplementedException();
+            var cursor = this.OpenCursor();
+            try
+            {
+                Api.JetBeginTransaction(cursor.jetSession);
+                try
+                {
+                    Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockHashTxIndex");
+                    Api.MakeKey(cursor.jetSession, cursor.blocksTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
+                    Api.MakeKey(cursor.jetSession, cursor.blocksTableId, -1, MakeKeyGrbit.None);
+
+                    if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekGE)
+                        && blockHash == DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)))
+                    {
+                        do
+                        {
+                            Api.JetDelete(cursor.jetSession, cursor.blocksTableId);
+                        } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId)
+                            && blockHash == DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockHashColumnId)));
+
+                        // decrease block count
+                        Api.EscrowUpdate(cursor.jetSession, cursor.globalsTableId, cursor.blockCountColumnId, -1);
+
+                        Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
+
+                        return true;
+                    }
+                    else
+                    {
+                        // transactions are already removed
+                        return false;
+                    }
+                }
+                catch (Exception)
+                {
+                    Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
+                    throw;
+                }
+            }
+            finally
+            {
+                this.FreeCursor(cursor);
+            }
         }
 
         public void Flush()
@@ -486,7 +548,7 @@ namespace BitSharp.Esent
                 Api.JetBeginTransaction(cursor.jetSession);
                 try
                 {
-                    Api.EscrowUpdate(cursor.jetSession, cursor.globalTableId, cursor.flushColumnId, 1);
+                    Api.EscrowUpdate(cursor.jetSession, cursor.globalsTableId, cursor.flushColumnId, 1);
                     Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.None);
                 }
                 catch (Exception)

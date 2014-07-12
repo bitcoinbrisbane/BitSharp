@@ -15,7 +15,7 @@ namespace BitSharp.Esent
         public readonly Session jetSession;
         public readonly JET_DBID blockDbId;
 
-        public readonly JET_TABLEID globalTableId;
+        public readonly JET_TABLEID globalsTableId;
         public readonly JET_COLUMNID flushColumnId;
 
         public readonly JET_TABLEID blockHeadersTableId;
@@ -34,7 +34,7 @@ namespace BitSharp.Esent
             this.OpenCursor(this.jetDatabase, this.jetInstance, false /*readOnly*/,
                 out this.jetSession,
                 out this.blockDbId,
-                out this.globalTableId,
+                out this.globalsTableId,
                     out this.flushColumnId,
                 out this.blockHeadersTableId,
                     out this.blockHeaderHashColumnId,
@@ -54,7 +54,7 @@ namespace BitSharp.Esent
         private void OpenCursor(string jetDatabase, Instance jetInstance, bool readOnly,
             out Session jetSession,
             out JET_DBID blockDbId,
-            out JET_TABLEID globalTableId,
+            out JET_TABLEID globalsTableId,
             out JET_COLUMNID flushColumnId,
             out JET_TABLEID blockHeadersTableId,
             out JET_COLUMNID blockHeaderHashColumnId,
@@ -69,8 +69,11 @@ namespace BitSharp.Esent
             {
                 Api.JetOpenDatabase(jetSession, jetDatabase, "", out blockDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
 
-                Api.JetOpenTable(jetSession, blockDbId, "global", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out globalTableId);
-                flushColumnId = Api.GetTableColumnid(jetSession, globalTableId, "Flush");
+                Api.JetOpenTable(jetSession, blockDbId, "Globals", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out globalsTableId);
+                flushColumnId = Api.GetTableColumnid(jetSession, globalsTableId, "Flush");
+
+                if (!Api.TryMoveFirst(jetSession, globalsTableId))
+                    throw new InvalidOperationException();
 
                 Api.JetOpenTable(jetSession, blockDbId, "BlockHeaders", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out blockHeadersTableId);
                 blockHeaderHashColumnId = Api.GetTableColumnid(jetSession, blockHeadersTableId, "BlockHash");
