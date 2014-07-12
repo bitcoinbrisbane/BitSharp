@@ -28,8 +28,8 @@ namespace BitSharp.Core.Test.Workers
 
             // initialize data
             var fakeHeaders = new FakeHeaders();
-            var chainedHeader0 = new ChainedHeader(fakeHeaders.Genesis(), height: 0, totalWork: 0);
-            var chainedHeader1 = new ChainedHeader(fakeHeaders.Next(), height: 1, totalWork: 1);
+            var chainedHeader0 = fakeHeaders.GenesisChained();
+            var chainedHeader1 = fakeHeaders.NextChained();
 
             // initialize the target block watcher
             using (var targetBlockWorker = kernel.Get<TargetBlockWorker>(new ConstructorArgument("workerConfig", new WorkerConfig(initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue))))

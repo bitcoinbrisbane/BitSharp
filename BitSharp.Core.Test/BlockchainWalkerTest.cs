@@ -37,22 +37,22 @@ namespace BitSharp.Blockchain.Test
         public void Init()
         {
             var fakeHeaders = new FakeHeaders();
-            this.chainedHeader0 = new ChainedHeader(fakeHeaders.Genesis(), 0, 0);
-            this.chainedHeader1 = new ChainedHeader(fakeHeaders.Next(), 1, 0);
+            this.chainedHeader0 = fakeHeaders.GenesisChained();
+            this.chainedHeader1 = fakeHeaders.NextChained();
 
             var fakeHeadersA = new FakeHeaders(fakeHeaders);
-            this.chainedHeaderA2 = new ChainedHeader(fakeHeadersA.Next(), 2, 0);
-            this.chainedHeaderA3 = new ChainedHeader(fakeHeadersA.Next(), 3, 0);
-            this.chainedHeaderA4 = new ChainedHeader(fakeHeadersA.Next(), 4, 0);
+            this.chainedHeaderA2 = fakeHeadersA.NextChained();
+            this.chainedHeaderA3 = fakeHeadersA.NextChained();
+            this.chainedHeaderA4 = fakeHeadersA.NextChained();
 
             var fakeHeadersB = new FakeHeaders(fakeHeaders);
-            this.chainedHeaderB2 = new ChainedHeader(fakeHeadersB.Next(), 2, 0);
-            this.chainedHeaderB3 = new ChainedHeader(fakeHeadersB.Next(), 3, 0);
-            this.chainedHeaderB4 = new ChainedHeader(fakeHeadersB.Next(), 4, 0);
+            this.chainedHeaderB2 = fakeHeadersB.NextChained();
+            this.chainedHeaderB3 = fakeHeadersB.NextChained();
+            this.chainedHeaderB4 = fakeHeadersB.NextChained();
 
             var fakeHeadersX = new FakeHeaders();
-            this.chainedHeaderX0 = new ChainedHeader(fakeHeadersX.Genesis(), 0, 0);
-            this.chainedHeaderX1 = new ChainedHeader(fakeHeadersX.Next(), 1, 0);
+            this.chainedHeaderX0 = fakeHeadersX.GenesisChained();
+            this.chainedHeaderX1 = fakeHeadersX.NextChained();
 
             this.chain = ImmutableDictionary.CreateRange(
                 new[] { chainedHeader0, chainedHeader1, chainedHeaderA2, chainedHeaderA3, chainedHeaderA4, chainedHeaderB2, chainedHeaderB3, chainedHeaderB4, chainedHeaderX0, chainedHeaderX1 }
