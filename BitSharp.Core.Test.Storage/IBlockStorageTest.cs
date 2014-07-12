@@ -97,33 +97,83 @@ namespace BitSharp.Core.Test.Storage
             }
         }
 
+        // IBlockStorage.TryAddChainedHeader
         private void TestTryAddChainedHeader(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            using (var storageManager = provider.OpenStorageManager())
+            {
+                var blockStorage = storageManager.BlockStorage;
+
+                // create a chained header
+                var fakeHeaders = new FakeHeaders();
+                var chainedHeader = fakeHeaders.GenesisChained();
+
+                // verify header can be added
+                Assert.IsTrue(blockStorage.TryAddChainedHeader(chainedHeader));
+
+                // verify header cannot be added again
+                Assert.IsFalse(blockStorage.TryAddChainedHeader(chainedHeader));
+
+                // remove the header
+                blockStorage.TryRemoveChainedHeader(chainedHeader.Hash);
+
+                // verify header can be added again, after being removed
+                Assert.IsTrue(blockStorage.TryAddChainedHeader(chainedHeader));
+            }
         }
 
+        // IBlockStorage.TryGetChainedHeader
         private void TestTryGetChainedHeader(ITestStorageProvider provider)
         {
+            using (var storageManager = provider.OpenStorageManager())
+            {
+                var blockStorage = storageManager.BlockStorage;
+
+            }
             Assert.Inconclusive("TODO");
         }
 
+        // IBlockStorage.FindMaxTotalWork
         private void TestFindMaxTotalWork(ITestStorageProvider provider)
         {
+            using (var storageManager = provider.OpenStorageManager())
+            {
+                var blockStorage = storageManager.BlockStorage;
+
+            }
             Assert.Inconclusive("TODO");
         }
 
+        // IBlockStorage.ReadChainedHeaders
         private void TestReadChainedHeaders(ITestStorageProvider provider)
         {
+            using (var storageManager = provider.OpenStorageManager())
+            {
+                var blockStorage = storageManager.BlockStorage;
+
+            }
             Assert.Inconclusive("TODO");
         }
 
+        // IBlockStorage.IsBlockInvalid
         private void TestIsBlockInvalid(ITestStorageProvider provider)
         {
+            using (var storageManager = provider.OpenStorageManager())
+            {
+                var blockStorage = storageManager.BlockStorage;
+
+            }
             Assert.Inconclusive("TODO");
         }
 
+        // IBlockStorage.MarkBlockInvalid
         private void TestMarkBlockInvalid(ITestStorageProvider provider)
         {
+            using (var storageManager = provider.OpenStorageManager())
+            {
+                var blockStorage = storageManager.BlockStorage;
+
+            }
             Assert.Inconclusive("TODO");
         }
     }
