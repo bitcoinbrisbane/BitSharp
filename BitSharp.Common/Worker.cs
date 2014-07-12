@@ -88,7 +88,10 @@ namespace BitSharp.Common
                 this.SubStop();
 
                 this.isStarted = false;
+                
                 this.startEvent.Reset();
+                this.forceNotifyEvent.Set();
+                this.notifyEvent.Set();
 
                 if (!this.idleEvent.Wait(timeout ?? DEFAULT_STOP_TIMEOUT))
                 {
