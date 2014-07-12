@@ -87,6 +87,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MethodTimer.cs" />
     <Compile Include="DurationMeasure.cs" />
+    <Compile Include="CountMeasure.cs" />
     <Compile Include="RateMeasure.cs" />
     <Compile Include="ReadOnlyDictionaryOfDictionary.cs" />
     <Compile Include="ThrottledNotifyEvent.cs" />

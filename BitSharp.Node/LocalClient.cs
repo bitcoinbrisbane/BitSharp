@@ -153,14 +153,14 @@ namespace BitSharp.Node
             return this.blockRequestWorker.GetBlockDownloadRate(perUnitTime);
         }
 
-        public float GetDuplicateBlockDownloadRate(TimeSpan perUnitTime)
+        public int GetDuplicateBlockDownloadCount()
         {
-            return this.blockRequestWorker.GetDuplicateBlockDownloadRate(perUnitTime);
+            return this.blockRequestWorker.GetDuplicateBlockDownloadCount();
         }
 
-        public float GetBlockMissRate(TimeSpan perUnitTime)
+        public int GetBlockMissCount()
         {
-            return this.coreDaemon.GetBlockMissRate(perUnitTime);
+            return this.coreDaemon.GetBlockMissCount();
         }
 
         private void ConnectWorker(WorkerMethod instance)

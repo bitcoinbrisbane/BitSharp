@@ -44,8 +44,8 @@ namespace BitSharp.Client
         private float transactionRate;
         private float inputRate;
         private float blockDownloadRate;
-        private float duplicateBlockDownloadRate;
-        private float blockMissRate;
+        private int duplicateBlockDownloadCount;
+        private int blockMissCount;
 
         private readonly WalletMonitor walletMonitor;
         private decimal bitBalance;
@@ -77,8 +77,8 @@ namespace BitSharp.Client
                 this.TransactionRate = this.coreDaemon.GetTxRate(TimeSpan.FromSeconds(1));
                 this.InputRate = this.coreDaemon.GetInputRate(TimeSpan.FromSeconds(1));
                 this.BlockDownloadRate = this.localClient.GetBlockDownloadRate(TimeSpan.FromSeconds(1));
-                this.DuplicateBlockDownloadRate = this.localClient.GetDuplicateBlockDownloadRate(TimeSpan.FromSeconds(1));
-                this.BlockMissRate = this.localClient.GetBlockMissRate(TimeSpan.FromSeconds(1));
+                this.DuplicateBlockDownloadCount = this.localClient.GetDuplicateBlockDownloadCount();
+                this.BlockMissCount = this.localClient.GetBlockMissCount();
             };
             ratesTimer.Interval = TimeSpan.FromSeconds(1);
             ratesTimer.Start();
@@ -161,16 +161,16 @@ namespace BitSharp.Client
             set { SetValue(ref this.blockDownloadRate, value); }
         }
 
-        public float DuplicateBlockDownloadRate
+        public int DuplicateBlockDownloadCount
         {
-            get { return this.duplicateBlockDownloadRate; }
-            set { SetValue(ref this.duplicateBlockDownloadRate, value); }
+            get { return this.duplicateBlockDownloadCount; }
+            set { SetValue(ref this.duplicateBlockDownloadCount, value); }
         }
 
-        public float BlockMissRate
+        public int BlockMissCount
         {
-            get { return this.blockMissRate; }
-            set { SetValue(ref this.blockMissRate, value); }
+            get { return this.blockMissCount; }
+            set { SetValue(ref this.blockMissCount, value); }
         }
 
         public long ViewBlockchainHeight

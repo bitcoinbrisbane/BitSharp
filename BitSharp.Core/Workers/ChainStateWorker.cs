@@ -29,7 +29,7 @@ namespace BitSharp.Core.Workers
         private readonly CoreStorage coreStorage;
 
         private readonly DurationMeasure blockProcessingDurationMeasure;
-        private readonly RateMeasure blockMissRateMeasure;
+        private readonly CountMeasure blockMissCountMeasure;
         private UInt256? lastBlockMissHash;
 
         private readonly TargetChainWorker targetChainWorker;
@@ -45,7 +45,7 @@ namespace BitSharp.Core.Workers
             this.coreStorage = coreStorage;
 
             this.blockProcessingDurationMeasure = new DurationMeasure(sampleCutoff: TimeSpan.FromMinutes(5));
-            this.blockMissRateMeasure = new RateMeasure();
+            this.blockMissCountMeasure = new CountMeasure(TimeSpan.FromSeconds(30));
 
             this.targetChainWorker = targetChainWorker;
             this.chainStateBuilder = chainStateBuilder;
@@ -57,9 +57,9 @@ namespace BitSharp.Core.Workers
             return this.blockProcessingDurationMeasure.GetAverage();
         }
 
-        public float GetBlockMissRate(TimeSpan perUnitTime)
+        public int GetBlockMissCount()
         {
-            return this.blockMissRateMeasure.GetAverage(perUnitTime);
+            return this.blockMissCountMeasure.GetCount();
         }
 
         public Chain CurrentChain
@@ -72,7 +72,7 @@ namespace BitSharp.Core.Workers
             new IDisposable[]
             {
                 this.blockProcessingDurationMeasure,
-                this.blockMissRateMeasure,
+                this.blockMissCountMeasure,
                 this.chainStateBuilder,
             }.DisposeList();
         }
@@ -144,7 +144,7 @@ namespace BitSharp.Core.Workers
                 if (this.lastBlockMissHash == null || this.lastBlockMissHash.Value != (UInt256)missingException.Key)
                 {
                     this.lastBlockMissHash = (UInt256)missingException.Key;
-                    this.blockMissRateMeasure.Tick();
+                    this.blockMissCountMeasure.Tick();
                 }
             }
             else

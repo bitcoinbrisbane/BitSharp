@@ -42,7 +42,7 @@ namespace BitSharp.Node.Workers
 
         private readonly DurationMeasure blockRequestDurationMeasure;
         private readonly RateMeasure blockDownloadRateMeasure;
-        private readonly RateMeasure duplicateBlockDownloadRateMeasure;
+        private readonly CountMeasure duplicateBlockDownloadCountMeasure;
 
         private int targetChainLookAhead;
         private int criticalTargetChainLookAhead;
@@ -72,7 +72,7 @@ namespace BitSharp.Node.Workers
 
             this.blockRequestDurationMeasure = new DurationMeasure(sampleCutoff: TimeSpan.FromMinutes(5));
             this.blockDownloadRateMeasure = new RateMeasure();
-            this.duplicateBlockDownloadRateMeasure = new RateMeasure();
+            this.duplicateBlockDownloadCountMeasure = new CountMeasure(TimeSpan.FromSeconds(30));
 
             this.targetChainLookAhead = 1;
             this.criticalTargetChainLookAhead = 1;
@@ -89,9 +89,9 @@ namespace BitSharp.Node.Workers
             return this.blockDownloadRateMeasure.GetAverage(perUnitTime);
         }
 
-        public float GetDuplicateBlockDownloadRate(TimeSpan perUnitTime)
+        public int GetDuplicateBlockDownloadCount()
         {
-            return this.duplicateBlockDownloadRateMeasure.GetAverage(perUnitTime);
+            return this.duplicateBlockDownloadCountMeasure.GetCount();
         }
 
         protected override void SubDispose()
@@ -103,7 +103,7 @@ namespace BitSharp.Node.Workers
 
             this.blockRequestDurationMeasure.Dispose();
             this.blockDownloadRateMeasure.Dispose();
-            this.duplicateBlockDownloadRateMeasure.Dispose();
+            this.duplicateBlockDownloadCountMeasure.Dispose();
 
             this.flushWorker.Dispose();
             this.diagnosticWorker.Dispose();
@@ -388,7 +388,7 @@ namespace BitSharp.Node.Workers
                 if (!this.coreStorage.ContainsBlockTxes(block.Hash) && this.coreStorage.TryAddBlock(block))
                     this.blockDownloadRateMeasure.Tick();
                 else
-                    this.duplicateBlockDownloadRateMeasure.Tick();
+                    this.duplicateBlockDownloadCountMeasure.Tick();
 
                 this.flushBlocks.Remove(block.Hash);
 
@@ -423,7 +423,7 @@ namespace BitSharp.Node.Workers
             this.logger.Info("targetChainQueueTime: {0}".Format2(this.targetChainQueueTime));
             this.logger.Info("blockRequestDurationMeasure: {0}".Format2(this.blockRequestDurationMeasure.GetAverage()));
             this.logger.Info("blockDownloadRateMeasure: {0}/s".Format2(this.blockDownloadRateMeasure.GetAverage(TimeSpan.FromSeconds(1))));
-            this.logger.Info("duplicateBlockDownloadRateMeasure: {0}/s".Format2(this.duplicateBlockDownloadRateMeasure.GetAverage(TimeSpan.FromSeconds(1))));
+            this.logger.Info("duplicateBlockDownloadCountMeasure: {0}/s".Format2(this.duplicateBlockDownloadCountMeasure.GetCount()));
             this.logger.Info("targetChainLookAhead: {0}".Format2(this.targetChainLookAhead));
             this.logger.Info("criticalTargetChainLookAhead: {0}".Format2(this.criticalTargetChainLookAhead));
             this.logger.Info("flushQueue.Count: {0}".Format2(this.flushQueue.Count));
