@@ -41,6 +41,8 @@ namespace BitSharp.Client
     {
         private IKernel kernel;
         private Logger logger;
+        private CoreDaemon coreDaemon;
+        private LocalClient localClient;
         private MainWindowViewModel viewModel;
 
         public MainWindow()
@@ -93,8 +95,8 @@ namespace BitSharp.Client
                 this.kernel.Load(modules.ToArray());
 
                 // initialize the blockchain daemon
-                this.kernel.Bind<CoreDaemon>().ToSelf().InSingletonScope();
-                var coreDaemon = this.kernel.Get<CoreDaemon>();
+                this.coreDaemon = this.kernel.Get<CoreDaemon>();
+                this.kernel.Bind<CoreDaemon>().ToConstant(this.coreDaemon).InTransientScope();
 
 #if DUMMY_MONITOR
                 var dummyMonitor = new DummyMonitor(this.logger);
@@ -102,8 +104,8 @@ namespace BitSharp.Client
 #endif
 
                 // initialize p2p client
-                this.kernel.Bind<LocalClient>().ToSelf().InSingletonScope();
-                var localClient = this.kernel.Get<LocalClient>();
+                this.localClient = this.kernel.Get<LocalClient>();
+                this.kernel.Bind<LocalClient>().ToConstant(this.localClient).InTransientScope();
 
                 // setup view model
 #if DUMMY_MONITOR
@@ -115,10 +117,10 @@ namespace BitSharp.Client
                 this.viewModel.ViewBlockchainLast();
 
                 // start the blockchain daemon
-                coreDaemon.Start();
+                this.coreDaemon.Start();
 
                 // start p2p client
-                var startThread = new Thread(() => localClient.Start());
+                var startThread = new Thread(() => this.localClient.Start());
                 startThread.Name = "LocalClient.Start";
                 startThread.Start();
 
@@ -168,7 +170,12 @@ namespace BitSharp.Client
         protected override void OnClosed(EventArgs e)
         {
             // shutdown
-            this.kernel.Dispose();
+            new IDisposable[]
+            {
+                this.localClient,
+                this.coreDaemon,
+                this.kernel
+            }.DisposeList();
 
             base.OnClosed(e);
         }
