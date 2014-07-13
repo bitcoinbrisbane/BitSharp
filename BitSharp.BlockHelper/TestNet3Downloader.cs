@@ -81,18 +81,16 @@ namespace BitSharp.BlockHelper
                         // start p2p client
                         localClient.Start();
 
-                        using (var finishedEvent = new ManualResetEventSlim())
+                        // wait for testnet chain to reach desired height
+                        while (true)
                         {
-                            while (true)
-                            {
-                                testNetChainState = coreDaemon.GetChainState();
-                                logger.Info("TestNet blockchain at height: " + testNetChainState.Chain.Height);
+                            testNetChainState = coreDaemon.GetChainState();
+                            logger.Info("TestNet blockchain at height: " + testNetChainState.Chain.Height);
 
-                                if (testNetChainState.Chain.Height >= desiredBlockHeight)
-                                    break;
-                                else
-                                    Thread.Sleep(TimeSpan.FromSeconds(5));
-                            }
+                            if (testNetChainState.Chain.Height >= desiredBlockHeight)
+                                break;
+                            else
+                                Thread.Sleep(TimeSpan.FromSeconds(5));
                         }
                     }
 
