@@ -42,6 +42,7 @@ namespace BitSharp.Core
         public event EventHandler OnTargetBlockChanged;
         public event EventHandler OnTargetChainChanged;
         public event EventHandler OnChainStateChanged;
+        public event Action<UInt256> BlockMissed;
 
         private readonly Logger logger;
         private readonly IKernel kernel;
@@ -105,6 +106,8 @@ namespace BitSharp.Core
             
             // notify defrag worker after pruning
             this.pruningWorker.OnWorkFinished += this.defragWorker.NotifyWork;
+
+            this.chainStateWorker.BlockMissed += HandleBlockMissed;
 
             this.targetChainWorker.OnTargetBlockChanged +=
                 () =>
@@ -191,6 +194,7 @@ namespace BitSharp.Core
             // cleanup events
             this.coreStorage.BlockTxesAdded -= HandleBlockTxesAdded;
             this.pruningWorker.OnWorkFinished -= this.defragWorker.NotifyWork;
+            this.chainStateWorker.BlockMissed -= HandleBlockMissed;
 
             // notify threads to begin shutting down
             this.shutdownToken.Cancel();
@@ -329,6 +333,13 @@ namespace BitSharp.Core
         private void HandleBlockTxesAdded(ChainedHeader chainedHeader)
         {
             this.chainStateWorker.NotifyWork();
+        }
+
+        private void HandleBlockMissed(UInt256 blockHash)
+        {
+            var handler = this.BlockMissed;
+            if (handler != null)
+                handler(blockHash);
         }
 
         private void ValidateCurrentChainWorker()

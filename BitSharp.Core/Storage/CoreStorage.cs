@@ -21,7 +21,6 @@ namespace BitSharp.Core.Storage
 
         //TODO contains needs synchronization
         private readonly ConcurrentDictionary<UInt256, ChainedHeader> cachedHeaders;
-        private readonly ConcurrentDictionary<UInt256, bool> containsBlockTxes;
 
         private readonly ConcurrentSetBuilder<UInt256> missingHeaders;
         private readonly ConcurrentSetBuilder<UInt256> missingBlockTxes;
@@ -34,7 +33,6 @@ namespace BitSharp.Core.Storage
             this.blockTxesStorage = storageManager.BlockTxesStorage;
 
             this.cachedHeaders = new ConcurrentDictionary<UInt256, ChainedHeader>();
-            this.containsBlockTxes = new ConcurrentDictionary<UInt256, bool>();
 
             this.missingHeaders = new ConcurrentSetBuilder<UInt256>();
             this.missingBlockTxes = new ConcurrentSetBuilder<UInt256>();
@@ -162,33 +160,19 @@ namespace BitSharp.Core.Storage
 
         public bool ContainsBlockTxes(UInt256 blockHash)
         {
-            bool contains;
-            if (this.containsBlockTxes.TryGetValue(blockHash, out contains))
-            {
-                return contains;
-            }
-            else
-            {
-                contains = this.blockTxesStorage.ContainsBlock(blockHash);
-                this.containsBlockTxes[blockHash] = contains;
-                return contains;
-            }
+            return this.blockTxesStorage.ContainsBlock(blockHash);
         }
 
         public bool TryAddBlock(Block block)
         {
-            if (!this.ContainsBlockTxes(block.Hash))
+            ChainedHeader chainedHeader;
+            if (TryChainHeader(block.Header, out chainedHeader))
             {
-                ChainedHeader chainedHeader;
-                if (TryChainHeader(block.Header, out chainedHeader))
+                if (this.blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions))
                 {
-                    if (this.blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions))
-                    {
-                        this.containsBlockTxes[block.Hash] = true;
-                        this.missingBlockTxes.Remove(block.Hash);
-                        RaiseBlockTxesAdded(chainedHeader);
-                        return true;
-                    }
+                    this.missingBlockTxes.Remove(block.Hash);
+                    RaiseBlockTxesAdded(chainedHeader);
+                    return true;
                 }
             }
 
@@ -235,7 +219,6 @@ namespace BitSharp.Core.Storage
             }
             catch (Exception)
             {
-                this.containsBlockTxes[blockHash] = false;
                 this.missingBlockTxes.Add(blockHash);
                 RaiseBlockTxesMissed(blockHash);
                 throw;
@@ -251,7 +234,6 @@ namespace BitSharp.Core.Storage
                     }
                     catch (Exception)
                     {
-                        this.containsBlockTxes[blockHash] = false;
                         this.missingBlockTxes.Add(blockHash);
                         RaiseBlockTxesMissed(blockHash);
                         throw;

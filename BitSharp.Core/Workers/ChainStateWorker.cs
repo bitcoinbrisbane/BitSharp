@@ -22,7 +22,7 @@ namespace BitSharp.Core.Workers
     internal class ChainStateWorker : Worker
     {
         public event Action OnChainStateChanged;
-        
+
         private readonly Logger logger;
         private readonly Func<Chain> getTargetChain;
         private readonly IBlockchainRules rules;
@@ -51,6 +51,8 @@ namespace BitSharp.Core.Workers
             this.chainStateBuilder = chainStateBuilder;
             this.currentChain = this.chainStateBuilder.Chain;
         }
+
+        public event Action<UInt256> BlockMissed;
 
         public TimeSpan AverageBlockProcessingTime()
         {
@@ -141,11 +143,14 @@ namespace BitSharp.Core.Workers
             var missingException = e as MissingDataException;
             if (missingException != null)
             {
-                if (this.lastBlockMissHash == null || this.lastBlockMissHash.Value != (UInt256)missingException.Key)
+                var missingBlockHash = (UInt256)missingException.Key;
+                if (this.lastBlockMissHash == null || this.lastBlockMissHash.Value != missingBlockHash)
                 {
-                    this.lastBlockMissHash = (UInt256)missingException.Key;
+                    this.lastBlockMissHash = missingBlockHash;
                     this.blockMissCountMeasure.Tick();
                 }
+                
+                RaiseBlockMissed(missingBlockHash);
             }
             else
             {
@@ -187,6 +192,13 @@ namespace BitSharp.Core.Workers
                         }
                     })
                 .LookAhead(chainLookAhead);
+        }
+
+        private void RaiseBlockMissed(UInt256 blockHash)
+        {
+            var handler = this.BlockMissed;
+            if (handler != null)
+                handler(blockHash);
         }
     }
 }

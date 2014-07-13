@@ -69,6 +69,7 @@ namespace BitSharp.Node.Workers
             this.coreDaemon.OnChainStateChanged += HandleChainStateChanged;
             this.coreDaemon.OnTargetChainChanged += HandleTargetChainChanged;
             this.coreStorage.BlockTxesMissed += HandleBlockTxesMissed;
+            this.coreDaemon.BlockMissed += HandleBlockMissed;
 
             this.blockRequestDurationMeasure = new DurationMeasure(sampleCutoff: TimeSpan.FromMinutes(5));
             this.blockDownloadRateMeasure = new RateMeasure();
@@ -250,28 +251,9 @@ namespace BitSharp.Node.Workers
 
             // determine stale request times
             var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
-            var staleRequestTime = STALE_REQUEST_TIME; // + avgBlockRequestTime;
-            var missingStaleRequestTime = MISSING_STALE_REQUEST_TIME + avgBlockRequestTime;
 
             // remove any stale requests from the global list of requests
-            this.allBlockRequests.RemoveWhere(x => (now - x.Value) > staleRequestTime);
-
-            // remove any stale requests for missing blocks, using a shorter timeout
-            var missingBlocks = this.missingBlockQueue.Values.ToDictionary(x => x.Hash, x => x);
-            this.allBlockRequests.RemoveWhere(x =>
-                {
-                    ChainedHeader missingBlock;
-                    if ((now - x.Value) > missingStaleRequestTime
-                        && missingBlocks.TryGetValue(x.Key, out missingBlock))
-                    {
-                        this.logger.Debug("Clearing stale request for missing block: {0,10:#,##0}: {1}".Format2(missingBlock.Height, missingBlock.Hash));
-                        return true;
-                    }
-                    else
-                    {
-                        return false;
-                    }
-                });
+            this.allBlockRequests.RemoveWhere(x => (now - x.Value) > STALE_REQUEST_TIME);
 
             var peerCount = this.localClient.ConnectedPeers.Count;
             if (peerCount == 0)
@@ -385,7 +367,7 @@ namespace BitSharp.Node.Workers
                 var remoteNode = tuple.Item1;
                 var block = tuple.Item2;
 
-                if (!this.coreStorage.ContainsBlockTxes(block.Hash) && this.coreStorage.TryAddBlock(block))
+                if (this.coreStorage.TryAddBlock(block))
                     this.blockDownloadRateMeasure.Tick();
                 else
                     this.duplicateBlockDownloadCountMeasure.Tick();
@@ -450,6 +432,18 @@ namespace BitSharp.Node.Workers
         private void HandleBlockTxesMissed(UInt256 blockHash)
         {
             this.NotifyWork();
+        }
+
+        private void HandleBlockMissed(UInt256 blockHash)
+        {
+            // on block miss, remove request from global list so it can be re-requested from another peer
+            var now = DateTime.UtcNow;
+            DateTime requestTime;
+            if (this.allBlockRequests.TryGetValue(blockHash, out requestTime)
+                && now - requestTime > MISSING_STALE_REQUEST_TIME)
+            {
+                this.allBlockRequests.TryRemove(blockHash, out requestTime);
+            }
         }
 
         private sealed class HeightComparer : IComparer<ChainedHeader>
