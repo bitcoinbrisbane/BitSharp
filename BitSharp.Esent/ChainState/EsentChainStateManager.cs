@@ -8,6 +8,7 @@ using BitSharp.Core.Storage.Memory;
 using BitSharp.Node.Storage;
 using Microsoft.Isam.Esent.Collections.Generic;
 using Microsoft.Isam.Esent.Interop;
+using Microsoft.Isam.Esent.Interop.Windows81;
 using Ninject;
 using Ninject.Modules;
 using Ninject.Parameters;
@@ -243,6 +244,10 @@ namespace BitSharp.Esent
             instance.Parameters.WaypointLatency = 1;
             instance.Parameters.MaxSessions = 256;
             instance.Parameters.MaxOpenTables = 256;
+            if (EsentVersion.SupportsWindows81Features)
+            {
+                instance.Parameters.EnableShrinkDatabase = ShrinkDatabaseGrbit.On | ShrinkDatabaseGrbit.Realtime;
+            }
 
             return instance;
         }

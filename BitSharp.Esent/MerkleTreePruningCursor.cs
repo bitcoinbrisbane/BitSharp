@@ -114,7 +114,11 @@ namespace BitSharp.Esent
 
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId, node.Depth);
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId, DbEncoder.EncodeUInt256(node.Hash));
-                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId, null);
+                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytes0ColumnId, null);
+                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytes1ColumnId, null);
+                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytes2ColumnId, null);
+                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytes3ColumnId, null);
+                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesLongColumnId, null);
 
                 Api.JetUpdate(cursor.jetSession, cursor.blocksTableId);
             }

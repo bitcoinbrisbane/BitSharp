@@ -28,7 +28,11 @@ namespace BitSharp.Esent
         public readonly JET_COLUMNID blockTxIndexColumnId;
         public readonly JET_COLUMNID blockDepthColumnId;
         public readonly JET_COLUMNID blockTxHashColumnId;
-        public readonly JET_COLUMNID blockTxBytesColumnId;
+        public readonly JET_COLUMNID blockTxBytes0ColumnId;
+        public readonly JET_COLUMNID blockTxBytes1ColumnId;
+        public readonly JET_COLUMNID blockTxBytes2ColumnId;
+        public readonly JET_COLUMNID blockTxBytes3ColumnId;
+        public readonly JET_COLUMNID blockTxBytesLongColumnId;
 
         public BlockTxesCursor(string jetDatabase, Instance jetInstance)
         {
@@ -49,7 +53,11 @@ namespace BitSharp.Esent
                     out this.blockTxIndexColumnId,
                     out this.blockDepthColumnId,
                     out this.blockTxHashColumnId,
-                    out this.blockTxBytesColumnId);
+                    out this.blockTxBytes0ColumnId,
+                    out this.blockTxBytes1ColumnId,
+                    out this.blockTxBytes2ColumnId,
+                    out this.blockTxBytes3ColumnId,
+                    out this.blockTxBytesLongColumnId);
         }
 
         public void Dispose()
@@ -71,7 +79,11 @@ namespace BitSharp.Esent
             out JET_COLUMNID blockTxIndexColumnId,
             out JET_COLUMNID blockDepthColumnId,
             out JET_COLUMNID blockTxHashColumnId,
-            out JET_COLUMNID blockTxBytesColumnId)
+            out JET_COLUMNID blockTxBytes0ColumnId,
+            out JET_COLUMNID blockTxBytes1ColumnId,
+            out JET_COLUMNID blockTxBytes2ColumnId,
+            out JET_COLUMNID blockTxBytes3ColumnId,
+            out JET_COLUMNID blockTxBytesLongColumnId)
         {
             jetSession = new Session(jetInstance);
             try
@@ -95,7 +107,11 @@ namespace BitSharp.Esent
                 blockTxIndexColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxIndex");
                 blockDepthColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "Depth");
                 blockTxHashColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxHash");
-                blockTxBytesColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxBytes");
+                blockTxBytes0ColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxBytes0");
+                blockTxBytes1ColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxBytes1");
+                blockTxBytes2ColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxBytes2");
+                blockTxBytes3ColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxBytes3");
+                blockTxBytesLongColumnId = Api.GetTableColumnid(jetSession, blocksTableId, "TxBytesLong");
             }
             catch (Exception)
             {
