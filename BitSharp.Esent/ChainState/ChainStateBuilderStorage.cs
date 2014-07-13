@@ -32,9 +32,6 @@ namespace BitSharp.Esent
 
         private readonly ChainStateStorageCursor cursor;
 
-        private ChainBuilder chain;
-        private Chain savedChain;
-
         private bool inTransaction;
 
         public ChainStateBuilderStorage(string jetDatabase, Instance jetInstance, Logger logger)
@@ -44,8 +41,6 @@ namespace BitSharp.Esent
             this.jetInstance = jetInstance;
 
             this.cursor = new ChainStateStorageCursor(jetDatabase, jetInstance, readOnly: false);
-
-            this.chain = ChainStateStorage.ReadChain(this.cursor).ToBuilder();
         }
 
         ~ChainStateBuilderStorage()
@@ -60,9 +55,9 @@ namespace BitSharp.Esent
             this.cursor.Dispose();
         }
 
-        public Chain Chain
+        public IEnumerable<ChainedHeader> ReadChain()
         {
-            get { return this.chain.ToImmutable(); }
+            return ChainStateStorage.ReadChain(this.cursor);
         }
 
         public void AddChainedHeader(ChainedHeader chainedHeader)
@@ -70,27 +65,17 @@ namespace BitSharp.Esent
             if (!this.inTransaction)
                 throw new InvalidOperationException();
 
-            var savedChain = this.chain.ToImmutable();
-            this.chain.AddBlock(chainedHeader);
+            Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.chainTableId, JET_prep.Insert);
             try
             {
-                Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.chainTableId, JET_prep.Insert);
-                try
-                {
-                    Api.SetColumn(this.cursor.jetSession, this.cursor.chainTableId, this.cursor.blockHeightColumnId, chainedHeader.Height);
-                    Api.SetColumn(this.cursor.jetSession, this.cursor.chainTableId, this.cursor.chainedHeaderBytesColumnId, DataEncoder.EncodeChainedHeader(chainedHeader));
+                Api.SetColumn(this.cursor.jetSession, this.cursor.chainTableId, this.cursor.blockHeightColumnId, chainedHeader.Height);
+                Api.SetColumn(this.cursor.jetSession, this.cursor.chainTableId, this.cursor.chainedHeaderBytesColumnId, DataEncoder.EncodeChainedHeader(chainedHeader));
 
-                    Api.JetUpdate(this.cursor.jetSession, this.cursor.chainTableId);
-                }
-                catch (Exception)
-                {
-                    Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId, JET_prep.Cancel);
-                    throw;
-                }
+                Api.JetUpdate(this.cursor.jetSession, this.cursor.chainTableId);
             }
             catch (Exception)
             {
-                this.chain = savedChain.ToBuilder();
+                Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId, JET_prep.Cancel);
                 throw;
             }
         }
@@ -100,24 +85,14 @@ namespace BitSharp.Esent
             if (!this.inTransaction)
                 throw new InvalidOperationException();
 
-            var savedChain = this.chain.ToImmutable();
-            this.chain.RemoveBlock(chainedHeader);
-            try
-            {
-                Api.JetSetCurrentIndex(this.cursor.jetSession, this.cursor.chainTableId, "IX_BlockHeight");
+            Api.JetSetCurrentIndex(this.cursor.jetSession, this.cursor.chainTableId, "IX_BlockHeight");
 
-                Api.MakeKey(this.cursor.jetSession, this.cursor.chainTableId, chainedHeader.Height, MakeKeyGrbit.NewKey);
+            Api.MakeKey(this.cursor.jetSession, this.cursor.chainTableId, chainedHeader.Height, MakeKeyGrbit.NewKey);
 
-                if (!Api.TrySeek(this.cursor.jetSession, this.cursor.chainTableId, SeekGrbit.SeekEQ))
-                    throw new InvalidOperationException();
+            if (!Api.TrySeek(this.cursor.jetSession, this.cursor.chainTableId, SeekGrbit.SeekEQ))
+                throw new InvalidOperationException();
 
-                Api.JetDelete(this.cursor.jetSession, this.cursor.chainTableId);
-            }
-            catch (Exception)
-            {
-                this.chain = savedChain.ToBuilder();
-                throw;
-            }
+            Api.JetDelete(this.cursor.jetSession, this.cursor.chainTableId);
         }
 
         public int TransactionCount
@@ -350,7 +325,7 @@ namespace BitSharp.Esent
             if (this.inTransaction)
                 throw new InvalidOperationException();
 
-            return new ChainStateStorage(this.jetDatabase, this.jetInstance, this.chain.ToImmutable());
+            return new ChainStateStorage(this.jetDatabase, this.jetInstance);
         }
 
         public void BeginTransaction()
@@ -359,7 +334,6 @@ namespace BitSharp.Esent
                 throw new InvalidOperationException();
 
             Api.JetBeginTransaction(this.cursor.jetSession);
-            this.savedChain = this.chain.ToImmutable();
 
             this.inTransaction = true;
         }
@@ -370,7 +344,6 @@ namespace BitSharp.Esent
                 throw new InvalidOperationException();
 
             Api.JetCommitTransaction(this.cursor.jetSession, CommitTransactionGrbit.LazyFlush);
-            this.savedChain = null;
 
             this.inTransaction = false;
         }
@@ -381,7 +354,6 @@ namespace BitSharp.Esent
                 throw new InvalidOperationException();
 
             Api.JetRollback(this.cursor.jetSession, RollbackTransactionGrbit.None);
-            this.chain = this.savedChain.ToBuilder();
 
             this.inTransaction = false;
         }
