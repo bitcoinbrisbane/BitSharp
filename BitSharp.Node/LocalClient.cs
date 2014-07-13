@@ -168,6 +168,20 @@ namespace BitSharp.Node
             if (this.Type == RulesEnum.ComparisonToolTestNet)
                 return;
 
+            foreach (var peer in this.connectedPeers)
+            {
+                if (this.connectedPeers.Count < 5)
+                    break;
+
+                // disconnect seed peers, once enough peers are connected
+                if (peer.Value.IsSeed)
+                    DisconnectPeer(peer.Value.RemoteEndPoint, null);
+
+                // disconnect slow peers
+                if (peer.Value.BlockMissCount > 5)
+                    DisconnectPeer(peer.Value.RemoteEndPoint, null);
+            }
+
             // get peer counts
             var connectedCount = this.connectedPeers.Count;
             var pendingCount = this.pendingPeers.Count;

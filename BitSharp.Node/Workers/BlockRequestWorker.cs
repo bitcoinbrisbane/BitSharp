@@ -30,7 +30,7 @@ namespace BitSharp.Node.Workers
         private readonly CoreDaemon coreDaemon;
         private readonly CoreStorage coreStorage;
 
-        private readonly ConcurrentDictionary<UInt256, Tuple<IPEndPoint, DateTime>> allBlockRequests;
+        private readonly ConcurrentDictionary<UInt256, Tuple<RemoteNode, DateTime>> allBlockRequests;
         private readonly ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>> blockRequestsByPeer;
 
         private int targetChainLookAhead;
@@ -56,7 +56,7 @@ namespace BitSharp.Node.Workers
             this.coreDaemon = coreDaemon;
             this.coreStorage = coreDaemon.CoreStorage;
 
-            this.allBlockRequests = new ConcurrentDictionary<UInt256, Tuple<IPEndPoint, DateTime>>();
+            this.allBlockRequests = new ConcurrentDictionary<UInt256, Tuple<RemoteNode, DateTime>>();
             this.blockRequestsByPeer = new ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>>();
 
             this.localClient.OnBlock += HandleBlock;
@@ -232,7 +232,7 @@ namespace BitSharp.Node.Workers
                     {
                         // track block requests
                         peerBlockRequests[requestBlock] = now;
-                        this.allBlockRequests.TryAdd(requestBlock, Tuple.Create(peer.Value.RemoteEndPoint, now));
+                        this.allBlockRequests.TryAdd(requestBlock, Tuple.Create(peer.Value, now));
 
                         // add block to inv request
                         invVectors.Add(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, requestBlock));
@@ -302,7 +302,7 @@ namespace BitSharp.Node.Workers
 
                 this.flushBlocks.Remove(block.Hash);
 
-                Tuple<IPEndPoint, DateTime> requestInfo;
+                Tuple<RemoteNode, DateTime> requestInfo;
                 this.allBlockRequests.TryRemove(block.Hash, out requestInfo);
 
                 DateTime requestTime;
@@ -368,7 +368,7 @@ namespace BitSharp.Node.Workers
                 return;
 
             // on block miss, allow re-request of all blocks made to a slow peer
-            Tuple<IPEndPoint, DateTime> requestInfo;
+            Tuple<RemoteNode, DateTime> requestInfo;
             if (this.allBlockRequests.TryGetValue(blockHash, out requestInfo))
             {
                 var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
@@ -377,9 +377,12 @@ namespace BitSharp.Node.Workers
                 var requestTime = requestInfo.Item2;
                 if (now - requestTime > MISSING_STALE_REQUEST_TIME + avgBlockRequestTime)
                 {
+                    // track block miss against this peer
+                    requestInfo.Item1.AddBlockMiss();
+
                     // remove all requests to the slow peer
                     ConcurrentDictionary<UInt256, DateTime> peerRequests;
-                    if (this.blockRequestsByPeer.TryGetValue(requestInfo.Item1, out peerRequests))
+                    if (this.blockRequestsByPeer.TryGetValue(requestInfo.Item1.RemoteEndPoint, out peerRequests))
                     {
                         foreach (var peerRequest in peerRequests)
                             this.allBlockRequests.TryRemove(peerRequest.Key, out requestInfo);

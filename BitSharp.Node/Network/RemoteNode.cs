@@ -37,6 +37,8 @@ namespace BitSharp.Node.Network
         private readonly RemoteSender sender;
         private readonly bool isSeed;
 
+        private CountMeasure blockMissCountMeasure;
+
         public RemoteNode(IPEndPoint remoteEndPoint, bool isSeed, Logger logger)
         {
             this.logger = logger;
@@ -46,6 +48,8 @@ namespace BitSharp.Node.Network
             this.socket = new Socket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             this.receiver = new RemoteReceiver(this, this.socket, persistent: false, logger: this.logger);
             this.sender = new RemoteSender(this.socket, this.logger);
+
+            this.blockMissCountMeasure = new CountMeasure(TimeSpan.FromMinutes(10));
 
             WireNode();
         }
@@ -66,9 +70,10 @@ namespace BitSharp.Node.Network
 
         ~RemoteNode() { ((IDisposable)this).Dispose(); }
 
-        void IDisposable.Dispose()
+        public void Dispose()
         {
             Disconnect();
+            this.blockMissCountMeasure.Dispose();
         }
 
         public IPEndPoint LocalEndPoint { get { return this.localEndPoint; } }
@@ -82,6 +87,13 @@ namespace BitSharp.Node.Network
         public bool IsConnected { get { return this.isConnected; } }
 
         public bool IsSeed { get { return this.isSeed; } }
+
+        public int BlockMissCount { get { return this.blockMissCountMeasure.GetCount(); } }
+
+        public void AddBlockMiss()
+        {
+            this.blockMissCountMeasure.Tick();
+        }
 
         public async Task ConnectAsync()
         {
@@ -156,7 +168,7 @@ namespace BitSharp.Node.Network
                 this.logger.DebugException("Remote peer failed: {0}".Format2(this.remoteEndPoint), e);
             else
                 this.logger.Debug("Remote peer failed: {0}".Format2(this.remoteEndPoint));
-            
+
             Disconnect();
         }
 
