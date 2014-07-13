@@ -155,6 +155,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Storage\IChainStateBuilderStorage.cs" />
     <Compile Include="Storage\IChainStateStorage.cs" />
+    <Compile Include="Storage\DeferredMerkleTreePruningCursor.cs" />
     <Compile Include="Storage\Memory\MemoryMerkleTreePruningCursor.cs" />
     <Compile Include="Storage\Memory\MemoryBlockStorage.cs" />
     <Compile Include="Storage\Memory\MemoryBlockTxesStorage.cs" />
