@@ -170,7 +170,7 @@ namespace BitSharp.Node
 
             foreach (var peer in this.connectedPeers)
             {
-                if (this.connectedPeers.Count < 5)
+                if (this.connectedPeers.Count <= 5)
                     break;
 
                 // disconnect seed peers, once enough peers are connected
@@ -178,7 +178,7 @@ namespace BitSharp.Node
                     DisconnectPeer(peer.Value.RemoteEndPoint, null);
 
                 // disconnect slow peers
-                if (peer.Value.BlockMissCount > 5)
+                if (peer.Value.BlockMissCount >= 5)
                     DisconnectPeer(peer.Value.RemoteEndPoint, null);
             }
 
