@@ -17,16 +17,18 @@ using BitSharp.Node.Domain;
 
 namespace BitSharp.Node.Network
 {
-    public class RemoteNode : IDisposable
+    public class Peer : IDisposable
     {
-        public event Action<RemoteNode, GetBlocksPayload> OnGetBlocks;
-        public event Action<RemoteNode, GetBlocksPayload> OnGetHeaders;
-        public event Action<RemoteNode, InventoryPayload> OnGetData;
-        public event Action<RemoteNode, ImmutableArray<byte>> OnPing;
-        public event Action<RemoteNode> OnDisconnect;
+        public event Action<Peer, GetBlocksPayload> OnGetBlocks;
+        public event Action<Peer, GetBlocksPayload> OnGetHeaders;
+        public event Action<Peer, InventoryPayload> OnGetData;
+        public event Action<Peer, ImmutableArray<byte>> OnPing;
+        public event Action<Peer> OnDisconnect;
 
         private readonly Logger logger;
+        //TODO semaphore not disposed
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1);
+        private int disposeCount;
 
         private bool startedConnecting = false;
         private bool isConnected = false;
@@ -39,7 +41,7 @@ namespace BitSharp.Node.Network
 
         private CountMeasure blockMissCountMeasure;
 
-        public RemoteNode(IPEndPoint remoteEndPoint, bool isSeed, Logger logger)
+        public Peer(IPEndPoint remoteEndPoint, bool isSeed, Logger logger)
         {
             this.logger = logger;
             this.remoteEndPoint = remoteEndPoint;
@@ -54,7 +56,7 @@ namespace BitSharp.Node.Network
             WireNode();
         }
 
-        public RemoteNode(Socket socket, bool isSeed)
+        public Peer(Socket socket, bool isSeed)
         {
             this.socket = socket;
             this.isConnected = true;
@@ -65,14 +67,42 @@ namespace BitSharp.Node.Network
             this.receiver = new RemoteReceiver(this, this.socket, persistent: false, logger: this.logger);
             this.sender = new RemoteSender(this.socket, this.logger);
 
+            this.blockMissCountMeasure = new CountMeasure(TimeSpan.FromMinutes(10));
+
             WireNode();
         }
 
-        ~RemoteNode() { ((IDisposable)this).Dispose(); }
+        ~Peer()
+        {
+            Dispose();
+        }
 
         public void Dispose()
         {
-            Disconnect();
+            // already disposed, only dispose once
+            if (Interlocked.Increment(ref this.disposeCount) != 1)
+                return;
+            
+            GC.SuppressFinalize(this);
+
+            UnwireNode();
+
+            try
+            {
+                this.socket.Dispose();
+            }
+            catch (Exception) { }
+
+            if (this.startedConnecting || this.isConnected)
+            {
+                this.startedConnecting = false;
+                this.isConnected = false;
+
+                var handler = this.OnDisconnect;
+                if (handler != null)
+                    handler(this);
+            }
+
             this.blockMissCountMeasure.Dispose();
         }
 
@@ -122,24 +152,7 @@ namespace BitSharp.Node.Network
 
         public void Disconnect()
         {
-            UnwireNode();
-
-            try
-            {
-                this.socket.Dispose();
-            }
-            catch (Exception) { }
-
-            if (this.startedConnecting || this.isConnected)
-            {
-                this.startedConnecting = false;
-                this.isConnected = false;
-                //TODO GC.SuppressFinalize(this);
-
-                var handler = this.OnDisconnect;
-                if (handler != null)
-                    handler(this);
-            }
+            this.Dispose();
         }
 
         private void WireNode()

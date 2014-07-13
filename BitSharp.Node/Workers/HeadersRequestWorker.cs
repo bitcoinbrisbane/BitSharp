@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Node.Workers
 {
-    public class HeadersRequestWorker : Worker
+    internal class HeadersRequestWorker : Worker
     {
         private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromSeconds(60);
 
@@ -27,10 +27,10 @@ namespace BitSharp.Node.Workers
         private readonly CoreDaemon coreDaemon;
         private readonly CoreStorage coreStorage;
 
-        private readonly ConcurrentDictionary<IPEndPoint, DateTime> headersRequestsByPeer;
+        private readonly ConcurrentDictionary<Peer, DateTime> headersRequestsByPeer;
 
         private readonly WorkerMethod flushWorker;
-        private readonly ConcurrentQueue<Tuple<RemoteNode, IImmutableList<BlockHeader>>> flushQueue;
+        private readonly ConcurrentQueue<FlushHeaders> flushQueue;
 
         public HeadersRequestWorker(WorkerConfig workerConfig, Logger logger, LocalClient localClient, CoreDaemon coreDaemon)
             : base("HeadersRequestWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
@@ -40,13 +40,13 @@ namespace BitSharp.Node.Workers
             this.coreDaemon = coreDaemon;
             this.coreStorage = coreDaemon.CoreStorage;
 
-            this.headersRequestsByPeer = new ConcurrentDictionary<IPEndPoint, DateTime>();
+            this.headersRequestsByPeer = new ConcurrentDictionary<Peer, DateTime>();
 
             this.localClient.OnBlockHeaders += HandleBlockHeaders;
             this.coreDaemon.OnTargetChainChanged += HandleTargetChainChanged;
 
             this.flushWorker = new WorkerMethod("HeadersRequestWorker.FlushWorker", FlushWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
-            this.flushQueue = new ConcurrentQueue<Tuple<RemoteNode, IImmutableList<BlockHeader>>>();
+            this.flushQueue = new ConcurrentQueue<FlushHeaders>();
         }
 
         protected override void SubDispose()
@@ -89,11 +89,11 @@ namespace BitSharp.Node.Workers
             foreach (var peer in this.localClient.ConnectedPeers)
             {
                 // determine if a new request can be made
-                if (this.headersRequestsByPeer.TryAdd(peer.Key, now))
+                if (this.headersRequestsByPeer.TryAdd(peer, now))
                 {
                     // send out the request for headers
-                    requestTasks.Add(peer.Value.Sender.SendGetHeaders(blockLocatorHashes, hashStop: 0));
-                    
+                    requestTasks.Add(peer.Sender.SendGetHeaders(blockLocatorHashes, hashStop: 0));
+
                     // only send out a single header request at a time
                     break;
                 }
@@ -102,40 +102,40 @@ namespace BitSharp.Node.Workers
 
         private void FlushWorkerMethod(WorkerMethod instance)
         {
-            Tuple<RemoteNode, IImmutableList<BlockHeader>> tuple;
-            while (this.flushQueue.TryDequeue(out tuple))
+            FlushHeaders flushHeaders;
+            while (this.flushQueue.TryDequeue(out flushHeaders))
             {
                 // cooperative loop
                 this.ThrowIfCancelled();
 
-                var remoteNode = tuple.Item1;
-                var blockHeaders = tuple.Item2;
+                var peer = flushHeaders.Peer;
+                var blockHeaders = flushHeaders.Headers;
 
                 foreach (var blockHeader in blockHeaders)
                 {
                     // cooperative loop
                     this.ThrowIfCancelled();
-                    
+
                     ChainedHeader chainedHeader;
                     this.coreStorage.TryChainHeader(blockHeader, out chainedHeader);
                 }
 
                 DateTime ignore;
-                this.headersRequestsByPeer.TryRemove(remoteNode.RemoteEndPoint, out ignore);
+                this.headersRequestsByPeer.TryRemove(peer, out ignore);
             }
         }
 
-        private void HandleBlockHeaders(RemoteNode remoteNode, IImmutableList<BlockHeader> blockHeaders)
+        private void HandleBlockHeaders(Peer peer, IImmutableList<BlockHeader> blockHeaders)
         {
             if (blockHeaders.Count > 0)
             {
-                this.flushQueue.Enqueue(Tuple.Create(remoteNode, blockHeaders));
+                this.flushQueue.Enqueue(new FlushHeaders(peer, blockHeaders));
                 this.flushWorker.NotifyWork();
             }
             else
             {
                 DateTime ignore;
-                this.headersRequestsByPeer.TryRemove(remoteNode.RemoteEndPoint, out ignore);
+                this.headersRequestsByPeer.TryRemove(peer, out ignore);
             }
         }
 
@@ -163,6 +163,22 @@ namespace BitSharp.Node.Workers
             }
 
             return blockLocatorHashes.ToImmutable();
+        }
+
+        private sealed class FlushHeaders
+        {
+            private readonly Peer peer;
+            private readonly IImmutableList<BlockHeader> headers;
+
+            public FlushHeaders(Peer peer, IImmutableList<BlockHeader> headers)
+            {
+                this.peer = peer;
+                this.headers = headers;
+            }
+
+            public Peer Peer { get { return this.peer; } }
+
+            public IImmutableList<BlockHeader> Headers { get { return this.headers; } }
         }
     }
 }

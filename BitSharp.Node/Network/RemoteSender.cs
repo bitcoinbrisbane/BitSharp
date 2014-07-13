@@ -24,6 +24,7 @@ namespace BitSharp.Node.Network
         public event Action<Exception> OnFailed;
 
         private readonly Logger logger;
+        //TODO semaphore not disposed
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1);
         private readonly Socket socket;
 

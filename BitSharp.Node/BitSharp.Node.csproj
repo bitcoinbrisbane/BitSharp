@@ -100,7 +100,7 @@
     <Compile Include="Domain\NetworkAddressWithTime.cs" />
     <Compile Include="Domain\VersionPayload.cs" />
     <Compile Include="Network\Messaging.cs" />
-    <Compile Include="Network\RemoteNode.cs" />
+    <Compile Include="Network\Peer.cs" />
     <Compile Include="Network\RemoteReceiver.cs" />
     <Compile Include="Network\RemoteSender.cs" />
     <Compile Include="NodeEncoder.cs" />
@@ -118,6 +118,8 @@
     <Compile Include="Storage\PassthroughUnboundedCache.cs" />
     <Compile Include="Storage\StorageInterfaces.cs" />
     <Compile Include="Storage\UnboundedCache.cs" />
+    <Compile Include="Workers\ListenWorker.cs" />
+    <Compile Include="Workers\PeerWorker.cs" />
     <Compile Include="Workers\HeadersRequestWorker.cs" />
     <Compile Include="Workers\BlockRequestWorker.cs" />
     <Compile Include="Config.cs" />

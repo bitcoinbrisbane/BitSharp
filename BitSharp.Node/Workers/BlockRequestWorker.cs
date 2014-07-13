@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Node.Workers
 {
-    public class BlockRequestWorker : Worker
+    internal class BlockRequestWorker : Worker
     {
         private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan MISSING_STALE_REQUEST_TIME = TimeSpan.FromSeconds(3);
@@ -30,8 +30,8 @@ namespace BitSharp.Node.Workers
         private readonly CoreDaemon coreDaemon;
         private readonly CoreStorage coreStorage;
 
-        private readonly ConcurrentDictionary<UInt256, Tuple<RemoteNode, DateTime>> allBlockRequests;
-        private readonly ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>> blockRequestsByPeer;
+        private readonly ConcurrentDictionary<UInt256, BlockRequest> allBlockRequests;
+        private readonly ConcurrentDictionary<Peer, ConcurrentDictionary<UInt256, DateTime>> blockRequestsByPeer;
 
         private int targetChainLookAhead;
         private List<ChainedHeader> targetChainQueue;
@@ -43,7 +43,7 @@ namespace BitSharp.Node.Workers
         private readonly CountMeasure duplicateBlockDownloadCountMeasure;
 
         private readonly WorkerMethod flushWorker;
-        private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
+        private readonly ConcurrentQueue<FlushBlock> flushQueue;
         private readonly ConcurrentSet<UInt256> flushBlocks;
 
         private readonly WorkerMethod diagnosticWorker;
@@ -56,8 +56,8 @@ namespace BitSharp.Node.Workers
             this.coreDaemon = coreDaemon;
             this.coreStorage = coreDaemon.CoreStorage;
 
-            this.allBlockRequests = new ConcurrentDictionary<UInt256, Tuple<RemoteNode, DateTime>>();
-            this.blockRequestsByPeer = new ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>>();
+            this.allBlockRequests = new ConcurrentDictionary<UInt256, BlockRequest>();
+            this.blockRequestsByPeer = new ConcurrentDictionary<Peer, ConcurrentDictionary<UInt256, DateTime>>();
 
             this.localClient.OnBlock += HandleBlock;
             this.coreDaemon.OnChainStateChanged += HandleChainStateChanged;
@@ -74,7 +74,7 @@ namespace BitSharp.Node.Workers
             this.targetChainLookAhead = 1;
 
             this.flushWorker = new WorkerMethod("BlockRequestWorker.FlushWorker", FlushWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
-            this.flushQueue = new ConcurrentQueue<Tuple<RemoteNode, Block>>();
+            this.flushQueue = new ConcurrentQueue<FlushBlock>();
             this.flushBlocks = new ConcurrentSet<UInt256>();
 
             this.diagnosticWorker = new WorkerMethod("BlockRequestWorker.DiagnosticWorker", DiagnosticWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(10), maxIdleTime: TimeSpan.FromSeconds(10), logger: this.logger);
@@ -193,11 +193,23 @@ namespace BitSharp.Node.Workers
             var requestTasks = new List<Task>();
 
             // remove any stale requests from the global list of requests
-            this.allBlockRequests.RemoveWhere(x => (now - x.Value.Item2) > STALE_REQUEST_TIME);
+            this.allBlockRequests.RemoveWhere(x =>
+                (now - x.Value.RequestTime) > STALE_REQUEST_TIME
+                || !this.localClient.ConnectedPeers.Contains(x.Value.Peer));
 
             var peerCount = this.localClient.ConnectedPeers.Count;
             if (peerCount == 0)
                 return;
+
+            // clear any disconnected peers
+            foreach (var peer in blockRequestsByPeer.Keys)
+            {
+                if (!this.localClient.ConnectedPeers.Contains(peer))
+                {
+                    ConcurrentDictionary<UInt256, DateTime> remove;
+                    blockRequestsByPeer.TryRemove(peer, out remove);
+                }
+            }
 
             // reset target queue index
             this.targetChainQueueIndex = 0;
@@ -210,12 +222,12 @@ namespace BitSharp.Node.Workers
             foreach (var peer in this.localClient.ConnectedPeers)
             {
                 // don't request blocks from seed peers
-                if (peer.Value.IsSeed)
+                if (peer.IsSeed)
                     continue;
 
                 // retrieve the peer's currently requested blocks
                 var peerBlockRequests = this.blockRequestsByPeer.AddOrUpdate(
-                    peer.Key,
+                    peer,
                     addKey => new ConcurrentDictionary<UInt256, DateTime>(),
                     (existingKey, existingValue) => existingValue);
 
@@ -232,7 +244,7 @@ namespace BitSharp.Node.Workers
                     {
                         // track block requests
                         peerBlockRequests[requestBlock] = now;
-                        this.allBlockRequests.TryAdd(requestBlock, Tuple.Create(peer.Value, now));
+                        this.allBlockRequests.TryAdd(requestBlock, new BlockRequest(peer, now));
 
                         // add block to inv request
                         invVectors.Add(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, requestBlock));
@@ -240,7 +252,7 @@ namespace BitSharp.Node.Workers
 
                     // send out the request for blocks
                     if (invVectors.Count > 0)
-                        requestTasks.Add(peer.Value.Sender.SendGetData(invVectors.ToImmutable()));
+                        requestTasks.Add(peer.Sender.SendGetData(invVectors.ToImmutable()));
                 }
             }
 
@@ -286,14 +298,14 @@ namespace BitSharp.Node.Workers
             var initalCount = this.flushQueue.Count;
             var count = 0;
 
-            Tuple<RemoteNode, Block> tuple;
-            while (this.flushQueue.TryDequeue(out tuple))
+            FlushBlock flushBlock;
+            while (this.flushQueue.TryDequeue(out flushBlock))
             {
                 // cooperative loop
                 this.ThrowIfCancelled();
 
-                var remoteNode = tuple.Item1;
-                var block = tuple.Item2;
+                var peer = flushBlock.Peer;
+                var block = flushBlock.Block;
 
                 if (this.coreStorage.TryAddBlock(block))
                     this.blockDownloadRateMeasure.Tick();
@@ -302,12 +314,12 @@ namespace BitSharp.Node.Workers
 
                 this.flushBlocks.Remove(block.Hash);
 
-                Tuple<RemoteNode, DateTime> requestInfo;
-                this.allBlockRequests.TryRemove(block.Hash, out requestInfo);
+                BlockRequest blockRequest;
+                this.allBlockRequests.TryRemove(block.Hash, out blockRequest);
 
                 DateTime requestTime;
                 ConcurrentDictionary<UInt256, DateTime> peerBlockRequests;
-                if (this.blockRequestsByPeer.TryGetValue(remoteNode.RemoteEndPoint, out peerBlockRequests)
+                if (this.blockRequestsByPeer.TryGetValue(peer, out peerBlockRequests)
                     && peerBlockRequests.TryRemove(block.Hash, out requestTime))
                 {
                     this.blockRequestDurationMeasure.Tick(DateTime.UtcNow - requestTime);
@@ -339,10 +351,10 @@ namespace BitSharp.Node.Workers
             this.logger.Info("flushBlocks.Count: {0}".Format2(this.flushBlocks.Count));
         }
 
-        private void HandleBlock(RemoteNode remoteNode, Block block)
+        private void HandleBlock(Peer peer, Block block)
         {
             this.flushBlocks.Add(block.Hash);
-            this.flushQueue.Enqueue(Tuple.Create(remoteNode, block));
+            this.flushQueue.Enqueue(new FlushBlock(peer, block));
             this.flushWorker.NotifyWork();
         }
 
@@ -368,28 +380,28 @@ namespace BitSharp.Node.Workers
                 return;
 
             // on block miss, allow re-request of all blocks made to a slow peer
-            Tuple<RemoteNode, DateTime> requestInfo;
-            if (this.allBlockRequests.TryGetValue(blockHash, out requestInfo))
+            BlockRequest blockRequest;
+            if (this.allBlockRequests.TryGetValue(blockHash, out blockRequest))
             {
                 var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
 
                 var now = DateTime.UtcNow;
-                var requestTime = requestInfo.Item2;
+                var requestTime = blockRequest.RequestTime;
                 if (now - requestTime > MISSING_STALE_REQUEST_TIME + avgBlockRequestTime)
                 {
                     // track block miss against this peer
-                    requestInfo.Item1.AddBlockMiss();
+                    blockRequest.Peer.AddBlockMiss();
 
                     // remove all requests to the slow peer
                     ConcurrentDictionary<UInt256, DateTime> peerRequests;
-                    if (this.blockRequestsByPeer.TryGetValue(requestInfo.Item1.RemoteEndPoint, out peerRequests))
+                    if (this.blockRequestsByPeer.TryGetValue(blockRequest.Peer, out peerRequests))
                     {
                         foreach (var peerRequest in peerRequests)
-                            this.allBlockRequests.TryRemove(peerRequest.Key, out requestInfo);
+                            this.allBlockRequests.TryRemove(peerRequest.Key, out blockRequest);
                     }
 
                     // ensure missed block is removed from the global request list
-                    this.allBlockRequests.TryRemove(blockHash, out requestInfo);
+                    this.allBlockRequests.TryRemove(blockHash, out blockRequest);
 
                     this.NotifyWork();
                 }
@@ -402,6 +414,38 @@ namespace BitSharp.Node.Workers
             {
                 return x.Height - y.Height;
             }
+        }
+
+        private sealed class BlockRequest
+        {
+            private readonly Peer peer;
+            private readonly DateTime requestTime;
+
+            public BlockRequest(Peer peer, DateTime requestTime)
+            {
+                this.peer = peer;
+                this.requestTime = requestTime;
+            }
+
+            public Peer Peer { get { return this.peer; } }
+
+            public DateTime RequestTime { get { return this.requestTime; } }
+        }
+
+        private sealed class FlushBlock
+        {
+            private readonly Peer peer;
+            private readonly Block block;
+
+            public FlushBlock(Peer peer, Block block)
+            {
+                this.peer = peer;
+                this.block = block;
+            }
+
+            public Peer Peer { get { return this.peer; } }
+
+            public Block Block { get { return this.block; } }
         }
     }
 }

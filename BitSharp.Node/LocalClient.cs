@@ -29,15 +29,8 @@ namespace BitSharp.Node
 {
     public class LocalClient : IDisposable
     {
-        public event Action<RemoteNode, Block> OnBlock;
-        public event Action<RemoteNode, IImmutableList<BlockHeader>> OnBlockHeaders;
-
-        private static readonly int SERVER_BACKLOG = 10;
-        private static readonly int CONNECTED_MAX = 25;
-        private static readonly int PENDING_MAX = 2 * CONNECTED_MAX;
-        private static readonly int HANDSHAKE_TIMEOUT_MS = 15000;
-
-        private static readonly Random random = new Random();
+        public event Action<Peer, Block> OnBlock;
+        public event Action<Peer, IImmutableList<BlockHeader>> OnBlockHeaders;
 
         private readonly Logger logger;
         private readonly CancellationTokenSource shutdownToken;
@@ -49,23 +42,13 @@ namespace BitSharp.Node
         private readonly CoreStorage coreStorage;
         private readonly NetworkPeerCache networkPeerCache;
 
-        private readonly WorkerMethod connectWorker;
+        private readonly PeerWorker peerWorker;
+        private readonly ListenWorker listenWorker;
         private readonly HeadersRequestWorker headersRequestWorker;
         private readonly BlockRequestWorker blockRequestWorker;
         private readonly WorkerMethod statsWorker;
 
         private RateMeasure messageRateMeasure;
-
-        private int incomingCount;
-        private ConcurrentSet<CandidatePeer> unconnectedPeers = new ConcurrentSet<CandidatePeer>();
-        private readonly ReaderWriterLockSlim unconnectedPeersLock = new ReaderWriterLockSlim();
-        private ConcurrentSet<IPEndPoint> badPeers = new ConcurrentSet<IPEndPoint>();
-        private ConcurrentDictionary<IPEndPoint, RemoteNode> pendingPeers = new ConcurrentDictionary<IPEndPoint, RemoteNode>();
-        private ConcurrentDictionary<IPEndPoint, RemoteNode> connectedPeers = new ConcurrentDictionary<IPEndPoint, RemoteNode>();
-
-        private readonly ConcurrentDictionary<UInt256, DateTime> requestedTransactions = new ConcurrentDictionary<UInt256, DateTime>();
-
-        private Socket listenSocket;
 
         public LocalClient(Logger logger, RulesEnum type, IKernel kernel, IBlockchainRules rules, CoreDaemon coreDaemon, NetworkPeerCache networkPeerCache)
         {
@@ -81,7 +64,11 @@ namespace BitSharp.Node
 
             this.messageRateMeasure = new RateMeasure();
 
-            this.connectWorker = new WorkerMethod("LocalClient.ConnectWorker", ConnectWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), this.logger);
+            this.peerWorker = new PeerWorker(
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromSeconds(1)),
+                this.logger, this, this.coreDaemon);
+
+            this.listenWorker = new ListenWorker(this.logger, this, this.peerWorker);
 
             this.headersRequestWorker = new HeadersRequestWorker(
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(5)),
@@ -91,7 +78,10 @@ namespace BitSharp.Node
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(30)),
                 this.logger, this, this.coreDaemon);
 
-            this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30), this.logger);
+            this.statsWorker = new WorkerMethod("LocalClient.StatsWorker", StatsWorker, true, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(30), this.logger);
+
+            this.peerWorker.PeerConnected += HandlePeerConnected;
+            this.peerWorker.PeerDisconnected += HandlePeerDisconnected;
 
             switch (this.Type)
             {
@@ -114,36 +104,42 @@ namespace BitSharp.Node
 
         public RulesEnum Type { get { return this.type; } }
 
-        internal ConcurrentDictionary<IPEndPoint, RemoteNode> ConnectedPeers { get { return this.connectedPeers; } }
+        internal ConcurrentSet<Peer> ConnectedPeers { get { return this.peerWorker.ConnectedPeers; } }
 
         public void Start()
         {
-            Startup();
-
-            this.connectWorker.Start();
-
             if (this.Type != RulesEnum.ComparisonToolTestNet)
             {
                 this.headersRequestWorker.Start();
             }
             this.blockRequestWorker.Start();
 
+            //this.listenWorker.Start();
+            this.peerWorker.Start();
             this.statsWorker.Start();
+
+            // add seed peers
+            AddSeedPeers();
+
+            // add known peers
+            AddKnownPeers();
         }
 
         public void Dispose()
         {
             this.shutdownToken.Cancel();
 
-            Shutdown();
+            this.peerWorker.PeerConnected -= HandlePeerConnected;
+            this.peerWorker.PeerDisconnected -= HandlePeerDisconnected;
 
             new IDisposable[]
             {
                 this.messageRateMeasure,
+                this.statsWorker,
                 this.headersRequestWorker,
                 this.blockRequestWorker,
-                this.connectWorker,
-                this.statsWorker,
+                this.peerWorker,
+                this.listenWorker,
                 this.shutdownToken
             }.DisposeList();
         }
@@ -163,205 +159,6 @@ namespace BitSharp.Node
             return this.coreDaemon.GetBlockMissCount();
         }
 
-        private void ConnectWorker(WorkerMethod instance)
-        {
-            if (this.Type == RulesEnum.ComparisonToolTestNet)
-                return;
-
-            foreach (var peer in this.connectedPeers)
-            {
-                if (this.connectedPeers.Count <= 5)
-                    break;
-
-                // disconnect seed peers, once enough peers are connected
-                if (peer.Value.IsSeed)
-                    DisconnectPeer(peer.Value.RemoteEndPoint, null);
-
-                // disconnect slow peers
-                if (peer.Value.BlockMissCount >= 5)
-                    DisconnectPeer(peer.Value.RemoteEndPoint, null);
-            }
-
-            // get peer counts
-            var connectedCount = this.connectedPeers.Count;
-            var pendingCount = this.pendingPeers.Count;
-            var unconnectedCount = this.unconnectedPeers.Count;
-            var maxConnections = Math.Max(CONNECTED_MAX + 20, PENDING_MAX);
-
-            // if there aren't enough peers connected and there is a pending connection slot available, make another connection
-            if (connectedCount < CONNECTED_MAX
-                 && pendingCount < PENDING_MAX
-                 && (connectedCount + pendingCount) < maxConnections
-                 && unconnectedCount > 0)
-            {
-                // get number of connections to attempt
-                var connectCount = Math.Min(unconnectedCount, maxConnections - (connectedCount + pendingCount));
-
-                var unconnectedPeersSorted = this.unconnectedPeers.OrderBy(x => -x.Time.Ticks).ToArray();
-                var unconnectedPeerIndex = 0;
-
-                var connectTasks = new List<Task>();
-                for (var i = 0; i < connectCount && unconnectedPeerIndex < unconnectedPeersSorted.Length; i++)
-                {
-                    // cooperative loop
-                    this.shutdownToken.Token.ThrowIfCancellationRequested();
-
-                    // get a random peer to connect to
-                    var candidatePeer = unconnectedPeersSorted[unconnectedPeerIndex];
-                    unconnectedPeerIndex++;
-
-                    connectTasks.Add(ConnectToPeer(candidatePeer.IPEndPoint, candidatePeer.IsSeed));
-                }
-
-                // wait for pending connection attempts to complete
-                //Task.WaitAll(connectTasks.ToArray(), this.shutdownToken.Token);
-            }
-
-            // check if there are too many peers connected
-            var overConnected = this.connectedPeers.Count - CONNECTED_MAX;
-            if (overConnected > 0)
-            {
-                foreach (var remoteEndpoint in this.connectedPeers.Keys.Take(overConnected))
-                {
-                    // cooperative loop
-                    this.shutdownToken.Token.ThrowIfCancellationRequested();
-
-                    this.logger.Debug("Too many peers connected ({0}), disconnecting {1}".Format2(overConnected, remoteEndpoint));
-                    DisconnectPeer(remoteEndpoint, null);
-                }
-            }
-        }
-
-        private void StatsWorker(WorkerMethod instance)
-        {
-            this.logger.Info(
-                "UNCONNECTED: {0,3}, PENDING: {1,3}, CONNECTED: {2,3}, BAD: {3,3}, INCOMING: {4,3}, MESSAGES/SEC: {5,6:#,##0}".Format2(
-                /*0*/ this.unconnectedPeers.Count,
-                /*1*/ this.pendingPeers.Count,
-                /*2*/ this.connectedPeers.Count,
-                /*3*/ this.badPeers.Count,
-                /*4*/ this.incomingCount,
-                /*5*/ this.messageRateMeasure.GetAverage(TimeSpan.FromSeconds(1))));
-        }
-
-        private void Startup()
-        {
-            this.logger.Info("LocalClients starting up");
-            var stopwatch = Stopwatch.StartNew();
-
-            // start listening for incoming peers
-            //StartListening();
-
-            // add seed peers
-            AddSeedPeers();
-
-            // add known peers
-            AddKnownPeers();
-
-            stopwatch.Stop();
-            this.logger.Info("LocalClients finished starting up: {0} ms".Format2(stopwatch.ElapsedMilliseconds));
-        }
-
-        private void Shutdown()
-        {
-            this.logger.Info("LocalClient shutting down");
-
-            try
-            {
-                foreach (var remoteNode in this.connectedPeers.Values)
-                {
-                    try
-                    {
-                        remoteNode.Disconnect();
-                    }
-                    catch (Exception) { } // swallow any exceptions at the peer disconnect level to try and process everyone
-                }
-            }
-            catch (Exception) { } // swallow any looping exceptions
-
-            this.logger.Info("LocalClient shutdown finished");
-        }
-
-        private async void StartListening()
-        {
-            try
-            {
-                switch (this.Type)
-                {
-                    case RulesEnum.MainNet:
-                    case RulesEnum.TestNet3:
-                        var externalIPAddress = Messaging.GetExternalIPAddress();
-                        var localhost = Dns.GetHostEntry(Dns.GetHostName());
-
-                        this.listenSocket = new Socket(externalIPAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                        this.listenSocket.Bind(new IPEndPoint(localhost.AddressList.Where(x => x.AddressFamily == externalIPAddress.AddressFamily).First(), Messaging.Port));
-                        break;
-
-                    case RulesEnum.ComparisonToolTestNet:
-                        this.listenSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                        this.listenSocket.Bind(new IPEndPoint(IPAddress.Parse("127.0.0.1"), Messaging.Port));
-                        break;
-                }
-                this.listenSocket.Listen(SERVER_BACKLOG);
-            }
-            catch (Exception e)
-            {
-                this.logger.ErrorException("Failed to start listener socket.", e);
-                if (this.listenSocket != null)
-                    this.listenSocket.Dispose();
-                return;
-            }
-
-            try
-            {
-                while (true)
-                {
-                    // cooperative loop
-                    this.shutdownToken.Token.ThrowIfCancellationRequested();
-
-                    try
-                    {
-                        var newSocket = await Task.Factory.FromAsync<Socket>(this.listenSocket.BeginAccept(null, null), this.listenSocket.EndAccept);
-
-                        Task.Run(async () =>
-                        {
-                            var remoteNode = new RemoteNode(newSocket, isSeed: false);
-                            try
-                            {
-                                if (await ConnectAndHandshake(remoteNode, isIncoming: true))
-                                {
-                                    Interlocked.Increment(ref this.incomingCount);
-                                }
-                                else
-                                {
-                                    DisconnectPeer(remoteNode.RemoteEndPoint, null);
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                if (remoteNode.RemoteEndPoint != null)
-                                    DisconnectPeer(remoteNode.RemoteEndPoint, e);
-                            }
-                        }).Forget();
-                    }
-                    catch (Exception e)
-                    {
-                        this.logger.WarnException("Failed incoming connection.", e);
-                    }
-                }
-            }
-            catch (OperationCanceledException) { }
-            finally
-            {
-                this.listenSocket.Dispose();
-            }
-        }
-
-        private async Task PeerStartup(RemoteNode remoteNode)
-        {
-            await remoteNode.Sender.RequestKnownAddressesAsync();
-        }
-
         private void AddSeedPeers()
         {
             Action<string> addSeed =
@@ -370,7 +167,7 @@ namespace BitSharp.Node
                     try
                     {
                         var ipAddress = Dns.GetHostEntry(hostNameOrAddress).AddressList.First();
-                        this.unconnectedPeers.TryAdd(
+                        this.peerWorker.AddCandidatePeer(
                             new CandidatePeer
                             {
                                 IPEndPoint = new IPEndPoint(ipAddress, Messaging.Port),
@@ -421,7 +218,7 @@ namespace BitSharp.Node
             var count = 0;
             foreach (var knownAddress in this.networkPeerCache.Values)
             {
-                this.unconnectedPeers.TryAdd(
+                this.peerWorker.AddCandidatePeer(
                     new CandidatePeer
                     {
                         IPEndPoint = knownAddress.NetworkAddress.ToIPEndPoint(),
@@ -434,68 +231,53 @@ namespace BitSharp.Node
             this.logger.Info("LocalClients loaded {0} known peers from database".Format2(count));
         }
 
-        private async Task<RemoteNode> ConnectToPeer(IPEndPoint remoteEndPoint, bool isSeed)
+        private void HandlePeerConnected(Peer peer)
         {
-            try
-            {
-                var remoteNode = new RemoteNode(remoteEndPoint, isSeed, this.logger);
+            var remoteAddressWithTime = new NetworkAddressWithTime(DateTime.UtcNow.ToUnixTime(), peer.RemoteEndPoint.ToNetworkAddress(/*TODO*/services: 0));
+            this.networkPeerCache[remoteAddressWithTime.GetKey()] = remoteAddressWithTime;
 
-                this.unconnectedPeers.TryRemove(remoteEndPoint.ToCandidatePeerKey());
-                this.pendingPeers.TryAdd(remoteNode.RemoteEndPoint, remoteNode);
+            WirePeerEvents(peer);
 
-                var success = await ConnectAndHandshake(remoteNode, isIncoming: false);
-                if (success)
-                {
-                    await PeerStartup(remoteNode);
-
-                    return remoteNode;
-                }
-                else
-                {
-                    //this.knownAddressCache[remoteEndPoint.ToNetworkAddressKey()] =
-                    //    new NetworkAddressWithTime(0, remoteEndPoint.ToNetworkAddress(0));
-                    DisconnectPeer(remoteEndPoint, null);
-                    return null;
-                }
-            }
-            catch (Exception e)
-            {
-                this.logger.DebugException("Could not connect to {0}".Format2(remoteEndPoint), e);
-                //this.knownAddressCache[remoteEndPoint.ToNetworkAddressKey()] =
-                //    new NetworkAddressWithTime(0, remoteEndPoint.ToNetworkAddress(0));
-                DisconnectPeer(remoteEndPoint, e);
-                return null;
-            }
+            this.statsWorker.NotifyWork();
+            this.headersRequestWorker.NotifyWork();
+            this.blockRequestWorker.NotifyWork();
         }
 
-        private void WireNode(RemoteNode remoteNode)
+        private void HandlePeerDisconnected(Peer peer)
         {
-            remoteNode.Receiver.OnMessage += OnMessage;
-            remoteNode.Receiver.OnInventoryVectors += OnInventoryVectors;
-            remoteNode.Receiver.OnBlock += HandleBlock;
-            remoteNode.Receiver.OnBlockHeaders += HandleBlockHeaders;
-            remoteNode.Receiver.OnTransaction += OnTransaction;
-            remoteNode.Receiver.OnReceivedAddresses += OnReceivedAddresses;
-            remoteNode.OnGetBlocks += OnGetBlocks;
-            remoteNode.OnGetHeaders += OnGetHeaders;
-            remoteNode.OnGetData += OnGetData;
-            remoteNode.OnPing += OnPing;
-            remoteNode.OnDisconnect += OnDisconnect;
+            UnwirePeerEvents(peer);
+
+            this.statsWorker.NotifyWork();
+            this.headersRequestWorker.NotifyWork();
+            this.blockRequestWorker.NotifyWork();
         }
 
-        private void UnwireNode(RemoteNode remoteNode)
+        private void WirePeerEvents(Peer peer)
         {
-            remoteNode.Receiver.OnMessage -= OnMessage;
-            remoteNode.Receiver.OnInventoryVectors -= OnInventoryVectors;
-            remoteNode.Receiver.OnBlock -= HandleBlock;
-            remoteNode.Receiver.OnBlockHeaders -= HandleBlockHeaders;
-            remoteNode.Receiver.OnTransaction -= OnTransaction;
-            remoteNode.Receiver.OnReceivedAddresses -= OnReceivedAddresses;
-            remoteNode.OnGetBlocks -= OnGetBlocks;
-            remoteNode.OnGetHeaders -= OnGetHeaders;
-            remoteNode.OnGetData -= OnGetData;
-            remoteNode.OnPing -= OnPing;
-            remoteNode.OnDisconnect -= OnDisconnect;
+            peer.Receiver.OnMessage += OnMessage;
+            peer.Receiver.OnInventoryVectors += OnInventoryVectors;
+            peer.Receiver.OnBlock += HandleBlock;
+            peer.Receiver.OnBlockHeaders += HandleBlockHeaders;
+            peer.Receiver.OnTransaction += OnTransaction;
+            peer.Receiver.OnReceivedAddresses += OnReceivedAddresses;
+            peer.OnGetBlocks += OnGetBlocks;
+            peer.OnGetHeaders += OnGetHeaders;
+            peer.OnGetData += OnGetData;
+            peer.OnPing += OnPing;
+        }
+
+        private void UnwirePeerEvents(Peer peer)
+        {
+            peer.Receiver.OnMessage -= OnMessage;
+            peer.Receiver.OnInventoryVectors -= OnInventoryVectors;
+            peer.Receiver.OnBlock -= HandleBlock;
+            peer.Receiver.OnBlockHeaders -= HandleBlockHeaders;
+            peer.Receiver.OnTransaction -= OnTransaction;
+            peer.Receiver.OnReceivedAddresses -= OnReceivedAddresses;
+            peer.OnGetBlocks -= OnGetBlocks;
+            peer.OnGetHeaders -= OnGetHeaders;
+            peer.OnGetData -= OnGetData;
+            peer.OnPing -= OnPing;
         }
 
         private void OnMessage(Message message)
@@ -505,7 +287,7 @@ namespace BitSharp.Node
 
         private void OnInventoryVectors(ImmutableArray<InventoryVector> invVectors)
         {
-            var connectedPeersLocal = this.connectedPeers.Values.SafeToList();
+            var connectedPeersLocal = this.ConnectedPeers.SafeToList();
             if (connectedPeersLocal.Count == 0)
                 return;
 
@@ -526,42 +308,24 @@ namespace BitSharp.Node
             }
         }
 
-        private Task RequestTransaction(RemoteNode remoteNode, UInt256 txHash)
-        {
-            var now = DateTime.UtcNow;
-            var newRequestTime = now;
-
-            // check if transaction has already been requested
-            if (this.requestedTransactions.TryAdd(txHash, now))
-            {
-                var invVectors = ImmutableArray.Create<InventoryVector>(new InventoryVector(InventoryVector.TYPE_MESSAGE_TRANSACTION, txHash));
-                return remoteNode.Sender.SendGetData(invVectors);
-            }
-
-            return null;
-        }
-
-        private void HandleBlock(RemoteNode remoteNode, Block block)
+        private void HandleBlock(Peer peer, Block block)
         {
             var handler = this.OnBlock;
             if (handler != null)
-                handler(remoteNode, block);
+                handler(peer, block);
         }
 
-        private void HandleBlockHeaders(RemoteNode remoteNode, IImmutableList<BlockHeader> blockHeaders)
+        private void HandleBlockHeaders(Peer peer, IImmutableList<BlockHeader> blockHeaders)
         {
             var handler = this.OnBlockHeaders;
             if (handler != null)
-                handler(remoteNode, blockHeaders);
+                handler(peer, blockHeaders);
         }
 
         private void OnTransaction(Transaction transaction)
         {
             if (this.logger.IsTraceEnabled)
-                this.logger.Trace("Received block header {0}".Format2(transaction.Hash));
-
-            DateTime ignore;
-            this.requestedTransactions.TryRemove(transaction.Hash, out ignore);
+                this.logger.Trace("Received transaction {0}".Format2(transaction.Hash));
         }
 
         private void OnReceivedAddresses(ImmutableArray<NetworkAddressWithTime> addresses)
@@ -573,19 +337,13 @@ namespace BitSharp.Node
                 ipEndpoints.Add(ipEndpoint);
             }
 
-            this.unconnectedPeers.UnionWith(ipEndpoints.Select(x => x.ToCandidatePeerKey()));
-            this.unconnectedPeers.ExceptWith(this.badPeers.Select(x => x.ToCandidatePeerKey()));
-            this.unconnectedPeers.ExceptWith(this.connectedPeers.Keys.Select(x => x.ToCandidatePeerKey()));
-            this.unconnectedPeers.ExceptWith(this.pendingPeers.Keys.Select(x => x.ToCandidatePeerKey()));
-
-            // queue up addresses to be flushed to the database
             foreach (var address in addresses)
             {
-                //this.knownAddressCache.TryAdd(address.GetKey(), address);
+                this.peerWorker.AddCandidatePeer(address.NetworkAddress.ToIPEndPoint().ToCandidatePeerKey());
             }
         }
 
-        private void OnGetBlocks(RemoteNode remoteNode, GetBlocksPayload payload)
+        private void OnGetBlocks(Peer peer, GetBlocksPayload payload)
         {
             var targetChainLocal = this.coreDaemon.TargetChain;
             if (targetChainLocal == null)
@@ -622,10 +380,10 @@ namespace BitSharp.Node
                     break;
             }
 
-            remoteNode.Sender.SendInventory(invVectors.ToImmutable()).Forget();
+            peer.Sender.SendInventory(invVectors.ToImmutable()).Forget();
         }
 
-        private void OnGetHeaders(RemoteNode remoteNode, GetBlocksPayload payload)
+        private void OnGetHeaders(Peer peer, GetBlocksPayload payload)
         {
             if (this.Type == RulesEnum.ComparisonToolTestNet)
             {
@@ -668,10 +426,10 @@ namespace BitSharp.Node
                     break;
             }
 
-            remoteNode.Sender.SendHeaders(blockHeaders.ToImmutable()).Forget();
+            peer.Sender.SendHeaders(blockHeaders.ToImmutable()).Forget();
         }
 
-        private void OnGetData(RemoteNode remoteNode, InventoryPayload payload)
+        private void OnGetData(Peer peer, InventoryPayload payload)
         {
             foreach (var invVector in payload.InventoryVectors)
             {
@@ -681,7 +439,7 @@ namespace BitSharp.Node
                         //Block block;
                         //if (this.blockCache.TryGetValue(invVector.Hash, out block))
                         //{
-                        //    remoteNode.Sender.SendBlock(block).Forget();
+                        //    peer.Sender.SendBlock(block).Forget();
                         //}
                         break;
 
@@ -692,107 +450,21 @@ namespace BitSharp.Node
             }
         }
 
-        private void OnPing(RemoteNode remoteNode, ImmutableArray<byte> payload)
+        private void OnPing(Peer peer, ImmutableArray<byte> payload)
         {
-            remoteNode.Sender.SendMessageAsync(Messaging.ConstructMessage("pong", payload.ToArray())).Wait();
+            peer.Sender.SendMessageAsync(Messaging.ConstructMessage("pong", payload.ToArray())).Wait();
         }
 
-        private void OnDisconnect(RemoteNode remoteNode)
+        private void StatsWorker(WorkerMethod instance)
         {
-            DisconnectPeer(remoteNode.RemoteEndPoint, null);
-        }
-
-        private async Task<bool> ConnectAndHandshake(RemoteNode remoteNode, bool isIncoming)
-        {
-            // wire node
-            WireNode(remoteNode);
-
-            // connect
-            await remoteNode.ConnectAsync();
-
-            if (remoteNode.IsConnected)
-            {
-                //TODO
-                RemoteNode ignore;
-                this.pendingPeers.TryRemove(remoteNode.RemoteEndPoint, out ignore);
-                this.connectedPeers.TryAdd(remoteNode.RemoteEndPoint, remoteNode);
-
-                // setup task to wait for verack
-                var verAckTask = remoteNode.Receiver.WaitForMessage(x => x.Command == "verack", HANDSHAKE_TIMEOUT_MS);
-
-                // setup task to wait for version
-                var versionTask = remoteNode.Receiver.WaitForMessage(x => x.Command == "version", HANDSHAKE_TIMEOUT_MS);
-
-                // start listening for messages after tasks have been setup
-                remoteNode.Receiver.Listen();
-
-                // send our local version
-                var nodeId = random.NextUInt64(); //TODO should be generated and verified on version message
-
-                var currentHeight = this.coreDaemon.CurrentChain.Height;
-                await remoteNode.Sender.SendVersion(Messaging.GetExternalIPEndPoint(), remoteNode.RemoteEndPoint, nodeId, (UInt32)currentHeight);
-
-                // wait for our local version to be acknowledged by the remote peer
-                // wait for remote peer to send their version
-                await Task.WhenAll(verAckTask, versionTask);
-
-                //TODO shouldn't have to decode again
-                var versionMessage = versionTask.Result;
-                var versionPayload = NodeEncoder.DecodeVersionPayload(versionMessage.Payload.ToArray(), versionMessage.Payload.Length);
-
-                var remoteAddressWithTime = new NetworkAddressWithTime
-                (
-                    Time: DateTime.UtcNow.ToUnixTime(),
-                    NetworkAddress: new NetworkAddress
-                    (
-                        Services: versionPayload.LocalAddress.Services,
-                        IPv6Address: versionPayload.LocalAddress.IPv6Address,
-                        Port: versionPayload.LocalAddress.Port
-                    )
-                );
-
-                if (!isIncoming)
-                    this.networkPeerCache[remoteAddressWithTime.GetKey()] = remoteAddressWithTime;
-
-                // acknowledge their version
-                await remoteNode.Sender.SendVersionAcknowledge();
-
-                this.headersRequestWorker.NotifyWork();
-                this.blockRequestWorker.NotifyWork();
-                this.statsWorker.NotifyWork();
-
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        private void DisconnectPeer(IPEndPoint remoteEndpoint, Exception e)
-        {
-            this.badPeers.Add(remoteEndpoint); //TODO
-            this.unconnectedPeers.TryRemove(remoteEndpoint.ToCandidatePeerKey());
-
-            RemoteNode pendingPeer;
-            this.pendingPeers.TryRemove(remoteEndpoint, out pendingPeer);
-
-            RemoteNode connectedPeer;
-            this.connectedPeers.TryRemove(remoteEndpoint, out connectedPeer);
-
-            this.logger.DebugException("Remote peer failed: {0}".Format2(remoteEndpoint), e);
-
-            if (pendingPeer != null)
-            {
-                UnwireNode(pendingPeer);
-                pendingPeer.Disconnect();
-            }
-
-            if (connectedPeer != null)
-            {
-                UnwireNode(connectedPeer);
-                connectedPeer.Disconnect();
-            }
+            this.logger.Info(
+                "UNCONNECTED: {0,3}, PENDING: {1,3}, CONNECTED: {2,3}, BAD: {3,3}, INCOMING: {4,3}, MESSAGES/SEC: {5,6:#,##0}".Format2(
+                /*0*/ this.peerWorker.UnconnectedPeers.Count,
+                /*1*/ this.peerWorker.PendingPeers.Count,
+                /*2*/ this.peerWorker.ConnectedPeers.Count,
+                /*3*/ this.peerWorker.BadPeers.Count,
+                /*4*/ this.peerWorker.IncomingCount,
+                /*5*/ this.messageRateMeasure.GetAverage(TimeSpan.FromSeconds(1))));
         }
     }
 
