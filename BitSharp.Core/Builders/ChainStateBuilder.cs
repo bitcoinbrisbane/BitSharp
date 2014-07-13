@@ -127,7 +127,6 @@ namespace BitSharp.Core.Builders
 
                         // track stats
                         this.stats.blockCount++;
-                        this.stats.blockRateMeasure.Tick();
                     });
 
                     // wait for transactions to load
