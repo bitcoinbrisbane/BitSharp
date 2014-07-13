@@ -10,3 +10,5 @@ if exist *.log del /q *.log
 
 if exist "packages" rmdir /s /q "packages"
 if exist "TestResults" rmdir /s /q "TestResults"
+
+if exist "BitSharp.BlockHelper\Blocks" rmdir /s /q "BitSharp.BlockHelper\Blocks"
