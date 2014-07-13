@@ -92,7 +92,7 @@ namespace BitSharp.Core.Builders
         private void Mint(Transaction tx, int txIndex, ChainedHeader chainedHeader)
         {
             // add transaction to the utxo
-            var unspentTx = new UnspentTx(chainedHeader.Height, txIndex, tx.Outputs.Length, OutputState.Unspent);
+            var unspentTx = new UnspentTx(tx.Hash, chainedHeader.Height, txIndex, tx.Outputs.Length, OutputState.Unspent);
             if (!this.chainStateBuilderStorage.TryAddTransaction(tx.Hash, unspentTx))
             {
                 // duplicate transaction
@@ -218,7 +218,7 @@ namespace BitSharp.Core.Builders
                     throw new ValidationException(chainedHeader.Hash);
 
                 // restore fully spent transaction
-                unspentTx = new UnspentTx(spentTx.ConfirmedBlockIndex, spentTx.TxIndex, new OutputStates(spentTx.OutputCount, OutputState.Spent));
+                unspentTx = new UnspentTx(spentTx.TxHash, spentTx.ConfirmedBlockIndex, spentTx.TxIndex, new OutputStates(spentTx.OutputCount, OutputState.Spent));
                 wasRestored = true;
             }
 

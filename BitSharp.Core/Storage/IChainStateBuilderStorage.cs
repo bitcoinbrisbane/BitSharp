@@ -36,7 +36,7 @@ namespace BitSharp.Core.Storage
 
         void PrepareSpentTransactions(int spentBlockIndex);
 
-        IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions();
+        IEnumerable<UnspentTx> ReadUnspentTransactions();
 
         IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex);
 

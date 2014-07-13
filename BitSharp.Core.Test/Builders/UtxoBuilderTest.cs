@@ -42,7 +42,7 @@ namespace BitSharp.Core.Test.Builders
 
             // prepare an unspent transaction
             var txHash = new UInt256(100);
-            var unspentTx = new UnspentTx(chainedHeader0.Height, 0, 3, OutputState.Unspent);
+            var unspentTx = new UnspentTx(txHash, chainedHeader0.Height, 0, 3, OutputState.Unspent);
 
             // prepare unspent output
             var unspentTransactions = ImmutableDictionary.Create<UInt256, UnspentTx>().Add(txHash, unspentTx);
@@ -112,7 +112,7 @@ namespace BitSharp.Core.Test.Builders
 
             // prepare an unspent transaction
             var txHash = new UInt256(100);
-            var unspentTx = new UnspentTx(chainedHeader0.Height, 0, 1, OutputState.Unspent);
+            var unspentTx = new UnspentTx(txHash, chainedHeader0.Height, 0, 1, OutputState.Unspent);
 
             // add the unspent transaction
             memoryChainStateBuilderStorage.UnspentTransactionsDictionary.Add(txHash, unspentTx);

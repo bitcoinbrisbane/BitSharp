@@ -58,7 +58,7 @@ namespace BitSharp.Core.Test.Storage
                     coreStorage.TryAddBlock(block);
 
                 // store the genesis utxo state
-                var expectedUtxos = new List<List<KeyValuePair<UInt256, UnspentTx>>>();
+                var expectedUtxos = new List<List<UnspentTx>>();
                 using (var chainState = chainStateBuilder.ToImmutable())
                 {
                     expectedUtxos.Add(chainState.Utxo.GetUnspentTransactions().ToList());
@@ -101,30 +101,14 @@ namespace BitSharp.Core.Test.Storage
                     var expectedUtxo = expectedUtxos.Last();
                     expectedUtxos.RemoveAt(expectedUtxos.Count - 1);
 
-                    List<KeyValuePair<UInt256, UnspentTx>> actualUtxo;
+                    List<UnspentTx> actualUtxo;
                     using (var chainState = chainStateBuilder.ToImmutable())
                     {
                         actualUtxo = chainState.Utxo.GetUnspentTransactions().ToList();
                     }
 
-                    CollectionAssert.AreEqual(expectedUtxo, actualUtxo, new UtxoComparer(), "UTXO differs at height: {0}".Format2(blockIndex));
+                    CollectionAssert.AreEqual(expectedUtxo, actualUtxo, "UTXO differs at height: {0}".Format2(blockIndex));
                 }
-            }
-        }
-
-        private class UtxoComparer : IComparer, IComparer<KeyValuePair<UInt256, UnspentTx>>
-        {
-            public int Compare(KeyValuePair<UInt256, UnspentTx> x, KeyValuePair<UInt256, UnspentTx> y)
-            {
-                if (x.Key == y.Key && x.Value.Equals(y.Value))
-                    return 0;
-                else
-                    return -1;
-            }
-
-            int IComparer.Compare(object x, object y)
-            {
-                return this.Compare((KeyValuePair<UInt256, UnspentTx>)x, (KeyValuePair<UInt256, UnspentTx>)y);
             }
         }
     }

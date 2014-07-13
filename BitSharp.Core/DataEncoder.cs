@@ -383,6 +383,7 @@ namespace BitSharp.Core
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
                 return new UnspentTx(
+                    txHash: reader.ReadUInt256(),
                     blockIndex: reader.ReadInt32(),
                     txIndex: reader.ReadInt32(),
                     outputStates: new OutputStates(
@@ -404,6 +405,7 @@ namespace BitSharp.Core
         {
             using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
             {
+                writer.WriteUInt256(unspentTx.TxHash);
                 writer.WriteInt32(unspentTx.BlockIndex);
                 writer.WriteInt32(unspentTx.TxIndex);
                 writer.WriteVarBytes(unspentTx.OutputStates.ToByteArray());

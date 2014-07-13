@@ -18,6 +18,6 @@ namespace BitSharp.Core.Storage
 
         bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx);
 
-        IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions();
+        IEnumerable<UnspentTx> ReadUnspentTransactions();
     }
 }

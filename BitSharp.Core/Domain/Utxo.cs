@@ -49,7 +49,7 @@ namespace BitSharp.Domain
             }
         }
 
-        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> GetUnspentTransactions()
+        public IEnumerable<UnspentTx> GetUnspentTransactions()
         {
             return this.chainStateStorage.ReadUnspentTransactions();
         }

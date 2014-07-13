@@ -47,9 +47,9 @@ namespace BitSharp.Core.Storage.Memory
             return this.unspentTransactions.TryGetValue(txHash, out unspentTx);
         }
 
-        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions()
+        public IEnumerable<UnspentTx> ReadUnspentTransactions()
         {
-            return this.unspentTransactions;
+            return this.unspentTransactions.Values;
         }
     }
 }

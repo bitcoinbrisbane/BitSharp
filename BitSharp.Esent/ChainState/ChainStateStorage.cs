@@ -106,7 +106,7 @@ namespace BitSharp.Esent
             }
         }
 
-        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions()
+        public IEnumerable<UnspentTx> ReadUnspentTransactions()
         {
             var cursor = this.OpenCursor();
             try
@@ -179,7 +179,7 @@ namespace BitSharp.Esent
                 var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.txIndexColumnId).Value;
                 var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.outputStatesColumnId));
 
-                unspentTx = new UnspentTx(blockIndex, txIndex, outputStates);
+                unspentTx = new UnspentTx(txHash, blockIndex, txIndex, outputStates);
                 return true;
             }
 
@@ -187,7 +187,7 @@ namespace BitSharp.Esent
             return false;
         }
 
-        internal static IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions(ChainStateStorageCursor cursor)
+        internal static IEnumerable<UnspentTx> ReadUnspentTransactions(ChainStateStorageCursor cursor)
         {
             Api.JetSetCurrentIndex(cursor.jetSession, cursor.unspentTxTableId, "IX_TxHash");
 
@@ -200,7 +200,7 @@ namespace BitSharp.Esent
                     var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.txIndexColumnId).Value;
                     var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.outputStatesColumnId));
 
-                    yield return new KeyValuePair<UInt256, UnspentTx>(txHash, new UnspentTx(blockIndex, txIndex, outputStates));
+                    yield return new UnspentTx(txHash, blockIndex, txIndex, outputStates);
                 } while (Api.TryMoveNext(cursor.jetSession, cursor.unspentTxTableId));
             }
         }

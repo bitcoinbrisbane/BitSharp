@@ -97,9 +97,9 @@ namespace BitSharp.Core.Storage.Memory
             this.unspentTransactions[txHash] = unspentTx;
         }
 
-        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions()
+        public IEnumerable<UnspentTx> ReadUnspentTransactions()
         {
-            return this.unspentTransactions;
+            return this.unspentTransactions.Values;
         }
 
         public void PrepareSpentTransactions(int spentBlockIndex)

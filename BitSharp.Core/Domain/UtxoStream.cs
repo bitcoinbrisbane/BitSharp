@@ -13,11 +13,11 @@ namespace BitSharp.Core.Domain
     public class UtxoStream : Stream
     {
         private readonly Logger logger;
-        private readonly IEnumerator<KeyValuePair<UInt256, UnspentTx>> unspentTransactions;
+        private readonly IEnumerator<UnspentTx> unspentTransactions;
         private readonly List<byte> unreadBytes;
         private int totalBytes;
 
-        public UtxoStream(Logger logger, IEnumerable<KeyValuePair<UInt256, UnspentTx>> unspentTransactions)
+        public UtxoStream(Logger logger, IEnumerable<UnspentTx> unspentTransactions)
         {
             this.logger = logger;
             this.unspentTransactions = unspentTransactions.GetEnumerator();
@@ -75,10 +75,7 @@ namespace BitSharp.Core.Domain
                 && this.unspentTransactions.MoveNext()
             )
             {
-                var txHash = this.unspentTransactions.Current.Key;
-                var unspentTx = this.unspentTransactions.Current.Value;
-
-                unreadBytes.AddRange(txHash.ToByteArray());
+                var unspentTx = this.unspentTransactions.Current;
                 unreadBytes.AddRange(DataEncoder.EncodeUnspentTx(unspentTx));
             }
 

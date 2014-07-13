@@ -231,7 +231,7 @@ namespace BitSharp.Esent
             }
         }
 
-        public IEnumerable<KeyValuePair<UInt256, UnspentTx>> ReadUnspentTransactions()
+        public IEnumerable<UnspentTx> ReadUnspentTransactions()
         {
             return ChainStateStorage.ReadUnspentTransactions(this.cursor);
         }

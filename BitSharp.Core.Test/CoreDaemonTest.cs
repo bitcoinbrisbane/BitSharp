@@ -250,12 +250,12 @@ namespace BitSharp.Core.Test
                     using (var actualChainSate = daemon1.CoreDaemon.GetChainState())
                     {
                         var expectedUtxo = expectedChainSate.Utxo;
-                        var expectedUnspentTransactions = ImmutableDictionary.CreateRange<UInt256, UnspentTx>(expectedUtxo.GetUnspentTransactions());
+                        var expectedUnspentTransactions = expectedUtxo.GetUnspentTransactions().ToList();
 
                         var actualUtxo = actualChainSate.Utxo;
-                        var actualUnspentTransactions = ImmutableDictionary.CreateRange<UInt256, UnspentTx>(actualUtxo.GetUnspentTransactions());
+                        var actualUnspentTransactions = actualUtxo.GetUnspentTransactions().ToList();
 
-                        CollectionAssert.AreEquivalent(expectedUnspentTransactions, actualUnspentTransactions);
+                        CollectionAssert.AreEqual(expectedUnspentTransactions, actualUnspentTransactions);
                     }
                 }
             }
