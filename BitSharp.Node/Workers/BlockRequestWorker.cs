@@ -23,7 +23,6 @@ namespace BitSharp.Node.Workers
     {
         private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan MISSING_STALE_REQUEST_TIME = TimeSpan.FromSeconds(3);
-        private static readonly int MAX_CRITICAL_LOOKAHEAD = 1.THOUSAND();
         private static readonly int MAX_REQUESTS_PER_PEER = 100;
 
         private readonly Logger logger;
@@ -31,11 +30,10 @@ namespace BitSharp.Node.Workers
         private readonly CoreDaemon coreDaemon;
         private readonly CoreStorage coreStorage;
 
-        private readonly ConcurrentDictionary<UInt256, DateTime> allBlockRequests;
+        private readonly ConcurrentDictionary<UInt256, Tuple<IPEndPoint, DateTime>> allBlockRequests;
         private readonly ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>> blockRequestsByPeer;
 
-        private SortedList<int, ChainedHeader> missingBlockQueue;
-
+        private int targetChainLookAhead;
         private List<ChainedHeader> targetChainQueue;
         private int targetChainQueueIndex;
         private DateTime targetChainQueueTime;
@@ -43,9 +41,6 @@ namespace BitSharp.Node.Workers
         private readonly DurationMeasure blockRequestDurationMeasure;
         private readonly RateMeasure blockDownloadRateMeasure;
         private readonly CountMeasure duplicateBlockDownloadCountMeasure;
-
-        private int targetChainLookAhead;
-        private int criticalTargetChainLookAhead;
 
         private readonly WorkerMethod flushWorker;
         private readonly ConcurrentQueue<Tuple<RemoteNode, Block>> flushQueue;
@@ -61,9 +56,8 @@ namespace BitSharp.Node.Workers
             this.coreDaemon = coreDaemon;
             this.coreStorage = coreDaemon.CoreStorage;
 
-            this.allBlockRequests = new ConcurrentDictionary<UInt256, DateTime>();
+            this.allBlockRequests = new ConcurrentDictionary<UInt256, Tuple<IPEndPoint, DateTime>>();
             this.blockRequestsByPeer = new ConcurrentDictionary<IPEndPoint, ConcurrentDictionary<UInt256, DateTime>>();
-            this.missingBlockQueue = new SortedList<int, ChainedHeader>();
 
             this.localClient.OnBlock += HandleBlock;
             this.coreDaemon.OnChainStateChanged += HandleChainStateChanged;
@@ -75,8 +69,9 @@ namespace BitSharp.Node.Workers
             this.blockDownloadRateMeasure = new RateMeasure();
             this.duplicateBlockDownloadCountMeasure = new CountMeasure(TimeSpan.FromSeconds(30));
 
+            this.targetChainQueue = new List<ChainedHeader>();
+            this.targetChainQueueIndex = 0;
             this.targetChainLookAhead = 1;
-            this.criticalTargetChainLookAhead = 1;
 
             this.flushWorker = new WorkerMethod("BlockRequestWorker.FlushWorker", FlushWorkerMethod, initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: this.logger);
             this.flushQueue = new ConcurrentQueue<Tuple<RemoteNode, Block>>();
@@ -128,10 +123,6 @@ namespace BitSharp.Node.Workers
             new MethodTimer(false).Time("UpdateLookAhead", () =>
                 UpdateLookAhead());
 
-            // update list of missing blocks to request
-            new MethodTimer(false).Time("UpdateMissingBlockQueue", () =>
-                UpdateMissingBlockQueue());
-
             // update list of blocks on target chain to request
             new MethodTimer(false).Time("UpdateTargetChainQueue", () =>
                 UpdateTargetChainQueue());
@@ -151,7 +142,6 @@ namespace BitSharp.Node.Workers
             if (blockProcessingTime == TimeSpan.Zero)
             {
                 this.targetChainLookAhead = 1;
-                this.criticalTargetChainLookAhead = 1;
             }
             else
             {
@@ -162,78 +152,27 @@ namespace BitSharp.Node.Workers
                 var lookAheadTime = avgBlockRequestTime + TimeSpan.FromSeconds(30);
                 this.targetChainLookAhead = 1 + (int)(lookAheadTime.TotalSeconds / blockProcessingTime.TotalSeconds);
 
-                // determine critical target chain look ahead
-                var criticalLookAheadTime = TimeSpan.FromSeconds(5);
-                this.criticalTargetChainLookAhead = 1 + (int)(criticalLookAheadTime.TotalSeconds / blockProcessingTime.TotalSeconds);
-                this.criticalTargetChainLookAhead = Math.Min(this.criticalTargetChainLookAhead, MAX_CRITICAL_LOOKAHEAD);
-
                 this.logger.Debug(new string('-', 80));
                 this.logger.Debug("Block Request Time: {0}".Format2(avgBlockRequestTime));
                 this.logger.Debug("Look Ahead: {0:#,##0}".Format2(this.targetChainLookAhead));
-                this.logger.Debug("Critical Look Ahead: {0:#,##0}".Format2(this.criticalTargetChainLookAhead));
-                this.logger.Debug("Missing Block Queue Count: {0:#,##0}".Format2(this.missingBlockQueue.Count));
                 this.logger.Debug("Block Request Count: {0:#,##0}".Format2(this.allBlockRequests.Count));
                 this.logger.Debug(new string('-', 80));
             }
         }
 
-        private void UpdateMissingBlockQueue()
-        {
-            var currentChainLocal = this.coreDaemon.CurrentChain;
-            var targetChainLocal = this.coreDaemon.TargetChain;
-            var maxMissingHeight = currentChainLocal.Height + this.criticalTargetChainLookAhead;
-
-            // remove any blocks that are no longer missing
-            this.missingBlockQueue.RemoveWhere(x => this.coreStorage.ContainsBlockTxes(x.Value.Hash));
-
-            // remove old missing blocks
-            this.missingBlockQueue.RemoveWhere(x => x.Value.Height < currentChainLocal.Height);
-
-            // remove any missing blocks that are too far ahead
-            this.missingBlockQueue.RemoveWhere(x => x.Value.Height > maxMissingHeight);
-
-            // add any blocks that are currently missing
-            foreach (var missingBlock in this.coreStorage.MissingBlockTxes)
-            {
-                ChainedHeader missingBlockChained;
-                if (this.coreStorage.TryGetChainedHeader(missingBlock, out missingBlockChained)
-                    && missingBlockChained.Height <= maxMissingHeight)
-                {
-                    this.missingBlockQueue[missingBlockChained.Height] = missingBlockChained;
-                }
-            }
-
-            // preemptively add any upcoming blocks on the target chain that are missing
-            if (targetChainLocal != null)
-            {
-                foreach (var upcomingBlock in
-                    currentChainLocal.NavigateTowards(targetChainLocal)
-                    .Select(x => x.Item2)
-                    .Take(this.criticalTargetChainLookAhead)
-                    .Where(x =>
-                        x.Height <= maxMissingHeight
-                        && !this.missingBlockQueue.ContainsKey(x.Height)
-                        && !this.coreStorage.ContainsBlockTxes(x.Hash)))
-                {
-                    this.missingBlockQueue[upcomingBlock.Height] = upcomingBlock;
-                }
-            }
-        }
-
         private void UpdateTargetChainQueue()
         {
-            var currentChainLocal = this.coreDaemon.CurrentChain;
-            var targetChainLocal = this.coreDaemon.TargetChain;
-
             // update the target chain queue at most once per second
             if (this.targetChainQueueTime != null && DateTime.UtcNow - targetChainQueueTime < TimeSpan.FromSeconds(1))
                 return;
             else
                 this.targetChainQueueTime = DateTime.UtcNow;
 
+            var currentChainLocal = this.coreDaemon.CurrentChain;
+            var targetChainLocal = this.coreDaemon.TargetChain;
+
             // find missing blocks on the target chain to be requested, taking a chunk at a time
-            if (targetChainLocal != null &&
-                (this.targetChainQueue == null || this.targetChainQueueIndex >= this.targetChainQueue.Count))
+            if (targetChainLocal != null && this.targetChainQueueIndex >= this.targetChainQueue.Count)
             {
                 this.targetChainQueue = currentChainLocal.NavigateTowards(targetChainLocal)
                     .Select(x => x.Item2)
@@ -246,20 +185,25 @@ namespace BitSharp.Node.Workers
 
         private void SendBlockRequests()
         {
+            // don't do work on empty target chain queue
+            if (this.targetChainQueue.Count == 0)
+                return;
+
             var now = DateTime.UtcNow;
             var requestTasks = new List<Task>();
 
-            // determine stale request times
-            var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
-
             // remove any stale requests from the global list of requests
-            this.allBlockRequests.RemoveWhere(x => (now - x.Value) > STALE_REQUEST_TIME);
+            this.allBlockRequests.RemoveWhere(x => (now - x.Value.Item2) > STALE_REQUEST_TIME);
 
             var peerCount = this.localClient.ConnectedPeers.Count;
             if (peerCount == 0)
                 return;
 
-            var requestsPerPeer = Math.Max(1, this.missingBlockQueue.Count + (this.targetChainLookAhead / peerCount * 5));
+            // reset target queue index
+            this.targetChainQueueIndex = 0;
+
+            // spread the number of blocks queued to be requested over each peer
+            var requestsPerPeer = Math.Max(1, this.targetChainLookAhead / peerCount);
             requestsPerPeer = Math.Min(requestsPerPeer, MAX_REQUESTS_PER_PEER);
 
             // loop through each connected peer
@@ -288,7 +232,7 @@ namespace BitSharp.Node.Workers
                     {
                         // track block requests
                         peerBlockRequests[requestBlock] = now;
-                        this.allBlockRequests.TryAdd(requestBlock, now);
+                        this.allBlockRequests.TryAdd(requestBlock, Tuple.Create(peer.Value.RemoteEndPoint, now));
 
                         // add block to inv request
                         invVectors.Add(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, requestBlock));
@@ -306,8 +250,8 @@ namespace BitSharp.Node.Workers
                 this.logger.Info("Request tasks timed out.");
             }
 
-            // notify for another loop of work when out of target chain queue to use, unless there is nothing left missing
-            if (this.targetChainQueue != null && this.targetChainQueueIndex >= this.targetChainQueue.Count && this.missingBlockQueue.Count > 0)
+            // notify for another loop of work when out of target chain queue to use
+            if (this.targetChainQueueIndex >= this.targetChainQueue.Count)
                 this.NotifyWork();
         }
 
@@ -321,24 +265,8 @@ namespace BitSharp.Node.Workers
             // keep track of blocks iterated blocks for peer
             var currentCount = 0;
 
-            // iterate through any missing blocks first, they have priority and requests go stale more quickly
-            foreach (var missingBlock in this.missingBlockQueue.Values)
-            {
-                if (currentCount >= count)
-                    break;
-
-                if (!this.flushBlocks.Contains(missingBlock.Hash)
-                    && !peerBlockRequests.ContainsKey(missingBlock.Hash)
-                    && !this.allBlockRequests.ContainsKey(missingBlock.Hash)
-                    && !this.coreStorage.ContainsBlockTxes(missingBlock.Hash))
-                {
-                    yield return missingBlock.Hash;
-                    currentCount++;
-                }
-            }
-
             // iterate through the blocks on the target chain, each peer will request a separate chunk of blocks
-            for (; this.targetChainQueue != null && this.targetChainQueueIndex < this.targetChainQueue.Count && currentCount < count; this.targetChainQueueIndex++)
+            for (; this.targetChainQueueIndex < this.targetChainQueue.Count && currentCount < count; this.targetChainQueueIndex++)
             {
                 var requestBlock = this.targetChainQueue[this.targetChainQueueIndex];
 
@@ -374,9 +302,10 @@ namespace BitSharp.Node.Workers
 
                 this.flushBlocks.Remove(block.Hash);
 
-                DateTime requestTime;
-                this.allBlockRequests.TryRemove(block.Hash, out requestTime);
+                Tuple<IPEndPoint, DateTime> requestInfo;
+                this.allBlockRequests.TryRemove(block.Hash, out requestInfo);
 
+                DateTime requestTime;
                 ConcurrentDictionary<UInt256, DateTime> peerBlockRequests;
                 if (this.blockRequestsByPeer.TryGetValue(remoteNode.RemoteEndPoint, out peerBlockRequests)
                     && peerBlockRequests.TryRemove(block.Hash, out requestTime))
@@ -399,15 +328,13 @@ namespace BitSharp.Node.Workers
             this.logger.Info(new string('-', 80));
             this.logger.Info("allBlockRequests.Count: {0:#,##0}".Format2(this.allBlockRequests.Count));
             this.logger.Info("blockRequestsByPeer.InnerCount: {0:#,##0}".Format2(this.blockRequestsByPeer.Sum(x => x.Value.Count)));
-            this.logger.Info("missingBlockQueue.Count: {0:#,##0}".Format2(this.missingBlockQueue.Count));
-            this.logger.Info("targetChainQueue.Count: {0:#,##0}".Format2(this.targetChainQueue != null ? this.targetChainQueue.Count : (int?)null));
+            this.logger.Info("targetChainQueue.Count: {0:#,##0}".Format2(this.targetChainQueue.Count));
             this.logger.Info("targetChainQueueIndex: {0:#,##0}".Format2(this.targetChainQueueIndex));
             this.logger.Info("targetChainQueueTime: {0}".Format2(this.targetChainQueueTime));
             this.logger.Info("blockRequestDurationMeasure: {0}".Format2(this.blockRequestDurationMeasure.GetAverage()));
             this.logger.Info("blockDownloadRateMeasure: {0}/s".Format2(this.blockDownloadRateMeasure.GetAverage(TimeSpan.FromSeconds(1))));
             this.logger.Info("duplicateBlockDownloadCountMeasure: {0}/s".Format2(this.duplicateBlockDownloadCountMeasure.GetCount()));
             this.logger.Info("targetChainLookAhead: {0}".Format2(this.targetChainLookAhead));
-            this.logger.Info("criticalTargetChainLookAhead: {0}".Format2(this.criticalTargetChainLookAhead));
             this.logger.Info("flushQueue.Count: {0}".Format2(this.flushQueue.Count));
             this.logger.Info("flushBlocks.Count: {0}".Format2(this.flushBlocks.Count));
         }
@@ -436,13 +363,33 @@ namespace BitSharp.Node.Workers
 
         private void HandleBlockMissed(UInt256 blockHash)
         {
-            // on block miss, remove request from global list so it can be re-requested from another peer
-            var now = DateTime.UtcNow;
-            DateTime requestTime;
-            if (this.allBlockRequests.TryGetValue(blockHash, out requestTime)
-                && now - requestTime > MISSING_STALE_REQUEST_TIME)
+            // don't send re-requests against blocks in the flush queue
+            if (this.flushBlocks.Contains(blockHash))
+                return;
+
+            // on block miss, allow re-request of all blocks made to a slow peer
+            Tuple<IPEndPoint, DateTime> requestInfo;
+            if (this.allBlockRequests.TryGetValue(blockHash, out requestInfo))
             {
-                this.allBlockRequests.TryRemove(blockHash, out requestTime);
+                var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
+
+                var now = DateTime.UtcNow;
+                var requestTime = requestInfo.Item2;
+                if (now - requestTime > MISSING_STALE_REQUEST_TIME + avgBlockRequestTime)
+                {
+                    // remove all requests to the slow peer
+                    ConcurrentDictionary<UInt256, DateTime> peerRequests;
+                    if (this.blockRequestsByPeer.TryGetValue(requestInfo.Item1, out peerRequests))
+                    {
+                        foreach (var peerRequest in peerRequests)
+                            this.allBlockRequests.TryRemove(peerRequest.Key, out requestInfo);
+                    }
+
+                    // ensure missed block is removed from the global request list
+                    this.allBlockRequests.TryRemove(blockHash, out requestInfo);
+
+                    this.NotifyWork();
+                }
             }
         }
 
