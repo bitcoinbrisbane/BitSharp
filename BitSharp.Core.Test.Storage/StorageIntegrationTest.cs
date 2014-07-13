@@ -44,7 +44,6 @@ namespace BitSharp.Core.Test.Storage
             var genesisBlock = blocks[0];
             var genesisHeader = new ChainedHeader(genesisBlock.Header, height: 0, totalWork: 0);
             var genesisChain = Chain.CreateForGenesisBlock(genesisHeader);
-            var genesisUtxo = Utxo.CreateForGenesisBlock(genesisHeader);
 
             var rules = new MainnetRules(logger);
 

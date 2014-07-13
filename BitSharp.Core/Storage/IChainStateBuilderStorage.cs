@@ -16,8 +16,8 @@ namespace BitSharp.Core.Storage
         
         void RollbackTransaction();
 
-        Chain Chain { get; }
-
+        IEnumerable<ChainedHeader> ReadChain();
+        
         void AddChainedHeader(ChainedHeader chainedHeader);
 
         void RemoveChainedHeader(ChainedHeader chainedHeader);

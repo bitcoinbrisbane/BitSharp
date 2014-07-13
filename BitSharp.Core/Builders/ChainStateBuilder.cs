@@ -43,6 +43,7 @@ namespace BitSharp.Core.Builders
 
         private bool inTransaction;
         private readonly IChainStateBuilderStorage chainStateBuilderStorage;
+        private ChainBuilder chain;
         private readonly UtxoBuilder utxoBuilder;
 
         private readonly ReaderWriterLockSlim commitLock;
@@ -62,6 +63,8 @@ namespace BitSharp.Core.Builders
             this.txPrevOutputLoader = new TxPrevOutputLoader(this.coreStorage, this.txValidator, this.logger, this.rules, isConcurrent);
 
             this.chainStateBuilderStorage = chainStateBuilderStorage;
+
+            this.chain = new ChainBuilder(chainStateBuilderStorage.ReadChain());
             this.utxoBuilder = new UtxoBuilder(chainStateBuilderStorage, logger);
 
             this.commitLock = new ReaderWriterLockSlim();
@@ -87,7 +90,7 @@ namespace BitSharp.Core.Builders
             }.DisposeList();
         }
 
-        public Chain Chain { get { return this.chainStateBuilderStorage.Chain; } }
+        public Chain Chain { get { return this.chain.ToImmutable(); } }
 
         public BuilderStats Stats { get { return this.stats; } }
 
@@ -97,10 +100,12 @@ namespace BitSharp.Core.Builders
             using (this.txValidator.Start())
             using (this.scriptValidator.Start(/*isConcurrent: chainedHeader.Height > 150.THOUSAND()*/))
             {
+                var savedChain = this.chain.ToImmutable();
                 this.BeginTransaction();
                 try
                 {
                     // add the block to the chain
+                    this.chain.AddBlock(chainedHeader);
                     this.chainStateBuilderStorage.AddChainedHeader(chainedHeader);
 
                     // validate the block
@@ -112,7 +117,7 @@ namespace BitSharp.Core.Builders
                     // calculate the new block utxo, double spends will be checked for
                     new MethodTimer(false).Time("CalculateUtxo", () =>
                     {
-                        foreach (var pendingTx in this.utxoBuilder.CalculateUtxo(chainedHeader, blockTxes.Select(x => x.Transaction)))
+                        foreach (var pendingTx in this.utxoBuilder.CalculateUtxo(this.chain.ToImmutable(), blockTxes.Select(x => x.Transaction)))
                         {
                             this.txPrevOutputLoader.Add(pendingTx);
 
@@ -158,6 +163,7 @@ namespace BitSharp.Core.Builders
                 }
                 catch (Exception)
                 {
+                    this.chain = savedChain.ToBuilder();
                     this.RollbackTransaction();
                     throw;
                 }
@@ -179,10 +185,12 @@ namespace BitSharp.Core.Builders
 
         public void RollbackBlock(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
         {
+            var savedChain = this.chain.ToImmutable();
             this.BeginTransaction();
             try
             {
                 // remove the block from the chain
+                this.chain.RemoveBlock(chainedHeader);
                 this.chainStateBuilderStorage.RemoveChainedHeader(chainedHeader);
 
                 // read spent transaction rollback information
@@ -203,6 +211,7 @@ namespace BitSharp.Core.Builders
             }
             catch (Exception)
             {
+                this.chain = savedChain.ToBuilder();
                 this.RollbackTransaction();
                 throw;
             }
@@ -263,7 +272,7 @@ namespace BitSharp.Core.Builders
         public ChainState ToImmutable()
         {
             return this.commitLock.DoRead(() =>
-                new ChainState(this.chainStateBuilderStorage));
+                new ChainState(this.chain.ToImmutable(), this.chainStateBuilderStorage));
         }
 
         private void BeginTransaction()

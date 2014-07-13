@@ -23,12 +23,11 @@ namespace BitSharp.Esent
     {
         private readonly string jetDatabase;
         private readonly Instance jetInstance;
-        private readonly Chain chain;
 
         private readonly ChainStateStorageCursor[] cursors;
         private readonly object cursorsLock;
 
-        internal ChainStateStorage(string jetDatabase, Instance jetInstance, Chain chain)
+        internal ChainStateStorage(string jetDatabase, Instance jetInstance)
         {
             this.jetDatabase = jetDatabase;
             this.jetInstance = jetInstance;
@@ -42,16 +41,6 @@ namespace BitSharp.Esent
                 {
                     this.cursors[i] = new ChainStateStorageCursor(this.jetDatabase, this.jetInstance, readOnly: true);
                     Api.JetBeginTransaction2(this.cursors[i].jetSession, BeginTransactionGrbit.ReadOnly);
-                }
-
-                if (chain != null)
-                {
-                    this.chain = chain;
-                }
-                else
-                {
-                    var cursor = this.cursors[0];
-                    this.chain = ReadChain(cursor);
                 }
             }
             catch (Exception)
@@ -72,9 +61,17 @@ namespace BitSharp.Esent
             this.cursors.DisposeList();
         }
 
-        public Chain Chain
+        public IEnumerable<ChainedHeader> ReadChain()
         {
-            get { return this.chain; }
+            var cursor = this.OpenCursor();
+            try
+            {
+                return ChainStateStorage.ReadChain(cursor);
+            }
+            finally
+            {
+                this.FreeCursor(cursor);
+            }
         }
 
         public int TransactionCount
@@ -208,26 +205,24 @@ namespace BitSharp.Esent
             }
         }
 
-        internal static Chain ReadChain(ChainStateStorageCursor cursor)
+        internal static IEnumerable<ChainedHeader> ReadChain(ChainStateStorageCursor cursor)
         {
             var chainBuilder = new ChainBuilder();
 
             Api.JetSetCurrentIndex(cursor.jetSession, cursor.chainTableId, "IX_BlockHeight");
-            
+
             if (Api.TryMoveFirst(cursor.jetSession, cursor.chainTableId))
             {
                 do
                 {
                     var chainedHeader = DataEncoder.DecodeChainedHeader(Api.RetrieveColumn(cursor.jetSession, cursor.chainTableId, cursor.chainedHeaderBytesColumnId));
-                    chainBuilder.AddBlock(chainedHeader);
+                    yield return chainedHeader;
                 } while (Api.TryMoveNext(cursor.jetSession, cursor.chainTableId));
             }
             else
             {
                 throw new InvalidOperationException();
             }
-
-            return chainBuilder.ToImmutable();
         }
     }
 }

@@ -149,7 +149,6 @@
     <Compile Include="Script\PayToPublicKeyHashBuilder.cs" />
     <Compile Include="Script\TransactionManager.cs" />
     <Compile Include="Storage\ExtensionMethods.cs" />
-    <Compile Include="Storage\GenesisChainStateStorage.cs" />
     <Compile Include="Storage\IBlockTxesStorage.cs" />
     <Compile Include="Storage\IBlockStorage.cs" />
     <Compile Include="Storage\IStorageManager.cs" />

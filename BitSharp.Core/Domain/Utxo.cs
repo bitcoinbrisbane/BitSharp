@@ -53,10 +53,5 @@ namespace BitSharp.Domain
         {
             return this.chainStateStorage.ReadUnspentTransactions();
         }
-
-        public static Utxo CreateForGenesisBlock(ChainedHeader genesisHeader)
-        {
-            return new Utxo(new GenesisChainStateStorage(genesisHeader));
-        }
     }
 }

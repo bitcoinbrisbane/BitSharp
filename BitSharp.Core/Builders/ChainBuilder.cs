@@ -24,6 +24,14 @@ namespace BitSharp.Core.Builders
             this.blocks = parentChain.Blocks.ToBuilder();
         }
 
+        public ChainBuilder(IEnumerable<ChainedHeader> chainedHeaders)
+        {
+            this.blocks = ImmutableList.CreateBuilder<ChainedHeader>();
+
+            foreach (var chainedHeader in chainedHeaders)
+                this.AddBlock(chainedHeader);
+        }
+
         public ChainedHeader GenesisBlock { get { return this.blocks.First(); } }
 
         public ChainedHeader LastBlock { get { return this.blocks.Last(); } }

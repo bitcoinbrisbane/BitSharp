@@ -31,9 +31,9 @@ namespace BitSharp.Core.Storage.Memory
 
         internal ImmutableSortedDictionary<UInt256, UnspentTx>.Builder UnspentTransactionsDictionary { get { return this.unspentTransactions; } }
 
-        public Chain Chain
+        public IEnumerable<ChainedHeader> ReadChain()
         {
-            get { return this.chain.ToImmutable(); }
+            return this.chain.Blocks;
         }
 
         public void AddChainedHeader(ChainedHeader chainedHeader)

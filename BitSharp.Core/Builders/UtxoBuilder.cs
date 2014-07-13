@@ -45,9 +45,9 @@ namespace BitSharp.Core.Builders
             this.chainStateBuilderStorage = chainStateBuilderStorage;
         }
 
-        public IEnumerable<TxWithPrevOutputKeys> CalculateUtxo(ChainedHeader chainedHeader, IEnumerable<Transaction> blockTxes)
+        public IEnumerable<TxWithPrevOutputKeys> CalculateUtxo(Chain chain, IEnumerable<Transaction> blockTxes)
         {
-            var chain = this.chainStateBuilderStorage.Chain;
+            var chainedHeader = chain.LastBlock;
 
             this.chainStateBuilderStorage.PrepareSpentTransactions(chainedHeader.Height);
 

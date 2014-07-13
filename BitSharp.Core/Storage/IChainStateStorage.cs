@@ -10,7 +10,7 @@ namespace BitSharp.Core.Storage
 {
     public interface IChainStateStorage : IDisposable
     {
-        Chain Chain { get; }
+        IEnumerable<ChainedHeader> ReadChain();
 
         int TransactionCount { get; }
 

@@ -14,11 +14,13 @@ namespace BitSharp.Core.Domain
     public class ChainState : IDisposable
     {
         private readonly IChainStateStorage chainStateStorage;
+        private readonly Chain chain;
         private readonly Utxo utxo;
 
-        public ChainState(IChainStateBuilderStorage chainStateBuilderStorage)
+        public ChainState(Chain chain, IChainStateBuilderStorage chainStateBuilderStorage)
         {
             this.chainStateStorage = chainStateBuilderStorage.ToImmutable();
+            this.chain = chain;
             this.utxo = new Utxo(this.chainStateStorage);
         }
 
@@ -33,7 +35,7 @@ namespace BitSharp.Core.Domain
             this.chainStateStorage.Dispose();
         }
 
-        public Chain Chain { get { return this.chainStateStorage.Chain; } }
+        public Chain Chain { get { return this.chain; } }
 
         public Utxo Utxo { get { return this.utxo; } }
     }
