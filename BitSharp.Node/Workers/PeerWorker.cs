@@ -112,6 +112,8 @@ namespace BitSharp.Node.Workers
 
         protected override void SubDispose()
         {
+            this.pendingPeers.DisposeList();
+            this.connectedPeers.DisposeList();
         }
 
         protected override void SubStart()
@@ -120,7 +122,6 @@ namespace BitSharp.Node.Workers
 
         protected override void SubStop()
         {
-            this.connectedPeers.DisposeList();
         }
 
         protected override void WorkAction()
