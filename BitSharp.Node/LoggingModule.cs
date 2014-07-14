@@ -5,6 +5,7 @@ using NLog.Config;
 using NLog.Targets;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -43,7 +44,11 @@ namespace BitSharp.Node
             config.AddTarget("file", fileTarget);
 
             // file settings
-            fileTarget.FileName = "${specialfolder:folder=localapplicationdata}/BitSharp/BitSharp.log";
+            if (Debugger.IsAttached)
+                fileTarget.FileName = "${specialfolder:folder=localapplicationdata}/BitSharp/Debugger/BitSharp.log";
+            else
+                fileTarget.FileName = "${specialfolder:folder=localapplicationdata}/BitSharp/BitSharp.log";
+            
             fileTarget.Layout = layout;
             fileTarget.DeleteOldFileOnStartup = true;
 

@@ -26,7 +26,14 @@ namespace BitSharp.Esent
         public NetworkPeerStorage(RulesEnum rulesType)
         {
             this.name = "KnownAddresses";
-            this.directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "Peers", rulesType.ToString(), this.name);
+            
+            string baseDirectory;
+            if (Debugger.IsAttached)
+                baseDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "Debugger");
+            else
+                baseDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp");
+
+            this.directory = Path.Combine(Path.Combine(baseDirectory, "Peers", rulesType.ToString(), this.name));
             this.dict = new PersistentByteDictionary(this.directory);
         }
 

@@ -81,7 +81,13 @@ namespace BitSharp.Client
 #elif MEMORY
                 modules.Add(new MemoryStorageModule());
 #else
-                modules.Add(new EsentStorageModule(Path.Combine(Config.LocalStoragePath, "Data"), rulesType, cacheSizeMaxBytes: int.MaxValue - 1));
+                string baseDirectory;
+                if (Debugger.IsAttached)
+                    baseDirectory = Path.Combine(Config.LocalStoragePath, "Debugger", "Data");
+                else
+                    baseDirectory = Path.Combine(Config.LocalStoragePath, "Data");
+                
+                modules.Add(new EsentStorageModule(baseDirectory, rulesType, cacheSizeMaxBytes: int.MaxValue - 1));
                 //ChainStateBuilderStorage.IndexOutputs = true;
 #endif
 
