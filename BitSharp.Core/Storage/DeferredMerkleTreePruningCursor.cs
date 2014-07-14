@@ -19,21 +19,21 @@ namespace BitSharp.Core.Storage
     /// </summary>
     public class DeferredMerkleTreePruningCursor : IMerkleTreePruningCursor
     {
-        private readonly MemoryMerkleTreePruningCursor parentCursor;
+        private readonly IMerkleTreePruningCursor parentCursor;
 
         private readonly Dictionary<int, MerkleTreeNode> cachedNodes;
 
         private readonly Dictionary<int, int?> indicesToLeft;
         private readonly Dictionary<int, int?> indicesToRight;
 
-        private readonly ImmutableHashSet<int>.Builder updatedIndices;
-        private readonly ImmutableHashSet<int>.Builder deletedIndices;
+        private readonly HashSet<int> updatedIndices;
+        private readonly HashSet<int> deletedIndices;
 
         private int currentIndex;
         private bool beforeStart;
         private bool afterEnd;
 
-        public DeferredMerkleTreePruningCursor(MemoryMerkleTreePruningCursor parentCursor)
+        public DeferredMerkleTreePruningCursor(IMerkleTreePruningCursor parentCursor)
         {
             this.parentCursor = parentCursor;
 
@@ -41,8 +41,8 @@ namespace BitSharp.Core.Storage
             this.indicesToLeft = new Dictionary<int, int?>();
             this.indicesToRight = new Dictionary<int, int?>();
 
-            this.updatedIndices = ImmutableHashSet.CreateBuilder<int>();
-            this.deletedIndices = ImmutableHashSet.CreateBuilder<int>();
+            this.updatedIndices = new HashSet<int>();
+            this.deletedIndices = new HashSet<int>();
 
             this.currentIndex = -1;
         }
@@ -53,10 +53,12 @@ namespace BitSharp.Core.Storage
 
         public void BeginTransaction()
         {
+            throw new NotSupportedException();
         }
 
         public void CommitTransaction()
         {
+            throw new NotSupportedException();
         }
 
         public void RollbackTransaction()
@@ -241,7 +243,7 @@ namespace BitSharp.Core.Storage
             this.currentIndex = nodeToLeftIndex;
         }
 
-        public IEnumerable<MerkleTreeNode> ReadNodes()
+        public void ApplyChanges()
         {
             foreach (var updatedIndex in this.updatedIndices)
             {
@@ -261,8 +263,13 @@ namespace BitSharp.Core.Storage
                     this.parentCursor.DeleteNodeToRight();
                 }
             }
+        }
 
-            return parentCursor.ReadNodes();
+        //TODO remove
+        public IEnumerable<MerkleTreeNode> ReadNodes()
+        {
+            this.ApplyChanges();
+            return ((MemoryMerkleTreePruningCursor)parentCursor).ReadNodes();
         }
     }
 }
