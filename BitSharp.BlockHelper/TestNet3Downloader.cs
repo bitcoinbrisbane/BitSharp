@@ -49,7 +49,7 @@ namespace BitSharp.BlockHelper
                 // prepare the block folder
                 var blockFolder = Path.Combine(projectFolder, "Blocks");
                 try { Directory.Delete(blockFolder, recursive: true); }
-                catch (Exception e) { }
+                catch (Exception) { }
                 if (!Directory.Exists(blockFolder))
                     Directory.CreateDirectory(blockFolder);
 
