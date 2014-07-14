@@ -7,6 +7,8 @@ using BitSharp.Core.ExtensionMethods;
 using BitSharp.Core.Storage;
 using Microsoft.Isam.Esent.Collections.Generic;
 using Microsoft.Isam.Esent.Interop;
+using Microsoft.Isam.Esent.Interop.Windows8;
+using Microsoft.Isam.Esent.Interop.Windows81;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -32,6 +34,9 @@ namespace BitSharp.Esent
 
         private readonly ChainStateStorageCursor cursor;
 
+        private readonly ChainStateStorageCursor[] cursors;
+        private readonly object cursorsLock;
+
         private bool inTransaction;
 
         public ChainStateBuilderStorage(string jetDatabase, Instance jetInstance, Logger logger)
@@ -41,6 +46,9 @@ namespace BitSharp.Esent
             this.jetInstance = jetInstance;
 
             this.cursor = new ChainStateStorageCursor(jetDatabase, jetInstance, readOnly: false);
+
+            this.cursors = new ChainStateStorageCursor[16];
+            this.cursorsLock = new object();
         }
 
         ~ChainStateBuilderStorage()
@@ -238,7 +246,8 @@ namespace BitSharp.Esent
 
         public IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex)
         {
-            using (var readCursor = new ChainStateStorageCursor(this.jetDatabase, this.jetInstance, readOnly: true))
+            var readCursor = this.OpenCursor();
+            try
             {
                 Api.JetSetCurrentIndex(readCursor.jetSession, readCursor.spentTxTableId, "IX_SpentBlockIndex");
 
@@ -256,11 +265,16 @@ namespace BitSharp.Esent
                     }
                 }
             }
+            finally
+            {
+                this.FreeCursor(readCursor);
+            }
         }
 
         public void RemoveSpentTransactions(int spentBlockIndex)
         {
-            using (var pruneCursor = new ChainStateStorageCursor(this.jetDatabase, this.jetInstance, readOnly: false))
+            var pruneCursor = this.OpenCursor();
+            try
             {
                 Api.JetBeginTransaction(pruneCursor.jetSession);
                 try
@@ -282,11 +296,16 @@ namespace BitSharp.Esent
                     throw;
                 }
             }
+            finally
+            {
+                this.FreeCursor(pruneCursor);
+            }
         }
 
         public void RemoveSpentTransactionsToHeight(int spentBlockIndex)
         {
-            using (var pruneCursor = new ChainStateStorageCursor(this.jetDatabase, this.jetInstance, readOnly: false))
+            var pruneCursor = this.OpenCursor();
+            try
             {
                 Api.JetBeginTransaction(pruneCursor.jetSession);
                 try
@@ -317,6 +336,10 @@ namespace BitSharp.Esent
                     Api.JetRollback(pruneCursor.jetSession, RollbackTransactionGrbit.None);
                     throw;
                 }
+            }
+            finally
+            {
+                this.FreeCursor(pruneCursor);
             }
         }
 
@@ -360,12 +383,71 @@ namespace BitSharp.Esent
 
         public void Defragment()
         {
-            using (var defragCursor = new ChainStateStorageCursor(this.jetDatabase, this.jetInstance, readOnly: false))
+            var defragCursor = this.OpenCursor();
+            try
             {
-                int passes = -1, seconds = -1;
-                Api.JetDefragment(defragCursor.jetSession, defragCursor.chainStateDbId, "Chain", ref passes, ref seconds, DefragGrbit.BatchStart);
-                Api.JetDefragment(defragCursor.jetSession, defragCursor.chainStateDbId, "ChainState", ref passes, ref seconds, DefragGrbit.BatchStart);
+                //int passes = -1, seconds = -1;
+                //Api.JetDefragment(defragCursor.jetSession, defragCursor.chainStateDbId, "Chain", ref passes, ref seconds, DefragGrbit.BatchStart);
+                //Api.JetDefragment(defragCursor.jetSession, defragCursor.chainStateDbId, "ChainState", ref passes, ref seconds, DefragGrbit.BatchStart);
+
+                if (EsentVersion.SupportsWindows81Features)
+                {
+                    this.logger.Info("Begin shrinking chain state database");
+
+                    int actualPages;
+                    Windows8Api.JetResizeDatabase(defragCursor.jetSession, defragCursor.chainStateDbId, 0, out actualPages, Windows81Grbits.OnlyShrink);
+
+                    this.logger.Info("Finished shrinking chain state database: {0:#,##0} pages".Format2(actualPages));
+                }
             }
+            finally
+            {
+                this.FreeCursor(defragCursor);
+            }
+        }
+
+        private ChainStateStorageCursor OpenCursor()
+        {
+            ChainStateStorageCursor cursor = null;
+
+            lock (this.cursorsLock)
+            {
+                for (var i = 0; i < this.cursors.Length; i++)
+                {
+                    if (this.cursors[i] != null)
+                    {
+                        cursor = this.cursors[i];
+                        this.cursors[i] = null;
+                        break;
+                    }
+                }
+            }
+
+            if (cursor == null)
+                cursor = new ChainStateStorageCursor(this.jetDatabase, this.jetInstance, readOnly: false);
+
+            return cursor;
+        }
+
+        private void FreeCursor(ChainStateStorageCursor cursor)
+        {
+            var cached = false;
+
+            lock (this.cursorsLock)
+            {
+                for (var i = 0; i < this.cursors.Length; i++)
+                {
+                    if (this.cursors[i] == null)
+                    {
+                        this.cursors[i] = cursor;
+                        cached = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!cached)
+                cursor.Dispose();
         }
     }
 }

@@ -32,7 +32,7 @@ namespace BitSharp.Esent
             this.jetDatabase = jetDatabase;
             this.jetInstance = jetInstance;
 
-            this.cursors = new ChainStateStorageCursor[32];
+            this.cursors = new ChainStateStorageCursor[16];
             this.cursorsLock = new object();
 
             try

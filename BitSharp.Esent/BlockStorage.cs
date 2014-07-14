@@ -17,11 +17,15 @@ using System.Threading;
 using System.Collections.Immutable;
 using System.Security.Cryptography;
 using Microsoft.Isam.Esent.Interop.Vista;
+using Microsoft.Isam.Esent.Interop.Windows8;
+using Microsoft.Isam.Esent.Interop.Windows81;
+using NLog;
 
 namespace BitSharp.Esent
 {
     public class BlockStorage : IBlockStorage
     {
+        private readonly Logger logger;
         private readonly string jetDirectory;
         private readonly string jetDatabase;
         private readonly Instance jetInstance;
@@ -29,12 +33,13 @@ namespace BitSharp.Esent
         private readonly BlockCursor[] cursors;
         private readonly object cursorsLock;
 
-        public BlockStorage(string baseDirectory, Instance jetInstance)
+        public BlockStorage(string baseDirectory, Instance jetInstance, Logger logger)
         {
+            this.logger = logger;
             this.jetDirectory = Path.Combine(baseDirectory, "Blocks");
             this.jetDatabase = Path.Combine(this.jetDirectory, "Blocks.edb");
 
-            this.cursors = new BlockCursor[64];
+            this.cursors = new BlockCursor[16];
             this.cursorsLock = new object();
 
             this.jetInstance = jetInstance;
@@ -497,8 +502,18 @@ namespace BitSharp.Esent
             var cursor = this.OpenCursor();
             try
             {
-                int passes = -1, seconds = -1;
-                Api.JetDefragment(cursor.jetSession, cursor.blockDbId, "BlockTxes", ref passes, ref seconds, DefragGrbit.BatchStart);
+                //int passes = -1, seconds = -1;
+                //Api.JetDefragment(cursor.jetSession, cursor.blockDbId, "BlockTxes", ref passes, ref seconds, DefragGrbit.BatchStart);
+
+                if (EsentVersion.SupportsWindows81Features)
+                {
+                    this.logger.Info("Begin shrinking block database");
+
+                    int actualPages;
+                    Windows8Api.JetResizeDatabase(cursor.jetSession, cursor.blockDbId, 0, out actualPages, Windows81Grbits.OnlyShrink);
+
+                    this.logger.Info("Finished shrinking block database: {0:#,##0} pages".Format2(actualPages));
+                }
             }
             finally
             {

@@ -34,6 +34,8 @@ namespace BitSharp.Core.Workers
 
         protected override void WorkAction()
         {
+            this.logger.Info("Begin defragging");
+
             this.coreStorage.Defragment();
             this.chainStateBuilderStorage.Defragment();
         }

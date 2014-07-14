@@ -182,8 +182,6 @@ namespace BitSharp.Esent
 
         private void OpenDatabase(string jetDatabase, Instance jetInstance)
         {
-            JET_DBID chainStateDbId;
-
             var readOnly = false;
 
             using (var jetSession = new Session(jetInstance))

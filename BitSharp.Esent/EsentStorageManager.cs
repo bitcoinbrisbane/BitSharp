@@ -36,8 +36,8 @@ namespace BitSharp.Esent
 
             try
             {
-                this.blockTxesStorage = new BlockTxesStorage(this.baseDirectory);
-                this.blockStorage = new BlockStorage(this.baseDirectory, this.blockTxesStorage.JetInstance);
+                this.blockTxesStorage = new BlockTxesStorage(this.baseDirectory, this.logger);
+                this.blockStorage = new BlockStorage(this.baseDirectory, this.blockTxesStorage.JetInstance, this.logger);
                 this.chainStateManager = new EsentChainStateManager(this.baseDirectory, this.logger);
             }
             catch (Exception)
