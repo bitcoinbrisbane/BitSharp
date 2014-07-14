@@ -106,17 +106,17 @@ namespace BitSharp.Esent
         public void PruneElements(UInt256 blockHash, IEnumerable<int> txIndices)
         {
             using (var pruningCursor = OpenPruningCursor(blockHash))
-            using (var deferredCursor = new DeferredMerkleTreePruningCursor(pruningCursor))
+            //using (var deferredCursor = new DeferredMerkleTreePruningCursor(pruningCursor))
             {
                 pruningCursor.BeginTransaction();
                 try
                 {
                     // prune the transactions, gathering the pruning operations into a deferred cursor
                     foreach (var index in txIndices)
-                        MerkleTree.PruneNode(deferredCursor, index);
-                    
+                        MerkleTree.PruneNode(pruningCursor /*deferredCursor*/, index);
+
                     // apply the final pruning operations
-                    deferredCursor.ApplyChanges();
+                    //deferredCursor.ApplyChanges();
 
                     pruningCursor.CommitTransaction();
                 }

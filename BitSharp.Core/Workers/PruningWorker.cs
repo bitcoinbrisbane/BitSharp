@@ -99,7 +99,8 @@ namespace BitSharp.Core.Workers
 
                         // prune the spent transactions from each block
                         pruneStopwatch.Start();
-                        foreach (var keyPair in pruneData)
+                        Parallel.ForEach(pruneData, keyPair =>
+                        //foreach (var keyPair in pruneData)
                         {
                             // cooperative loop
                             this.ThrowIfCancelled();
@@ -109,7 +110,7 @@ namespace BitSharp.Core.Workers
                             var spentTxIndices = keyPair.Value;
 
                             this.coreStorage.PruneElements(confirmedBlockHash, spentTxIndices);
-                        }
+                        });
                         pruneStopwatch.Stop();
 
                         //TODO properly sync commits before removing
