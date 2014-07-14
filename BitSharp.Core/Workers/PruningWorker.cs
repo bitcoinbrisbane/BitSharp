@@ -22,17 +22,19 @@ namespace BitSharp.Core.Workers
     {
         private readonly Logger logger;
         private readonly CoreStorage coreStorage;
+        private readonly ChainStateWorker chainStateWorker;
         private readonly ChainStateBuilder chainStateBuilder;
         private readonly IBlockchainRules rules;
 
         //TODO
         private int lastPruneHeight;
 
-        public PruningWorker(WorkerConfig workerConfig, CoreStorage coreStorage, ChainStateBuilder chainStateBuilder, Logger logger, IBlockchainRules rules)
+        public PruningWorker(WorkerConfig workerConfig, CoreStorage coreStorage, ChainStateWorker chainStateWorker, ChainStateBuilder chainStateBuilder, Logger logger, IBlockchainRules rules)
             : base("PruningWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.coreStorage = coreStorage;
+            this.chainStateWorker = chainStateWorker;
             this.chainStateBuilder = chainStateBuilder;
             this.rules = rules;
 
@@ -55,6 +57,8 @@ namespace BitSharp.Core.Workers
             if (maxHeight < minHeight)
                 return;
 
+            //this.chainStateWorker.Stop();
+
             switch (this.Mode)
             {
                 case PruningMode.RollbackOnly:
@@ -66,6 +70,8 @@ namespace BitSharp.Core.Workers
                     var gatherStopwatch = new Stopwatch();
                     var pruneStopwatch = new Stopwatch();
                     var cleanStopwatch = new Stopwatch();
+
+                    var txCount = 0;
 
                     for (var blockHeight = minHeight; blockHeight <= maxHeight; blockHeight++)
                     {
@@ -83,6 +89,7 @@ namespace BitSharp.Core.Workers
                             if (!pruneData.ContainsKey(spentTx.ConfirmedBlockIndex))
                                 pruneData[spentTx.ConfirmedBlockIndex] = new List<int>();
 
+                            txCount++;
                             pruneData[spentTx.ConfirmedBlockIndex].Add(spentTx.TxIndex);
                         }
                         gatherStopwatch.Stop();
@@ -112,14 +119,17 @@ namespace BitSharp.Core.Workers
                     this.lastPruneHeight = maxHeight;
                     this.logger.Info(
 @"Pruned from block {0:#,##0} to {1:#,##0}:
-    - gather: {2,8:#,##0.000}s
-    - prune:  {3,8:#,##0.000}s
-    - clean:  {4,8:#,##0.000}s
-    - TOTAL:  {5,8:#,##0.000}s"
-                        .Format2(minHeight, maxHeight, gatherStopwatch.Elapsed.TotalSeconds, pruneStopwatch.Elapsed.TotalSeconds, cleanStopwatch.Elapsed.TotalSeconds, totalStopwatch.Elapsed.TotalSeconds));
+    - tx count: {2,8:#,##0}
+    - gather:       {3,8:#,##0.000}s
+    - prune:        {4,8:#,##0.000}s
+    - clean:        {5,8:#,##0.000}s
+    - TOTAL:        {6,8:#,##0.000}s"
+                        .Format2(minHeight, maxHeight, txCount, gatherStopwatch.Elapsed.TotalSeconds, pruneStopwatch.Elapsed.TotalSeconds, cleanStopwatch.Elapsed.TotalSeconds, totalStopwatch.Elapsed.TotalSeconds));
 
                     break;
             }
+
+            //this.chainStateWorker.Start();
         }
     }
 
