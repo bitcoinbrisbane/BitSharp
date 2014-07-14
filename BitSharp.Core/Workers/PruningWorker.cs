@@ -51,13 +51,16 @@ namespace BitSharp.Core.Workers
             var pruneBuffer = blocksPerDay * 7;
 
             var chain = this.chainStateBuilder.Chain;
-            var minHeight = this.lastPruneHeight;
+            var minHeight = this.lastPruneHeight + 1;
             var maxHeight = chain.Blocks.Count - pruneBuffer;
 
             if (maxHeight < minHeight)
                 return;
 
-            //this.chainStateWorker.Stop();
+            if (maxHeight - this.lastPruneHeight > blocksPerDay)
+                this.chainStateWorker.Stop();
+
+            this.logger.Info(@"Begin pruning from block {0:#,##0} to {1:#,##0}".Format2(minHeight, maxHeight));
 
             switch (this.Mode)
             {
@@ -119,17 +122,17 @@ namespace BitSharp.Core.Workers
                     this.lastPruneHeight = maxHeight;
                     this.logger.Info(
 @"Pruned from block {0:#,##0} to {1:#,##0}:
-    - tx count: {2,8:#,##0}
-    - gather:       {3,8:#,##0.000}s
-    - prune:        {4,8:#,##0.000}s
-    - clean:        {5,8:#,##0.000}s
-    - TOTAL:        {6,8:#,##0.000}s"
+    - tx count: {2,10:#,##0}
+    - gather:       {3,10:#,##0.000}s
+    - prune:        {4,10:#,##0.000}s
+    - clean:        {5,10:#,##0.000}s
+    - TOTAL:        {6,10:#,##0.000}s"
                         .Format2(minHeight, maxHeight, txCount, gatherStopwatch.Elapsed.TotalSeconds, pruneStopwatch.Elapsed.TotalSeconds, cleanStopwatch.Elapsed.TotalSeconds, totalStopwatch.Elapsed.TotalSeconds));
 
                     break;
             }
 
-            //this.chainStateWorker.Start();
+            this.chainStateWorker.Start();
         }
     }
 
