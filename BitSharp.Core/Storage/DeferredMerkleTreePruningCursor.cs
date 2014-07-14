@@ -66,11 +66,16 @@ namespace BitSharp.Core.Storage
             throw new NotSupportedException();
         }
 
-        public bool TryMoveToIndex(int index, out MerkleTreeNode node)
+        public bool TryMoveToIndex(int index)
         {
+            MerkleTreeNode node;
             if (!this.cachedNodes.TryGetValue(index, out node))
             {
-                this.parentCursor.TryMoveToIndex(index, out node);
+                this.parentCursor.MoveToIndex(index);
+                node = this.parentCursor.ReadNode();
+                
+                if (node.Index != index)
+                    throw new InvalidOperationException();
                 this.cachedNodes[index] = node;
             }
 
@@ -81,15 +86,14 @@ namespace BitSharp.Core.Storage
             return node != null;
         }
 
-        public bool TryMoveLeft(out MerkleTreeNode nodeToLeft)
+        public bool TryMoveLeft()
         {
             if (this.currentIndex == -1)
                 throw new InvalidOperationException();
             else if (this.afterEnd)
             {
                 this.afterEnd = false;
-                nodeToLeft = this.cachedNodes[this.currentIndex];
-                return nodeToLeft != null;
+                return true;
             }
 
             int? indexToLeft;
@@ -97,24 +101,27 @@ namespace BitSharp.Core.Storage
             {
                 if (indexToLeft != null)
                 {
-                    if (!this.TryMoveToIndex(indexToLeft.Value, out nodeToLeft))
-                        throw new InvalidOperationException();
+                    this.MoveToIndex(indexToLeft.Value);
+                    return true;
                 }
                 else
                 {
-                    nodeToLeft = null;
+                    Debug.Assert(this.currentIndex == 0);
                     this.beforeStart = true;
+                    return false;
                 }
             }
             else
             {
-                MerkleTreeNode ignore;
-                if (!this.parentCursor.TryMoveToIndex(this.currentIndex, out ignore))
-                    throw new InvalidOperationException();
+                this.parentCursor.MoveToIndex(this.currentIndex);
 
+                MerkleTreeNode nodeToLeft = null;
                 do
                 {
-                    this.parentCursor.TryMoveLeft(out nodeToLeft);
+                    if (this.parentCursor.TryMoveLeft())
+                        nodeToLeft = this.parentCursor.ReadNode();
+                    else
+                        nodeToLeft = null;
                 } while (nodeToLeft != null && this.deletedIndices.Contains(nodeToLeft.Index));
 
                 this.indicesToLeft[this.currentIndex] = (nodeToLeft != null ? nodeToLeft.Index : (int?)null);
@@ -125,23 +132,20 @@ namespace BitSharp.Core.Storage
                     this.currentIndex = nodeToLeft.Index;
                 else
                     this.beforeStart = true;
-            }
 
-            return nodeToLeft != null;
+                return nodeToLeft != null;
+            }
         }
 
-        public bool TryMoveRight(out MerkleTreeNode nodeToRight)
+        public bool TryMoveRight()
         {
             if (this.currentIndex == -1)
                 throw new InvalidOperationException();
             else if (this.beforeStart)
             {
-                if (this.currentIndex != 0)
-                    throw new InvalidOperationException();
-
+                Debug.Assert(this.currentIndex == 0);
                 this.beforeStart = false;
-                nodeToRight = this.cachedNodes[this.currentIndex];
-                return nodeToRight != null;
+                return true;
             }
 
             int? indexToRight;
@@ -149,24 +153,26 @@ namespace BitSharp.Core.Storage
             {
                 if (indexToRight != null)
                 {
-                    if (!this.TryMoveToIndex(indexToRight.Value, out nodeToRight))
-                        throw new InvalidOperationException();
+                    this.MoveToIndex(indexToRight.Value);
+                    return true;
                 }
                 else
                 {
-                    nodeToRight = null;
                     this.afterEnd = true;
+                    return false;
                 }
             }
             else
             {
-                MerkleTreeNode ignore;
-                if (!this.parentCursor.TryMoveToIndex(this.currentIndex, out ignore))
-                    throw new InvalidOperationException();
+                this.parentCursor.MoveToIndex(this.currentIndex);
 
+                MerkleTreeNode nodeToRight = null;
                 do
                 {
-                    this.parentCursor.TryMoveRight(out nodeToRight);
+                    if (this.parentCursor.TryMoveRight())
+                        nodeToRight = this.parentCursor.ReadNode();
+                    else
+                        nodeToRight = null;
                 } while (nodeToRight != null && this.deletedIndices.Contains(nodeToRight.Index));
 
                 this.indicesToRight[this.currentIndex] = (nodeToRight != null ? nodeToRight.Index : (int?)null);
@@ -177,12 +183,34 @@ namespace BitSharp.Core.Storage
                     this.currentIndex = nodeToRight.Index;
                 else
                     this.afterEnd = true;
+
+                return nodeToRight != null;
+            }
+        }
+
+        public MerkleTreeNode ReadNode()
+        {
+            if (this.currentIndex == -1 || this.beforeStart || this.afterEnd)
+                throw new InvalidOperationException();
+
+            if (this.deletedIndices.Contains(this.currentIndex))
+                throw new InvalidOperationException();
+
+            MerkleTreeNode node;
+            if (!this.cachedNodes.TryGetValue(this.currentIndex, out node))
+            {
+                this.parentCursor.MoveToIndex(this.currentIndex);
+                node = this.parentCursor.ReadNode();
+                
+                if (node.Index != this.currentIndex)
+                    throw new InvalidOperationException();
+                this.cachedNodes[this.currentIndex] = node;
             }
 
-            if (nodeToRight == null)
-                this.MoveLeft();
+            if (node == null)
+                throw new InvalidOperationException();
 
-            return nodeToRight != null;
+            return node;
         }
 
         public void WriteNode(MerkleTreeNode node)
@@ -196,40 +224,32 @@ namespace BitSharp.Core.Storage
             this.updatedIndices.Add(node.Index);
         }
 
-        public void MoveLeft()
-        {
-            MerkleTreeNode ignore;
-            if (!this.TryMoveLeft(out ignore))
-                throw new InvalidOperationException();
-        }
-
-        public void MoveRight()
-        {
-            MerkleTreeNode ignore;
-            if (!this.TryMoveRight(out ignore))
-                throw new InvalidOperationException();
-        }
-
-        public void DeleteNodeToRight()
+        public void DeleteNode()
         {
             if (this.currentIndex == -1 || this.beforeStart || this.afterEnd)
                 throw new InvalidOperationException();
 
-            var nodeToLeftIndex = this.currentIndex;
-
-            // move right to the node to delete
+            int? nodeToLeftIndex;
+            if (this.TryMoveLeft())
+            {
+                nodeToLeftIndex = this.currentIndex;
+            }
+            else
+            {
+                nodeToLeftIndex = null;
+            }
             this.MoveRight();
 
             // try to find the next node to the right, so its index is known
-            MerkleTreeNode ignore;
-            if (this.TryMoveRight(out ignore))
-                this.MoveLeft();
+            this.TryMoveRight();
+            this.MoveLeft();
 
             int? nodeToRightIndex;
             if (!this.indicesToRight.TryGetValue(this.currentIndex, out nodeToRightIndex))
                 throw new InvalidOperationException();
 
-            this.indicesToRight[nodeToLeftIndex] = nodeToRightIndex;
+            if (nodeToLeftIndex != null)
+                this.indicesToRight[nodeToLeftIndex.Value] = nodeToRightIndex;
             if (nodeToRightIndex != null)
                 this.indicesToLeft[nodeToRightIndex.Value] = nodeToLeftIndex;
 
@@ -240,27 +260,40 @@ namespace BitSharp.Core.Storage
             this.updatedIndices.Remove(this.currentIndex);
             this.deletedIndices.Add(this.currentIndex);
 
-            this.currentIndex = nodeToLeftIndex;
+            if (nodeToLeftIndex != null)
+            {
+                this.currentIndex = nodeToLeftIndex.Value;
+            }
+            else
+            {
+                Debug.Assert(this.currentIndex == 0);
+                this.beforeStart = true;
+            }
         }
 
         public void ApplyChanges()
         {
             foreach (var updatedIndex in this.updatedIndices)
             {
-                MerkleTreeNode ignore;
-                if (this.parentCursor.TryMoveToIndex(updatedIndex, out ignore))
+                if (this.parentCursor.TryMoveToIndex(updatedIndex))
                 {
                     this.parentCursor.WriteNode(this.cachedNodes[updatedIndex]);
+                }
+                else
+                {
+                    //TODO throw
                 }
             }
 
             foreach (var deletedIndex in this.deletedIndices)
             {
-                MerkleTreeNode ignore;
-                if (this.parentCursor.TryMoveToIndex(deletedIndex, out ignore))
+                if (this.parentCursor.TryMoveToIndex(deletedIndex))
                 {
-                    this.parentCursor.MoveLeft();
-                    this.parentCursor.DeleteNodeToRight();
+                    this.parentCursor.DeleteNode();
+                }
+                else
+                {
+                    //TODO throw
                 }
             }
         }

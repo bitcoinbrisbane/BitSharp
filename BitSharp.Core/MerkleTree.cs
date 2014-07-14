@@ -17,9 +17,8 @@ namespace BitSharp.Core
     {
         public static void PruneNode(IMerkleTreePruningCursor cursor, int index)
         {
-            MerkleTreeNode node;
-            if (!cursor.TryMoveToIndex(index, out node))
-                throw new InvalidOperationException();
+            cursor.MoveToIndex(index);
+            var node = cursor.ReadNode();
 
             if (node.Depth != 0)
                 throw new InvalidOperationException();
@@ -37,15 +36,16 @@ namespace BitSharp.Core
 
                 if (node.IsLeft)
                 {
-                    MerkleTreeNode rightNode;
-                    if (cursor.TryMoveRight(out rightNode))
+                    if (cursor.TryMoveRight())
                     {
+                        var rightNode = cursor.ReadNode();
                         if (node.Pruned && rightNode.Pruned && node.Depth == rightNode.Depth)
                         {
                             var newNode = node.PairWith(rightNode);
-                            cursor.MoveLeft();
+
+                            cursor.DeleteNode();
+                            //TODO cursor.MoveLeft();
                             cursor.WriteNode(newNode);
-                            cursor.DeleteNodeToRight();
 
                             node = newNode;
                             didWork = true;
@@ -56,6 +56,7 @@ namespace BitSharp.Core
                         if (node.Index != 0 && node.Pruned)
                         {
                             var newNode = node.PairWithSelf();
+                            cursor.MoveLeft();
                             cursor.WriteNode(newNode);
 
                             node = newNode;
@@ -65,14 +66,16 @@ namespace BitSharp.Core
                 }
                 else
                 {
-                    MerkleTreeNode leftNode;
-                    if (cursor.TryMoveLeft(out leftNode))
+                    if (cursor.TryMoveLeft())
                     {
+                        var leftNode = cursor.ReadNode();
                         if (node.Pruned && leftNode.Pruned && node.Depth == leftNode.Depth)
                         {
                             var newNode = leftNode.PairWith(node);
                             cursor.WriteNode(newNode);
-                            cursor.DeleteNodeToRight();
+                            cursor.MoveRight();
+                            cursor.DeleteNode();
+                            //TODO cursor.MoveLeft();
 
                             node = newNode;
                             didWork = true;

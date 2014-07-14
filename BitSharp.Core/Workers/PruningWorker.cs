@@ -120,14 +120,17 @@ namespace BitSharp.Core.Workers
                     }
 
                     this.lastPruneHeight = maxHeight;
+
+                    var txRate = txCount / totalStopwatch.Elapsed.TotalSeconds;
                     this.logger.Info(
 @"Pruned from block {0:#,##0} to {1:#,##0}:
     - tx count: {2,10:#,##0}
-    - gather:       {3,10:#,##0.000}s
-    - prune:        {4,10:#,##0.000}s
-    - clean:        {5,10:#,##0.000}s
-    - TOTAL:        {6,10:#,##0.000}s"
-                        .Format2(minHeight, maxHeight, txCount, gatherStopwatch.Elapsed.TotalSeconds, pruneStopwatch.Elapsed.TotalSeconds, cleanStopwatch.Elapsed.TotalSeconds, totalStopwatch.Elapsed.TotalSeconds));
+    - tx rate:  {3,10:#,##0}/s
+    - gather:       {4,10:#,##0.000}s
+    - prune:        {5,10:#,##0.000}s
+    - clean:        {6,10:#,##0.000}s
+    - TOTAL:        {7,10:#,##0.000}s"
+                        .Format2(minHeight, maxHeight, txCount, txRate, gatherStopwatch.Elapsed.TotalSeconds, pruneStopwatch.Elapsed.TotalSeconds, cleanStopwatch.Elapsed.TotalSeconds, totalStopwatch.Elapsed.TotalSeconds));
 
                     break;
             }

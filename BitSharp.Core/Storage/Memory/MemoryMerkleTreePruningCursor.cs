@@ -15,13 +15,13 @@ namespace BitSharp.Core.Storage.Memory
         public MemoryMerkleTreePruningCursor(IEnumerable<MerkleTreeNode> nodes)
         {
             this.nodes = new List<BlockTx>(nodes.Select(x => new BlockTx(x.Index, x.Depth, x.Hash, x.Pruned, null)));
-            this.index = -1;
+            this.index = -2;
         }
 
         public MemoryMerkleTreePruningCursor(IEnumerable<BlockTx> nodes)
         {
             this.nodes = new List<BlockTx>(nodes);
-            this.index = -1;
+            this.index = -2;
         }
 
         public void Dispose()
@@ -43,54 +43,53 @@ namespace BitSharp.Core.Storage.Memory
             //TODO
         }
 
-        public bool TryMoveToIndex(int index, out MerkleTreeNode node)
+        public bool TryMoveToIndex(int index)
         {
             this.index = this.nodes.FindIndex(x => x.Index == index);
 
             if (this.index >= 0 && this.index < this.nodes.Count)
             {
-                node = this.nodes[this.index];
                 return true;
             }
             else
             {
-                node = default(MerkleTreeNode);
+                this.index = -2;
                 return false;
             }
         }
 
-        public bool TryMoveLeft(out MerkleTreeNode node)
+        public bool TryMoveLeft()
         {
-            if (this.index >= 0 && this.index < this.nodes.Count)
+            if (this.index >= 0 && this.index <= this.nodes.Count)
             {
-                var newIndex = this.index - 1;
-                if (newIndex >= 0 && newIndex < this.nodes.Count)
-                {
-                    this.index = newIndex;
-                    node = this.nodes[newIndex];
-                    return true;
-                }
+                this.index--;
+                return (this.index >= 0 && this.index < this.nodes.Count);
             }
-
-            node = default(MerkleTreeNode);
-            return false;
+            else
+            {
+                return false;
+            }
         }
 
-        public bool TryMoveRight(out MerkleTreeNode node)
+        public bool TryMoveRight()
         {
-            if (this.index >= 0 && this.index < this.nodes.Count)
+            if (this.index >= -1 && this.index < this.nodes.Count)
             {
-                var newIndex = this.index + 1;
-                if (newIndex >= 0 && newIndex < this.nodes.Count)
-                {
-                    this.index = newIndex;
-                    node = this.nodes[newIndex];
-                    return true;
-                }
+                this.index++;
+                return (this.index >= 0 && this.index < this.nodes.Count);
             }
+            else
+            {
+                return false;
+            }
+        }
 
-            node = default(MerkleTreeNode);
-            return false;
+        public MerkleTreeNode ReadNode()
+        {
+            if (this.index < 0 || this.index >= this.nodes.Count)
+                throw new InvalidOperationException();
+
+            return this.nodes[this.index];
         }
 
         public void WriteNode(MerkleTreeNode node)
@@ -103,23 +102,13 @@ namespace BitSharp.Core.Storage.Memory
             this.nodes[this.index] = new BlockTx(node.Index, node.Depth, node.Hash, node.Pruned, null);
         }
 
-        public void MoveLeft()
-        {
-            MerkleTreeNode node;
-            if (!this.TryMoveLeft(out node))
-                throw new InvalidOperationException();
-        }
-
-        public void DeleteNodeToRight()
+        public void DeleteNode()
         {
             if (this.index < 0 || this.index >= this.nodes.Count)
                 throw new InvalidOperationException();
 
-            var removeIndex = this.index + 1;
-            if (removeIndex < 0 || removeIndex >= this.nodes.Count)
-                throw new InvalidOperationException();
-
-            this.nodes.RemoveAt(removeIndex);
+            this.nodes.RemoveAt(this.index);
+            this.index--;
         }
 
         public IEnumerable<BlockTx> ReadNodes()

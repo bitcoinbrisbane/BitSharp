@@ -15,16 +15,37 @@ namespace BitSharp.Core
 
         void RollbackTransaction();
 
-        bool TryMoveToIndex(int index, out MerkleTreeNode node);
+        bool TryMoveToIndex(int index);
 
-        bool TryMoveLeft(out MerkleTreeNode node);
+        bool TryMoveLeft();
 
-        bool TryMoveRight(out MerkleTreeNode node);
+        bool TryMoveRight();
+
+        MerkleTreeNode ReadNode();
 
         void WriteNode(MerkleTreeNode node);
 
-        void MoveLeft();
+        void DeleteNode();
+    }
 
-        void DeleteNodeToRight();
+    public static class IMerkleTreePruningCursorExtensionMethods
+    {
+        public static void MoveToIndex(this IMerkleTreePruningCursor cursor, int index)
+        {
+            if (!cursor.TryMoveToIndex(index))
+                throw new InvalidOperationException();
+        }
+
+        public static void MoveLeft(this IMerkleTreePruningCursor cursor)
+        {
+            if (!cursor.TryMoveLeft())
+                throw new InvalidOperationException();
+        }
+
+        public static void MoveRight(this IMerkleTreePruningCursor cursor)
+        {
+            if (!cursor.TryMoveRight())
+                throw new InvalidOperationException();
+        }
     }
 }

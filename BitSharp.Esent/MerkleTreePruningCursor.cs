@@ -30,7 +30,6 @@ namespace BitSharp.Esent
             this.blockId = blockId;
             this.cursor = cursor;
             this.disposeAction = disposeAction;
-
         }
 
         public void Dispose()
@@ -54,58 +53,48 @@ namespace BitSharp.Esent
             Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
         }
 
-        public bool TryMoveToIndex(int index, out MerkleTreeNode node)
+        public bool TryMoveToIndex(int index)
         {
             Api.MakeKey(cursor.jetSession, cursor.blocksTableId, blockId, MakeKeyGrbit.NewKey);
             Api.MakeKey(cursor.jetSession, cursor.blocksTableId, index, MakeKeyGrbit.None);
 
-            if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekEQ))
-            {
-                node = ReadNode();
-                return true;
-            }
-            else
-            {
-                node = default(MerkleTreeNode);
-                return false;
-            }
+            return Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekEQ);
         }
 
-        public bool TryMoveLeft(out MerkleTreeNode node)
+        public bool TryMoveLeft()
         {
-            if (Api.TryMovePrevious(cursor.jetSession, cursor.blocksTableId)
-                && this.blockId == Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value)
-            {
-                node = ReadNode();
-                return true;
-            }
-            else
-            {
-                node = default(MerkleTreeNode);
-                return false;
-            }
+            return (Api.TryMovePrevious(cursor.jetSession, cursor.blocksTableId)
+                && this.blockId == Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value);
         }
 
-        public bool TryMoveRight(out MerkleTreeNode node)
+        public bool TryMoveRight()
         {
-            if (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId)
-                && this.blockId == Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value)
-            {
-                node = ReadNode();
-                return true;
-            }
-            else
-            {
-                MoveLeft();
-                node = default(MerkleTreeNode);
-                return false;
-            }
+            return (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId)
+                && this.blockId == Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value);
+        }
+
+        public MerkleTreeNode ReadNode()
+        {
+            if (this.blockId != Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value)
+                throw new InvalidOperationException();
+
+            var index = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
+            var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
+            var txHash = DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
+
+            var pruned = depth >= 0;
+            depth = Math.Max(0, depth);
+
+            return new MerkleTreeNode(index, depth, txHash, pruned);
         }
 
         public void WriteNode(MerkleTreeNode node)
         {
             if (!node.Pruned)
                 throw new ArgumentException();
+
+            if (this.blockId != Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value)
+                throw new InvalidOperationException();
 
             Api.JetPrepareUpdate(cursor.jetSession, cursor.blocksTableId, JET_prep.Replace);
             try
@@ -129,34 +118,10 @@ namespace BitSharp.Esent
             }
         }
 
-        public void MoveLeft()
+        public void DeleteNode()
         {
-            MerkleTreeNode node;
-            if (!this.TryMoveLeft(out node))
-                throw new InvalidOperationException();
-        }
-
-        public void DeleteNodeToRight()
-        {
-            MerkleTreeNode node;
-            if (!this.TryMoveRight(out node))
-                throw new InvalidOperationException();
-
             Api.JetDelete(cursor.jetSession, cursor.blocksTableId);
-
-            MoveLeft();
-        }
-
-        private MerkleTreeNode ReadNode()
-        {
-            var index = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
-            var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
-            var txHash = DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
-
-            var pruned = depth >= 0;
-            depth = Math.Max(0, depth);
-
-            return new MerkleTreeNode(index, depth, txHash, pruned);
+            Api.TryMovePrevious(cursor.jetSession, cursor.blocksTableId);
         }
     }
 }
