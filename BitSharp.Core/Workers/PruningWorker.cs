@@ -76,6 +76,8 @@ namespace BitSharp.Core.Workers
 
                     var txCount = 0;
 
+                    var pruneData = new SortedDictionary<int, List<int>>();
+
                     for (var blockHeight = minHeight; blockHeight <= maxHeight; blockHeight++)
                     {
                         // cooperative loop
@@ -83,7 +85,6 @@ namespace BitSharp.Core.Workers
 
                         // collect pruning information and group it by block
                         gatherStopwatch.Start();
-                        var pruneData = new SortedDictionary<int, List<int>>();
                         foreach (var spentTx in this.chainStateBuilder.ReadSpentTransactions(blockHeight))
                         {
                             // cooperative loop
@@ -96,29 +97,34 @@ namespace BitSharp.Core.Workers
                             pruneData[spentTx.ConfirmedBlockIndex].Add(spentTx.TxIndex);
                         }
                         gatherStopwatch.Stop();
-
-                        // prune the spent transactions from each block
-                        pruneStopwatch.Start();
-                        Parallel.ForEach(pruneData, keyPair =>
-                        //foreach (var keyPair in pruneData)
-                        {
-                            // cooperative loop
-                            this.ThrowIfCancelled();
-
-                            var confirmedBlockIndex = keyPair.Key;
-                            var confirmedBlockHash = chain.Blocks[confirmedBlockIndex].Hash;
-                            var spentTxIndices = keyPair.Value;
-
-                            this.coreStorage.PruneElements(confirmedBlockHash, spentTxIndices);
-                        });
-                        pruneStopwatch.Stop();
-
-                        //TODO properly sync commits before removing
-                        // remove the pruning information
-                        cleanStopwatch.Start();
-                        this.chainStateBuilder.RemoveSpentTransactions(blockHeight);
-                        cleanStopwatch.Stop();
                     }
+
+                    // prune the spent transactions from each block
+                    pruneStopwatch.Start();
+                    Parallel.ForEach(pruneData, keyPair =>
+                    //foreach (var keyPair in pruneData)
+                    {
+                        // cooperative loop
+                        this.ThrowIfCancelled();
+
+                        var confirmedBlockIndex = keyPair.Key;
+                        var confirmedBlockHash = chain.Blocks[confirmedBlockIndex].Hash;
+                        var spentTxIndices = keyPair.Value;
+                        spentTxIndices.Sort();
+
+                        this.coreStorage.PruneElements(confirmedBlockHash, spentTxIndices);
+                    });
+                    pruneStopwatch.Stop();
+
+                    //TODO properly sync commits before removing
+                    // remove the pruning information
+                    cleanStopwatch.Start();
+                    for (var blockHeight = minHeight; blockHeight <= maxHeight; blockHeight++)
+                    {
+                        this.chainStateBuilder.RemoveSpentTransactions(blockHeight);
+                    }
+                    cleanStopwatch.Stop();
+                    //}
 
                     this.lastPruneHeight = maxHeight;
 

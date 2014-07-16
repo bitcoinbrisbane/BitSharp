@@ -12,12 +12,9 @@ using System.Threading.Tasks;
 namespace BitSharp.Core.Storage
 {
     /// <summary>
-    /// A pruning cursor which caches reads and defers updates and deletes for a parent pruning cursor.
-    /// 
-    /// After pruning has been completed, the final list of updates and deletes can be retrieved. This cursor
-    /// can be used to prevent intermediate updates to the merkle tree from being written out to storage.
+    /// A pruning cursor which caches reads and movements to a parent pruning cursor.
     /// </summary>
-    public class DeferredMerkleTreePruningCursor : IMerkleTreePruningCursor
+    public class CachedMerkleTreePruningCursor : IMerkleTreePruningCursor
     {
         private readonly IMerkleTreePruningCursor parentCursor;
 
@@ -26,14 +23,12 @@ namespace BitSharp.Core.Storage
         private readonly Dictionary<int, int?> indicesToLeft;
         private readonly Dictionary<int, int?> indicesToRight;
 
-        private readonly HashSet<int> updatedIndices;
-        private readonly HashSet<int> deletedIndices;
-
+        private int parentCurrentIndex;
         private int currentIndex;
         private bool beforeStart;
         private bool afterEnd;
 
-        public DeferredMerkleTreePruningCursor(IMerkleTreePruningCursor parentCursor)
+        public CachedMerkleTreePruningCursor(IMerkleTreePruningCursor parentCursor)
         {
             this.parentCursor = parentCursor;
 
@@ -41,9 +36,7 @@ namespace BitSharp.Core.Storage
             this.indicesToLeft = new Dictionary<int, int?>();
             this.indicesToRight = new Dictionary<int, int?>();
 
-            this.updatedIndices = new HashSet<int>();
-            this.deletedIndices = new HashSet<int>();
-
+            this.parentCurrentIndex = -1;
             this.currentIndex = -1;
         }
 
@@ -71,7 +64,11 @@ namespace BitSharp.Core.Storage
             MerkleTreeNode node;
             if (!this.cachedNodes.TryGetValue(index, out node))
             {
-                this.parentCursor.MoveToIndex(index);
+                if (this.parentCurrentIndex != index)
+                {
+                    this.parentCursor.MoveToIndex(index);
+                    this.parentCurrentIndex = index;
+                }
                 node = this.parentCursor.ReadNode();
                 
                 if (node.Index != index)
@@ -113,25 +110,33 @@ namespace BitSharp.Core.Storage
             }
             else
             {
-                this.parentCursor.MoveToIndex(this.currentIndex);
+                if (this.parentCurrentIndex != this.currentIndex)
+                {
+                    this.parentCursor.MoveToIndex(this.currentIndex);
+                    this.parentCurrentIndex = this.currentIndex;
+                }
 
                 MerkleTreeNode nodeToLeft = null;
-                do
-                {
+                //do
+                //{
                     if (this.parentCursor.TryMoveLeft())
                         nodeToLeft = this.parentCursor.ReadNode();
                     else
                         nodeToLeft = null;
-                } while (nodeToLeft != null && this.deletedIndices.Contains(nodeToLeft.Index));
+                //} while (nodeToLeft != null); // && this.deletedIndices.Contains(nodeToLeft.Index));
 
                 this.indicesToLeft[this.currentIndex] = (nodeToLeft != null ? nodeToLeft.Index : (int?)null);
                 if (nodeToLeft != null)
+                {
                     this.indicesToRight[nodeToLeft.Index] = this.currentIndex;
-
-                if (nodeToLeft != null)
+                    this.parentCurrentIndex = nodeToLeft.Index;
                     this.currentIndex = nodeToLeft.Index;
+                }
                 else
+                {
+                    this.parentCurrentIndex = -1;
                     this.beforeStart = true;
+                }
 
                 return nodeToLeft != null;
             }
@@ -164,25 +169,33 @@ namespace BitSharp.Core.Storage
             }
             else
             {
-                this.parentCursor.MoveToIndex(this.currentIndex);
+                if (this.parentCurrentIndex != this.currentIndex)
+                {
+                    this.parentCursor.MoveToIndex(this.currentIndex);
+                    this.parentCurrentIndex = this.currentIndex;
+                }
 
                 MerkleTreeNode nodeToRight = null;
-                do
-                {
+                //do
+                //{
                     if (this.parentCursor.TryMoveRight())
                         nodeToRight = this.parentCursor.ReadNode();
                     else
                         nodeToRight = null;
-                } while (nodeToRight != null && this.deletedIndices.Contains(nodeToRight.Index));
+                //} while (nodeToRight != null); // && this.deletedIndices.Contains(nodeToRight.Index));
 
                 this.indicesToRight[this.currentIndex] = (nodeToRight != null ? nodeToRight.Index : (int?)null);
                 if (nodeToRight != null)
+                {
                     this.indicesToLeft[nodeToRight.Index] = this.currentIndex;
-
-                if (nodeToRight != null)
+                    this.parentCurrentIndex = nodeToRight.Index;
                     this.currentIndex = nodeToRight.Index;
+                }
                 else
+                {
+                    this.parentCurrentIndex = -1;
                     this.afterEnd = true;
+                }
 
                 return nodeToRight != null;
             }
@@ -193,13 +206,17 @@ namespace BitSharp.Core.Storage
             if (this.currentIndex == -1 || this.beforeStart || this.afterEnd)
                 throw new InvalidOperationException();
 
-            if (this.deletedIndices.Contains(this.currentIndex))
-                throw new InvalidOperationException();
+            //if (this.deletedIndices.Contains(this.currentIndex))
+            //    throw new InvalidOperationException();
 
             MerkleTreeNode node;
             if (!this.cachedNodes.TryGetValue(this.currentIndex, out node))
             {
-                this.parentCursor.MoveToIndex(this.currentIndex);
+                if (this.parentCurrentIndex != this.currentIndex)
+                {
+                    this.parentCursor.MoveToIndex(this.currentIndex);
+                    this.parentCurrentIndex = this.currentIndex;
+                }
                 node = this.parentCursor.ReadNode();
                 
                 if (node.Index != this.currentIndex)
@@ -220,8 +237,14 @@ namespace BitSharp.Core.Storage
             if (this.currentIndex != node.Index)
                 throw new InvalidOperationException();
 
+            if (this.parentCurrentIndex != node.Index)
+            {
+                this.parentCursor.MoveToIndex(node.Index);
+                this.parentCurrentIndex = node.Index;
+            }
+            this.parentCursor.WriteNode(node);
+
             this.cachedNodes[node.Index] = node;
-            this.updatedIndices.Add(node.Index);
         }
 
         public void DeleteNode()
@@ -257,8 +280,12 @@ namespace BitSharp.Core.Storage
             this.indicesToLeft.Remove(this.currentIndex);
             this.indicesToRight.Remove(this.currentIndex);
 
-            this.updatedIndices.Remove(this.currentIndex);
-            this.deletedIndices.Add(this.currentIndex);
+            if (this.parentCurrentIndex != this.currentIndex)
+            {
+                this.parentCursor.MoveToIndex(this.currentIndex);
+                this.parentCurrentIndex = this.currentIndex;
+            }
+            this.parentCursor.DeleteNode();
 
             if (nodeToLeftIndex != null)
             {
@@ -271,37 +298,9 @@ namespace BitSharp.Core.Storage
             }
         }
 
-        public void ApplyChanges()
-        {
-            foreach (var updatedIndex in this.updatedIndices)
-            {
-                if (this.parentCursor.TryMoveToIndex(updatedIndex))
-                {
-                    this.parentCursor.WriteNode(this.cachedNodes[updatedIndex]);
-                }
-                else
-                {
-                    //TODO throw
-                }
-            }
-
-            foreach (var deletedIndex in this.deletedIndices)
-            {
-                if (this.parentCursor.TryMoveToIndex(deletedIndex))
-                {
-                    this.parentCursor.DeleteNode();
-                }
-                else
-                {
-                    //TODO throw
-                }
-            }
-        }
-
         //TODO remove
         public IEnumerable<MerkleTreeNode> ReadNodes()
         {
-            this.ApplyChanges();
             return ((MemoryMerkleTreePruningCursor)parentCursor).ReadNodes();
         }
     }
