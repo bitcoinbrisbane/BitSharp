@@ -53,9 +53,27 @@ namespace BitSharp.Core.Domain
         /// </summary>
         public OutputStates OutputStates { get { return this.outputStates; } }
 
+        /// <summary>
+        /// True if all of the transaction's outputs are in the spent state.
+        /// </summary>
+        public bool IsFullySpent { get { return this.OutputStates.All(x => x == OutputState.Spent); } }
+
         public UnspentTx SetOutputState(int index, OutputState value)
         {
             return new UnspentTx(this.txHash, this.blockIndex, this.txIndex, this.outputStates.Set(index, value));
+        }
+
+        /// <summary>
+        /// Create a spent transaction representation of this unspent transaction, for a specified block.
+        /// </summary>
+        /// <param name="spentBlockIndex">The index (height) of the block in which this transaction became fully spent.</param>
+        /// <returns>The spent transaction.</returns>
+        public SpentTx ToSpentTx(int spentBlockIndex)
+        {
+            if (!this.IsFullySpent)
+                throw new InvalidOperationException();
+            
+            return new SpentTx(this.txHash, this.blockIndex, this.txIndex, this.outputStates.Length, spentBlockIndex);
         }
 
         public override bool Equals(object obj)

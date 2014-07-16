@@ -30,7 +30,7 @@ namespace BitSharp.Core.Storage
 
         bool TryAddTransaction(UInt256 txHash, UnspentTx unspentTx);
 
-        bool RemoveTransaction(UInt256 txHash, int spentBlockIndex);
+        bool RemoveTransaction(UInt256 txHash);
 
         void UpdateTransaction(UInt256 txHash, UnspentTx unspentTx);
 
@@ -39,6 +39,8 @@ namespace BitSharp.Core.Storage
         IEnumerable<UnspentTx> ReadUnspentTransactions();
 
         IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex);
+
+        void AddSpentTransaction(SpentTx spentTx);
 
         void RemoveSpentTransactions(int spentBlockIndex);
 

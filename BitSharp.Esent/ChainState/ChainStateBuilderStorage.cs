@@ -175,7 +175,7 @@ namespace BitSharp.Esent
                 throw new InvalidOperationException();
         }
 
-        public bool RemoveTransaction(UInt256 txHash, int spentBlockIndex)
+        public bool RemoveTransaction(UInt256 txHash)
         {
             if (!this.inTransaction)
                 throw new InvalidOperationException();
@@ -190,27 +190,6 @@ namespace BitSharp.Esent
             var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.outputStatesColumnId));
 
             Api.JetDelete(this.cursor.jetSession, this.cursor.unspentTxTableId);
-
-            if (spentBlockIndex >= 0)
-            {
-                Debug.Assert(spentBlockIndex == Api.RetrieveColumnAsInt32(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentSpentBlockIndexColumnId).Value);
-
-                Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.spentTxTableId, JET_prep.Replace);
-                try
-                {
-                    var spentTx = new SpentTx(txHash, addedBlockIndex, txIndex, outputStates.Length, spentBlockIndex);
-                    var spentTxBytes = DataEncoder.EncodeSpentTx(spentTx);
-
-                    Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentDataColumnId, spentTxBytes, SetColumnGrbit.AppendLV);
-
-                    Api.JetUpdate(this.cursor.jetSession, this.cursor.spentTxTableId);
-                }
-                catch (Exception)
-                {
-                    Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.spentTxTableId, JET_prep.Cancel);
-                    throw;
-                }
-            }
 
             return true;
         }
@@ -268,6 +247,26 @@ namespace BitSharp.Esent
             finally
             {
                 this.FreeCursor(readCursor);
+            }
+        }
+
+        public void AddSpentTransaction(SpentTx spentTx)
+        {
+            Debug.Assert(spentTx.SpentBlockIndex == Api.RetrieveColumnAsInt32(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentSpentBlockIndexColumnId).Value);
+
+            Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.spentTxTableId, JET_prep.Replace);
+            try
+            {
+                var spentTxBytes = DataEncoder.EncodeSpentTx(spentTx);
+
+                Api.SetColumn(this.cursor.jetSession, this.cursor.spentTxTableId, this.cursor.spentDataColumnId, spentTxBytes, SetColumnGrbit.AppendLV);
+
+                Api.JetUpdate(this.cursor.jetSession, this.cursor.spentTxTableId);
+            }
+            catch (Exception)
+            {
+                Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.spentTxTableId, JET_prep.Cancel);
+                throw;
             }
         }
 

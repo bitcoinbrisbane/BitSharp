@@ -74,7 +74,7 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
-        public bool RemoveTransaction(UInt256 txHash, int spentBlockIndex)
+        public bool RemoveTransaction(UInt256 txHash)
         {
             UnspentTx unspentTx;
             if (!this.unspentTransactions.TryGetValue(txHash, out unspentTx))
@@ -82,12 +82,6 @@ namespace BitSharp.Core.Storage.Memory
 
             var removed = this.unspentTransactions.Remove(txHash);
             Debug.Assert(removed);
-
-            if (spentBlockIndex >= 0)
-            {
-                this.spentTransactions[spentBlockIndex]
-                    .Add(new SpentTx(txHash, unspentTx.BlockIndex, unspentTx.TxIndex, unspentTx.OutputStates.Length, spentBlockIndex));
-            }
 
             return true;
         }
@@ -115,6 +109,11 @@ namespace BitSharp.Core.Storage.Memory
                 foreach (var spentTx in spentTxes)
                     yield return spentTx;
             }
+        }
+
+        public void AddSpentTransaction(SpentTx spentTx)
+        {
+            this.spentTransactions[spentTx.SpentBlockIndex].Add(spentTx);
         }
 
         public void RemoveSpentTransactions(int spentBlockIndex)
