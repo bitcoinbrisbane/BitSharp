@@ -175,6 +175,8 @@ namespace BitSharp.Client
 
         protected override void OnClosed(EventArgs e)
         {
+            this.logger.Info("Shutting down");
+
             // shutdown
             new IDisposable[]
             {
@@ -184,6 +186,8 @@ namespace BitSharp.Client
             }.DisposeList();
 
             base.OnClosed(e);
+            
+            this.logger.Info("Finished shutting down");
         }
 
         private void ViewFirst_Click(object sender, RoutedEventArgs e)
