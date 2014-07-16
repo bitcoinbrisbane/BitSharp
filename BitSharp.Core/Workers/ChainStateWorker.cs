@@ -75,7 +75,6 @@ namespace BitSharp.Core.Workers
             {
                 this.blockProcessingDurationMeasure,
                 this.blockMissCountMeasure,
-                this.chainStateBuilder,
             }.DisposeList();
         }
 

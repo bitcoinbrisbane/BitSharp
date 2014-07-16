@@ -13,25 +13,24 @@ namespace BitSharp.Common
     {
         private readonly ReaderWriterLockSlim rwLock;
 
-        private readonly ManualResetEventSlim stopToken;
+        private readonly CancellationTokenSource cancelToken;
         private readonly Stopwatch stopwatch;
         private List<Sample> samples;
         private int tickCount;
         private long tickDuration;
-        private readonly Thread sampleThread;
+        private readonly Task sampleTask;
 
         public DurationMeasure(TimeSpan? sampleCutoff = null, TimeSpan? sampleResolution = null)
         {
             this.rwLock = new ReaderWriterLockSlim();
-            this.stopToken = new ManualResetEventSlim();
+            this.cancelToken = new CancellationTokenSource();
             this.stopwatch = Stopwatch.StartNew();
             this.samples = new List<Sample>();
 
             this.SampleCutoff = sampleCutoff ?? TimeSpan.FromSeconds(30);
             this.SampleResolution = sampleResolution ?? TimeSpan.FromSeconds(1);
 
-            this.sampleThread = new Thread(SampleThread);
-            this.sampleThread.Start();
+            this.sampleTask = Task.Run((Func<Task>)this.SampleThread);
         }
 
         public TimeSpan SampleCutoff { get; set; }
@@ -40,9 +39,9 @@ namespace BitSharp.Common
 
         public void Dispose()
         {
-            this.stopToken.Set();
-            this.sampleThread.Join();
-            this.stopToken.Dispose();
+            this.cancelToken.Cancel();
+            this.sampleTask.Wait();
+            this.cancelToken.Dispose();
         }
 
         public void Tick(TimeSpan duration)
@@ -75,14 +74,20 @@ namespace BitSharp.Common
             });
         }
 
-        private void SampleThread()
+        private async Task SampleThread()
         {
             while (true)
             {
                 var start = stopwatch.Elapsed;
 
-                if (this.stopToken.Wait(this.SampleResolution))
+                try
+                {
+                    await Task.Delay(this.SampleResolution, this.cancelToken.Token);
+                }
+                catch (TaskCanceledException)
+                {
                     return;
+                }
 
                 var now = stopwatch.Elapsed;
                 var duration = now - start;
