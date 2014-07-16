@@ -147,7 +147,7 @@ namespace BitSharp.Node.Workers
             var connectedCount = this.connectedPeers.Count;
             var pendingCount = this.pendingPeers.Count;
             var unconnectedCount = this.unconnectedPeers.Count;
-            var maxConnections = Math.Max(CONNECTED_MAX + 20, PENDING_MAX);
+            var maxConnections = CONNECTED_MAX; // Math.Max(CONNECTED_MAX + 20, PENDING_MAX);
 
             // if there aren't enough peers connected and there is a pending connection slot available, make another connection
             if (connectedCount < CONNECTED_MAX

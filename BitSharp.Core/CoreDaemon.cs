@@ -93,7 +93,7 @@ namespace BitSharp.Core
                 this.logger, this.rules, this.coreStorage);
 
             this.chainStateWorker = new ChainStateWorker(
-                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.FromSeconds(5)),
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(5)),
                 this.targetChainWorker, this.chainStateBuilder, () => this.targetChainWorker.TargetChain, this.logger, this.rules, this.coreStorage);
 
             this.pruningWorker = new PruningWorker(
@@ -337,6 +337,8 @@ namespace BitSharp.Core
 
         private void HandleBlockMissed(UInt256 blockHash)
         {
+            this.chainStateWorker.NotifyWork();
+
             var handler = this.BlockMissed;
             if (handler != null)
                 handler(blockHash);

@@ -393,12 +393,12 @@ namespace BitSharp.Node.Workers
                     blockRequest.Peer.AddBlockMiss();
 
                     // remove all requests to the slow peer
-                    ConcurrentDictionary<UInt256, DateTime> peerRequests;
-                    if (this.blockRequestsByPeer.TryGetValue(blockRequest.Peer, out peerRequests))
-                    {
-                        foreach (var peerRequest in peerRequests)
-                            this.allBlockRequests.TryRemove(peerRequest.Key, out blockRequest);
-                    }
+                    //ConcurrentDictionary<UInt256, DateTime> peerRequests;
+                    //if (this.blockRequestsByPeer.TryGetValue(blockRequest.Peer, out peerRequests))
+                    //{
+                    //    foreach (var peerRequest in peerRequests)
+                    //        this.allBlockRequests.TryRemove(peerRequest.Key, out blockRequest);
+                    //}
 
                     // ensure missed block is removed from the global request list
                     this.allBlockRequests.TryRemove(blockHash, out blockRequest);

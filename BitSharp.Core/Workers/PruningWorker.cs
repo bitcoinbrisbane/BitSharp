@@ -54,7 +54,7 @@ namespace BitSharp.Core.Workers
             var minHeight = this.lastPruneHeight + 1;
             var maxHeight = chain.Blocks.Count - pruneBuffer;
 
-            if (maxHeight < minHeight)
+            if (maxHeight <= minHeight)
                 return;
 
             if (maxHeight - this.lastPruneHeight > blocksPerDay)
@@ -137,6 +137,7 @@ namespace BitSharp.Core.Workers
             }
 
             this.chainStateWorker.Start();
+            this.chainStateWorker.NotifyWork();
         }
     }
 

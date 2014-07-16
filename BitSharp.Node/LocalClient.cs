@@ -208,6 +208,7 @@ namespace BitSharp.Node
 
                 case RulesEnum.TestNet3:
                     addSeed("testnet-seed.bitcoin.petertodd.org");
+                    addSeed("static-testnet-seed.bitcoin.petertodd.org");
                     addSeed("testnet-seed.bluematt.me");
                     break;
             }
