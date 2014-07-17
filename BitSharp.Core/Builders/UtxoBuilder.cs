@@ -135,7 +135,10 @@ namespace BitSharp.Core.Builders
             // remove fully spent transaction from the utxo
             else
             {
-                this.chainStateBuilderStorage.RemoveTransaction(input.PreviousTxOutputKey.TxHash);
+                if (!this.chainStateBuilderStorage.TryRemoveTransaction(input.PreviousTxOutputKey.TxHash))
+                {
+                    throw new ValidationException(chainedHeader.Hash);
+                }
 
                 // store rollback/pruning information
                 this.chainStateBuilderStorage.AddSpentTransaction(unspentTx.ToSpentTx(chainedHeader.Height));
@@ -203,7 +206,10 @@ namespace BitSharp.Core.Builders
             }
 
             // remove the transaction
-            this.chainStateBuilderStorage.RemoveTransaction(tx.Hash);
+            if (!this.chainStateBuilderStorage.TryRemoveTransaction(tx.Hash))
+            {
+                throw new ValidationException(chainedHeader.Hash);
+            }
         }
 
         private void Unspend(TxInput input, ChainedHeader chainedHeader, ImmutableDictionary<UInt256, SpentTx> spentTxes)

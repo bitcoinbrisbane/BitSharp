@@ -175,23 +175,27 @@ namespace BitSharp.Esent
                 throw new InvalidOperationException();
         }
 
-        public bool RemoveTransaction(UInt256 txHash)
+        public bool TryRemoveTransaction(UInt256 txHash)
         {
             if (!this.inTransaction)
                 throw new InvalidOperationException();
 
             Api.JetSetCurrentIndex(this.cursor.jetSession, this.cursor.unspentTxTableId, "IX_TxHash");
             Api.MakeKey(this.cursor.jetSession, this.cursor.unspentTxTableId, DbEncoder.EncodeUInt256(txHash), MakeKeyGrbit.NewKey);
-            if (!Api.TrySeek(this.cursor.jetSession, this.cursor.unspentTxTableId, SeekGrbit.SeekEQ))
-                throw new KeyNotFoundException();
+            if (Api.TrySeek(this.cursor.jetSession, this.cursor.unspentTxTableId, SeekGrbit.SeekEQ))
+            {
+                var addedBlockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.blockIndexColumnId).Value;
+                var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.txIndexColumnId).Value;
+                var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.outputStatesColumnId));
 
-            var addedBlockIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.blockIndexColumnId).Value;
-            var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.unspentTxTableId, cursor.txIndexColumnId).Value;
-            var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(cursor.jetSession, cursor.unspentTxTableId, cursor.outputStatesColumnId));
+                Api.JetDelete(this.cursor.jetSession, this.cursor.unspentTxTableId);
 
-            Api.JetDelete(this.cursor.jetSession, this.cursor.unspentTxTableId);
-
-            return true;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         public void UpdateTransaction(UInt256 txHash, UnspentTx unspentTx)

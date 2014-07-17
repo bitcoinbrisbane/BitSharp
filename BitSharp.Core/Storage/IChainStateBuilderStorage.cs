@@ -30,7 +30,7 @@ namespace BitSharp.Core.Storage
 
         bool TryAddTransaction(UInt256 txHash, UnspentTx unspentTx);
 
-        bool RemoveTransaction(UInt256 txHash);
+        bool TryRemoveTransaction(UInt256 txHash);
 
         void UpdateTransaction(UInt256 txHash, UnspentTx unspentTx);
 
