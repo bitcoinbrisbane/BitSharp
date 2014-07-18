@@ -184,31 +184,18 @@ namespace BitSharp.Node
             switch (this.Type)
             {
                 case RulesEnum.MainNet:
-                    addSeed("archivum.info");
-                    addSeed("62.75.216.13");
-                    addSeed("69.64.34.118");
-                    addSeed("79.160.221.140");
-                    addSeed("netzbasis.de");
-                    addSeed("fallback.bitcoin.zhoutong.com");
-                    addSeed("bauhaus.csail.mit.edu");
-                    addSeed("jun.dashjr.org");
-                    addSeed("cheaperinbitcoins.com");
-                    addSeed("django.webflows.fr");
-                    addSeed("204.9.55.71");
-                    addSeed("btcnode.novit.ro");
-                    //No such host is known: addSeed("porgressbar.sk");
-                    addSeed("faucet.bitcoin.st");
-                    addSeed("bitcoin.securepayment.cc");
-                    addSeed("x.jine.se");
-                    //addSeed("www.dcscdn.com");
-                    //addSeed("ns2.dcscdn.com");
-                    //No such host is known: addSeed("coin.soul-dev.com");
-                    addSeed("messier.bzfx.net");
+                    addSeed("seed.bitcoin.sipa.be");
+                    addSeed("dnsseed.bluematt.me");
+                    addSeed("dnsseed.bitcoin.dashjr.org");
+                    addSeed("seed.bitcoinstats.com");
+                    addSeed("seed.bitnodes.io");
+                    addSeed("seeds.bitcoin.open-nodes.org");
+                    addSeed("bitseed.xf2.org");
                     break;
 
                 case RulesEnum.TestNet3:
+                    addSeed("testnet-seed.alexykot.me");
                     addSeed("testnet-seed.bitcoin.petertodd.org");
-                    addSeed("static-testnet-seed.bitcoin.petertodd.org");
                     addSeed("testnet-seed.bluematt.me");
                     break;
             }
