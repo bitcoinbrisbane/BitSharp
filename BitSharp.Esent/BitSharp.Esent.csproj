@@ -83,6 +83,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChainState\ChainStateSchema.cs" />
     <Compile Include="DbEncoder.cs" />
     <Compile Include="BlockCursor.cs" />
     <Compile Include="BlockTxesCursor.cs" />

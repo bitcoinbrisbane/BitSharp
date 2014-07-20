@@ -26,11 +26,7 @@ namespace BitSharp.Esent
         public readonly JET_COLUMNID outputStatesColumnId;
 
         public readonly JET_TABLEID spentTxTableId;
-        public readonly JET_COLUMNID spentTxHashColumnId;
         public readonly JET_COLUMNID spentSpentBlockIndexColumnId;
-        public readonly JET_COLUMNID spentAddedBlockIndexColumnId;
-        public readonly JET_COLUMNID spentTxIndexColumnId;
-        public readonly JET_COLUMNID spentOutputCountColumnId;
         public readonly JET_COLUMNID spentDataColumnId;
 
         public ChainStateStorageCursor(string jetDatabase, Instance jetInstance, bool readOnly)
@@ -50,11 +46,7 @@ namespace BitSharp.Esent
                     out this.txIndexColumnId,
                     out this.outputStatesColumnId,
                 out spentTxTableId,
-                    out spentTxHashColumnId,
                     out spentSpentBlockIndexColumnId,
-                    out spentAddedBlockIndexColumnId,
-                    out spentTxIndexColumnId,
-                    out spentOutputCountColumnId,
                     out spentDataColumnId);
         }
 
@@ -76,11 +68,7 @@ namespace BitSharp.Esent
             out JET_COLUMNID txIndexColumnId,
             out JET_COLUMNID outputStatesColumnId,
             out JET_TABLEID spentTxTableId,
-            out JET_COLUMNID spentTxHashColumnId,
             out JET_COLUMNID spentSpentBlockIndexColumnId,
-            out JET_COLUMNID spentAddedBlockIndexColumnId,
-            out JET_COLUMNID spentTxIndexColumnId,
-            out JET_COLUMNID spentOutputCountColumnId,
             out JET_COLUMNID spentDataColumnId)
         {
             jetSession = new Session(jetInstance);
@@ -99,17 +87,8 @@ namespace BitSharp.Esent
                 outputStatesColumnId = Api.GetTableColumnid(jetSession, unspentTxTableId, "OutputStates");
 
                 Api.JetOpenTable(jetSession, chainStateDbId, "SpentTx", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out spentTxTableId);
-                //spentTxHashColumnId = Api.GetTableColumnid(jetSession, spentTxTableId, "TxHash");
                 spentSpentBlockIndexColumnId = Api.GetTableColumnid(jetSession, spentTxTableId, "SpentBlockIndex");
-                //spentAddedBlockIndexColumnId = Api.GetTableColumnid(jetSession, spentTxTableId, "AddedBlockIndex");
-                //spentTxIndexColumnId = Api.GetTableColumnid(jetSession, spentTxTableId, "TxIndex");
-                //spentOutputCountColumnId = Api.GetTableColumnid(jetSession, spentTxTableId, "OutputCount");
                 spentDataColumnId = Api.GetTableColumnid(jetSession, spentTxTableId, "SpentData");
-
-                spentTxHashColumnId = default(JET_COLUMNID);
-                spentAddedBlockIndexColumnId = default(JET_COLUMNID);
-                spentTxIndexColumnId = default(JET_COLUMNID);
-                spentOutputCountColumnId = default(JET_COLUMNID);
             }
             catch (Exception)
             {
