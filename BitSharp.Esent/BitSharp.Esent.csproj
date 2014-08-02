@@ -97,7 +97,7 @@
     <Compile Include="PersistentByteDictionary.cs" />
     <Compile Include="EsentStorageModule.cs" />
     <Compile Include="ChainState\ChainStateStorage.cs" />
-    <Compile Include="ChainState\ChainStateBuilderStorage.cs" />
+    <Compile Include="ChainState\ChainStateCursor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

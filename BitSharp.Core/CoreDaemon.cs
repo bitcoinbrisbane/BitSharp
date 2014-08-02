@@ -52,7 +52,7 @@ namespace BitSharp.Core
 
         private readonly CancellationTokenSource shutdownToken;
 
-        private readonly IChainStateBuilderStorage chainStateBuilderStorage;
+        private readonly IChainStateCursor chainStateCursor;
         private readonly ChainStateBuilder chainStateBuilder;
         private ChainState prevChainState;
         private ChainState chainState;
@@ -83,8 +83,8 @@ namespace BitSharp.Core
             this.coreStorage.BlockTxesAdded += HandleBlockTxesAdded;
 
             // create chain state builder
-            this.chainStateBuilderStorage = this.storageManager.CreateOrLoadChainState(this.rules.GenesisChainedHeader);
-            this.chainStateBuilder = new ChainStateBuilder(this.chainStateBuilderStorage, this.logger, this.rules, this.coreStorage);
+            this.chainStateCursor = this.storageManager.CreateOrLoadChainState(this.rules.GenesisChainedHeader);
+            this.chainStateBuilder = new ChainStateBuilder(this.chainStateCursor, this.logger, this.rules, this.coreStorage);
             this.chainStateLock = new ReaderWriterLockSlim();
 
             // create workers
@@ -102,7 +102,7 @@ namespace BitSharp.Core
 
             this.defragWorker = new DefragWorker(
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMinutes(5), maxIdleTime: TimeSpan.FromMinutes(5)),
-                this.coreStorage, this.chainStateBuilderStorage, this.logger);
+                this.coreStorage, this.chainStateCursor, this.logger);
 
             // notify defrag worker after pruning
             this.pruningWorker.OnWorkFinished += this.defragWorker.NotifyWork;
@@ -211,7 +211,7 @@ namespace BitSharp.Core
                 this.gcWorker,
                 this.utxoScanWorker,
                 this.chainStateBuilder,
-                this.chainStateBuilderStorage,
+                this.chainStateCursor,
                 this.shutdownToken
             }.DisposeList();
         }

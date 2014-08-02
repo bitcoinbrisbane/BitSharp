@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Storage.Memory
 {
-    public class MemoryChainStateBuilderStorage : IChainStateBuilderStorage
+    public class MemoryChainStateCursor : IChainStateCursor
     {
         private ChainBuilder chain;
         private ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
@@ -22,7 +22,7 @@ namespace BitSharp.Core.Storage.Memory
         private ImmutableSortedDictionary<UInt256, UnspentTx> savedUnspentTransactions;
         private ImmutableDictionary<int, List<SpentTx>> savedSpentTransactions;
 
-        public MemoryChainStateBuilderStorage(ChainedHeader genesisHeader)
+        public MemoryChainStateCursor(ChainedHeader genesisHeader)
         {
             this.chain = Chain.CreateForGenesisBlock(genesisHeader).ToBuilder();
             this.unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();

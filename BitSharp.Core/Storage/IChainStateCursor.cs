@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Storage
 {
-    public interface IChainStateBuilderStorage : IDisposable
+    public interface IChainStateCursor : IDisposable
     {
         void BeginTransaction();
         

@@ -14,6 +14,6 @@ namespace BitSharp.Core.Storage
 
         IBlockTxesStorage BlockTxesStorage { get; }
 
-        IChainStateBuilderStorage CreateOrLoadChainState(ChainedHeader genesisHeader);
+        IChainStateCursor CreateOrLoadChainState(ChainedHeader genesisHeader);
     }
 }

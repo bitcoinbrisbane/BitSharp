@@ -35,21 +35,21 @@ namespace BitSharp.Core.Builders
         private readonly Logger logger;
         private readonly SHA256Managed sha256;
 
-        private readonly IChainStateBuilderStorage chainStateBuilderStorage;
+        private readonly IChainStateCursor chainStateCursor;
 
-        public UtxoBuilder(IChainStateBuilderStorage chainStateBuilderStorage, Logger logger)
+        public UtxoBuilder(IChainStateCursor chainStateCursor, Logger logger)
         {
             this.logger = logger;
             this.sha256 = new SHA256Managed();
 
-            this.chainStateBuilderStorage = chainStateBuilderStorage;
+            this.chainStateCursor = chainStateCursor;
         }
 
         public IEnumerable<TxWithPrevOutputKeys> CalculateUtxo(Chain chain, IEnumerable<Transaction> blockTxes)
         {
             var chainedHeader = chain.LastBlock;
 
-            this.chainStateBuilderStorage.PrepareSpentTransactions(chainedHeader.Height);
+            this.chainStateCursor.PrepareSpentTransactions(chainedHeader.Height);
 
             var txIndex = -1;
             foreach (var tx in blockTxes)
@@ -93,7 +93,7 @@ namespace BitSharp.Core.Builders
         {
             // add transaction to the utxo
             var unspentTx = new UnspentTx(tx.Hash, chainedHeader.Height, txIndex, tx.Outputs.Length, OutputState.Unspent);
-            if (!this.chainStateBuilderStorage.TryAddTransaction(tx.Hash, unspentTx))
+            if (!this.chainStateCursor.TryAddTransaction(tx.Hash, unspentTx))
             {
                 // duplicate transaction
                 this.logger.Warn("Duplicate transaction at block {0:#,##0}, {1}, coinbase".Format2(chainedHeader.Height, chainedHeader.Hash.ToHexNumberString()));
@@ -104,7 +104,7 @@ namespace BitSharp.Core.Builders
         private UnspentTx Spend(int txIndex, Transaction tx, int inputIndex, TxInput input, ChainedHeader chainedHeader)
         {
             UnspentTx unspentTx;
-            if (!this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
+            if (!this.chainStateCursor.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
             {
                 // output wasn't present in utxo, invalid block
                 throw new ValidationException(chainedHeader.Hash);
@@ -130,18 +130,18 @@ namespace BitSharp.Core.Builders
             // update transaction output states in the utxo
             if (!unspentTx.IsFullySpent)
             {
-                this.chainStateBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
+                this.chainStateCursor.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
             }
             // remove fully spent transaction from the utxo
             else
             {
-                if (!this.chainStateBuilderStorage.TryRemoveTransaction(input.PreviousTxOutputKey.TxHash))
+                if (!this.chainStateCursor.TryRemoveTransaction(input.PreviousTxOutputKey.TxHash))
                 {
                     throw new ValidationException(chainedHeader.Hash);
                 }
 
                 // store rollback/pruning information
-                this.chainStateBuilderStorage.AddSpentTransaction(unspentTx.ToSpentTx(chainedHeader.Height));
+                this.chainStateCursor.AddSpentTransaction(unspentTx.ToSpentTx(chainedHeader.Height));
             }
 
             return unspentTx;
@@ -190,7 +190,7 @@ namespace BitSharp.Core.Builders
 
             // check that transaction exists
             UnspentTx unspentTx;
-            if (!this.chainStateBuilderStorage.TryGetTransaction(tx.Hash, out unspentTx))
+            if (!this.chainStateCursor.TryGetTransaction(tx.Hash, out unspentTx))
             {
                 // missing transaction output
                 this.logger.Warn("Missing transaction at block {0:#,##0}, {1}, tx {2}".Format2(chainedHeader.Height, chainedHeader.Hash.ToHexNumberString(), tx.Hash));
@@ -206,7 +206,7 @@ namespace BitSharp.Core.Builders
             }
 
             // remove the transaction
-            if (!this.chainStateBuilderStorage.TryRemoveTransaction(tx.Hash))
+            if (!this.chainStateCursor.TryRemoveTransaction(tx.Hash))
             {
                 throw new ValidationException(chainedHeader.Hash);
             }
@@ -217,7 +217,7 @@ namespace BitSharp.Core.Builders
             bool wasRestored;
 
             UnspentTx unspentTx;
-            if (this.chainStateBuilderStorage.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
+            if (this.chainStateCursor.TryGetTransaction(input.PreviousTxOutputKey.TxHash, out unspentTx))
             {
                 wasRestored = false;
             }
@@ -248,12 +248,12 @@ namespace BitSharp.Core.Builders
             // update storage
             if (!wasRestored)
             {
-                this.chainStateBuilderStorage.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
+                this.chainStateCursor.UpdateTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
             }
             else
             {
                 // a restored fully spent transaction must be added back
-                var wasAdded = this.chainStateBuilderStorage.TryAddTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
+                var wasAdded = this.chainStateCursor.TryAddTransaction(input.PreviousTxOutputKey.TxHash, unspentTx);
                 if (!wasAdded)
                     throw new ValidationException(chainedHeader.Hash);
             }

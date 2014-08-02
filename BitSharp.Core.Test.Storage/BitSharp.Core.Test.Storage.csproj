@@ -78,7 +78,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="IChainStateBuilderStorageTest.cs" />
+    <Compile Include="IChainStateCursorTest.cs" />
     <Compile Include="IChainStateStorageTest.cs" />
     <Compile Include="IBlockTxesStorageTest.cs" />
     <Compile Include="IBlockStorageTest.cs" />

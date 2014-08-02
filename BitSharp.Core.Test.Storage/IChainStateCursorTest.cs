@@ -25,7 +25,7 @@ using System.Threading.Tasks;
 namespace BitSharp.Core.Test.Storage
 {
     [TestClass]
-    public class IChainStateBuilderStorageTest : StorageProviderTest
+    public class IChainStateCursorTest : StorageProviderTest
     {
         [TestMethod]
         public void TODO() { Assert.Inconclusive("TODO"); }

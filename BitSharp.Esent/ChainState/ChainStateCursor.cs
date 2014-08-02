@@ -22,7 +22,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Esent
 {
-    internal class ChainStateBuilderStorage : IChainStateBuilderStorage
+    internal class ChainStateCursor : IChainStateCursor
     {
         //TODO
         public static bool IndexOutputs { get; set; }
@@ -39,7 +39,7 @@ namespace BitSharp.Esent
 
         private bool inTransaction;
 
-        public ChainStateBuilderStorage(string jetDatabase, Instance jetInstance, Logger logger)
+        public ChainStateCursor(string jetDatabase, Instance jetInstance, Logger logger)
         {
             this.logger = logger;
             this.jetDatabase = jetDatabase;
@@ -51,7 +51,7 @@ namespace BitSharp.Esent
             this.cursorsLock = new object();
         }
 
-        ~ChainStateBuilderStorage()
+        ~ChainStateCursor()
         {
             this.Dispose();
         }

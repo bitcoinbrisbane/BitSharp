@@ -17,9 +17,9 @@ namespace BitSharp.Core.Domain
         private readonly Chain chain;
         private readonly Utxo utxo;
 
-        public ChainState(Chain chain, IChainStateBuilderStorage chainStateBuilderStorage)
+        public ChainState(Chain chain, IChainStateCursor chainStateCursor)
         {
-            this.chainStateStorage = chainStateBuilderStorage.ToImmutable();
+            this.chainStateStorage = chainStateCursor.ToImmutable();
             this.chain = chain;
             this.utxo = new Utxo(this.chainStateStorage);
         }

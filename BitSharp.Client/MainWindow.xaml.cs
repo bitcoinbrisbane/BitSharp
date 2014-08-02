@@ -88,7 +88,7 @@ namespace BitSharp.Client
                     baseDirectory = Path.Combine(Config.LocalStoragePath, "Data");
                 
                 modules.Add(new EsentStorageModule(baseDirectory, rulesType, cacheSizeMaxBytes: int.MaxValue - 1));
-                //ChainStateBuilderStorage.IndexOutputs = true;
+                //ChainStateCursor.IndexOutputs = true;
 #endif
 
                 // add cache modules

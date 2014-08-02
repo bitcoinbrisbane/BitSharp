@@ -22,14 +22,14 @@ namespace BitSharp.Core.Workers
     {
         private readonly Logger logger;
         private readonly CoreStorage coreStorage;
-        private readonly IChainStateBuilderStorage chainStateBuilderStorage;
+        private readonly IChainStateCursor chainStateCursor;
 
-        public DefragWorker(WorkerConfig workerConfig, CoreStorage coreStorage, IChainStateBuilderStorage chainStateBuilderStorage, Logger logger)
+        public DefragWorker(WorkerConfig workerConfig, CoreStorage coreStorage, IChainStateCursor chainStateCursor, Logger logger)
             : base("DefragWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.coreStorage = coreStorage;
-            this.chainStateBuilderStorage = chainStateBuilderStorage;
+            this.chainStateCursor = chainStateCursor;
         }
 
         protected override void WorkAction()
@@ -37,7 +37,7 @@ namespace BitSharp.Core.Workers
             this.logger.Info("Begin defragging");
 
             this.coreStorage.Defragment();
-            this.chainStateBuilderStorage.Defragment();
+            this.chainStateCursor.Defragment();
         }
     }
 }

@@ -32,9 +32,9 @@ namespace BitSharp.Core.Storage.Memory
             get { return this.blockTxesStorage; }
         }
 
-        public IChainStateBuilderStorage CreateOrLoadChainState(ChainedHeader genesisHeader)
+        public IChainStateCursor CreateOrLoadChainState(ChainedHeader genesisHeader)
         {
-            return new MemoryChainStateBuilderStorage(genesisHeader);
+            return new MemoryChainStateCursor(genesisHeader);
         }
     }
 }

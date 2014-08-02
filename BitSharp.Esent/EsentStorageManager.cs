@@ -68,7 +68,7 @@ namespace BitSharp.Esent
             get { return this.blockTxesStorage; }
         }
 
-        public IChainStateBuilderStorage CreateOrLoadChainState(ChainedHeader genesisHeader)
+        public IChainStateCursor CreateOrLoadChainState(ChainedHeader genesisHeader)
         {
             return this.chainStateManager.CreateOrLoadChainState(genesisHeader);
         }
