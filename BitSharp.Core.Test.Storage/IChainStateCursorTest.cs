@@ -262,7 +262,36 @@ namespace BitSharp.Core.Test.Storage
 
         private void TestAddChainedHeader(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            var fakeHeaders = new FakeHeaders();
+            var chainedHeader0 = fakeHeaders.GenesisChained();
+            var chainedHeader1 = fakeHeaders.NextChained();
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            {
+                chainStateCursor.BeginTransaction();
+
+                // verify initial empty chain
+                Assert.AreEqual(0, chainStateCursor.ReadChain().Count());
+
+                // add header 0
+                chainStateCursor.AddChainedHeader(chainedHeader0);
+
+                // verify chain
+                CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor.ReadChain().ToList());
+
+                // try to add header 0 again
+                AssertThrows<InvalidOperationException>(() => chainStateCursor.AddChainedHeader(chainedHeader0));
+
+                // verify chain
+                CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor.ReadChain().ToList());
+
+                // add header 1
+                chainStateCursor.AddChainedHeader(chainedHeader1);
+
+                // verify chain
+                CollectionAssert.AreEqual(new[] { chainedHeader0, chainedHeader1 }, chainStateCursor.ReadChain().ToList());
+            }
         }
 
         private void TestRemoveChainedHeader(ITestStorageProvider provider)
@@ -298,6 +327,20 @@ namespace BitSharp.Core.Test.Storage
         private void TestTryUpdateUnspentTx(ITestStorageProvider provider)
         {
             Assert.Inconclusive("TODO");
+        }
+
+        private void AssertThrows<T>(Action action) where T : Exception
+        {
+            try
+            {
+                action();
+                Assert.Fail("No exception thrown, expected: {0}".Format2(typeof(T).Name));
+            }
+            catch (UnitTestAssertException) { throw; }
+            catch (Exception e)
+            {
+                Assert.IsInstanceOfType(e, typeof(T), "Unexpected exeption thrown.");
+            }
         }
     }
 }

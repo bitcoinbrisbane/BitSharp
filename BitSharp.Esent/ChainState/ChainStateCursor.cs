@@ -121,10 +121,10 @@ namespace BitSharp.Esent
 
                 Api.JetUpdate(this.jetSession, this.chainTableId);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Cancel);
-                throw;
+                Api.JetPrepareUpdate(this.jetSession, this.chainTableId, JET_prep.Cancel);
+                throw new InvalidOperationException("Failed to add chained header.", e);
             }
         }
 
