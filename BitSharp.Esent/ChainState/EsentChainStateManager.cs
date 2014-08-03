@@ -30,11 +30,7 @@ namespace BitSharp.Esent
         private readonly string baseDirectory;
         private readonly string jetDirectory;
         private readonly string jetDatabase;
-
-        private Instance jetInstance;
-        private IChainStateCursor chainStateCursor;
-
-        private readonly object chainStateCursorLock;
+        private readonly Instance jetInstance;
 
         public EsentChainStateManager(string baseDirectory, Logger logger)
         {
@@ -43,7 +39,10 @@ namespace BitSharp.Esent
             this.jetDirectory = Path.Combine(baseDirectory, "ChainState");
             this.jetDatabase = Path.Combine(this.jetDirectory, "ChainState.edb");
 
-            this.chainStateCursorLock = new object();
+            this.jetInstance = CreateInstance(this.jetDirectory);
+            this.jetInstance.Init();
+
+            this.CreateOrOpenDatabase(this.jetDirectory, this.jetDatabase, this.jetInstance);
         }
 
         public void Dispose()
@@ -53,22 +52,9 @@ namespace BitSharp.Esent
             }.DisposeList();
         }
 
-        public IChainStateCursor CreateOrLoadChainState()
+        public IChainStateCursor OpenChainStateCursor()
         {
-            lock (this.chainStateCursorLock)
-            {
-                if (this.chainStateCursor != null)
-                    throw new InvalidOperationException();
-
-                this.jetInstance = CreateInstance(this.jetDirectory);
-                this.jetInstance.Init();
-
-                this.CreateOrOpenDatabase(this.jetDirectory, this.jetDatabase, this.jetInstance);
-
-                this.chainStateCursor = new ChainStateCursor(this.jetDatabase, this.jetInstance, this.logger);
-
-                return this.chainStateCursor;
-            }
+            return new ChainStateCursor(this.jetDatabase, this.jetInstance, this.logger);
         }
 
         private void CreateOrOpenDatabase(string jetDirectory, string jetDatabase, Instance jetInstance)

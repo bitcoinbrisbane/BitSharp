@@ -70,7 +70,7 @@ namespace BitSharp.Esent
 
         public IChainStateCursor OpenChainStateCursor()
         {
-            return this.chainStateManager.CreateOrLoadChainState();
+            return this.chainStateManager.OpenChainStateCursor();
         }
     }
 }

@@ -101,6 +101,12 @@ namespace BitSharp.Core.Test.Storage
 
         private void TestBeginTransaction(ITestStorageProvider provider)
         {
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor1 = storageManager.OpenChainStateCursor())
+            using (var chainStateCursor2 = storageManager.OpenChainStateCursor())
+            {
+            }
+
             Assert.Inconclusive("TODO");
         }
 
