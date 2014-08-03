@@ -46,26 +46,26 @@ namespace BitSharp.Core.Storage.Memory
             this.chain.RemoveBlock(chainedHeader);
         }
 
-        public int TransactionCount
+        public int UnspentTxCount
         {
             get { return this.unspentTransactions.Count; }
         }
 
-        public bool ContainsTransaction(UInt256 txHash)
+        public bool ConainsUnspentTx(UInt256 txHash)
         {
             return this.unspentTransactions.ContainsKey(txHash);
         }
 
-        public bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx)
+        public bool TryGetUnspentTx(UInt256 txHash, out UnspentTx unspentTx)
         {
             return this.unspentTransactions.TryGetValue(txHash, out unspentTx);
         }
 
-        public bool TryAddTransaction(UInt256 txHash, UnspentTx unspentTx)
+        public bool TryAddUnspentTx(UnspentTx unspentTx)
         {
             try
             {
-                this.unspentTransactions.Add(txHash, unspentTx);
+                this.unspentTransactions.Add(unspentTx.TxHash, unspentTx);
                 return true;
             }
             catch (ArgumentException)
@@ -74,7 +74,7 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
-        public bool TryRemoveTransaction(UInt256 txHash)
+        public bool TryRemoveUnspentTx(UInt256 txHash)
         {
             UnspentTx unspentTx;
             if (!this.unspentTransactions.TryGetValue(txHash, out unspentTx))
@@ -83,9 +83,17 @@ namespace BitSharp.Core.Storage.Memory
             return this.unspentTransactions.Remove(txHash);
         }
 
-        public void UpdateTransaction(UInt256 txHash, UnspentTx unspentTx)
+        public bool TryUpdateUnspentTx(UnspentTx unspentTx)
         {
-            this.unspentTransactions[txHash] = unspentTx;
+            if (this.unspentTransactions.ContainsKey(unspentTx.TxHash))
+            {
+                this.unspentTransactions[unspentTx.TxHash] = unspentTx;
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         public IEnumerable<UnspentTx> ReadUnspentTransactions()

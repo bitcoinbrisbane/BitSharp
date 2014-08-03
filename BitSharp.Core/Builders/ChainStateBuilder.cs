@@ -241,7 +241,7 @@ namespace BitSharp.Core.Builders
 
         public int TransactionCount
         {
-            get { return this.chainStateCursor.TransactionCount; }
+            get { return this.chainStateCursor.UnspentTxCount; }
         }
 
         public IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex)

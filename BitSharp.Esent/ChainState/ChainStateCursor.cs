@@ -103,23 +103,23 @@ namespace BitSharp.Esent
             Api.JetDelete(this.cursor.jetSession, this.cursor.chainTableId);
         }
 
-        public int TransactionCount
+        public int UnspentTxCount
         {
             //TODO
             get { return 0; }
         }
 
-        public bool ContainsTransaction(UInt256 txHash)
+        public bool ConainsUnspentTx(UInt256 txHash)
         {
             return ChainStateStorage.ContainsTransaction(this.cursor, txHash);
         }
 
-        public bool TryGetTransaction(UInt256 txHash, out UnspentTx unspentTx)
+        public bool TryGetUnspentTx(UInt256 txHash, out UnspentTx unspentTx)
         {
             return ChainStateStorage.TryGetTransaction(this.cursor, txHash, out unspentTx);
         }
 
-        public bool TryAddTransaction(UInt256 txHash, UnspentTx unspentTx)
+        public bool TryAddUnspentTx(UnspentTx unspentTx)
         {
             if (!this.inTransaction)
                 throw new InvalidOperationException();
@@ -129,7 +129,7 @@ namespace BitSharp.Esent
                 Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId, JET_prep.Insert);
                 try
                 {
-                    Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.txHashColumnId, DbEncoder.EncodeUInt256(txHash));
+                    Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.txHashColumnId, DbEncoder.EncodeUInt256(unspentTx.TxHash));
                     Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.blockIndexColumnId, unspentTx.BlockIndex);
                     Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.txIndexColumnId, unspentTx.TxIndex);
                     Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
@@ -175,7 +175,7 @@ namespace BitSharp.Esent
                 throw new InvalidOperationException();
         }
 
-        public bool TryRemoveTransaction(UInt256 txHash)
+        public bool TryRemoveUnspentTx(UInt256 txHash)
         {
             if (!this.inTransaction)
                 throw new InvalidOperationException();
@@ -198,27 +198,34 @@ namespace BitSharp.Esent
             }
         }
 
-        public void UpdateTransaction(UInt256 txHash, UnspentTx unspentTx)
+        public bool TryUpdateUnspentTx(UnspentTx unspentTx)
         {
             if (!this.inTransaction)
                 throw new InvalidOperationException();
 
             Api.JetSetCurrentIndex(this.cursor.jetSession, this.cursor.unspentTxTableId, "IX_TxHash");
-            Api.MakeKey(this.cursor.jetSession, this.cursor.unspentTxTableId, DbEncoder.EncodeUInt256(txHash), MakeKeyGrbit.NewKey);
-            if (!Api.TrySeek(this.cursor.jetSession, this.cursor.unspentTxTableId, SeekGrbit.SeekEQ))
-                throw new KeyNotFoundException();
+            Api.MakeKey(this.cursor.jetSession, this.cursor.unspentTxTableId, DbEncoder.EncodeUInt256(unspentTx.TxHash), MakeKeyGrbit.NewKey);
 
-            Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId, JET_prep.Replace);
-            try
+            if (Api.TrySeek(this.cursor.jetSession, this.cursor.unspentTxTableId, SeekGrbit.SeekEQ))
             {
-                Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
+                Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId, JET_prep.Replace);
+                try
+                {
+                    Api.SetColumn(this.cursor.jetSession, this.cursor.unspentTxTableId, this.cursor.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
 
-                Api.JetUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId);
+                    Api.JetUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId);
+                }
+                catch (Exception)
+                {
+                    Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId, JET_prep.Cancel);
+                    throw;
+                }
+
+                return true;
             }
-            catch (Exception)
+            else
             {
-                Api.JetPrepareUpdate(this.cursor.jetSession, this.cursor.unspentTxTableId, JET_prep.Cancel);
-                throw;
+                return false;
             }
         }
 
