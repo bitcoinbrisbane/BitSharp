@@ -296,7 +296,40 @@ namespace BitSharp.Core.Test.Storage
 
         private void TestRemoveChainedHeader(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            var fakeHeaders = new FakeHeaders();
+            var chainedHeader0 = fakeHeaders.GenesisChained();
+            var chainedHeader1 = fakeHeaders.NextChained();
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            {
+                chainStateCursor.BeginTransaction();
+
+                // add headers
+                chainStateCursor.AddChainedHeader(chainedHeader0);
+                chainStateCursor.AddChainedHeader(chainedHeader1);
+
+                // verify chain
+                CollectionAssert.AreEqual(new[] { chainedHeader0, chainedHeader1 }, chainStateCursor.ReadChain().ToList());
+
+                // remove header 1
+                chainStateCursor.RemoveChainedHeader(chainedHeader1);
+
+                // verify chain
+                CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor.ReadChain().ToList());
+
+                // try to remove header 1 again
+                AssertThrows<InvalidOperationException>(() => chainStateCursor.RemoveChainedHeader(chainedHeader1));
+
+                // verify chain
+                CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor.ReadChain().ToList());
+
+                // remove header 0
+                chainStateCursor.RemoveChainedHeader(chainedHeader0);
+
+                // verify chain
+                Assert.AreEqual(0, chainStateCursor.ReadChain().Count());
+            }
         }
 
         private void TestUnspentTxCount(ITestStorageProvider provider)
