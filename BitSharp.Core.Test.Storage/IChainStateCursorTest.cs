@@ -162,7 +162,55 @@ namespace BitSharp.Core.Test.Storage
 
         private void TestReadChain(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            var fakeHeaders = new FakeHeaders();
+            var chainedHeader0 = fakeHeaders.GenesisChained();
+            var chainedHeader1 = fakeHeaders.NextChained();
+            var chainedHeader2 = fakeHeaders.NextChained();
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            {
+                chainStateCursor.BeginTransaction();
+
+                // verify initial empty chain
+                Assert.AreEqual(0, chainStateCursor.ReadChain().Count());
+
+                // add header 0
+                chainStateCursor.AddChainedHeader(chainedHeader0);
+
+                // verify chain
+                CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor.ReadChain().ToList());
+
+                // add header 1
+                chainStateCursor.AddChainedHeader(chainedHeader1);
+
+                // verify chain
+                CollectionAssert.AreEqual(new[] { chainedHeader0, chainedHeader1 }, chainStateCursor.ReadChain().ToList());
+
+                // add header 2
+                chainStateCursor.AddChainedHeader(chainedHeader2);
+
+                // verify chain
+                CollectionAssert.AreEqual(new[] { chainedHeader0, chainedHeader1, chainedHeader2 }, chainStateCursor.ReadChain().ToList());
+
+                // remove header 2
+                chainStateCursor.RemoveChainedHeader(chainedHeader2);
+
+                // verify chain
+                CollectionAssert.AreEqual(new[] { chainedHeader0, chainedHeader1 }, chainStateCursor.ReadChain().ToList());
+
+                // remove header 1
+                chainStateCursor.RemoveChainedHeader(chainedHeader1);
+
+                // verify chain
+                CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor.ReadChain().ToList());
+
+                // remove header 0
+                chainStateCursor.RemoveChainedHeader(chainedHeader0);
+
+                // verify chain
+                Assert.AreEqual(0, chainStateCursor.ReadChain().Count());
+            }
         }
 
         private void TestAddChainedHeader(ITestStorageProvider provider)
