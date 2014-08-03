@@ -11,7 +11,7 @@ namespace BitSharp.Esent.ChainState
 {
     internal static class ChainStateSchema
     {
-        public static void CreateDatabase(string jetDatabase, Instance jetInstance, ChainedHeader genesisHeader)
+        public static void CreateDatabase(string jetDatabase, Instance jetInstance)
         {
             JET_DBID utxoDbId;
 
@@ -19,13 +19,13 @@ namespace BitSharp.Esent.ChainState
             {
                 Api.JetCreateDatabase(jetSession, jetDatabase, "", out utxoDbId, CreateDatabaseGrbit.None);
 
-                CreateChainTable(genesisHeader, utxoDbId, jetSession);
+                CreateChainTable(utxoDbId, jetSession);
                 CreateUnspentTxTable(utxoDbId, jetSession);
                 CreateSpentTxTable(utxoDbId, jetSession);
             }
         }
 
-        private static void CreateChainTable(ChainedHeader genesisHeader, JET_DBID utxoDbId, Session jetSession)
+        private static void CreateChainTable(JET_DBID utxoDbId, Session jetSession)
         {
             JET_TABLEID chainTableId;
             JET_COLUMNID blockHeightColumnId;
@@ -47,20 +47,6 @@ namespace BitSharp.Esent.ChainState
                             cbKey = "+BlockHeight\0\0".Length
                         }
                     }, 1);
-
-            // insert genesis chain header
-            Api.JetPrepareUpdate(jetSession, chainTableId, JET_prep.Insert);
-            try
-            {
-                Api.SetColumn(jetSession, chainTableId, blockHeightColumnId, 0);
-                Api.SetColumn(jetSession, chainTableId, chainedHeaderBytesColumnId, DataEncoder.EncodeChainedHeader(genesisHeader));
-
-                Api.JetUpdate(jetSession, chainTableId);
-            }
-            catch (Exception)
-            {
-                Api.JetPrepareUpdate(jetSession, chainTableId, JET_prep.Cancel);
-            }
 
             Api.JetCloseTable(jetSession, chainTableId);
         }

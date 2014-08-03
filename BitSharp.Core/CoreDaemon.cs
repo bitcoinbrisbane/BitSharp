@@ -83,9 +83,13 @@ namespace BitSharp.Core
             this.coreStorage.BlockTxesAdded += HandleBlockTxesAdded;
 
             // create chain state builder
-            this.chainStateCursor = this.storageManager.CreateOrLoadChainState(this.rules.GenesisChainedHeader);
+            this.chainStateCursor = this.storageManager.OpenChainStateCursor();
             this.chainStateBuilder = new ChainStateBuilder(this.chainStateCursor, this.logger, this.rules, this.coreStorage);
             this.chainStateLock = new ReaderWriterLockSlim();
+
+            // add genesis block to chain state, if needed
+            if (this.chainStateBuilder.Chain.Height < 0)
+                this.chainStateBuilder.AddBlock(this.rules.GenesisChainedHeader, this.rules.GenesisBlock.Transactions);
 
             // create workers
             this.targetChainWorker = new TargetChainWorker(

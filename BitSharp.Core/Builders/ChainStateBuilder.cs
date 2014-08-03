@@ -89,6 +89,11 @@ namespace BitSharp.Core.Builders
 
         public BuilderStats Stats { get { return this.stats; } }
 
+        public void AddBlock(ChainedHeader chainedHeader, IEnumerable<Transaction> transactions)
+        {
+            AddBlock(chainedHeader, transactions.Select((tx, txIndex) => new BlockTx(txIndex, depth: 0, hash: tx.Hash, pruned: false, transaction: tx)));
+        }
+
         public void AddBlock(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
         {
             using (this.txPrevOutputLoader.Start())
@@ -112,15 +117,19 @@ namespace BitSharp.Core.Builders
                     // calculate the new block utxo, double spends will be checked for
                     new MethodTimer(false).Time("CalculateUtxo", () =>
                     {
-                        foreach (var pendingTx in this.utxoBuilder.CalculateUtxo(this.chain.ToImmutable(), blockTxes.Select(x => x.Transaction)))
+                        // ignore transactions on geneis block
+                        if (chainedHeader.Height > 0)
                         {
-                            this.txPrevOutputLoader.Add(pendingTx);
+                            foreach (var pendingTx in this.utxoBuilder.CalculateUtxo(this.chain.ToImmutable(), blockTxes.Select(x => x.Transaction)))
+                            {
+                                this.txPrevOutputLoader.Add(pendingTx);
 
-                            // track stats
-                            this.stats.txCount++;
-                            this.stats.inputCount += pendingTx.transaction.Inputs.Length;
-                            this.stats.txRateMeasure.Tick();
-                            this.stats.inputRateMeasure.Tick(pendingTx.transaction.Inputs.Length);
+                                // track stats
+                                this.stats.txCount++;
+                                this.stats.inputCount += pendingTx.transaction.Inputs.Length;
+                                this.stats.txRateMeasure.Tick();
+                                this.stats.inputRateMeasure.Tick(pendingTx.transaction.Inputs.Length);
+                            }
                         }
 
                         this.txPrevOutputLoader.CompleteAdding();

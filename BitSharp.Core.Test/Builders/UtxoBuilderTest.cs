@@ -35,7 +35,7 @@ namespace BitSharp.Core.Test.Builders
             var emptyCoinbaseTx2 = new Transaction(2, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
 
             // initialize memory utxo builder storage
-            var memoryChainStateCursor = new MemoryChainStateCursor(chainedHeader0);
+            var memoryChainStateCursor = new MemoryChainStateCursor();
 
             // initialize utxo builder
             var utxoBuilder = new UtxoBuilder(memoryChainStateCursor, LogManager.CreateNullLogger());
@@ -105,7 +105,7 @@ namespace BitSharp.Core.Test.Builders
             var emptyCoinbaseTx1 = new Transaction(1, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
 
             // initialize memory utxo builder storage
-            var memoryChainStateCursor = new MemoryChainStateCursor(chainedHeader0);
+            var memoryChainStateCursor = new MemoryChainStateCursor();
 
             // initialize utxo builder
             var utxoBuilder = new UtxoBuilder(memoryChainStateCursor, LogManager.CreateNullLogger());

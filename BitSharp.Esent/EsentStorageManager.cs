@@ -68,9 +68,9 @@ namespace BitSharp.Esent
             get { return this.blockTxesStorage; }
         }
 
-        public IChainStateCursor CreateOrLoadChainState(ChainedHeader genesisHeader)
+        public IChainStateCursor OpenChainStateCursor()
         {
-            return this.chainStateManager.CreateOrLoadChainState(genesisHeader);
+            return this.chainStateManager.CreateOrLoadChainState();
         }
     }
 }

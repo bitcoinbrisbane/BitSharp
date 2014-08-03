@@ -22,9 +22,9 @@ namespace BitSharp.Core.Storage.Memory
         private ImmutableSortedDictionary<UInt256, UnspentTx> savedUnspentTransactions;
         private ImmutableDictionary<int, List<SpentTx>> savedSpentTransactions;
 
-        public MemoryChainStateCursor(ChainedHeader genesisHeader)
+        public MemoryChainStateCursor()
         {
-            this.chain = Chain.CreateForGenesisBlock(genesisHeader).ToBuilder();
+            this.chain = new ChainBuilder();
             this.unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
             this.spentTransactions = ImmutableDictionary.CreateBuilder<int, List<SpentTx>>();
         }

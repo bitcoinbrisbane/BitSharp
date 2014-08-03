@@ -49,7 +49,7 @@ namespace BitSharp.Core.Test.Storage
 
             using (var storageManager = provider.OpenStorageManager())
             using (var coreStorage = new CoreStorage(storageManager, logger))
-            using (var chainStateCursor = storageManager.CreateOrLoadChainState(genesisHeader))
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
             using (var chainStateBuilder = new ChainStateBuilder(chainStateCursor, logger, rules, coreStorage))
             {
                 // add blocks to storage
@@ -57,21 +57,14 @@ namespace BitSharp.Core.Test.Storage
                 foreach (var block in blocks)
                     coreStorage.TryAddBlock(block);
 
-                // store the genesis utxo state
-                var expectedUtxos = new List<List<UnspentTx>>();
-                using (var chainState = chainStateBuilder.ToImmutable())
-                {
-                    expectedUtxos.Add(chainState.Utxo.GetUnspentTransactions().ToList());
-                }
-
                 // calculate utxo forward and store its state at each step along the way
-                for (var blockIndex = 1; blockIndex < blocks.Count; blockIndex++)
+                var expectedUtxos = new List<List<UnspentTx>>();
+                for (var blockIndex = 0; blockIndex < blocks.Count; blockIndex++)
                 {
                     var block = blocks[blockIndex];
                     var chainedHeader = new ChainedHeader(block.Header, blockIndex, 0);
-                    var blockTxes = block.Transactions.Select((tx, txIndex) => new BlockTx(txIndex, 0, tx.Hash, /*pruned:*/false, tx));
 
-                    chainStateBuilder.AddBlock(chainedHeader, blockTxes);
+                    chainStateBuilder.AddBlock(chainedHeader, block.Transactions);
 
                     using (var chainState = chainStateBuilder.ToImmutable())
                     {

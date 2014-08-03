@@ -53,7 +53,7 @@ namespace BitSharp.Esent
             }.DisposeList();
         }
 
-        public IChainStateCursor CreateOrLoadChainState(ChainedHeader genesisHeader)
+        public IChainStateCursor CreateOrLoadChainState()
         {
             lock (this.chainStateCursorLock)
             {
@@ -63,7 +63,7 @@ namespace BitSharp.Esent
                 this.jetInstance = CreateInstance(this.jetDirectory);
                 this.jetInstance.Init();
 
-                this.CreateOrOpenDatabase(this.jetDirectory, this.jetDatabase, this.jetInstance, genesisHeader);
+                this.CreateOrOpenDatabase(this.jetDirectory, this.jetDatabase, this.jetInstance);
 
                 this.chainStateCursor = new ChainStateCursor(this.jetDatabase, this.jetInstance, this.logger);
 
@@ -71,7 +71,7 @@ namespace BitSharp.Esent
             }
         }
 
-        private void CreateOrOpenDatabase(string jetDirectory, string jetDatabase, Instance jetInstance, ChainedHeader genesisHeader)
+        private void CreateOrOpenDatabase(string jetDirectory, string jetDatabase, Instance jetInstance)
         {
             try
             {
@@ -83,7 +83,7 @@ namespace BitSharp.Esent
                 catch (Exception) { }
                 Directory.CreateDirectory(jetDirectory);
 
-                ChainStateSchema.CreateDatabase(jetDatabase, jetInstance, genesisHeader);
+                ChainStateSchema.CreateDatabase(jetDatabase, jetInstance);
             }
         }
 

@@ -219,10 +219,6 @@ namespace BitSharp.Esent
                     yield return chainedHeader;
                 } while (Api.TryMoveNext(cursor.jetSession, cursor.chainTableId));
             }
-            else
-            {
-                throw new InvalidOperationException();
-            }
         }
     }
 }

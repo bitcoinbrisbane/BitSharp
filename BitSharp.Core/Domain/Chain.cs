@@ -19,10 +19,6 @@ namespace BitSharp.Core.Domain
             if (blocks == null)
                 throw new ArgumentNullException("blocks");
 
-            if (blocks.Count == 0
-                || blocks[0].Height != 0)
-                throw new InvalidOperationException();
-
             this.blocks = blocks;
         }
 
