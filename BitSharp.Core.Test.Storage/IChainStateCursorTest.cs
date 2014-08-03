@@ -467,7 +467,39 @@ namespace BitSharp.Core.Test.Storage
 
         private void TestTryUpdateUnspentTx(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            var unspentTx = new UnspentTx(txHash: 0, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
+            var unspentTxUpdated = unspentTx.SetOutputState(0, OutputState.Spent);
+            Assert.AreNotEqual(unspentTx, unspentTxUpdated);
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            {
+                chainStateCursor.BeginTransaction();
+
+                // verify can't update missing unspent tx
+                Assert.IsFalse(chainStateCursor.TryUpdateUnspentTx(unspentTx));
+
+                // add unspent tx
+                Assert.IsTrue(chainStateCursor.TryAddUnspentTx(unspentTx));
+
+                // verify unspent tx
+                UnspentTx actualUnspentTx;
+                Assert.IsTrue(chainStateCursor.TryGetUnspentTx(unspentTx.TxHash, out actualUnspentTx));
+                Assert.AreEqual(unspentTx, actualUnspentTx);
+
+                // update unspent tx
+                Assert.IsTrue(chainStateCursor.TryUpdateUnspentTx(unspentTxUpdated));
+
+                // verify updated unspent tx
+                Assert.IsTrue(chainStateCursor.TryGetUnspentTx(unspentTx.TxHash, out actualUnspentTx));
+                Assert.AreEqual(unspentTxUpdated, actualUnspentTx);
+
+                // remove unspent tx
+                Assert.IsTrue(chainStateCursor.TryRemoveUnspentTx(unspentTx.TxHash));
+
+                // verify can't update missing unspent tx
+                Assert.IsFalse(chainStateCursor.TryUpdateUnspentTx(unspentTx));
+            }
         }
 
         private void AssertThrows<T>(Action action) where T : Exception
