@@ -386,7 +386,46 @@ namespace BitSharp.Core.Test.Storage
 
         private void TestContainsUnspentTx(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            var unspentTx0 = new UnspentTx(txHash: 0, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
+            var unspentTx1 = new UnspentTx(txHash: 1, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            {
+                chainStateCursor.BeginTransaction();
+
+                // verify presence
+                Assert.IsFalse(chainStateCursor.ContainsUnspentTx(unspentTx0.TxHash));
+                Assert.IsFalse(chainStateCursor.ContainsUnspentTx(unspentTx1.TxHash));
+
+                // add unspent tx 0
+                chainStateCursor.TryAddUnspentTx(unspentTx0);
+
+                // verify presence
+                Assert.IsTrue(chainStateCursor.ContainsUnspentTx(unspentTx0.TxHash));
+                Assert.IsFalse(chainStateCursor.ContainsUnspentTx(unspentTx1.TxHash));
+
+                // add unspent tx 1
+                chainStateCursor.TryAddUnspentTx(unspentTx1);
+
+                // verify presence
+                Assert.IsTrue(chainStateCursor.ContainsUnspentTx(unspentTx0.TxHash));
+                Assert.IsTrue(chainStateCursor.ContainsUnspentTx(unspentTx1.TxHash));
+
+                // remove unspent tx 1
+                chainStateCursor.TryRemoveUnspentTx(unspentTx1.TxHash);
+
+                // verify presence
+                Assert.IsTrue(chainStateCursor.ContainsUnspentTx(unspentTx0.TxHash));
+                Assert.IsFalse(chainStateCursor.ContainsUnspentTx(unspentTx1.TxHash));
+
+                // remove unspent tx 0
+                chainStateCursor.TryRemoveUnspentTx(unspentTx0.TxHash);
+
+                // verify presence
+                Assert.IsFalse(chainStateCursor.ContainsUnspentTx(unspentTx0.TxHash));
+                Assert.IsFalse(chainStateCursor.ContainsUnspentTx(unspentTx1.TxHash));
+            }
         }
 
         private void TestTryGetUnspentTx(ITestStorageProvider provider)
