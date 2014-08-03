@@ -76,9 +76,9 @@ namespace BitSharp.Core.Test.Storage
         }
 
         [TestMethod]
-        public void TestConainsUnspentTx()
+        public void TestContainsUnspentTx()
         {
-            RunTest(TestConainsUnspentTx);
+            RunTest(TestContainsUnspentTx);
         }
 
         [TestMethod]
@@ -384,7 +384,7 @@ namespace BitSharp.Core.Test.Storage
             }
         }
 
-        private void TestConainsUnspentTx(ITestStorageProvider provider)
+        private void TestContainsUnspentTx(ITestStorageProvider provider)
         {
             Assert.Inconclusive("TODO");
         }
