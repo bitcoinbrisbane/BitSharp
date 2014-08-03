@@ -66,8 +66,8 @@ namespace BitSharp.Core.Workers
             if (maxHeight <= minHeight)
                 return;
 
-            if (maxHeight - this.lastPruneHeight > blocksPerDay)
-                this.chainStateWorker.Stop();
+            //if (maxHeight - this.lastPruneHeight > blocksPerDay)
+            //    this.chainStateWorker.Stop();
 
             var committed = false;
             this.chainStateCursor.BeginTransaction();
@@ -114,19 +114,21 @@ namespace BitSharp.Core.Workers
 
                         // prune the spent transactions from each block
                         pruneStopwatch.Start();
-                        Parallel.ForEach(pruneData, keyPair =>
                         //foreach (var keyPair in pruneData)
-                        {
-                            // cooperative loop
-                            this.ThrowIfCancelled();
+                        Parallel.ForEach(pruneData,
+                            new ParallelOptions { MaxDegreeOfParallelism = 4 },
+                            keyPair =>
+                            {
+                                // cooperative loop
+                                this.ThrowIfCancelled();
 
-                            var confirmedBlockIndex = keyPair.Key;
-                            var confirmedBlockHash = chain.Blocks[confirmedBlockIndex].Hash;
-                            var spentTxIndices = keyPair.Value;
-                            spentTxIndices.Sort();
+                                var confirmedBlockIndex = keyPair.Key;
+                                var confirmedBlockHash = chain.Blocks[confirmedBlockIndex].Hash;
+                                var spentTxIndices = keyPair.Value;
+                                spentTxIndices.Sort();
 
-                            this.coreStorage.PruneElements(confirmedBlockHash, spentTxIndices);
-                        });
+                                this.coreStorage.PruneElements(confirmedBlockHash, spentTxIndices);
+                            });
                         pruneStopwatch.Stop();
 
                         //TODO properly sync commits before removing
