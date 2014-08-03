@@ -13,138 +13,223 @@ namespace BitSharp.Core.Storage.Memory
 {
     public class MemoryChainStateCursor : IChainStateCursor
     {
+        private readonly MemoryChainStateStorage chainStateStorage;
+
+        private bool inTransaction;
+
         private ChainBuilder chain;
         private ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
         private ImmutableDictionary<int, List<SpentTx>>.Builder spentTransactions;
 
-        private bool inTransaction;
-        private Chain savedChain;
-        private ImmutableSortedDictionary<UInt256, UnspentTx> savedUnspentTransactions;
-        private ImmutableDictionary<int, List<SpentTx>> savedSpentTransactions;
+        private long chainVersion;
+        private long unspentTxesVersion;
+        private long spentTxesVersion;
 
-        public MemoryChainStateCursor()
+        private bool chainModified;
+        private bool unspentTxesModified;
+        private bool spentTxesModified;
+
+        internal MemoryChainStateCursor(MemoryChainStateStorage chainStateStorage)
         {
-            this.chain = new ChainBuilder();
-            this.unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
-            this.spentTransactions = ImmutableDictionary.CreateBuilder<int, List<SpentTx>>();
+            this.chainStateStorage = chainStateStorage;
         }
 
         internal ImmutableSortedDictionary<UInt256, UnspentTx>.Builder UnspentTransactionsDictionary { get { return this.unspentTransactions; } }
 
         public IEnumerable<ChainedHeader> ReadChain()
         {
-            return this.chain.Blocks;
+            if (this.inTransaction)
+                return this.chain.Blocks;
+            else
+                return this.chainStateStorage.ReadChain();
         }
 
         public void AddChainedHeader(ChainedHeader chainedHeader)
         {
-            this.chain.AddBlock(chainedHeader);
+            if (this.inTransaction)
+            {
+                this.chain.AddBlock(chainedHeader);
+                this.chainModified = true;
+            }
+            else
+            {
+                this.chainStateStorage.AddChainedHeader(chainedHeader);
+            }
         }
 
         public void RemoveChainedHeader(ChainedHeader chainedHeader)
         {
-            this.chain.RemoveBlock(chainedHeader);
+            if (this.inTransaction)
+            {
+                this.chain.RemoveBlock(chainedHeader);
+                this.chainModified = true;
+            }
+            else
+            {
+                this.chainStateStorage.RemoveChainedHeader(chainedHeader);
+            }
         }
 
         public int UnspentTxCount
         {
-            get { return this.unspentTransactions.Count; }
+            get
+            {
+                if (this.inTransaction)
+                    return this.unspentTransactions.Count;
+                else
+                    return this.chainStateStorage.UnspentTxCount;
+            }
         }
 
-        public bool ConainsUnspentTx(UInt256 txHash)
+        public bool ContainsUnspentTx(UInt256 txHash)
         {
-            return this.unspentTransactions.ContainsKey(txHash);
+            if (this.inTransaction)
+                return this.unspentTransactions.ContainsKey(txHash);
+            else
+                return this.chainStateStorage.ContainsUnspentTx(txHash);
         }
 
         public bool TryGetUnspentTx(UInt256 txHash, out UnspentTx unspentTx)
         {
-            return this.unspentTransactions.TryGetValue(txHash, out unspentTx);
+            if (this.inTransaction)
+                return this.unspentTransactions.TryGetValue(txHash, out unspentTx);
+            else
+                return this.chainStateStorage.TryGetUnspentTx(txHash, out unspentTx);
         }
 
         public bool TryAddUnspentTx(UnspentTx unspentTx)
         {
-            try
+            if (this.inTransaction)
             {
-                this.unspentTransactions.Add(unspentTx.TxHash, unspentTx);
-                return true;
+                try
+                {
+                    this.unspentTransactions.Add(unspentTx.TxHash, unspentTx);
+                    this.unspentTxesModified = true;
+                    return true;
+                }
+                catch (ArgumentException)
+                {
+                    return false;
+                }
             }
-            catch (ArgumentException)
+            else
             {
-                return false;
+                return this.chainStateStorage.TryAddUnspentTx(unspentTx);
             }
         }
 
         public bool TryRemoveUnspentTx(UInt256 txHash)
         {
-            UnspentTx unspentTx;
-            if (!this.unspentTransactions.TryGetValue(txHash, out unspentTx))
-                return false;
+            if (this.inTransaction)
+            {
+                var wasRemoved = this.unspentTransactions.Remove(txHash);
+                if (wasRemoved)
+                    this.unspentTxesModified = true;
 
-            return this.unspentTransactions.Remove(txHash);
+                return wasRemoved;
+            }
+            else
+            {
+                return this.chainStateStorage.TryRemoveUnspentTx(txHash);
+            }
         }
 
         public bool TryUpdateUnspentTx(UnspentTx unspentTx)
         {
-            if (this.unspentTransactions.ContainsKey(unspentTx.TxHash))
+            if (this.inTransaction)
             {
-                this.unspentTransactions[unspentTx.TxHash] = unspentTx;
-                return true;
+                if (this.unspentTransactions.ContainsKey(unspentTx.TxHash))
+                {
+                    this.unspentTransactions[unspentTx.TxHash] = unspentTx;
+                    this.unspentTxesModified = true;
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
             }
             else
             {
-                return false;
+                return this.chainStateStorage.TryUpdateUnspentTx(unspentTx);
             }
         }
 
         public IEnumerable<UnspentTx> ReadUnspentTransactions()
         {
-            return this.unspentTransactions.Values;
+            if (this.inTransaction)
+                return this.unspentTransactions.Values;
+            else
+                return this.chainStateStorage.ReadUnspentTransactions();
         }
 
         public void PrepareSpentTransactions(int spentBlockIndex)
         {
-            this.spentTransactions.Add(spentBlockIndex, new List<SpentTx>());
+            if (this.inTransaction)
+            {
+                this.spentTransactions.Add(spentBlockIndex, new List<SpentTx>());
+                this.spentTxesModified = true;
+            }
+            else
+            {
+                this.chainStateStorage.PrepareSpentTransactions(spentBlockIndex);
+            }
         }
 
         public IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex)
         {
-            List<SpentTx> spentTxes;
-            if (this.spentTransactions.TryGetValue(spentBlockIndex, out spentTxes))
+            if (this.inTransaction)
             {
-                foreach (var spentTx in spentTxes)
+                List<SpentTx> spentTxes;
+                if (this.spentTransactions.TryGetValue(spentBlockIndex, out spentTxes))
+                {
+                    foreach (var spentTx in spentTxes)
+                        yield return spentTx;
+                }
+            }
+            else
+            {
+                foreach (var spentTx in this.chainStateStorage.ReadSpentTransactions(spentBlockIndex))
                     yield return spentTx;
             }
         }
 
         public void AddSpentTransaction(SpentTx spentTx)
         {
-            this.spentTransactions[spentTx.SpentBlockIndex].Add(spentTx);
+            if (this.inTransaction)
+            {
+                this.spentTransactions[spentTx.SpentBlockIndex].Add(spentTx);
+                this.spentTxesModified = true;
+            }
+            else
+            {
+                this.chainStateStorage.AddSpentTransaction(spentTx);
+            }
         }
 
         public void RemoveSpentTransactions(int spentBlockIndex)
         {
-            this.spentTransactions.Remove(spentBlockIndex);
+            if (this.inTransaction)
+            {
+                this.spentTransactions.Remove(spentBlockIndex);
+                this.spentTxesModified = true;
+            }
+            else
+            {
+                this.chainStateStorage.RemoveSpentTransactions(spentBlockIndex);
+            }
         }
 
         public void RemoveSpentTransactionsToHeight(int spentBlockIndex)
         {
-            this.spentTransactions.RemoveRange(Enumerable.Range(0, spentBlockIndex));
-        }
-
-        public IChainStateStorage ToImmutable()
-        {
-            //TODO figure out if creating clean dictionaries actually has any benefits
-            if (true)
+            if (this.inTransaction)
             {
-                return new MemoryChainStateStorage(this.chain.ToImmutable(), this.unspentTransactions.ToImmutable());
+                this.spentTransactions.RemoveRange(Enumerable.Range(0, spentBlockIndex));
+                this.spentTxesModified = true;
             }
             else
             {
-                var compactUnspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
-                foreach (var unspentTransaction in this.unspentTransactions)
-                    compactUnspentTransactions.Add(unspentTransaction);
-
-                return new MemoryChainStateStorage(this.chain.ToImmutable(), compactUnspentTransactions.ToImmutable());
+                this.chainStateStorage.RemoveSpentTransactionsToHeight(spentBlockIndex);
             }
         }
 
@@ -157,9 +242,11 @@ namespace BitSharp.Core.Storage.Memory
             if (this.inTransaction)
                 throw new InvalidOperationException();
 
-            this.savedChain = this.chain.ToImmutable();
-            this.savedUnspentTransactions = this.unspentTransactions.ToImmutable();
-            this.savedSpentTransactions = this.spentTransactions.ToImmutable();
+            this.chainStateStorage.BeginTransaction(out this.chain, out this.unspentTransactions, out this.spentTransactions, out this.chainVersion, out this.unspentTxesVersion, out this.spentTxesVersion);
+
+            this.chainModified = false;
+            this.unspentTxesModified = false;
+            this.spentTxesModified = false;
 
             this.inTransaction = true;
         }
@@ -169,9 +256,15 @@ namespace BitSharp.Core.Storage.Memory
             if (!this.inTransaction)
                 throw new InvalidOperationException();
 
-            this.savedChain = null;
-            this.savedUnspentTransactions = null;
-            this.savedSpentTransactions = null;
+            this.chainStateStorage.CommitTransaction(
+                this.chainModified ? this.chain : null,
+                this.unspentTxesModified ? this.unspentTransactions : null,
+                this.spentTxesModified ? this.spentTransactions : null,
+                this.chainVersion, this.unspentTxesVersion, this.spentTxesVersion);
+
+            this.chain = null;
+            this.unspentTransactions = null;
+            this.spentTransactions = null;
 
             this.inTransaction = false;
         }
@@ -181,13 +274,9 @@ namespace BitSharp.Core.Storage.Memory
             if (!this.inTransaction)
                 throw new InvalidOperationException();
 
-            this.chain = this.savedChain.ToBuilder();
-            this.unspentTransactions = this.savedUnspentTransactions.ToBuilder();
-            this.spentTransactions = this.savedSpentTransactions.ToBuilder();
-
-            this.savedChain = null;
-            this.savedUnspentTransactions = null;
-            this.savedSpentTransactions = null;
+            this.chain = null;
+            this.unspentTransactions = null;
+            this.spentTransactions = null;
 
             this.inTransaction = false;
         }

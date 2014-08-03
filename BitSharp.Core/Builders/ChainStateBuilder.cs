@@ -45,7 +45,7 @@ namespace BitSharp.Core.Builders
 
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(IChainStateCursor chainStateCursor, Logger logger, IBlockchainRules rules, CoreStorage coreStorage)
+        public ChainStateBuilder(Logger logger, IBlockchainRules rules, CoreStorage coreStorage)
         {
             this.logger = logger;
             this.sha256 = new SHA256Managed();
@@ -57,7 +57,7 @@ namespace BitSharp.Core.Builders
             this.txValidator = new TxValidator(this.scriptValidator, this.logger, this.rules, isConcurrent);
             this.txPrevOutputLoader = new TxPrevOutputLoader(this.coreStorage, this.txValidator, this.logger, this.rules, isConcurrent);
 
-            this.chainStateCursor = chainStateCursor;
+            this.chainStateCursor = coreStorage.OpenChainStateCursor();
 
             this.chain = new ChainBuilder(chainStateCursor.ReadChain());
             this.utxoBuilder = new UtxoBuilder(chainStateCursor, logger);
@@ -78,6 +78,7 @@ namespace BitSharp.Core.Builders
 
             new IDisposable[]
             {
+                this.chainStateCursor,
                 this.txPrevOutputLoader,
                 this.txValidator,
                 this.scriptValidator,
@@ -253,21 +254,6 @@ namespace BitSharp.Core.Builders
             get { return this.chainStateCursor.UnspentTxCount; }
         }
 
-        public IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex)
-        {
-            return this.chainStateCursor.ReadSpentTransactions(spentBlockIndex);
-        }
-
-        public void RemoveSpentTransactions(int spentBlockIndex)
-        {
-            this.chainStateCursor.RemoveSpentTransactions(spentBlockIndex);
-        }
-
-        public void RemoveSpentTransactionsToHeight(int spentBlockIndex)
-        {
-            this.chainStateCursor.RemoveSpentTransactionsToHeight(spentBlockIndex);
-        }
-
         private UInt256 GetOutputScripHash(TxOutput txOutput)
         {
             return new UInt256(this.sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
@@ -276,7 +262,12 @@ namespace BitSharp.Core.Builders
         public ChainState ToImmutable()
         {
             return this.commitLock.DoRead(() =>
-                new ChainState(this.chain.ToImmutable(), this.chainStateCursor));
+            {
+                var chainStateCursor = this.coreStorage.OpenChainStateCursor();
+                chainStateCursor.BeginTransaction();
+
+                return new ChainState(this.chain.ToImmutable(), chainStateCursor);
+            });
         }
 
         private void BeginTransaction()

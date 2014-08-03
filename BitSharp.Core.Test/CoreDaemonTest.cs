@@ -246,13 +246,13 @@ namespace BitSharp.Core.Test
                     AssertMethods.AssertDaemonAtBlock(6, block6b.Hash, daemon2.CoreDaemon);
 
                     // verify that re-organized blockchain matches winning-only blockchain
-                    using (var expectedChainSate = daemon2.CoreDaemon.GetChainState())
-                    using (var actualChainSate = daemon1.CoreDaemon.GetChainState())
+                    using (var expectedChainState = daemon2.CoreDaemon.GetChainState())
+                    using (var actualChainState = daemon1.CoreDaemon.GetChainState())
                     {
-                        var expectedUtxo = expectedChainSate.Utxo;
+                        var expectedUtxo = expectedChainState.Utxo;
                         var expectedUnspentTransactions = expectedUtxo.GetUnspentTransactions().ToList();
 
-                        var actualUtxo = actualChainSate.Utxo;
+                        var actualUtxo = actualChainState.Utxo;
                         var actualUnspentTransactions = actualUtxo.GetUnspentTransactions().ToList();
 
                         CollectionAssert.AreEqual(expectedUnspentTransactions, actualUnspentTransactions);

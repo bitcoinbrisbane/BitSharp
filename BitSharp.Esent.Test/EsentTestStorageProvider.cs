@@ -30,7 +30,10 @@ namespace BitSharp.Esent.Test
         public void TestCleanup()
         {
             if (Directory.Exists(this.baseDirectory))
-                Directory.Delete(this.baseDirectory, recursive: true);
+            {
+                try { Directory.Delete(this.baseDirectory, recursive: true); }
+                catch (Exception) { }
+            }
         }
 
         public IStorageManager OpenStorageManager()

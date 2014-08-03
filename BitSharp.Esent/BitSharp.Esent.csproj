@@ -83,6 +83,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChainState\CachedChainStateCursor.cs" />
     <Compile Include="ChainState\ChainStateSchema.cs" />
     <Compile Include="DbEncoder.cs" />
     <Compile Include="BlockCursor.cs" />
@@ -90,13 +91,11 @@
     <Compile Include="MerkleTreePruningCursor.cs" />
     <Compile Include="BlockStorage.cs" />
     <Compile Include="BlockTxesStorage.cs" />
-    <Compile Include="ChainState\ChainStateStorageCursor.cs" />
     <Compile Include="ChainState\EsentChainStateManager.cs" />
     <Compile Include="EsentStorageManager.cs" />
     <Compile Include="NetworkPeerStorage.cs" />
     <Compile Include="PersistentByteDictionary.cs" />
     <Compile Include="EsentStorageModule.cs" />
-    <Compile Include="ChainState\ChainStateStorage.cs" />
     <Compile Include="ChainState\ChainStateCursor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

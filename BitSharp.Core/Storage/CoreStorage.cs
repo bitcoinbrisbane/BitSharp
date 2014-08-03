@@ -269,6 +269,11 @@ namespace BitSharp.Core.Storage
             return this.blockStorage.IsBlockInvalid(blockHash);
         }
 
+        internal IChainStateCursor OpenChainStateCursor()
+        {
+            return this.storageManager.OpenChainStateCursor();
+        }
+
         internal void MarkBlockInvalid(UInt256 blockHash)
         {
             this.blockStorage.MarkBlockInvalid(blockHash);

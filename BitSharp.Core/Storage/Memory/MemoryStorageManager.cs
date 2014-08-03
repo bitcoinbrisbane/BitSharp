@@ -1,6 +1,8 @@
-﻿using BitSharp.Core.Domain;
+﻿using BitSharp.Common;
+using BitSharp.Core.Domain;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,11 +13,17 @@ namespace BitSharp.Core.Storage.Memory
     {
         private readonly MemoryBlockStorage blockStorage;
         private readonly MemoryBlockTxesStorage blockTxesStorage;
+        private readonly MemoryChainStateStorage chainStateStorage;
 
         public MemoryStorageManager()
+            : this(null, null, null)
+        { }
+
+        internal MemoryStorageManager(Chain chain = null, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions = null, ImmutableDictionary<int, List<SpentTx>> spentTransactions = null)
         {
             this.blockStorage = new MemoryBlockStorage();
             this.blockTxesStorage = new MemoryBlockTxesStorage();
+            this.chainStateStorage = new MemoryChainStateStorage(chain, unspentTransactions, spentTransactions);
         }
 
         public void Dispose()
@@ -34,7 +42,7 @@ namespace BitSharp.Core.Storage.Memory
 
         public IChainStateCursor OpenChainStateCursor()
         {
-            return new MemoryChainStateCursor();
+            return new MemoryChainStateCursor(this.chainStateStorage);
         }
     }
 }

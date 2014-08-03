@@ -32,6 +32,9 @@ namespace BitSharp.Esent
         private readonly string jetDatabase;
         private readonly Instance jetInstance;
 
+        private readonly IChainStateCursor[] cursors;
+        private readonly object cursorsLock;
+
         public EsentChainStateManager(string baseDirectory, Logger logger)
         {
             this.logger = logger;
@@ -42,11 +45,16 @@ namespace BitSharp.Esent
             this.jetInstance = CreateInstance(this.jetDirectory);
             this.jetInstance.Init();
 
-            this.CreateOrOpenDatabase(this.jetDirectory, this.jetDatabase, this.jetInstance);
+            this.CreateOrOpenDatabase();
+
+            this.cursors = new IChainStateCursor[16];
+            this.cursorsLock = new object();
         }
 
         public void Dispose()
         {
+            this.cursors.DisposeList();
+
             new IDisposable[] {
                 this.jetInstance
             }.DisposeList();
@@ -54,22 +62,61 @@ namespace BitSharp.Esent
 
         public IChainStateCursor OpenChainStateCursor()
         {
-            return new ChainStateCursor(this.jetDatabase, this.jetInstance, this.logger);
+            IChainStateCursor cursor = null;
+
+            lock (this.cursorsLock)
+            {
+                for (var i = 0; i < this.cursors.Length; i++)
+                {
+                    if (this.cursors[i] != null)
+                    {
+                        cursor = this.cursors[i];
+                        this.cursors[i] = null;
+                        break;
+                    }
+                }
+            }
+
+            if (cursor == null)
+                cursor = new ChainStateCursor(this.jetDatabase, this.jetInstance, this.logger);
+
+            return new CachedChainStateCursor(cursor, () => this.FreeCursor(cursor));
         }
 
-        private void CreateOrOpenDatabase(string jetDirectory, string jetDatabase, Instance jetInstance)
+        private void FreeCursor(IChainStateCursor cursor)
+        {
+            var cached = false;
+
+            lock (this.cursorsLock)
+            {
+                for (var i = 0; i < this.cursors.Length; i++)
+                {
+                    if (this.cursors[i] == null)
+                    {
+                        this.cursors[i] = cursor;
+                        cached = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!cached)
+                cursor.Dispose();
+        }
+
+        private void CreateOrOpenDatabase()
         {
             try
             {
-                ChainStateSchema.OpenDatabase(jetDatabase, jetInstance, readOnly: false);
+                ChainStateSchema.OpenDatabase(this.jetDatabase, this.jetInstance, readOnly: false, logger: this.logger);
             }
             catch (Exception)
             {
-                try { Directory.Delete(jetDirectory, recursive: true); }
+                try { Directory.Delete(this.jetDirectory, recursive: true); }
                 catch (Exception) { }
-                Directory.CreateDirectory(jetDirectory);
+                Directory.CreateDirectory(this.jetDirectory);
 
-                ChainStateSchema.CreateDatabase(jetDatabase, jetInstance);
+                ChainStateSchema.CreateDatabase(this.jetDatabase, this.jetInstance);
             }
         }
 

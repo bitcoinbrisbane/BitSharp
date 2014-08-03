@@ -35,7 +35,8 @@ namespace BitSharp.Core.Test.Builders
             var emptyCoinbaseTx2 = new Transaction(2, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
 
             // initialize memory utxo builder storage
-            var memoryChainStateCursor = new MemoryChainStateCursor();
+            var memoryStorage = new MemoryStorageManager();
+            var memoryChainStateCursor = memoryStorage.OpenChainStateCursor();
 
             // initialize utxo builder
             var utxoBuilder = new UtxoBuilder(memoryChainStateCursor, LogManager.CreateNullLogger());
@@ -48,7 +49,7 @@ namespace BitSharp.Core.Test.Builders
             var unspentTransactions = ImmutableDictionary.Create<UInt256, UnspentTx>().Add(txHash, unspentTx);
 
             // add the unspent transaction
-            memoryChainStateCursor.UnspentTransactionsDictionary.Add(txHash, unspentTx);
+            memoryChainStateCursor.TryAddUnspentTx(unspentTx);
 
             // create an input to spend the unspent transaction's first output
             var input0 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
@@ -59,11 +60,12 @@ namespace BitSharp.Core.Test.Builders
             utxoBuilder.CalculateUtxo(chain.ToImmutable(), new[] { emptyCoinbaseTx0, tx0 }).ToList();
 
             // verify utxo storage
-            Assert.IsTrue(memoryChainStateCursor.UnspentTransactionsDictionary.ContainsKey(txHash));
-            Assert.IsTrue(memoryChainStateCursor.UnspentTransactionsDictionary[txHash].OutputStates.Length == 3);
-            Assert.IsTrue(memoryChainStateCursor.UnspentTransactionsDictionary[txHash].OutputStates[0] == OutputState.Spent);
-            Assert.IsTrue(memoryChainStateCursor.UnspentTransactionsDictionary[txHash].OutputStates[1] == OutputState.Unspent);
-            Assert.IsTrue(memoryChainStateCursor.UnspentTransactionsDictionary[txHash].OutputStates[2] == OutputState.Unspent);
+            UnspentTx actualUnspentTx;
+            Assert.IsTrue(memoryChainStateCursor.TryGetUnspentTx(txHash, out actualUnspentTx));
+            Assert.IsTrue(actualUnspentTx.OutputStates.Length == 3);
+            Assert.IsTrue(actualUnspentTx.OutputStates[0] == OutputState.Spent);
+            Assert.IsTrue(actualUnspentTx.OutputStates[1] == OutputState.Unspent);
+            Assert.IsTrue(actualUnspentTx.OutputStates[2] == OutputState.Unspent);
 
             // create an input to spend the unspent transaction's second output
             var input1 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 1), ImmutableArray.Create<byte>(), 0);
@@ -74,11 +76,11 @@ namespace BitSharp.Core.Test.Builders
             utxoBuilder.CalculateUtxo(chain.ToImmutable(), new[] { emptyCoinbaseTx1, tx1 }).ToList();
 
             // verify utxo storage
-            Assert.IsTrue(memoryChainStateCursor.UnspentTransactionsDictionary.ContainsKey(txHash));
-            Assert.IsTrue(memoryChainStateCursor.UnspentTransactionsDictionary[txHash].OutputStates.Length == 3);
-            Assert.IsTrue(memoryChainStateCursor.UnspentTransactionsDictionary[txHash].OutputStates[0] == OutputState.Spent);
-            Assert.IsTrue(memoryChainStateCursor.UnspentTransactionsDictionary[txHash].OutputStates[1] == OutputState.Spent);
-            Assert.IsTrue(memoryChainStateCursor.UnspentTransactionsDictionary[txHash].OutputStates[2] == OutputState.Unspent);
+            Assert.IsTrue(memoryChainStateCursor.TryGetUnspentTx(txHash, out actualUnspentTx));
+            Assert.IsTrue(actualUnspentTx.OutputStates.Length == 3);
+            Assert.IsTrue(actualUnspentTx.OutputStates[0] == OutputState.Spent);
+            Assert.IsTrue(actualUnspentTx.OutputStates[1] == OutputState.Spent);
+            Assert.IsTrue(actualUnspentTx.OutputStates[2] == OutputState.Unspent);
 
             // create an input to spend the unspent transaction's third output
             var input2 = new TxInput(new TxOutputKey(txHash, txOutputIndex: 2), ImmutableArray.Create<byte>(), 0);
@@ -89,7 +91,7 @@ namespace BitSharp.Core.Test.Builders
             utxoBuilder.CalculateUtxo(chain.ToImmutable(), new[] { emptyCoinbaseTx2, tx2 }).ToList();
 
             // verify utxo storage
-            Assert.IsFalse(memoryChainStateCursor.UnspentTransactionsDictionary.ContainsKey(txHash));
+            Assert.IsFalse(memoryChainStateCursor.ContainsUnspentTx(txHash));
         }
 
         [TestMethod]
@@ -105,7 +107,8 @@ namespace BitSharp.Core.Test.Builders
             var emptyCoinbaseTx1 = new Transaction(1, ImmutableArray.Create<TxInput>(), ImmutableArray.Create<TxOutput>(), 0);
 
             // initialize memory utxo builder storage
-            var memoryChainStateCursor = new MemoryChainStateCursor();
+            var memoryStorage = new MemoryStorageManager();
+            var memoryChainStateCursor = memoryStorage.OpenChainStateCursor();
 
             // initialize utxo builder
             var utxoBuilder = new UtxoBuilder(memoryChainStateCursor, LogManager.CreateNullLogger());
@@ -115,7 +118,7 @@ namespace BitSharp.Core.Test.Builders
             var unspentTx = new UnspentTx(txHash, chainedHeader0.Height, 0, 1, OutputState.Unspent);
 
             // add the unspent transaction
-            memoryChainStateCursor.UnspentTransactionsDictionary.Add(txHash, unspentTx);
+            memoryChainStateCursor.TryAddUnspentTx(unspentTx);
 
             // create an input to spend the unspent transaction
             var input = new TxInput(new TxOutputKey(txHash, txOutputIndex: 0), ImmutableArray.Create<byte>(), 0);
@@ -126,7 +129,7 @@ namespace BitSharp.Core.Test.Builders
             utxoBuilder.CalculateUtxo(chain.ToImmutable(), new[] { emptyCoinbaseTx0, tx }).ToList();
 
             // verify utxo storage
-            Assert.IsFalse(memoryChainStateCursor.UnspentTransactionsDictionary.ContainsKey(txHash));
+            Assert.IsFalse(memoryChainStateCursor.ContainsUnspentTx(txHash));
 
             // attempt to spend the input again
             chain.AddBlock(chainedHeader1);

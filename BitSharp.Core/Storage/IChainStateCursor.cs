@@ -19,12 +19,12 @@ namespace BitSharp.Core.Storage
         /// Begin a new transaction.
         /// </summary>
         void BeginTransaction();
-        
+
         /// <summary>
         /// Commit the current transaction.
         /// </summary>
         void CommitTransaction();
-        
+
         /// <summary>
         /// Rollback the current transaction
         /// </summary>
@@ -35,7 +35,7 @@ namespace BitSharp.Core.Storage
         /// </summary>
         /// <returns></returns>
         IEnumerable<ChainedHeader> ReadChain();
-        
+
         /// <summary>
         /// Add a new header to the chain.
         /// </summary>
@@ -58,7 +58,7 @@ namespace BitSharp.Core.Storage
         /// </summary>
         /// <param name="txHash">The transaction's hash.</param>
         /// <returns>true if the transaction is present; otherwise, false</returns>
-        bool ConainsUnspentTx(UInt256 txHash);
+        bool ContainsUnspentTx(UInt256 txHash);
 
         /// <summary>
         /// Retreive an unspent transaction.
@@ -106,9 +106,6 @@ namespace BitSharp.Core.Storage
 
         //TODO
         void RemoveSpentTransactionsToHeight(int spentBlockIndex);
-
-        //TODO
-        IChainStateStorage ToImmutable();
 
         //TODO
         void Defragment();

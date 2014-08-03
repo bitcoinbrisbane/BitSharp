@@ -32,7 +32,7 @@ namespace BitSharp.BlockHelper
             {
                 // testnet data
                 var desiredBlockHeight = 75.THOUSAND();
-                ChainState testNetChainState = null;
+                Chain testNetChain = null;
 
                 // add logging module
                 kernel.Load(new ConsoleLoggingModule(LogLevel.Info));
@@ -84,13 +84,18 @@ namespace BitSharp.BlockHelper
                         // wait for testnet chain to reach desired height
                         while (true)
                         {
-                            testNetChainState = coreDaemon.GetChainState();
-                            logger.Info("TestNet blockchain at height: " + testNetChainState.Chain.Height);
+                            using (var testNetChainState = coreDaemon.GetChainState())
+                            {
+                                logger.Info("TestNet blockchain at height: " + testNetChainState.Chain.Height);
 
-                            if (testNetChainState.Chain.Height >= desiredBlockHeight)
-                                break;
-                            else
-                                Thread.Sleep(TimeSpan.FromSeconds(5));
+                                if (testNetChainState.Chain.Height >= desiredBlockHeight)
+                                {
+                                    testNetChain = testNetChainState.Chain;
+                                    break;
+                                }
+                                else
+                                    Thread.Sleep(TimeSpan.FromSeconds(5));
+                            }
                         }
                     }
 
@@ -103,7 +108,7 @@ namespace BitSharp.BlockHelper
                         if (height % 1000 == 0)
                             logger.Info("Writing block: {0:#,##0}".Format2(height));
 
-                        var blockHash = testNetChainState.Chain.Blocks[height].Hash;
+                        var blockHash = testNetChain.Blocks[height].Hash;
 
                         Block block;
                         if (!coreDaemon.CoreStorage.TryGetBlock(blockHash, out block))

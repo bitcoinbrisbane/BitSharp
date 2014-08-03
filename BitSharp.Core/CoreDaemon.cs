@@ -52,11 +52,7 @@ namespace BitSharp.Core
 
         private readonly CancellationTokenSource shutdownToken;
 
-        private readonly IChainStateCursor chainStateCursor;
         private readonly ChainStateBuilder chainStateBuilder;
-        private ChainState prevChainState;
-        private ChainState chainState;
-        private readonly ReaderWriterLockSlim chainStateLock;
 
         private readonly TargetChainWorker targetChainWorker;
         private readonly ChainStateWorker chainStateWorker;
@@ -83,9 +79,7 @@ namespace BitSharp.Core
             this.coreStorage.BlockTxesAdded += HandleBlockTxesAdded;
 
             // create chain state builder
-            this.chainStateCursor = this.storageManager.OpenChainStateCursor();
-            this.chainStateBuilder = new ChainStateBuilder(this.chainStateCursor, this.logger, this.rules, this.coreStorage);
-            this.chainStateLock = new ReaderWriterLockSlim();
+            this.chainStateBuilder = new ChainStateBuilder(this.logger, this.rules, this.coreStorage);
 
             // add genesis block to chain state, if needed
             if (this.chainStateBuilder.Chain.Height < 0)
@@ -106,7 +100,7 @@ namespace BitSharp.Core
 
             this.defragWorker = new DefragWorker(
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMinutes(5), maxIdleTime: TimeSpan.FromMinutes(5)),
-                this.coreStorage, this.chainStateCursor, this.logger);
+                this.coreStorage, this.logger);
 
             // notify defrag worker after pruning
             this.pruningWorker.OnWorkFinished += this.defragWorker.NotifyWork;
@@ -137,11 +131,6 @@ namespace BitSharp.Core
                     this.pruningWorker.NotifyWork();
                     this.utxoScanWorker.NotifyWork();
 
-                    //TODO once fully synced, this should save off the immutable snapshot immediately
-                    //TODO this will allow there to always be an active chain state once synced
-                    this.chainStateLock.DoWrite(() =>
-                        this.chainState = null);
-
                     var handler = this.OnChainStateChanged;
                     if (handler != null)
                         handler(this, EventArgs.Empty);
@@ -167,27 +156,26 @@ namespace BitSharp.Core
             this.utxoScanWorker = new WorkerMethod("UTXO Scan Worker",
                 _ =>
                 {
-                    var chainStateLocal = this.GetChainState();
-                    if (chainStateLocal == null)
-                        return;
-
-                    new MethodTimer(this.logger).Time("UTXO Commitment: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
+                    using (var chainStateLocal = this.GetChainState())
                     {
-                        using (var utxoStream = new UtxoStream(this.logger, chainStateLocal.Utxo.GetUnspentTransactions()))
+                        new MethodTimer(this.logger).Time("UTXO Commitment: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
                         {
-                            var sha256 = new SHA256Managed();
-                            var utxoHash = sha256.ComputeHash(utxoStream);
-                            this.logger.Info("UXO Commitment Hash: {0}".Format2(utxoHash.ToHexNumberString()));
-                        }
-                    });
+                            using (var utxoStream = new UtxoStream(this.logger, chainStateLocal.Utxo.GetUnspentTransactions()))
+                            {
+                                var sha256 = new SHA256Managed();
+                                var utxoHash = sha256.ComputeHash(utxoStream);
+                                this.logger.Info("UXO Commitment Hash: {0}".Format2(utxoHash.ToHexNumberString()));
+                            }
+                        });
 
-                    //new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
-                    //{
-                    //    var sha256 = new SHA256Managed();
-                    //    foreach (var output in chainStateLocal.Utxo.GetUnspentTransactions())
-                    //    {
-                    //    }
-                    //});
+                        //new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
+                        //{
+                        //    var sha256 = new SHA256Managed();
+                        //    foreach (var output in chainStateLocal.Utxo.GetUnspentTransactions())
+                        //    {
+                        //    }
+                        //});
+                    }
                 }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(60), maxIdleTime: TimeSpan.FromSeconds(60), logger: this.logger);
         }
 
@@ -209,13 +197,10 @@ namespace BitSharp.Core
                 this.defragWorker,
                 this.pruningWorker,
                 this.chainStateWorker,
-                this.prevChainState,
-                this.chainState,
                 this.targetChainWorker,
                 this.gcWorker,
                 this.utxoScanWorker,
                 this.chainStateBuilder,
-                this.chainStateCursor,
                 this.shutdownToken
             }.DisposeList();
         }
@@ -298,35 +283,7 @@ namespace BitSharp.Core
 
         public ChainState GetChainState()
         {
-            this.chainStateLock.EnterUpgradeableReadLock();
-            try
-            {
-                if (this.chainState == null)
-                {
-                    this.chainStateLock.EnterWriteLock();
-                    try
-                    {
-                        if (this.chainState == null)
-                        {
-                            if (this.prevChainState != null)
-                                this.prevChainState.Dispose();
-
-                            this.chainState = this.chainStateBuilder.ToImmutable();
-                            this.prevChainState = this.chainState;
-                        }
-                    }
-                    finally
-                    {
-                        this.chainStateLock.ExitWriteLock();
-                    }
-                }
-
-                return this.chainState;
-            }
-            finally
-            {
-                this.chainStateLock.ExitUpgradeableReadLock();
-            }
+            return this.chainStateBuilder.ToImmutable();
         }
 
         public IDisposable SubscribeChainStateVisitor(IChainStateVisitor visitor)

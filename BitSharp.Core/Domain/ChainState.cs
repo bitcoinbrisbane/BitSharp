@@ -5,6 +5,7 @@ using BitSharp.Domain;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,15 +14,15 @@ namespace BitSharp.Core.Domain
 {
     public class ChainState : IDisposable
     {
-        private readonly IChainStateStorage chainStateStorage;
+        private readonly IChainStateCursor chainStateCursor;
         private readonly Chain chain;
         private readonly Utxo utxo;
 
         public ChainState(Chain chain, IChainStateCursor chainStateCursor)
         {
-            this.chainStateStorage = chainStateCursor.ToImmutable();
+            this.chainStateCursor = chainStateCursor;
             this.chain = chain;
-            this.utxo = new Utxo(this.chainStateStorage);
+            this.utxo = new Utxo(this.chainStateCursor);
         }
 
         ~ChainState()
@@ -32,7 +33,8 @@ namespace BitSharp.Core.Domain
         public void Dispose()
         {
             GC.SuppressFinalize(this);
-            this.chainStateStorage.Dispose();
+            this.chainStateCursor.RollbackTransaction();
+            this.chainStateCursor.Dispose();
         }
 
         public Chain Chain { get { return this.chain; } }

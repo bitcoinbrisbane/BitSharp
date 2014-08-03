@@ -28,6 +28,12 @@ namespace BitSharp.Core.Test.Storage
     public class IChainStateCursorTest : StorageProviderTest
     {
         [TestMethod]
+        public void TestTransactionIsolation()
+        {
+            RunTest(TestTransactionIsolation);
+        }
+
+        [TestMethod]
         public void TestBeginTransaction()
         {
             RunTest(TestBeginTransaction);
@@ -99,14 +105,48 @@ namespace BitSharp.Core.Test.Storage
             RunTest(TestTryUpdateUnspentTx);
         }
 
-        private void TestBeginTransaction(ITestStorageProvider provider)
+        private void TestTransactionIsolation(ITestStorageProvider provider)
         {
+            var fakeHeaders = new FakeHeaders();
+            var chainedHeader0 = fakeHeaders.GenesisChained();
+
+            // open two chain state cursors
             using (var storageManager = provider.OpenStorageManager())
             using (var chainStateCursor1 = storageManager.OpenChainStateCursor())
             using (var chainStateCursor2 = storageManager.OpenChainStateCursor())
             {
-            }
+                // open transactions on both cursors
+                chainStateCursor1.BeginTransaction();
+                chainStateCursor2.BeginTransaction();
 
+                // verify initial empty chain
+                Assert.AreEqual(0, chainStateCursor1.ReadChain().Count());
+                Assert.AreEqual(0, chainStateCursor2.ReadChain().Count());
+
+                // add a header on cursor 1
+                chainStateCursor1.AddChainedHeader(chainedHeader0);
+
+                // verify cursor 1 sees the new header while cursor 2 does not
+                CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor1.ReadChain().ToList());
+                Assert.AreEqual(0, chainStateCursor2.ReadChain().Count());
+
+                // commit cursor 1
+                chainStateCursor1.CommitTransaction();
+
+                // verify cursor 1 sees the new header while cursor 2 does not
+                CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor1.ReadChain().ToList());
+                Assert.AreEqual(0, chainStateCursor2.ReadChain().Count());
+
+                // commit cursor 2
+                chainStateCursor2.CommitTransaction();
+
+                // verify cursor 2 now sees the new header
+                CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor2.ReadChain().ToList());
+            }
+        }
+
+        private void TestBeginTransaction(ITestStorageProvider provider)
+        {
             Assert.Inconclusive("TODO");
         }
 

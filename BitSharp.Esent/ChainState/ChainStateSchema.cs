@@ -1,6 +1,7 @@
 ﻿using BitSharp.Core;
 using BitSharp.Core.Domain;
 using Microsoft.Isam.Esent.Interop;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -107,14 +108,14 @@ namespace BitSharp.Esent.ChainState
             Api.JetCloseTable(jetSession, spentTxTableId);
         }
 
-        public static void OpenDatabase(string jetDatabase, Instance jetInstance, bool readOnly)
+        public static void OpenDatabase(string jetDatabase, Instance jetInstance, bool readOnly, Logger logger)
         {
             using (var jetSession = new Session(jetInstance))
             {
                 Api.JetAttachDatabase(jetSession, jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
                 try
                 {
-                    var cursor = new ChainStateStorageCursor(jetDatabase, jetInstance, readOnly: true);
+                    var cursor = new ChainStateCursor(jetDatabase, jetInstance, logger);
                     cursor.Dispose();
                 }
                 catch (Exception)

@@ -11,21 +11,21 @@ namespace BitSharp.Domain
 {
     public class Utxo
     {
-        private readonly IChainStateStorage chainStateStorage;
+        private readonly IChainStateCursor chainStateCursor;
 
-        internal Utxo(IChainStateStorage chainStateStorage)
+        internal Utxo(IChainStateCursor chainStateStorage)
         {
-            this.chainStateStorage = chainStateStorage;
+            this.chainStateCursor = chainStateStorage;
         }
 
-        public IChainStateStorage Storage
+        public IChainStateCursor Storage
         {
-            get { return this.chainStateStorage; }
+            get { return this.chainStateCursor; }
         }
 
         public int TransactionCount
         {
-            get { return this.chainStateStorage.TransactionCount; }
+            get { return this.chainStateCursor.UnspentTxCount; }
         }
 
         public bool CanSpend(TxOutputKey txOutputKey)
@@ -34,7 +34,7 @@ namespace BitSharp.Domain
                 throw new ArgumentNullException("prevTxOutput");
 
             UnspentTx unspentTx;
-            if (this.chainStateStorage.TryGetTransaction(txOutputKey.TxHash, out unspentTx))
+            if (this.chainStateCursor.TryGetUnspentTx(txOutputKey.TxHash, out unspentTx))
             {
                 var outputIndex = unchecked((int)txOutputKey.TxOutputIndex);
                 
@@ -51,7 +51,7 @@ namespace BitSharp.Domain
 
         public IEnumerable<UnspentTx> GetUnspentTransactions()
         {
-            return this.chainStateStorage.ReadUnspentTransactions();
+            return this.chainStateCursor.ReadUnspentTransactions();
         }
     }
 }
