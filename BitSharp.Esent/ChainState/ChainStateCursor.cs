@@ -12,6 +12,7 @@ using Microsoft.Isam.Esent.Interop.Windows81;
 using NLog;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -210,31 +211,6 @@ namespace BitSharp.Esent
             }
         }
 
-        public void PrepareSpentTransactions(int spentBlockIndex)
-        {
-            if (!this.inTransaction)
-                throw new InvalidOperationException();
-
-            Api.JetPrepareUpdate(this.jetSession, this.spentTxTableId, JET_prep.Insert);
-            try
-            {
-                Api.SetColumn(this.jetSession, this.spentTxTableId, this.spentSpentBlockIndexColumnId, spentBlockIndex);
-                Api.SetColumn(this.jetSession, this.spentTxTableId, this.spentDataColumnId, new byte[0]);
-
-                Api.JetUpdate(this.jetSession, this.spentTxTableId);
-            }
-            catch (Exception)
-            {
-                Api.JetPrepareUpdate(this.jetSession, this.spentTxTableId, JET_prep.Cancel);
-                throw;
-            }
-
-            Api.JetSetCurrentIndex(this.jetSession, this.spentTxTableId, "IX_SpentBlockIndex");
-            Api.MakeKey(this.jetSession, this.spentTxTableId, spentBlockIndex, MakeKeyGrbit.NewKey);
-            if (!Api.TrySeek(this.jetSession, this.spentTxTableId, SeekGrbit.SeekEQ))
-                throw new InvalidOperationException();
-        }
-
         public bool TryRemoveUnspentTx(UInt256 txHash)
         {
             if (!this.inTransaction)
@@ -310,54 +286,86 @@ namespace BitSharp.Esent
             }
         }
 
-        public IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex)
+        public bool ContainsBlockSpentTxes(int blockIndex)
+        {
+            Api.JetSetCurrentIndex(this.jetSession, this.spentTxTableId, "IX_SpentBlockIndex");
+            Api.MakeKey(this.jetSession, this.spentTxTableId, blockIndex, MakeKeyGrbit.NewKey);
+            return Api.TrySeek(this.jetSession, this.spentTxTableId, SeekGrbit.SeekEQ);
+        }
+
+        public bool TryGetBlockSpentTxes(int blockIndex, out IImmutableList<SpentTx> spentTxes)
         {
             Api.JetSetCurrentIndex(this.jetSession, this.spentTxTableId, "IX_SpentBlockIndex");
 
-            Api.MakeKey(this.jetSession, this.spentTxTableId, spentBlockIndex, MakeKeyGrbit.NewKey);
+            Api.MakeKey(this.jetSession, this.spentTxTableId, blockIndex, MakeKeyGrbit.NewKey);
 
             if (Api.TrySeek(this.jetSession, this.spentTxTableId, SeekGrbit.SeekEQ))
             {
-                var spentData = Api.RetrieveColumn(this.jetSession, this.spentTxTableId, this.spentDataColumnId);
-                using (var stream = new MemoryStream(spentData))
+                var spentTxesBytes = Api.RetrieveColumn(this.jetSession, this.spentTxTableId, this.spentDataColumnId);
+
+                using (var stream = new MemoryStream(spentTxesBytes))
+                using (var reader = new BinaryReader(stream))
                 {
-                    while (stream.Position < stream.Length)
-                    {
-                        yield return DataEncoder.DecodeSpentTx(stream);
-                    }
+                    spentTxes = ImmutableList.CreateRange(reader.ReadList(() => DataEncoder.DecodeSpentTx(stream)));
                 }
+
+                return true;
+            }
+            else
+            {
+                spentTxes = null;
+                return false;
             }
         }
 
-        public void AddSpentTransaction(SpentTx spentTx)
+        public bool TryAddBlockSpentTxes(int blockIndex, IImmutableList<SpentTx> spentTxes)
         {
-            Debug.Assert(spentTx.SpentBlockIndex == Api.RetrieveColumnAsInt32(this.jetSession, this.spentTxTableId, this.spentSpentBlockIndexColumnId).Value);
-
-            Api.JetPrepareUpdate(this.jetSession, this.spentTxTableId, JET_prep.Replace);
             try
             {
-                var spentTxBytes = DataEncoder.EncodeSpentTx(spentTx);
+                Api.JetPrepareUpdate(this.jetSession, this.spentTxTableId, JET_prep.Insert);
+                try
+                {
+                    byte[] spentTxesBytes;
+                    using (var stream = new MemoryStream())
+                    using (var writer = new BinaryWriter(stream))
+                    {
+                        writer.WriteList(spentTxes.ToImmutableArray(), spentTx => DataEncoder.EncodeSpentTx(stream, spentTx));
+                        spentTxesBytes = stream.ToArray();
+                    }
 
-                Api.SetColumn(this.jetSession, this.spentTxTableId, this.spentDataColumnId, spentTxBytes, SetColumnGrbit.AppendLV);
+                    Api.SetColumn(this.jetSession, this.spentTxTableId, this.spentSpentBlockIndexColumnId, blockIndex);
+                    Api.SetColumn(this.jetSession, this.spentTxTableId, this.spentDataColumnId, spentTxesBytes);
 
-                Api.JetUpdate(this.jetSession, this.spentTxTableId);
+                    Api.JetUpdate(this.jetSession, this.spentTxTableId);
+                }
+                catch (Exception)
+                {
+                    Api.JetPrepareUpdate(this.jetSession, this.spentTxTableId, JET_prep.Cancel);
+                    throw;
+                }
+
+                return true;
             }
-            catch (Exception)
+            catch (EsentKeyDuplicateException)
             {
-                Api.JetPrepareUpdate(this.jetSession, this.spentTxTableId, JET_prep.Cancel);
-                throw;
+                return false;
             }
         }
 
-        public void RemoveSpentTransactions(int spentBlockIndex)
+        public bool TryRemoveBlockSpentTxes(int blockIndex)
         {
             Api.JetSetCurrentIndex(this.jetSession, this.spentTxTableId, "IX_SpentBlockIndex");
 
-            Api.MakeKey(this.jetSession, this.spentTxTableId, spentBlockIndex, MakeKeyGrbit.NewKey);
+            Api.MakeKey(this.jetSession, this.spentTxTableId, blockIndex, MakeKeyGrbit.NewKey);
 
             if (Api.TrySeek(this.jetSession, this.spentTxTableId, SeekGrbit.SeekEQ))
             {
                 Api.JetDelete(this.jetSession, this.spentTxTableId);
+                return true;
+            }
+            else
+            {
+                return false;
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Domain;
+using BitSharp.Core.ExtensionMethods;
 using BitSharp.Core.Builders;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Storage;
@@ -15,6 +16,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace BitSharp.Core.Workers
 {
@@ -98,16 +100,20 @@ namespace BitSharp.Core.Workers
 
                             // collect pruning information and group it by block
                             gatherStopwatch.Start();
-                            foreach (var spentTx in this.chainStateCursor.ReadSpentTransactions(blockHeight))
+                            IImmutableList<SpentTx> spentTxes;
+                            if (this.chainStateCursor.TryGetBlockSpentTxes(blockHeight, out spentTxes))
                             {
-                                // cooperative loop
-                                this.ThrowIfCancelled();
+                                foreach (var spentTx in spentTxes)
+                                {
+                                    // cooperative loop
+                                    this.ThrowIfCancelled();
 
-                                if (!pruneData.ContainsKey(spentTx.ConfirmedBlockIndex))
-                                    pruneData[spentTx.ConfirmedBlockIndex] = new List<int>();
+                                    if (!pruneData.ContainsKey(spentTx.ConfirmedBlockIndex))
+                                        pruneData[spentTx.ConfirmedBlockIndex] = new List<int>();
 
-                                txCount++;
-                                pruneData[spentTx.ConfirmedBlockIndex].Add(spentTx.TxIndex);
+                                    txCount++;
+                                    pruneData[spentTx.ConfirmedBlockIndex].Add(spentTx.TxIndex);
+                                }
                             }
                             gatherStopwatch.Stop();
                         }
@@ -136,7 +142,7 @@ namespace BitSharp.Core.Workers
                         cleanStopwatch.Start();
                         for (var blockHeight = minHeight; blockHeight <= maxHeight; blockHeight++)
                         {
-                            this.chainStateCursor.RemoveSpentTransactions(blockHeight);
+                            this.chainStateCursor.TryRemoveBlockSpentTxes(blockHeight);
                         }
                         cleanStopwatch.Stop();
                         //}

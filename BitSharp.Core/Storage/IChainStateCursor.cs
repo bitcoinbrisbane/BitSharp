@@ -2,6 +2,7 @@
 using BitSharp.Core.Domain;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -90,19 +91,37 @@ namespace BitSharp.Core.Storage
         bool TryUpdateUnspentTx(UnspentTx unspentTx);
 
         //TODO
-        void PrepareSpentTransactions(int spentBlockIndex);
-
-        //TODO
         IEnumerable<UnspentTx> ReadUnspentTransactions();
 
-        //TODO
-        IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex);
+        /// <summary>
+        /// Determine whether spent transactions are present for a block.
+        /// </summary>
+        /// <param name="blockIndex">The block's index (height) in the chain.</param>
+        /// <returns>true if the block's spent transactions are present; otherwise, false</returns>
+        bool ContainsBlockSpentTxes(int blockIndex);
 
-        //TODO
-        void AddSpentTransaction(SpentTx spentTx);
+        /// <summary>
+        /// Retreive a block's spent transactions.
+        /// </summary>
+        /// <param name="blockIndex">The blocks's index (height) in the chain.</param>
+        /// <param name="spentTxesBytes">Contains the spent transactions when successful; otherwise, null.</param>
+        /// <returns>true if the block's spent transactions were retrieved; otherwise, false</returns>
+        bool TryGetBlockSpentTxes(int blockIndex, out IImmutableList<SpentTx> spentTxes);
 
-        //TODO
-        void RemoveSpentTransactions(int spentBlockIndex);
+        /// <summary>
+        /// Add a block's spent transactions.
+        /// </summary>
+        /// <param name="blockIndex">The blocks's index (height) in the chain.</param>
+        /// <param name="spentTxesBytes">The spent transactions.</param>
+        /// <returns>true if the block's spent transactions were added; otherwise, false</returns>
+        bool TryAddBlockSpentTxes(int blockIndex, IImmutableList<SpentTx> spentTxes);
+
+        /// <summary>
+        /// Remove a block's spent transactions.
+        /// </summary>
+        /// <param name="blockIndex">The blocks's index (height) in the chain.</param>
+        /// <returns>true if the block's spent transactions were removed; otherwise, false</returns>
+        bool TryRemoveBlockSpentTxes(int blockIndex);
 
         //TODO
         void RemoveSpentTransactionsToHeight(int spentBlockIndex);

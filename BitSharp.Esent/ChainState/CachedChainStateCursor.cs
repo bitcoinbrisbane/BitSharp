@@ -3,6 +3,7 @@ using BitSharp.Core.Domain;
 using BitSharp.Core.Storage;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,6 +19,11 @@ namespace BitSharp.Esent.ChainState
         {
             this.chainStateCursor = chainStateCursor;
             this.disposeAction = disposeAction;
+        }
+
+        public void Dispose()
+        {
+            this.disposeAction();
         }
 
         public void BeginTransaction()
@@ -80,29 +86,29 @@ namespace BitSharp.Esent.ChainState
             return this.chainStateCursor.TryUpdateUnspentTx(unspentTx);
         }
 
-        public void PrepareSpentTransactions(int spentBlockIndex)
-        {
-            this.chainStateCursor.PrepareSpentTransactions(spentBlockIndex);
-        }
-
         public IEnumerable<UnspentTx> ReadUnspentTransactions()
         {
             return this.chainStateCursor.ReadUnspentTransactions();
         }
 
-        public IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex)
+        public bool ContainsBlockSpentTxes(int blockIndex)
         {
-            return this.chainStateCursor.ReadSpentTransactions(spentBlockIndex);
+            return this.chainStateCursor.ContainsBlockSpentTxes(blockIndex);
         }
 
-        public void AddSpentTransaction(SpentTx spentTx)
+        public bool TryGetBlockSpentTxes(int blockIndex, out IImmutableList<SpentTx> spentTxes)
         {
-            this.chainStateCursor.AddSpentTransaction(spentTx);
+            return this.chainStateCursor.TryGetBlockSpentTxes(blockIndex, out spentTxes);
         }
 
-        public void RemoveSpentTransactions(int spentBlockIndex)
+        public bool TryAddBlockSpentTxes(int blockIndex, IImmutableList<SpentTx> spentTxes)
         {
-            this.chainStateCursor.RemoveSpentTransactions(spentBlockIndex);
+            return this.chainStateCursor.TryAddBlockSpentTxes(blockIndex, spentTxes);
+        }
+
+        public bool TryRemoveBlockSpentTxes(int blockIndex)
+        {
+            return this.chainStateCursor.TryRemoveBlockSpentTxes(blockIndex);
         }
 
         public void RemoveSpentTransactionsToHeight(int spentBlockIndex)
@@ -113,11 +119,6 @@ namespace BitSharp.Esent.ChainState
         public void Defragment()
         {
             this.chainStateCursor.Defragment();
-        }
-
-        public void Dispose()
-        {
-            this.disposeAction();
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
+using BitSharp.Core.ExtensionMethods;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -47,9 +48,9 @@ namespace BitSharp.Core.Builders
 
         public IEnumerable<TxWithPrevOutputKeys> CalculateUtxo(Chain chain, IEnumerable<Transaction> blockTxes)
         {
-            var chainedHeader = chain.LastBlock;
+            var blockSpentTxes = ImmutableList.CreateBuilder<SpentTx>();
 
-            this.chainStateCursor.PrepareSpentTransactions(chainedHeader.Height);
+            var chainedHeader = chain.LastBlock;
 
             var txIndex = -1;
             foreach (var tx in blockTxes)
@@ -75,7 +76,7 @@ namespace BitSharp.Core.Builders
                     for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
                     {
                         var input = tx.Inputs[inputIndex];
-                        var unspentTx = this.Spend(txIndex, tx, inputIndex, input, chainedHeader);
+                        var unspentTx = this.Spend(txIndex, tx, inputIndex, input, chainedHeader, blockSpentTxes);
 
                         var unspentTxBlockHash = chain.Blocks[unspentTx.BlockIndex].Hash;
                         prevOutputTxKeys.Add(new BlockTxKey(unspentTxBlockHash, unspentTx.TxIndex));
@@ -87,6 +88,9 @@ namespace BitSharp.Core.Builders
 
                 yield return new TxWithPrevOutputKeys(txIndex, tx, chainedHeader, prevOutputTxKeys.ToImmutable());
             }
+
+            if (!this.chainStateCursor.TryAddBlockSpentTxes(chainedHeader.Height, blockSpentTxes.ToImmutable()))
+                throw new ValidationException(chainedHeader.Height);
         }
 
         private void Mint(Transaction tx, int txIndex, ChainedHeader chainedHeader)
@@ -101,7 +105,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        private UnspentTx Spend(int txIndex, Transaction tx, int inputIndex, TxInput input, ChainedHeader chainedHeader)
+        private UnspentTx Spend(int txIndex, Transaction tx, int inputIndex, TxInput input, ChainedHeader chainedHeader, ImmutableList<SpentTx>.Builder blockSpentTxes)
         {
             UnspentTx unspentTx;
             if (!this.chainStateCursor.TryGetUnspentTx(input.PreviousTxOutputKey.TxHash, out unspentTx))
@@ -142,7 +146,7 @@ namespace BitSharp.Core.Builders
                     throw new ValidationException(chainedHeader.Hash);
 
                 // store rollback/pruning information
-                this.chainStateCursor.AddSpentTransaction(unspentTx.ToSpentTx(chainedHeader.Height));
+                blockSpentTxes.Add(unspentTx.ToSpentTx(chainedHeader.Height));
             }
 
             return unspentTx;

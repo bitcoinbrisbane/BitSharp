@@ -19,7 +19,7 @@ namespace BitSharp.Core.Storage.Memory
 
         private ChainBuilder chain;
         private ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
-        private ImmutableDictionary<int, List<SpentTx>>.Builder spentTransactions;
+        private ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes;
 
         private long chainVersion;
         private long unspentTxesVersion;
@@ -163,60 +163,60 @@ namespace BitSharp.Core.Storage.Memory
                 return this.chainStateStorage.ReadUnspentTransactions();
         }
 
-        public void PrepareSpentTransactions(int spentBlockIndex)
+        public bool ContainsBlockSpentTxes(int blockIndex)
+        {
+            if (this.inTransaction)
+                return this.blockSpentTxes.ContainsKey(blockIndex);
+            else
+                return this.chainStateStorage.ContainsBlockSpentTxes(blockIndex);
+        }
+
+        public bool TryGetBlockSpentTxes(int blockIndex, out IImmutableList<SpentTx> spentTxes)
         {
             if (this.inTransaction)
             {
-                this.spentTransactions.Add(spentBlockIndex, new List<SpentTx>());
-                this.spentTxesModified = true;
+                return this.blockSpentTxes.TryGetValue(blockIndex, out spentTxes);
             }
             else
             {
-                this.chainStateStorage.PrepareSpentTransactions(spentBlockIndex);
+                return this.chainStateStorage.TryGetBlockSpentTxes(blockIndex, out spentTxes);
             }
         }
 
-        public IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex)
+        public bool TryAddBlockSpentTxes(int blockIndex, IImmutableList<SpentTx> spentTxes)
         {
             if (this.inTransaction)
             {
-                List<SpentTx> spentTxes;
-                if (this.spentTransactions.TryGetValue(spentBlockIndex, out spentTxes))
+                try
                 {
-                    foreach (var spentTx in spentTxes)
-                        yield return spentTx;
+                    this.blockSpentTxes.Add(blockIndex, spentTxes);
+                    this.spentTxesModified = true;
+                    return true;
+                }
+                catch (ArgumentException)
+                {
+                    return false;
                 }
             }
             else
             {
-                foreach (var spentTx in this.chainStateStorage.ReadSpentTransactions(spentBlockIndex))
-                    yield return spentTx;
+                return this.chainStateStorage.TryAddBlockSpentTxes(blockIndex, spentTxes);
             }
         }
 
-        public void AddSpentTransaction(SpentTx spentTx)
+        public bool TryRemoveBlockSpentTxes(int blockIndex)
         {
             if (this.inTransaction)
             {
-                this.spentTransactions[spentTx.SpentBlockIndex].Add(spentTx);
-                this.spentTxesModified = true;
-            }
-            else
-            {
-                this.chainStateStorage.AddSpentTransaction(spentTx);
-            }
-        }
+                var wasRemoved = this.blockSpentTxes.Remove(blockIndex);
+                if (wasRemoved)
+                    this.spentTxesModified = true;
 
-        public void RemoveSpentTransactions(int spentBlockIndex)
-        {
-            if (this.inTransaction)
-            {
-                this.spentTransactions.Remove(spentBlockIndex);
-                this.spentTxesModified = true;
+                return wasRemoved;
             }
             else
             {
-                this.chainStateStorage.RemoveSpentTransactions(spentBlockIndex);
+                return this.chainStateStorage.TryRemoveBlockSpentTxes(blockIndex);
             }
         }
 
@@ -224,7 +224,7 @@ namespace BitSharp.Core.Storage.Memory
         {
             if (this.inTransaction)
             {
-                this.spentTransactions.RemoveRange(Enumerable.Range(0, spentBlockIndex));
+                this.blockSpentTxes.RemoveRange(Enumerable.Range(0, spentBlockIndex));
                 this.spentTxesModified = true;
             }
             else
@@ -242,7 +242,7 @@ namespace BitSharp.Core.Storage.Memory
             if (this.inTransaction)
                 throw new InvalidOperationException();
 
-            this.chainStateStorage.BeginTransaction(out this.chain, out this.unspentTransactions, out this.spentTransactions, out this.chainVersion, out this.unspentTxesVersion, out this.spentTxesVersion);
+            this.chainStateStorage.BeginTransaction(out this.chain, out this.unspentTransactions, out this.blockSpentTxes, out this.chainVersion, out this.unspentTxesVersion, out this.spentTxesVersion);
 
             this.chainModified = false;
             this.unspentTxesModified = false;
@@ -259,12 +259,12 @@ namespace BitSharp.Core.Storage.Memory
             this.chainStateStorage.CommitTransaction(
                 this.chainModified ? this.chain : null,
                 this.unspentTxesModified ? this.unspentTransactions : null,
-                this.spentTxesModified ? this.spentTransactions : null,
+                this.spentTxesModified ? this.blockSpentTxes : null,
                 this.chainVersion, this.unspentTxesVersion, this.spentTxesVersion);
 
             this.chain = null;
             this.unspentTransactions = null;
-            this.spentTransactions = null;
+            this.blockSpentTxes = null;
 
             this.inTransaction = false;
         }
@@ -276,7 +276,7 @@ namespace BitSharp.Core.Storage.Memory
 
             this.chain = null;
             this.unspentTransactions = null;
-            this.spentTransactions = null;
+            this.blockSpentTxes = null;
 
             this.inTransaction = false;
         }

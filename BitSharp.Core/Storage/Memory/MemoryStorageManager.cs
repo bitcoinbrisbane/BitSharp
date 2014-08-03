@@ -19,7 +19,7 @@ namespace BitSharp.Core.Storage.Memory
             : this(null, null, null)
         { }
 
-        internal MemoryStorageManager(Chain chain = null, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions = null, ImmutableDictionary<int, List<SpentTx>> spentTransactions = null)
+        internal MemoryStorageManager(Chain chain = null, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions = null, ImmutableDictionary<int, IImmutableList<SpentTx>> spentTransactions = null)
         {
             this.blockStorage = new MemoryBlockStorage();
             this.blockTxesStorage = new MemoryBlockTxesStorage();

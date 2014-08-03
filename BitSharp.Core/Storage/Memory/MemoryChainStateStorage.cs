@@ -18,35 +18,35 @@ namespace BitSharp.Core.Storage.Memory
 
         private ChainBuilder chain;
         private ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
-        private ImmutableDictionary<int, List<SpentTx>>.Builder spentTransactions;
+        private ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes;
 
         private long chainVersion;
         private long unspentTxesVersion;
-        private long spentTxesVersion;
+        private long blockSpentTxesVersion;
 
-        public MemoryChainStateStorage(Chain chain = null, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions = null, ImmutableDictionary<int, List<SpentTx>> spentTransactions = null)
+        public MemoryChainStateStorage(Chain chain = null, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions = null, ImmutableDictionary<int, IImmutableList<SpentTx>> blockSpentTxes = null)
         {
             this.chain = chain != null ? chain.ToBuilder() : new ChainBuilder();
             this.unspentTransactions = unspentTransactions != null ? unspentTransactions.ToBuilder() : ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
-            this.spentTransactions = spentTransactions != null ? spentTransactions.ToBuilder() : ImmutableDictionary.CreateBuilder<int, List<SpentTx>>();
+            this.blockSpentTxes = blockSpentTxes != null ? blockSpentTxes.ToBuilder() : ImmutableDictionary.CreateBuilder<int, IImmutableList<SpentTx>>();
         }
 
         public void Dispose()
         {
         }
 
-        public void BeginTransaction(out ChainBuilder chain, out ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, out ImmutableDictionary<int, List<SpentTx>>.Builder spentTransactions, out long chainVersion, out long unspentTxesVersion, out long spentTxesVersion)
+        public void BeginTransaction(out ChainBuilder chain, out ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, out ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes, out long chainVersion, out long unspentTxesVersion, out long spentTxesVersion)
         {
             this.semaphore.Wait();
             try
             {
                 chain = this.chain.ToImmutable().ToBuilder();
                 unspentTransactions = this.unspentTransactions.ToImmutable().ToBuilder();
-                spentTransactions = this.spentTransactions.ToImmutable().ToBuilder();
+                blockSpentTxes = this.blockSpentTxes.ToImmutable().ToBuilder();
 
                 chainVersion = this.chainVersion;
                 unspentTxesVersion = this.unspentTxesVersion;
-                spentTxesVersion = this.spentTxesVersion;
+                spentTxesVersion = this.blockSpentTxesVersion;
             }
             finally
             {
@@ -54,13 +54,13 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
-        public void CommitTransaction(ChainBuilder chain, ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, ImmutableDictionary<int, List<SpentTx>>.Builder spentTransactions, long chainVersion, long unspentTxesVersion, long spentTxesVersion)
+        public void CommitTransaction(ChainBuilder chain, ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes, long chainVersion, long unspentTxesVersion, long blockSpentTxesVersion)
         {
             this.semaphore.Do(() =>
             {
                 if (chain != null && this.chainVersion != chainVersion
                     || unspentTransactions != null && unspentTxesVersion != this.unspentTxesVersion
-                    || spentTransactions != null && spentTxesVersion != this.spentTxesVersion)
+                    || blockSpentTxes != null && blockSpentTxesVersion != this.blockSpentTxesVersion)
                     throw new InvalidOperationException();
 
                 if (chain != null)
@@ -75,10 +75,10 @@ namespace BitSharp.Core.Storage.Memory
                     this.unspentTxesVersion++;
                 }
 
-                if (spentTransactions != null)
+                if (blockSpentTxes != null)
                 {
-                    this.spentTransactions = spentTransactions.ToImmutable().ToBuilder();
-                    this.spentTxesVersion++;
+                    this.blockSpentTxes = blockSpentTxes.ToImmutable().ToBuilder();
+                    this.blockSpentTxesVersion++;
                 }
             });
         }
@@ -172,49 +172,58 @@ namespace BitSharp.Core.Storage.Memory
             });
         }
 
-        public void PrepareSpentTransactions(int spentBlockIndex)
-        {
-            this.semaphore.Do(() =>
-            {
-                this.spentTransactions.Add(spentBlockIndex, new List<SpentTx>());
-                this.spentTxesVersion++;
-            });
-        }
-
         public IEnumerable<UnspentTx> ReadUnspentTransactions()
         {
             return this.semaphore.Do(() =>
                 this.unspentTransactions.ToImmutable()).Values;
         }
 
-        public IEnumerable<SpentTx> ReadSpentTransactions(int spentBlockIndex)
+        public bool ContainsBlockSpentTxes(int blockIndex)
+        {
+            return this.semaphore.Do(() =>
+                this.blockSpentTxes.ContainsKey(blockIndex));
+        }
+
+
+        public bool TryGetBlockSpentTxes(int blockIndex, out IImmutableList<SpentTx> spentTxes)
+        {
+            this.semaphore.Wait();
+            try
+            {
+                return this.blockSpentTxes.TryGetValue(blockIndex, out spentTxes);
+            }
+            finally
+            {
+                this.semaphore.Release();
+            }
+        }
+
+        public bool TryAddBlockSpentTxes(int blockIndex, IImmutableList<SpentTx> spentTxes)
         {
             return this.semaphore.Do(() =>
             {
-                List<SpentTx> spentTxes;
-                if (this.spentTransactions.TryGetValue(spentBlockIndex, out spentTxes))
-                    return spentTxes.ToImmutableList();
-                else
-                    return Enumerable.Empty<SpentTx>();
+                try
+                {
+                    this.blockSpentTxes.Add(blockIndex, ImmutableArray.CreateRange(spentTxes));
+                    this.blockSpentTxesVersion++;
+                    return true;
+                }
+                catch (ArgumentException)
+                {
+                    return false;
+                }
             });
         }
 
-        public void AddSpentTransaction(SpentTx spentTx)
+        public bool TryRemoveBlockSpentTxes(int blockIndex)
         {
-            this.semaphore.Do(() =>
+            return this.semaphore.Do(() =>
             {
-                this.spentTransactions[spentTx.SpentBlockIndex].Add(spentTx);
-                this.spentTxesVersion++;
-            });
-        }
-
-        public void RemoveSpentTransactions(int spentBlockIndex)
-        {
-            this.semaphore.Do(() =>
-            {
-                var wasRemoved = this.spentTransactions.Remove(spentBlockIndex);
+                var wasRemoved = this.blockSpentTxes.Remove(blockIndex);
                 if (wasRemoved)
-                    this.spentTxesVersion++;
+                    this.blockSpentTxesVersion++;
+
+                return wasRemoved;
             });
         }
 
@@ -222,8 +231,8 @@ namespace BitSharp.Core.Storage.Memory
         {
             this.semaphore.Do(() =>
             {
-                this.spentTransactions.RemoveWhere(x => x.Key <= spentBlockIndex);
-                this.spentTxesVersion++;
+                this.blockSpentTxes.RemoveWhere(x => x.Key <= spentBlockIndex);
+                this.blockSpentTxesVersion++;
             });
         }
 

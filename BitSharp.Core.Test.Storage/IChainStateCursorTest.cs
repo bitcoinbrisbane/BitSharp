@@ -93,6 +93,48 @@ namespace BitSharp.Core.Test.Storage
             RunTest(TestTryUpdateUnspentTx);
         }
 
+        [TestMethod]
+        public void TestReadUnspentTransactions()
+        {
+            RunTest(TestReadUnspentTransactions);
+        }
+
+        [TestMethod]
+        public void TestContainsBlockSpentTxes()
+        {
+            RunTest(TestContainsBlockSpentTxes);
+        }
+
+        [TestMethod]
+        public void TestTryGetBlockSpentTxes()
+        {
+            RunTest(TestTryGetBlockSpentTxes);
+        }
+
+        [TestMethod]
+        public void TestTryAddBlockSpentTxes()
+        {
+            RunTest(TestTryAddBlockSpentTxes);
+        }
+
+        [TestMethod]
+        public void TestTryRemoveBlockSpentTxes()
+        {
+            RunTest(TestTryRemoveBlockSpentTxes);
+        }
+
+        [TestMethod]
+        public void TestRemoveSpentTransactionsToHeight()
+        {
+            RunTest(TestRemoveSpentTransactionsToHeight);
+        }
+
+        [TestMethod]
+        public void TestDefragment()
+        {
+            RunTest(TestDefragment);
+        }
+
         private void TestTransactionIsolation(ITestStorageProvider provider)
         {
             var fakeHeaders = new FakeHeaders();
@@ -152,7 +194,7 @@ namespace BitSharp.Core.Test.Storage
 
             var unspentTx = new UnspentTx(txHash: 0, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
 
-            var spentTxes = new List<SpentTx> { new SpentTx(txHash: 1, confirmedBlockIndex: 0, txIndex: 0, outputCount: 1, spentBlockIndex: 0) };
+            var spentTxes = ImmutableList.Create(new SpentTx(txHash: 1, confirmedBlockIndex: 0, txIndex: 0, outputCount: 1, spentBlockIndex: 0));
 
             using (var storageManager = provider.OpenStorageManager())
             using (var chainStateCursor = storageManager.OpenChainStateCursor())
@@ -174,11 +216,12 @@ namespace BitSharp.Core.Test.Storage
                 Assert.AreEqual(1, chainStateCursor.UnspentTxCount);
 
                 // add spent txes
-                chainStateCursor.PrepareSpentTransactions(0);
-                chainStateCursor.AddSpentTransaction(spentTxes.First());
+                chainStateCursor.TryAddBlockSpentTxes(0, spentTxes);
 
                 // verify spent txes
-                CollectionAssert.AreEqual(spentTxes, chainStateCursor.ReadSpentTransactions(0).ToList());
+                IImmutableList<SpentTx> actualSpentTxes;
+                Assert.IsTrue(chainStateCursor.TryGetBlockSpentTxes(0, out actualSpentTxes));
+                CollectionAssert.AreEqual(spentTxes, (ICollection)actualSpentTxes);
 
                 // rollback transaction
                 chainStateCursor.RollbackTransaction();
@@ -191,7 +234,7 @@ namespace BitSharp.Core.Test.Storage
                 Assert.AreEqual(0, chainStateCursor.UnspentTxCount);
 
                 // verify spent txes
-                Assert.AreEqual(0, chainStateCursor.ReadSpentTransactions(0).Count());
+                Assert.IsFalse(chainStateCursor.TryGetBlockSpentTxes(0, out actualSpentTxes));
             }
         }
 
@@ -500,6 +543,41 @@ namespace BitSharp.Core.Test.Storage
                 // verify can't update missing unspent tx
                 Assert.IsFalse(chainStateCursor.TryUpdateUnspentTx(unspentTx));
             }
+        }
+
+        public void TestReadUnspentTransactions(ITestStorageProvider provider)
+        {
+            Assert.Inconclusive("TODO");
+        }
+
+        public void TestContainsBlockSpentTxes(ITestStorageProvider provider)
+        {
+            Assert.Inconclusive("TODO");
+        }
+
+        public void TestTryGetBlockSpentTxes(ITestStorageProvider provider)
+        {
+            Assert.Inconclusive("TODO");
+        }
+
+        public void TestTryAddBlockSpentTxes(ITestStorageProvider provider)
+        {
+            Assert.Inconclusive("TODO");
+        }
+
+        public void TestTryRemoveBlockSpentTxes(ITestStorageProvider provider)
+        {
+            Assert.Inconclusive("TODO");
+        }
+
+        public void TestRemoveSpentTransactionsToHeight(ITestStorageProvider provider)
+        {
+            Assert.Inconclusive("TODO");
+        }
+
+        public void TestDefragment(ITestStorageProvider provider)
+        {
+            Assert.Inconclusive("TODO");
         }
 
         private void AssertThrows<T>(Action action) where T : Exception

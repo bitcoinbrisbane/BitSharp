@@ -13,6 +13,7 @@ using System.IO;
 using System.Globalization;
 using System.Collections;
 using NLog;
+using BitSharp.Core.ExtensionMethods;
 using BitSharp.Core.Rules;
 using BitSharp.Core.Storage;
 using BitSharp.Core.Workers;
@@ -199,17 +200,20 @@ namespace BitSharp.Core.Builders
                 this.chainStateCursor.RemoveChainedHeader(chainedHeader);
 
                 // read spent transaction rollback information
-                var spentTxes =
+                IImmutableList<SpentTx> spentTxes;
+                if (!this.chainStateCursor.TryGetBlockSpentTxes(chainedHeader.Height, out spentTxes))
+                    throw new ValidationException(chainedHeader.Height);
+
+                var spentTxesDictionary =
                     ImmutableDictionary.CreateRange(
-                        this.chainStateCursor.ReadSpentTransactions(chainedHeader.Height)
-                            .Select(spentTx => new KeyValuePair<UInt256, SpentTx>(spentTx.TxHash, spentTx)));
+                        spentTxes.Select(spentTx => new KeyValuePair<UInt256, SpentTx>(spentTx.TxHash, spentTx)));
 
                 // rollback the utxo
-                this.utxoBuilder.RollbackUtxo(chainedHeader, blockTxes, spentTxes);
+                this.utxoBuilder.RollbackUtxo(chainedHeader, blockTxes, spentTxesDictionary);
 
                 //TODO this needs to happen in the same transaction
                 // remove the rollback information
-                this.chainStateCursor.RemoveSpentTransactions(chainedHeader.Height);
+                this.chainStateCursor.TryRemoveBlockSpentTxes(chainedHeader.Height);
 
                 // commit the chain state
                 this.CommitTransaction();
