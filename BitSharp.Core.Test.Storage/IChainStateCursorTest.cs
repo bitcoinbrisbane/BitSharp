@@ -334,7 +334,54 @@ namespace BitSharp.Core.Test.Storage
 
         private void TestUnspentTxCount(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            var unspentTx0 = new UnspentTx(txHash: 0, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
+            var unspentTx1 = new UnspentTx(txHash: 1, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
+            var unspentTx2 = new UnspentTx(txHash: 2, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            {
+                chainStateCursor.BeginTransaction();
+
+                // verify initial count
+                Assert.AreEqual(0, chainStateCursor.UnspentTxCount);
+
+                // add unspent tx 0
+                chainStateCursor.TryAddUnspentTx(unspentTx0);
+
+                // verify count
+                Assert.AreEqual(1, chainStateCursor.UnspentTxCount);
+
+                // add unspent tx 1
+                chainStateCursor.TryAddUnspentTx(unspentTx1);
+
+                // verify count
+                Assert.AreEqual(2, chainStateCursor.UnspentTxCount);
+
+                // add unspent tx 2
+                chainStateCursor.TryAddUnspentTx(unspentTx2);
+
+                // verify count
+                Assert.AreEqual(3, chainStateCursor.UnspentTxCount);
+
+                // remove unspent tx 2
+                chainStateCursor.TryRemoveUnspentTx(unspentTx2.TxHash);
+
+                // verify count
+                Assert.AreEqual(2, chainStateCursor.UnspentTxCount);
+
+                // remove unspent tx 1
+                chainStateCursor.TryRemoveUnspentTx(unspentTx1.TxHash);
+
+                // verify count
+                Assert.AreEqual(1, chainStateCursor.UnspentTxCount);
+
+                // remove unspent tx 0
+                chainStateCursor.TryRemoveUnspentTx(unspentTx0.TxHash);
+
+                // verify count
+                Assert.AreEqual(0, chainStateCursor.UnspentTxCount);
+            }
         }
 
         private void TestConainsUnspentTx(ITestStorageProvider provider)
