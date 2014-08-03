@@ -94,16 +94,21 @@ namespace BitSharp.Core.Workers
                     // get block and metadata for next link in blockchain
                     var direction = pathElement.Item1;
                     var chainedHeader = pathElement.Item2;
-                    var blockTxes = this.coreStorage.ReadBlockTransactions(chainedHeader.Hash, chainedHeader.MerkleRoot).LookAhead(100);
+                    IEnumerable<BlockTx> blockTxes;
+                    if (!this.coreStorage.TryReadBlockTransactions(chainedHeader.Hash, chainedHeader.MerkleRoot, /*requireTransaction:*/false, out blockTxes))
+                    {
+                        RaiseBlockMissed(chainedHeader.Hash);
+                        break;
+                    }
 
                     var blockStopwatch = Stopwatch.StartNew();
                     if (direction > 0)
                     {
-                        this.chainStateBuilder.AddBlock(chainedHeader, blockTxes);
+                        this.chainStateBuilder.AddBlock(chainedHeader, blockTxes/*.LookAhead(100)*/);
                     }
                     else if (direction < 0)
                     {
-                        this.chainStateBuilder.RollbackBlock(chainedHeader, blockTxes);
+                        this.chainStateBuilder.RollbackBlock(chainedHeader, blockTxes/*.LookAhead(100)*/);
                     }
                     else
                     {
@@ -143,12 +148,6 @@ namespace BitSharp.Core.Workers
             if (missingException != null)
             {
                 var missingBlockHash = (UInt256)missingException.Key;
-                if (this.lastBlockMissHash == null || this.lastBlockMissHash.Value != missingBlockHash)
-                {
-                    this.lastBlockMissHash = missingBlockHash;
-                    this.blockMissCountMeasure.Tick();
-                }
-                
                 RaiseBlockMissed(missingBlockHash);
             }
             else
@@ -167,34 +166,14 @@ namespace BitSharp.Core.Workers
             }
         }
 
-        private IEnumerable<Tuple<int, ChainedHeader, IEnumerable<BlockTx>>> ChainedBlockLookAhead(IEnumerable<Tuple<int, ChainedHeader>> chain, int chainLookAhead, int txLookAhead)
-        {
-            return chain
-                .Select(
-                    chainedHeaderTuple =>
-                    {
-                        try
-                        {
-                            // cooperative loop
-                            this.ThrowIfCancelled();
-
-                            var direction = chainedHeaderTuple.Item1;
-                            var chainedHeader = chainedHeaderTuple.Item2;
-                            var blockTxes = this.coreStorage.ReadBlockTransactions(chainedHeader.Hash, chainedHeader.MerkleRoot).LookAhead(txLookAhead);
-
-                            return Tuple.Create(direction, chainedHeader, blockTxes);
-                        }
-                        catch (MissingDataException e)
-                        {
-                            this.logger.Debug("Stalled, MissingDataException: {0}".Format2(e.Key));
-                            throw;
-                        }
-                    })
-                .LookAhead(chainLookAhead);
-        }
-
         private void RaiseBlockMissed(UInt256 blockHash)
         {
+            if (this.lastBlockMissHash == null || this.lastBlockMissHash.Value != blockHash)
+            {
+                this.lastBlockMissHash = blockHash;
+                this.blockMissCountMeasure.Tick();
+            }
+
             var handler = this.BlockMissed;
             if (handler != null)
                 handler(blockHash);

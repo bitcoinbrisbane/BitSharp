@@ -226,12 +226,13 @@ namespace BitSharp.Core.Test.Storage
                 blockTxesStorage.TryAddBlockTransactions(expectedBlock.Hash, expectedBlock.Transactions);
 
                 // retrieve block transactions
-                var actualBlockTxes = blockTxesStorage.ReadBlockTransactions(expectedBlock.Hash)
-                    .Select(x => x.Transaction).ToList();
-                var actualBlockTxHashes = actualBlockTxes.Select(x => x.Hash).ToList();
+                IEnumerable<BlockTx> rawActualBlockTxes;
+                Assert.IsTrue(blockTxesStorage.TryReadBlockTransactions(expectedBlock.Hash, out rawActualBlockTxes));
+                var actualBlockTxes = rawActualBlockTxes.ToList();
+                var actualBlockTxHashes = actualBlockTxes.Select(x => x.Transaction.Hash).ToList();
 
                 // verify all retrieved transactions match their hashes
-                Assert.IsTrue(actualBlockTxes.All(x => x.Hash == DataCalculator.CalculateTransactionHash(x)));
+                Assert.IsTrue(actualBlockTxes.All(x => x.Hash == DataCalculator.CalculateTransactionHash(x.Transaction)));
 
                 // verify retrieved block transactions match stored block transactions
                 CollectionAssert.AreEqual(expectedBlockTxHashes, actualBlockTxHashes);
@@ -274,13 +275,18 @@ namespace BitSharp.Core.Test.Storage
                     // prune a transaction
                     blockTxesStorage.PruneElements(block.Hash, new[] { pruneIndex });
 
+                    // read block transactions
+                    IEnumerable<BlockTx> blockTxes;
+                    Assert.IsTrue(blockTxesStorage.TryReadBlockTransactions(block.Hash, out blockTxes));
+
                     // verify block transactions, exception will be fired if invalid
-                    MerkleTree.ReadMerkleTreeNodes(block.Header.MerkleRoot, blockTxesStorage.ReadBlockTransactions(block.Hash))
-                        .ToList();
+                    MerkleTree.ReadMerkleTreeNodes(block.Header.MerkleRoot, blockTxes).ToList();
                 }
 
                 // read fully pruned block and verify
-                var finalNodes = MerkleTree.ReadMerkleTreeNodes(block.Header.MerkleRoot, blockTxesStorage.ReadBlockTransactions(block.Hash)).ToList();
+                IEnumerable<BlockTx> finalBlockTxes;
+                Assert.IsTrue(blockTxesStorage.TryReadBlockTransactions(block.Hash, out finalBlockTxes));
+                var finalNodes = MerkleTree.ReadMerkleTreeNodes(block.Header.MerkleRoot, finalBlockTxes).ToList();
                 Assert.AreEqual(1, finalNodes.Count);
                 Assert.AreEqual(expectedFinalElement, finalNodes[0]);
             }

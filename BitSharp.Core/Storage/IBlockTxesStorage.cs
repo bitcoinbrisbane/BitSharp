@@ -51,8 +51,9 @@ namespace BitSharp.Core.Storage
         /// Read the transaction data for a block, including pruning information.
         /// </summary>
         /// <param name="blockHash">The block's hash.</param>
-        /// <returns>An enumerable of the transaction and pruning information.</returns>
-        IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash);
+        /// <param name="transaction">Contains the retrieved block's transactions when successful; otherwise, null.</param>
+        /// <returns>true if the block's transactions were retrieved; otherwise, false</returns>
+        bool TryReadBlockTransactions(UInt256 blockHash, out IEnumerable<BlockTx> blockTxes);
 
         /// <summary>
         /// Remove raw transaction data and prune the merkle tree for all transactions indicated by <paramref name="txIndices"/> within a block.
