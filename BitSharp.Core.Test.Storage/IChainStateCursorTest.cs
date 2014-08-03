@@ -157,7 +157,54 @@ namespace BitSharp.Core.Test.Storage
 
         private void TestRollbackTransaction(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            var fakeHeaders = new FakeHeaders();
+            var chainedHeader0 = fakeHeaders.GenesisChained();
+            var chainedHeader1 = fakeHeaders.NextChained();
+            var chainedHeader2 = fakeHeaders.NextChained();
+
+            var unspentTx = new UnspentTx(txHash: 0, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
+
+            var spentTxes = new List<SpentTx> { new SpentTx(txHash: 1, confirmedBlockIndex: 0, txIndex: 0, outputCount: 1, spentBlockIndex: 0) };
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            {
+                // begin transaction
+                chainStateCursor.BeginTransaction();
+
+                // add header 0
+                chainStateCursor.AddChainedHeader(chainedHeader0);
+
+                // verify chain
+                CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor.ReadChain().ToList());
+
+                // add unspent tx
+                chainStateCursor.TryAddUnspentTx(unspentTx);
+
+                // verify unspent tx
+                Assert.IsTrue(chainStateCursor.ContainsUnspentTx(unspentTx.TxHash));
+                Assert.AreEqual(1, chainStateCursor.UnspentTxCount);
+
+                // add spent txes
+                chainStateCursor.PrepareSpentTransactions(0);
+                chainStateCursor.AddSpentTransaction(spentTxes.First());
+
+                // verify spent txes
+                CollectionAssert.AreEqual(spentTxes, chainStateCursor.ReadSpentTransactions(0).ToList());
+
+                // rollback transaction
+                chainStateCursor.RollbackTransaction();
+
+                // verify chain
+                Assert.AreEqual(0, chainStateCursor.ReadChain().Count());
+
+                // verify unspent tx
+                Assert.IsFalse(chainStateCursor.ContainsUnspentTx(unspentTx.TxHash));
+                Assert.AreEqual(0, chainStateCursor.UnspentTxCount);
+
+                // verify spent txes
+                Assert.AreEqual(0, chainStateCursor.ReadSpentTransactions(0).Count());
+            }
         }
 
         private void TestReadChain(ITestStorageProvider provider)

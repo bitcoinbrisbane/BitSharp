@@ -35,6 +35,9 @@ namespace BitSharp.Esent
         public readonly Session jetSession;
         public readonly JET_DBID chainStateDbId;
 
+        public readonly JET_TABLEID globalsTableId;
+        public readonly JET_COLUMNID unspentTxCountColumnId;
+
         public readonly JET_TABLEID chainTableId;
         public readonly JET_COLUMNID blockHeightColumnId;
         public readonly JET_COLUMNID chainedHeaderBytesColumnId;
@@ -63,6 +66,8 @@ namespace BitSharp.Esent
             this.OpenCursor(this.jetDatabase, this.jetInstance, readOnly,
                 out this.jetSession,
                 out this.chainStateDbId,
+                out this.globalsTableId,
+                    out this.unspentTxCountColumnId,
                 out this.chainTableId,
                     out this.blockHeightColumnId,
                     out this.chainedHeaderBytesColumnId,
@@ -140,8 +145,10 @@ namespace BitSharp.Esent
 
         public int UnspentTxCount
         {
-            //TODO
-            get { return 0; }
+            get
+            {
+                return Api.RetrieveColumnAsInt32(this.jetSession, this.globalsTableId, this.unspentTxCountColumnId).Value;
+            }
         }
 
         public bool ContainsUnspentTx(UInt256 txHash)
@@ -185,6 +192,9 @@ namespace BitSharp.Esent
                     Api.SetColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
 
                     Api.JetUpdate(this.jetSession, this.unspentTxTableId);
+
+                    // increase unspent tx count
+                    Api.EscrowUpdate(this.jetSession, this.globalsTableId, this.unspentTxCountColumnId, +1);
 
                     return true;
                 }
@@ -239,6 +249,9 @@ namespace BitSharp.Esent
                 var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId));
 
                 Api.JetDelete(this.jetSession, this.unspentTxTableId);
+
+                // decrease unspent tx count
+                Api.EscrowUpdate(this.jetSession, this.globalsTableId, this.unspentTxCountColumnId, -1);
 
                 return true;
             }
@@ -420,6 +433,8 @@ namespace BitSharp.Esent
         private void OpenCursor(string jetDatabase, Instance jetInstance, bool readOnly,
             out Session jetSession,
             out JET_DBID chainStateDbId,
+            out JET_TABLEID globalsTableId,
+            out JET_COLUMNID unspentTxCountColumnId,
             out JET_TABLEID chainTableId,
             out JET_COLUMNID blockHeightColumnId,
             out JET_COLUMNID chainedHeaderBytesColumnId,
@@ -436,6 +451,12 @@ namespace BitSharp.Esent
             try
             {
                 Api.JetOpenDatabase(jetSession, jetDatabase, "", out chainStateDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
+
+                Api.JetOpenTable(jetSession, chainStateDbId, "Globals", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out globalsTableId);
+                unspentTxCountColumnId = Api.GetTableColumnid(jetSession, globalsTableId, "UnspentTxCount");
+
+                if (!Api.TryMoveFirst(jetSession, globalsTableId))
+                    throw new InvalidOperationException();
 
                 Api.JetOpenTable(jetSession, chainStateDbId, "Chain", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out chainTableId);
                 blockHeightColumnId = Api.GetTableColumnid(jetSession, chainTableId, "BlockHeight");

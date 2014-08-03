@@ -20,10 +20,37 @@ namespace BitSharp.Esent.ChainState
             {
                 Api.JetCreateDatabase(jetSession, jetDatabase, "", out utxoDbId, CreateDatabaseGrbit.None);
 
+                CreateGlobalsTable(utxoDbId, jetSession);
                 CreateChainTable(utxoDbId, jetSession);
                 CreateUnspentTxTable(utxoDbId, jetSession);
                 CreateSpentTxTable(utxoDbId, jetSession);
             }
+        }
+
+        private static void CreateGlobalsTable(JET_DBID utxoDbId, Session jetSession)
+        {
+            JET_TABLEID globalsTableId;
+            JET_COLUMNID unspentTxCountColumnId;
+
+            var defaultValue = BitConverter.GetBytes(0);
+
+            Api.JetCreateTable(jetSession, utxoDbId, "Globals", 0, 0, out globalsTableId);
+            Api.JetAddColumn(jetSession, globalsTableId, "UnspentTxCount", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnEscrowUpdate }, defaultValue, defaultValue.Length, out unspentTxCountColumnId);
+
+            // initialize global data
+            Api.JetPrepareUpdate(jetSession, globalsTableId, JET_prep.Insert);
+            try
+            {
+                Api.SetColumn(jetSession, globalsTableId, unspentTxCountColumnId, 0);
+
+                Api.JetUpdate(jetSession, globalsTableId);
+            }
+            catch (Exception)
+            {
+                Api.JetPrepareUpdate(jetSession, globalsTableId, JET_prep.Cancel);
+            }
+
+            Api.JetCloseTable(jetSession, globalsTableId);
         }
 
         private static void CreateChainTable(JET_DBID utxoDbId, Session jetSession)
