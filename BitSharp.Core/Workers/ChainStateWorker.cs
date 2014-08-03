@@ -89,8 +89,6 @@ namespace BitSharp.Core.Workers
                     // cooperative loop
                     this.ThrowIfCancelled();
 
-                    didWork = true;
-
                     // get block and metadata for next link in blockchain
                     var direction = pathElement.Item1;
                     var chainedHeader = pathElement.Item2;
@@ -100,6 +98,8 @@ namespace BitSharp.Core.Workers
                         RaiseBlockMissed(chainedHeader.Hash);
                         break;
                     }
+
+                    didWork = true;
 
                     var blockStopwatch = Stopwatch.StartNew();
                     if (direction > 0)
