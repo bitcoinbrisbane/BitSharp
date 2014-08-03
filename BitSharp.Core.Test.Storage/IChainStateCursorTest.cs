@@ -82,21 +82,9 @@ namespace BitSharp.Core.Test.Storage
         }
 
         [TestMethod]
-        public void TestTryGetUnspentTx()
+        public void TestTryAddGetRemoveUnspentTx()
         {
-            RunTest(TestTryGetUnspentTx);
-        }
-
-        [TestMethod]
-        public void TestTryAddUnspentTx()
-        {
-            RunTest(TestTryAddUnspentTx);
-        }
-
-        [TestMethod]
-        public void TestTryRemoveUnspentTx()
-        {
-            RunTest(TestTryRemoveUnspentTx);
+            RunTest(TestTryAddGetRemoveUnspentTx);
         }
 
         [TestMethod]
@@ -428,19 +416,53 @@ namespace BitSharp.Core.Test.Storage
             }
         }
 
-        private void TestTryGetUnspentTx(ITestStorageProvider provider)
+        private void TestTryAddGetRemoveUnspentTx(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
-        }
+            var unspentTx0 = new UnspentTx(txHash: 0, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
+            var unspentTx1 = new UnspentTx(txHash: 1, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
 
-        private void TestTryAddUnspentTx(ITestStorageProvider provider)
-        {
-            Assert.Inconclusive("TODO");
-        }
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            {
+                chainStateCursor.BeginTransaction();
 
-        private void TestTryRemoveUnspentTx(ITestStorageProvider provider)
-        {
-            Assert.Inconclusive("TODO");
+                // verify initial empty state
+                UnspentTx actualUnspentTx0, actualUnspentTx1;
+                Assert.IsFalse(chainStateCursor.TryGetUnspentTx(unspentTx0.TxHash, out actualUnspentTx0));
+                Assert.IsFalse(chainStateCursor.TryGetUnspentTx(unspentTx1.TxHash, out actualUnspentTx1));
+
+                // add unspent tx 0
+                Assert.IsTrue(chainStateCursor.TryAddUnspentTx(unspentTx0));
+
+                // verify unspent txes
+                Assert.IsTrue(chainStateCursor.TryGetUnspentTx(unspentTx0.TxHash, out actualUnspentTx0));
+                Assert.AreEqual(unspentTx0, actualUnspentTx0);
+                Assert.IsFalse(chainStateCursor.TryGetUnspentTx(unspentTx1.TxHash, out actualUnspentTx1));
+
+                // add unspent tx 1
+                Assert.IsTrue(chainStateCursor.TryAddUnspentTx(unspentTx1));
+
+                // verify unspent txes
+                Assert.IsTrue(chainStateCursor.TryGetUnspentTx(unspentTx0.TxHash, out actualUnspentTx0));
+                Assert.AreEqual(unspentTx0, actualUnspentTx0);
+                Assert.IsTrue(chainStateCursor.TryGetUnspentTx(unspentTx1.TxHash, out actualUnspentTx1));
+                Assert.AreEqual(unspentTx1, actualUnspentTx1);
+
+                // remove unspent tx 1
+                Assert.IsTrue(chainStateCursor.TryRemoveUnspentTx(unspentTx1.TxHash));
+
+                // verify unspent txes
+                Assert.IsTrue(chainStateCursor.TryGetUnspentTx(unspentTx0.TxHash, out actualUnspentTx0));
+                Assert.AreEqual(unspentTx0, actualUnspentTx0);
+                Assert.IsFalse(chainStateCursor.TryGetUnspentTx(unspentTx1.TxHash, out actualUnspentTx1));
+
+                // remove unspent tx 0
+                Assert.IsTrue(chainStateCursor.TryRemoveUnspentTx(unspentTx0.TxHash));
+
+                // verify unspent txes
+                Assert.IsFalse(chainStateCursor.TryGetUnspentTx(unspentTx0.TxHash, out actualUnspentTx0));
+                Assert.IsFalse(chainStateCursor.TryGetUnspentTx(unspentTx1.TxHash, out actualUnspentTx1));
+            }
         }
 
         private void TestTryUpdateUnspentTx(ITestStorageProvider provider)
