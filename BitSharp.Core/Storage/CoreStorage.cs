@@ -266,6 +266,11 @@ namespace BitSharp.Core.Storage
             }
         }
 
+        public void FlushBlockTxes()
+        {
+            this.blockTxesStorage.Flush();
+        }
+
         public void PruneElements(UInt256 blockHash, IEnumerable<int> txIndices)
         {
             this.blockTxesStorage.PruneElements(blockHash, txIndices);

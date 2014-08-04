@@ -71,110 +71,131 @@ namespace BitSharp.Core.Workers
             //if (maxHeight - this.lastPruneHeight > blocksPerDay)
             //    this.chainStateWorker.Stop();
 
-            var committed = false;
-            this.chainStateCursor.BeginTransaction();
-            try
+            this.logger.Info(@"Begin pruning from block {0:#,##0} to {1:#,##0}".Format2(minHeight, maxHeight));
+
+            switch (this.Mode)
             {
-                this.logger.Info(@"Begin pruning from block {0:#,##0} to {1:#,##0}".Format2(minHeight, maxHeight));
-
-                switch (this.Mode)
-                {
-                    case PruningMode.RollbackOnly:
-                        this.chainStateCursor.RemoveSpentTransactionsToHeight(maxHeight);
-                        break;
-
-                    case PruningMode.RollbackAndBlocks:
-                        var totalStopwatch = Stopwatch.StartNew();
-                        var gatherStopwatch = new Stopwatch();
-                        var pruneStopwatch = new Stopwatch();
-                        var cleanStopwatch = new Stopwatch();
-
-                        var txCount = 0;
-
-                        var pruneData = new SortedDictionary<int, List<int>>();
-
-                        for (var blockHeight = minHeight; blockHeight <= maxHeight; blockHeight++)
+                case PruningMode.RollbackOnly:
+                    {
+                        var committed = false;
+                        this.chainStateCursor.BeginTransaction();
+                        try
                         {
-                            // cooperative loop
-                            this.ThrowIfCancelled();
+                            this.chainStateCursor.RemoveSpentTransactionsToHeight(maxHeight);
 
-                            // collect pruning information and group it by block
-                            gatherStopwatch.Start();
-                            IImmutableList<SpentTx> spentTxes;
-                            if (this.chainStateCursor.TryGetBlockSpentTxes(blockHeight, out spentTxes))
-                            {
-                                foreach (var spentTx in spentTxes)
-                                {
-                                    // cooperative loop
-                                    this.ThrowIfCancelled();
-
-                                    if (!pruneData.ContainsKey(spentTx.ConfirmedBlockIndex))
-                                        pruneData[spentTx.ConfirmedBlockIndex] = new List<int>();
-
-                                    txCount++;
-                                    pruneData[spentTx.ConfirmedBlockIndex].Add(spentTx.TxIndex);
-                                }
-                            }
-                            gatherStopwatch.Stop();
+                            this.chainStateCursor.CommitTransaction();
+                            committed = true;
                         }
+                        finally
+                        {
+                            if (!committed)
+                                this.chainStateCursor.RollbackTransaction();
+                        }
+                    }
+                    break;
 
-                        // prune the spent transactions from each block
-                        pruneStopwatch.Start();
-                        //foreach (var keyPair in pruneData)
-                        Parallel.ForEach(pruneData,
-                            new ParallelOptions { MaxDegreeOfParallelism = 4 },
-                            keyPair =>
+                case PruningMode.RollbackAndBlocks:
+                    {
+                        var committed = false;
+                        this.chainStateCursor.BeginTransaction();
+                        try
+                        {
+                            var totalStopwatch = Stopwatch.StartNew();
+                            var gatherStopwatch = new Stopwatch();
+                            var pruneStopwatch = new Stopwatch();
+                            var flushStopwatch = new Stopwatch();
+                            var cleanStopwatch = new Stopwatch();
+                            var commitStopwatch = new Stopwatch();
+
+                            var txCount = 0;
+
+                            var pruneData = new SortedDictionary<int, List<int>>();
+
+                            for (var blockHeight = minHeight; blockHeight <= maxHeight; blockHeight++)
                             {
                                 // cooperative loop
                                 this.ThrowIfCancelled();
 
-                                var confirmedBlockIndex = keyPair.Key;
-                                var confirmedBlockHash = chain.Blocks[confirmedBlockIndex].Hash;
-                                var spentTxIndices = keyPair.Value;
-                                spentTxIndices.Sort();
+                                // collect pruning information and group it by block
+                                gatherStopwatch.Start();
+                                IImmutableList<SpentTx> spentTxes;
+                                if (this.chainStateCursor.TryGetBlockSpentTxes(blockHeight, out spentTxes))
+                                {
+                                    foreach (var spentTx in spentTxes)
+                                    {
+                                        // cooperative loop
+                                        this.ThrowIfCancelled();
 
-                                this.coreStorage.PruneElements(confirmedBlockHash, spentTxIndices);
-                            });
-                        pruneStopwatch.Stop();
+                                        if (!pruneData.ContainsKey(spentTx.ConfirmedBlockIndex))
+                                            pruneData[spentTx.ConfirmedBlockIndex] = new List<int>();
 
-                        //TODO properly sync commits before removing
-                        // remove the pruning information
-                        cleanStopwatch.Start();
-                        for (var blockHeight = minHeight; blockHeight <= maxHeight; blockHeight++)
-                        {
-                            this.chainStateCursor.TryRemoveBlockSpentTxes(blockHeight);
+                                        txCount++;
+                                        pruneData[spentTx.ConfirmedBlockIndex].Add(spentTx.TxIndex);
+                                    }
+                                }
+                                gatherStopwatch.Stop();
+                            }
+
+                            // prune the spent transactions from each block
+                            pruneStopwatch.Start();
+                            //foreach (var keyPair in pruneData)
+                            Parallel.ForEach(pruneData,
+                                new ParallelOptions { MaxDegreeOfParallelism = 4 },
+                                keyPair =>
+                                {
+                                    // cooperative loop
+                                    this.ThrowIfCancelled();
+
+                                    var confirmedBlockIndex = keyPair.Key;
+                                    var confirmedBlockHash = chain.Blocks[confirmedBlockIndex].Hash;
+                                    var spentTxIndices = keyPair.Value;
+                                    spentTxIndices.Sort();
+
+                                    this.coreStorage.PruneElements(confirmedBlockHash, spentTxIndices);
+                                });
+                            pruneStopwatch.Stop();
+
+                            flushStopwatch.Start();
+                            this.coreStorage.FlushBlockTxes();
+                            flushStopwatch.Stop();
+
+                            //TODO properly sync commits before removing
+                            // remove the pruning information
+                            cleanStopwatch.Start();
+                            for (var blockHeight = minHeight; blockHeight <= maxHeight; blockHeight++)
+                            {
+                                this.chainStateCursor.TryRemoveBlockSpentTxes(blockHeight);
+                            }
+                            cleanStopwatch.Stop();
+                            //}
+
+                            commitStopwatch.Start();
+                            this.chainStateCursor.CommitTransaction();
+                            committed = true;
+                            commitStopwatch.Stop();
+
+                            this.lastPruneHeight = maxHeight;
+
+                            var txRate = txCount / totalStopwatch.Elapsed.TotalSeconds;
+                            this.logger.Info(
+@"Pruned from block {0:#,##0} to {1:#,##0}:
+- tx count: {2,10:#,##0}
+- tx rate:  {3,10:#,##0}/s
+- gather:       {4,10:#,##0.000}s
+- prune:        {5,10:#,##0.000}s
+- flush:        {6,10:#,##0.000}s
+- clean:        {7,10:#,##0.000}s
+- commit:       {8,10:#,##0.000}s
+- TOTAL:        {9,10:#,##0.000}s"
+                                .Format2(minHeight, maxHeight, txCount, txRate, gatherStopwatch.Elapsed.TotalSeconds, pruneStopwatch.Elapsed.TotalSeconds, flushStopwatch.Elapsed.TotalSeconds, cleanStopwatch.Elapsed.TotalSeconds, commitStopwatch.Elapsed.TotalSeconds, totalStopwatch.Elapsed.TotalSeconds));
                         }
-                        cleanStopwatch.Stop();
-                        //}
-
-                        this.lastPruneHeight = maxHeight;
-
-                        var txRate = txCount / totalStopwatch.Elapsed.TotalSeconds;
-                        this.logger.Info(
-    @"Pruned from block {0:#,##0} to {1:#,##0}:
-    - tx count: {2,10:#,##0}
-    - tx rate:  {3,10:#,##0}/s
-    - gather:       {4,10:#,##0.000}s
-    - prune:        {5,10:#,##0.000}s
-    - clean:        {6,10:#,##0.000}s
-    - TOTAL:        {7,10:#,##0.000}s"
-                            .Format2(minHeight, maxHeight, txCount, txRate, gatherStopwatch.Elapsed.TotalSeconds, pruneStopwatch.Elapsed.TotalSeconds, cleanStopwatch.Elapsed.TotalSeconds, totalStopwatch.Elapsed.TotalSeconds));
-
-                        break;
-                }
-
-                this.chainStateCursor.CommitTransaction();
-                committed = true;
-            }
-            catch (Exception)
-            {
-                this.chainStateCursor.RollbackTransaction();
-                throw;
-            }
-            finally
-            {
-                if (!committed)
-                    this.chainStateCursor.RollbackTransaction();
+                        finally
+                        {
+                            if (!committed)
+                                this.chainStateCursor.RollbackTransaction();
+                        }
+                    }
+                    break;
             }
 
             this.chainStateWorker.Start();
