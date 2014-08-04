@@ -66,11 +66,16 @@ namespace BitSharp.Core.Storage
             {
                 if (this.parentCurrentIndex != index)
                 {
-                    this.parentCursor.MoveToIndex(index);
+                    if (!this.parentCursor.TryMoveToIndex(index))
+                    {
+                        this.cachedNodes[index] = null;
+                        return false;
+                    }
+
                     this.parentCurrentIndex = index;
                 }
                 node = this.parentCursor.ReadNode();
-                
+
                 if (node.Index != index)
                     throw new InvalidOperationException();
                 this.cachedNodes[index] = node;
@@ -119,10 +124,10 @@ namespace BitSharp.Core.Storage
                 MerkleTreeNode nodeToLeft = null;
                 //do
                 //{
-                    if (this.parentCursor.TryMoveLeft())
-                        nodeToLeft = this.parentCursor.ReadNode();
-                    else
-                        nodeToLeft = null;
+                if (this.parentCursor.TryMoveLeft())
+                    nodeToLeft = this.parentCursor.ReadNode();
+                else
+                    nodeToLeft = null;
                 //} while (nodeToLeft != null); // && this.deletedIndices.Contains(nodeToLeft.Index));
 
                 this.indicesToLeft[this.currentIndex] = (nodeToLeft != null ? nodeToLeft.Index : (int?)null);
@@ -178,10 +183,10 @@ namespace BitSharp.Core.Storage
                 MerkleTreeNode nodeToRight = null;
                 //do
                 //{
-                    if (this.parentCursor.TryMoveRight())
-                        nodeToRight = this.parentCursor.ReadNode();
-                    else
-                        nodeToRight = null;
+                if (this.parentCursor.TryMoveRight())
+                    nodeToRight = this.parentCursor.ReadNode();
+                else
+                    nodeToRight = null;
                 //} while (nodeToRight != null); // && this.deletedIndices.Contains(nodeToRight.Index));
 
                 this.indicesToRight[this.currentIndex] = (nodeToRight != null ? nodeToRight.Index : (int?)null);
@@ -218,7 +223,7 @@ namespace BitSharp.Core.Storage
                     this.parentCurrentIndex = this.currentIndex;
                 }
                 node = this.parentCursor.ReadNode();
-                
+
                 if (node.Index != this.currentIndex)
                     throw new InvalidOperationException();
                 this.cachedNodes[this.currentIndex] = node;
