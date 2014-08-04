@@ -92,7 +92,7 @@ namespace BitSharp.Esent
                 //TODO i'm using -1 depth to mean not pruned, this should be interpreted as depth 0
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId, -1);
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId, DbEncoder.EncodeUInt256(txHash));
-                WriteTxBytes(cursor, txBytes);
+                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId, txBytes);
 
                 Api.JetUpdate(cursor.jetSession, cursor.blocksTableId);
             }
@@ -145,7 +145,7 @@ namespace BitSharp.Esent
 
         public bool TryReadBlockTransactions(UInt256 blockHash, out IEnumerable<BlockTx> blockTxes)
         {
-            var success = false;
+            CursorFreer cursorFreer = null;
             var cursor = this.OpenCursor();
             try
             {
@@ -163,8 +163,8 @@ namespace BitSharp.Esent
                 if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekGE)
                     && blockId == Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value)
                 {
-                    blockTxes = ReadBlockTransactions(blockHash, blockId, cursor);
-                    success = true;
+                    cursorFreer = new CursorFreer(cursor, () => this.FreeCursor(cursor));
+                    blockTxes = ReadBlockTransactions(blockHash, blockId, cursor, cursorFreer);
                     return true;
                 }
                 else
@@ -175,12 +175,39 @@ namespace BitSharp.Esent
             }
             finally
             {
-                if (!success)
+                if (cursorFreer == null)
                     this.FreeCursor(cursor);
             }
         }
 
-        private IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash, int blockId, BlockTxesCursor cursor)
+        private sealed class CursorFreer : IDisposable
+        {
+            private readonly BlockTxesCursor cursor;
+            private readonly Action disposeAction;
+            private int disposed;
+
+            public CursorFreer(BlockTxesCursor cursor, Action disposeAction)
+            {
+                this.cursor = cursor;
+                this.disposeAction = disposeAction;
+            }
+
+            ~CursorFreer()
+            {
+                this.Dispose();
+            }
+
+            public void Dispose()
+            {
+                GC.SuppressFinalize(this);
+                if (Interlocked.Increment(ref this.disposed) != 1)
+                    return;
+
+                this.disposeAction();
+            }
+        }
+
+        private IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash, int blockId, BlockTxesCursor cursor, CursorFreer cursorFreer)
         {
             try
             {
@@ -196,7 +223,7 @@ namespace BitSharp.Esent
                         var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
                         var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
                         var txHash = DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
-                        var txBytes = ReadTxBytes(cursor);
+                        var txBytes = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId);
 
                         // determine if transaction is pruned by its depth
                         var pruned = depth >= 0;
@@ -228,8 +255,7 @@ namespace BitSharp.Esent
             }
             finally
             {
-                //TODO if the enumerable isn't used, the cursor will never be freed
-                this.FreeCursor(cursor);
+                cursorFreer.Dispose();
             }
         }
 
@@ -253,7 +279,7 @@ namespace BitSharp.Esent
                     Api.MakeKey(cursor.jetSession, cursor.blocksTableId, txIndex, MakeKeyGrbit.None);
                     if (Api.TrySeek(cursor.jetSession, cursor.blocksTableId, SeekGrbit.SeekEQ))
                     {
-                        var txBytes = ReadTxBytes(cursor);
+                        var txBytes = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId);
                         if (txBytes != null)
                         {
                             transaction = DataEncoder.DecodeTransaction(txBytes);
@@ -365,11 +391,7 @@ namespace BitSharp.Esent
             JET_COLUMNID blockTxIndexColumnId;
             JET_COLUMNID blockDepthColumnId;
             JET_COLUMNID blockTxHashColumnId;
-            JET_COLUMNID blockTxBytes0ColumnId;
-            JET_COLUMNID blockTxBytes1ColumnId;
-            JET_COLUMNID blockTxBytes2ColumnId;
-            JET_COLUMNID blockTxBytes3ColumnId;
-            JET_COLUMNID blockTxBytesLongColumnId;
+            JET_COLUMNID blockTxBytesColumnId;
 
             using (var jetSession = new Session(this.jetInstance))
             {
@@ -420,11 +442,7 @@ namespace BitSharp.Esent
                 Api.JetAddColumn(jetSession, blocksTableId, "TxIndex", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out blockTxIndexColumnId);
                 Api.JetAddColumn(jetSession, blocksTableId, "Depth", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out blockDepthColumnId);
                 Api.JetAddColumn(jetSession, blocksTableId, "TxHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL | ColumndefGrbit.ColumnFixed }, null, 0, out blockTxHashColumnId);
-                Api.JetAddColumn(jetSession, blocksTableId, "TxBytes0", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary }, null, 0, out blockTxBytes0ColumnId);
-                Api.JetAddColumn(jetSession, blocksTableId, "TxBytes1", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary }, null, 0, out blockTxBytes1ColumnId);
-                Api.JetAddColumn(jetSession, blocksTableId, "TxBytes2", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary }, null, 0, out blockTxBytes2ColumnId);
-                Api.JetAddColumn(jetSession, blocksTableId, "TxBytes3", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary }, null, 0, out blockTxBytes3ColumnId);
-                Api.JetAddColumn(jetSession, blocksTableId, "TxBytesLong", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary }, null, 0, out blockTxBytesLongColumnId);
+                Api.JetAddColumn(jetSession, blocksTableId, "TxBytes", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary }, null, 0, out blockTxBytesColumnId);
 
                 Api.JetCreateIndex2(jetSession, blocksTableId,
                     new JET_INDEXCREATE[]
@@ -432,7 +450,7 @@ namespace BitSharp.Esent
                         new JET_INDEXCREATE
                         {
                             cbKeyMost = 255,
-                            grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                            grbit = CreateIndexGrbit.IndexUnique | CreateIndexGrbit.IndexDisallowNull,
                             szIndexName = "IX_BlockIdTxIndex",
                             szKey = "+BlockId\0+TxIndex\0\0",
                             cbKey = "+BlockId\0+TxIndex\0\0".Length
@@ -676,7 +694,7 @@ namespace BitSharp.Esent
                     int actualPages;
                     Windows8Api.JetResizeDatabase(cursor.jetSession, cursor.blockDbId, 0, out actualPages, Windows81Grbits.OnlyShrink);
 
-                    this.logger.Info("Finished shrinking block txes database: {0:#,##0} pages".Format2(actualPages));
+                    this.logger.Info("Finished shrinking block txes database: {0:#,##0} MB".Format2((float)actualPages * SystemParameters.DatabasePageSize / 1.MILLION()));
                 }
             }
             finally
@@ -743,110 +761,6 @@ namespace BitSharp.Esent
             {
                 blockId = default(int);
                 return false;
-            }
-        }
-
-        private byte[] ReadTxBytes(BlockTxesCursor cursor)
-        {
-            var txBytesLong = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesLongColumnId);
-            if (txBytesLong != null)
-            {
-                return txBytesLong;
-            }
-            else
-            {
-                var txBytes0 = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytes0ColumnId);
-                var txBytes1 = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytes1ColumnId);
-                var txBytes2 = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytes2ColumnId);
-                var txBytes3 = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytes3ColumnId);
-
-                return MergeTx(txBytes0, txBytes1, txBytes2, txBytes3);
-            }
-        }
-
-        private void WriteTxBytes(BlockTxesCursor cursor, byte[] txBytes)
-        {
-            if (txBytes.Length <= 1020)
-            {
-                byte[] txBytes0, txBytes1, txBytes2, txBytes3;
-                SplitTx(txBytes, out txBytes0, out txBytes1, out txBytes2, out txBytes3);
-                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytes0ColumnId, txBytes0);
-                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytes1ColumnId, txBytes1);
-                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytes2ColumnId, txBytes2);
-                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytes3ColumnId, txBytes3);
-            }
-            else
-            {
-                Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesLongColumnId, txBytes);
-            }
-        }
-
-        private void SplitTx(byte[] txBytes, out byte[] txBytes0, out byte[] txBytes1, out byte[] txBytes2, out byte[] txBytes3)
-        {
-            if (txBytes.Length > 1020)
-                throw new InvalidOperationException();
-
-            txBytes0 = txBytes1 = txBytes2 = txBytes3 = null;
-
-            if (txBytes.Length > 0)
-            {
-                var count = Math.Min(255, txBytes.Length);
-                txBytes0 = new byte[count];
-                Buffer.BlockCopy(txBytes, 0, txBytes0, 0, count);
-            }
-
-            if (txBytes.Length > 255)
-            {
-                var count = Math.Min(255, txBytes.Length - 255);
-                txBytes1 = new byte[count];
-                Buffer.BlockCopy(txBytes, 255, txBytes1, 0, count);
-            }
-
-            if (txBytes.Length > 510)
-            {
-                var count = Math.Min(255, txBytes.Length - 510);
-                txBytes2 = new byte[count];
-                Buffer.BlockCopy(txBytes, 510, txBytes2, 0, count);
-            }
-
-            if (txBytes.Length > 765)
-            {
-                var count = Math.Min(255, txBytes.Length - 765);
-                txBytes3 = new byte[count];
-                Buffer.BlockCopy(txBytes, 765, txBytes3, 0, count);
-            }
-        }
-
-
-        private byte[] MergeTx(byte[] txBytes0, byte[] txBytes1, byte[] txBytes2, byte[] txBytes3)
-        {
-            var count =
-                (txBytes0 != null ? txBytes0.Length : 0)
-                + (txBytes1 != null ? txBytes1.Length : 0)
-                + (txBytes2 != null ? txBytes2.Length : 0)
-                + (txBytes3 != null ? txBytes3.Length : 0);
-
-            if (count == 0)
-            {
-                return null;
-            }
-            else
-            {
-                var txBytes = new byte[count];
-
-                if (txBytes0 != null)
-                    Buffer.BlockCopy(txBytes0, 0, txBytes, 0, txBytes0.Length);
-
-                if (txBytes1 != null)
-                    Buffer.BlockCopy(txBytes1, 0, txBytes, 255, txBytes1.Length);
-
-                if (txBytes2 != null)
-                    Buffer.BlockCopy(txBytes2, 0, txBytes, 510, txBytes2.Length);
-
-                if (txBytes3 != null)
-                    Buffer.BlockCopy(txBytes3, 0, txBytes, 765, txBytes3.Length);
-
-                return txBytes;
             }
         }
     }
