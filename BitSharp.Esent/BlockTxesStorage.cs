@@ -100,14 +100,14 @@ namespace BitSharp.Esent
         public void PruneElements(UInt256 blockHash, IEnumerable<int> txIndices)
         {
             using (var pruningCursor = OpenPruningCursor(blockHash))
-            using (var cachedCursor = new CachedMerkleTreePruningCursor(pruningCursor))
+            //using (var cachedCursor = new CachedMerkleTreePruningCursor(pruningCursor))
             {
                 pruningCursor.BeginTransaction();
                 try
                 {
                     // prune the transactions
                     foreach (var index in txIndices)
-                        MerkleTree.PruneNode(cachedCursor, index);
+                        MerkleTree.PruneNode(pruningCursor, index);
 
                     pruningCursor.CommitTransaction();
                 }
