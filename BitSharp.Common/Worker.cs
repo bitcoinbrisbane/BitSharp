@@ -27,7 +27,6 @@ namespace BitSharp.Common
         private readonly ManualResetEventSlim idleEvent;
 
         private bool isStarted;
-        private bool isStopping;
         private bool isDisposing;
         private bool isDisposed;
 
@@ -47,7 +46,6 @@ namespace BitSharp.Common
             this.idleEvent = new ManualResetEventSlim(false);
 
             this.isStarted = false;
-            this.isStopping = false;
             this.isDisposing = false;
             this.isDisposed = false;
 
@@ -68,11 +66,10 @@ namespace BitSharp.Common
 
             if (!this.isStarted)
             {
-                this.isStopping = false;
+                this.isStarted = true;
 
                 this.SubStart();
 
-                this.isStarted = true;
                 this.startEvent.Set();
             }
         }
@@ -83,12 +80,10 @@ namespace BitSharp.Common
 
             if (this.isStarted)
             {
-                this.isStopping = true;
+                this.isStarted = false;
 
                 this.SubStop();
 
-                this.isStarted = false;
-                
                 this.startEvent.Reset();
                 this.forceNotifyEvent.Set();
                 this.notifyEvent.Set();
@@ -97,8 +92,6 @@ namespace BitSharp.Common
                 {
                     this.logger.Warn("Worker failed to stop: {0}".Format2(this.Name));
                 }
-
-                this.isStopping = false;
             }
         }
 
@@ -196,7 +189,7 @@ namespace BitSharp.Common
         {
             CheckDisposed();
 
-            if (this.isStopping || !this.isStarted)
+            if (!this.isStarted)
                 throw new OperationCanceledException();
         }
 
@@ -257,6 +250,12 @@ namespace BitSharp.Common
                         {
                             WorkAction();
                         }
+                        catch (OperationCanceledException) { throw; }
+                        catch (Exception e)
+                        {
+                            this.logger.ErrorException("Unhandled worker exception", e);
+                            Debugger.Break();
+                        }
                         finally
                         {
                             workerTime.Stop();
@@ -287,6 +286,7 @@ namespace BitSharp.Common
             catch (Exception e)
             {
                 this.logger.FatalException("Unhandled worker exception", e);
+                Debugger.Break();
             }
             finally
             {
