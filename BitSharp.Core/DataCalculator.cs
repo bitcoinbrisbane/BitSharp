@@ -58,15 +58,15 @@ namespace BitSharp.Core
         public static UInt256 BitsToTarget(UInt32 bits)
         {
             // last three bytes store the multiplicand
-            var multiplicand = (UInt256)bits % 0x1000000;
+            var multiplicand = (BigInteger)bits % 0x1000000;
             if (multiplicand > 0x7fffff)
                 throw new ArgumentOutOfRangeException("bits");
 
             // first byte stores the value to be used in the power
             var powerPart = (int)(bits >> 24);
-            var multiplier = new UInt256(BigInteger.Pow(2, 8 * (powerPart - 3)));
+            var multiplier = BigInteger.Pow(2, 8 * (powerPart - 3));
 
-            return multiplicand * multiplier;
+            return new UInt256(multiplicand * multiplier);
         }
 
         public static UInt32 TargetToBits(UInt256 target)
