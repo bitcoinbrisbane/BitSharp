@@ -17,11 +17,13 @@ namespace BitSharp.Core
     {
         public static void PruneNode(IMerkleTreePruningCursor cursor, int index)
         {
-            cursor.MoveToIndex(index);
+            if (!cursor.TryMoveToIndex(index))
+                return;
+            
             var node = cursor.ReadNode();
 
             if (node.Depth != 0)
-                throw new InvalidOperationException();
+                return;
 
             if (!node.Pruned)
             {
