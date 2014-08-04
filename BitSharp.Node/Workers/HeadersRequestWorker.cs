@@ -86,6 +86,7 @@ namespace BitSharp.Node.Workers
             this.headersRequestsByPeer.RemoveWhere(x => (now - x.Value) > STALE_REQUEST_TIME);
 
             // loop through each connected peer
+            var requestCount = 0;
             foreach (var peer in this.localClient.ConnectedPeers)
             {
                 // determine if a new request can be made
@@ -94,8 +95,10 @@ namespace BitSharp.Node.Workers
                     // send out the request for headers
                     requestTasks.Add(peer.Sender.SendGetHeaders(blockLocatorHashes, hashStop: 0));
 
-                    // only send out a single header request at a time
-                    break;
+                    // only send out a few header requests at a time
+                    requestCount++;
+                    if (requestCount >= 5)
+                        break;
                 }
             }
         }
@@ -111,14 +114,8 @@ namespace BitSharp.Node.Workers
                 var peer = flushHeaders.Peer;
                 var blockHeaders = flushHeaders.Headers;
 
-                foreach (var blockHeader in blockHeaders)
-                {
-                    // cooperative loop
-                    this.ThrowIfCancelled();
-
-                    ChainedHeader chainedHeader;
-                    this.coreStorage.TryChainHeader(blockHeader, out chainedHeader);
-                }
+                // chain the downloaded headers
+                this.coreStorage.ChainHeaders(blockHeaders);
 
                 DateTime ignore;
                 this.headersRequestsByPeer.TryRemove(peer, out ignore);

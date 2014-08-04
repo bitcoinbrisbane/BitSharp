@@ -116,16 +116,39 @@ namespace BitSharp.Core.Storage
             }
         }
 
+        public void ChainHeaders(IEnumerable<BlockHeader> blockHeaders)
+        {
+            var added = false;
+            try
+            {
+                foreach (var blockHeader in blockHeaders)
+                {
+                    ChainedHeader ignore;
+                    added |= TryChainHeader(blockHeader, out ignore, suppressEvent: true);
+                }
+            }
+            finally
+            {
+                if (added)
+                    RaiseChainedHeaderAdded(/*TODO*/null);
+            }
+        }
+
         public bool TryChainHeader(BlockHeader blockHeader, out ChainedHeader chainedHeader)
+        {
+            return TryChainHeader(blockHeader, out chainedHeader, suppressEvent: false);
+        }
+
+        private bool TryChainHeader(BlockHeader blockHeader, out ChainedHeader chainedHeader, bool suppressEvent)
         {
             if (TryGetChainedHeader(blockHeader.Hash, out chainedHeader))
             {
-                return true;
+                return false;
             }
             else
             {
                 ChainedHeader previousChainedHeader;
-                if (this.blockStorage.TryGetChainedHeader(blockHeader.PreviousBlock, out previousChainedHeader))
+                if (TryGetChainedHeader(blockHeader.PreviousBlock, out previousChainedHeader))
                 {
                     var headerWork = blockHeader.CalculateWork();
                     if (headerWork < 0)
@@ -139,7 +162,10 @@ namespace BitSharp.Core.Storage
                     {
                         this.cachedHeaders[chainedHeader.Hash] = chainedHeader;
                         this.missingHeaders.Remove(chainedHeader.Hash);
-                        RaiseChainedHeaderAdded(chainedHeader);
+
+                        if (!suppressEvent)
+                            RaiseChainedHeaderAdded(chainedHeader);
+
                         return true;
                     }
                     else
@@ -166,7 +192,7 @@ namespace BitSharp.Core.Storage
         public bool TryAddBlock(Block block)
         {
             ChainedHeader chainedHeader;
-            if (TryChainHeader(block.Header, out chainedHeader))
+            if (TryGetChainedHeader(block.Hash, out chainedHeader) || TryChainHeader(block.Header, out chainedHeader))
             {
                 if (this.blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions))
                 {
