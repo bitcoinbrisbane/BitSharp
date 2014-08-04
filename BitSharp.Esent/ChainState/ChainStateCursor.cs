@@ -114,17 +114,18 @@ namespace BitSharp.Esent
             if (!this.inTransaction)
                 throw new InvalidOperationException();
 
-            Api.JetPrepareUpdate(this.jetSession, this.chainTableId, JET_prep.Insert);
             try
             {
-                Api.SetColumn(this.jetSession, this.chainTableId, this.blockHeightColumnId, chainedHeader.Height);
-                Api.SetColumn(this.jetSession, this.chainTableId, this.chainedHeaderBytesColumnId, DataEncoder.EncodeChainedHeader(chainedHeader));
+                using (var jetUpdate = this.jetSession.BeginUpdate(this.chainTableId, JET_prep.Insert))
+                {
+                    Api.SetColumn(this.jetSession, this.chainTableId, this.blockHeightColumnId, chainedHeader.Height);
+                    Api.SetColumn(this.jetSession, this.chainTableId, this.chainedHeaderBytesColumnId, DataEncoder.EncodeChainedHeader(chainedHeader));
 
-                Api.JetUpdate(this.jetSession, this.chainTableId);
+                    jetUpdate.Save();
+                }
             }
             catch (Exception e)
             {
-                Api.JetPrepareUpdate(this.jetSession, this.chainTableId, JET_prep.Cancel);
                 throw new InvalidOperationException("Failed to add chained header.", e);
             }
         }
@@ -184,25 +185,19 @@ namespace BitSharp.Esent
 
             try
             {
-                Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Insert);
-                try
+                using (var jetUpdate = this.jetSession.BeginUpdate(this.unspentTxTableId, JET_prep.Insert))
                 {
                     Api.SetColumn(this.jetSession, this.unspentTxTableId, this.txHashColumnId, DbEncoder.EncodeUInt256(unspentTx.TxHash));
                     Api.SetColumn(this.jetSession, this.unspentTxTableId, this.blockIndexColumnId, unspentTx.BlockIndex);
                     Api.SetColumn(this.jetSession, this.unspentTxTableId, this.txIndexColumnId, unspentTx.TxIndex);
                     Api.SetColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
 
-                    Api.JetUpdate(this.jetSession, this.unspentTxTableId);
+                    jetUpdate.Save();
 
                     // increase unspent tx count
                     Api.EscrowUpdate(this.jetSession, this.globalsTableId, this.unspentTxCountColumnId, +1);
 
                     return true;
-                }
-                catch (Exception)
-                {
-                    Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Cancel);
-                    throw;
                 }
             }
             catch (EsentKeyDuplicateException)
@@ -247,17 +242,11 @@ namespace BitSharp.Esent
 
             if (Api.TrySeek(this.jetSession, this.unspentTxTableId, SeekGrbit.SeekEQ))
             {
-                Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Replace);
-                try
+                using (var jetUpdate = this.jetSession.BeginUpdate(this.unspentTxTableId, JET_prep.Replace))
                 {
                     Api.SetColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
 
-                    Api.JetUpdate(this.jetSession, this.unspentTxTableId);
-                }
-                catch (Exception)
-                {
-                    Api.JetPrepareUpdate(this.jetSession, this.unspentTxTableId, JET_prep.Cancel);
-                    throw;
+                    jetUpdate.Save();
                 }
 
                 return true;
@@ -322,8 +311,7 @@ namespace BitSharp.Esent
         {
             try
             {
-                Api.JetPrepareUpdate(this.jetSession, this.spentTxTableId, JET_prep.Insert);
-                try
+                using (var jetUpdate = this.jetSession.BeginUpdate(this.spentTxTableId, JET_prep.Insert))
                 {
                     byte[] spentTxesBytes;
                     using (var stream = new MemoryStream())
@@ -336,12 +324,7 @@ namespace BitSharp.Esent
                     Api.SetColumn(this.jetSession, this.spentTxTableId, this.spentSpentBlockIndexColumnId, blockIndex);
                     Api.SetColumn(this.jetSession, this.spentTxTableId, this.spentDataColumnId, spentTxesBytes);
 
-                    Api.JetUpdate(this.jetSession, this.spentTxTableId);
-                }
-                catch (Exception)
-                {
-                    Api.JetPrepareUpdate(this.jetSession, this.spentTxTableId, JET_prep.Cancel);
-                    throw;
+                    jetUpdate.Save();
                 }
 
                 return true;

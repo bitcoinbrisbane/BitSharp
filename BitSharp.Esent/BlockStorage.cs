@@ -79,11 +79,9 @@ namespace BitSharp.Esent
                 var cursor = this.OpenCursor();
                 try
                 {
-                    Api.JetBeginTransaction(cursor.jetSession);
-                    try
+                    using (var jetTx = cursor.jetSession.BeginTransaction())
                     {
-                        Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Insert);
-                        try
+                        using (var jetUpdate = cursor.jetSession.BeginUpdate(cursor.blockHeadersTableId, JET_prep.Insert))
                         {
                             Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderHashColumnId, DbEncoder.EncodeUInt256(chainedHeader.Hash));
                             Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderPreviousHashColumnId, DbEncoder.EncodeUInt256(chainedHeader.PreviousBlockHash));
@@ -91,22 +89,11 @@ namespace BitSharp.Esent
                             Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderTotalWorkColumnId, DataEncoder.EncodeTotalWork(chainedHeader.TotalWork));
                             Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderBytesColumnId, DataEncoder.EncodeChainedHeader(chainedHeader));
 
-                            Api.JetUpdate(cursor.jetSession, cursor.blockHeadersTableId);
-                        }
-                        catch (Exception)
-                        {
-                            Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Cancel);
-                            throw;
+                            jetUpdate.Save();
                         }
 
-                        Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
-
+                        jetTx.CommitLazy();
                         return true;
-                    }
-                    catch (Exception)
-                    {
-                        Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
-                        throw;
                     }
                 }
                 finally
@@ -149,8 +136,7 @@ namespace BitSharp.Esent
             var cursor = this.OpenCursor();
             try
             {
-                Api.JetBeginTransaction(cursor.jetSession);
-                try
+                using (var jetTx = cursor.jetSession.BeginTransaction())
                 {
                     bool removed;
 
@@ -166,13 +152,8 @@ namespace BitSharp.Esent
                         removed = false;
                     }
 
-                    Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
+                    jetTx.CommitLazy();
                     return removed;
-                }
-                catch (Exception)
-                {
-                    Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
-                    throw;
                 }
             }
             finally
@@ -266,8 +247,7 @@ namespace BitSharp.Esent
             var cursor = this.OpenCursor();
             try
             {
-                Api.JetBeginTransaction(cursor.jetSession);
-                try
+                using (var jetTx = cursor.jetSession.BeginTransaction())
                 {
                     Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockHeadersTableId, "IX_BlockHash");
                     Api.MakeKey(cursor.jetSession, cursor.blockHeadersTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
@@ -275,25 +255,14 @@ namespace BitSharp.Esent
                     if (!Api.TrySeek(cursor.jetSession, cursor.blockHeadersTableId, SeekGrbit.SeekEQ))
                         throw new MissingDataException(blockHash);
 
-                    Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Replace);
-                    try
+                    using (var jetUpdate = cursor.jetSession.BeginUpdate(cursor.blockHeadersTableId, JET_prep.Replace))
                     {
                         Api.SetColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderValidColumnId, false);
 
-                        Api.JetUpdate(cursor.jetSession, cursor.blockHeadersTableId);
-                    }
-                    catch (Exception)
-                    {
-                        Api.JetPrepareUpdate(cursor.jetSession, cursor.blockHeadersTableId, JET_prep.Cancel);
-                        throw;
+                        jetUpdate.Save();
                     }
 
-                    Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
-                }
-                catch (Exception)
-                {
-                    Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
-                    throw;
+                    jetTx.CommitLazy();
                 }
             }
             finally
@@ -337,15 +306,11 @@ namespace BitSharp.Esent
                 Api.JetAddColumn(jetSession, globalsTableId, "Flush", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnEscrowUpdate }, defaultValue, defaultValue.Length, out flushColumnId);
 
                 // initialize global data
-                Api.JetPrepareUpdate(jetSession, globalsTableId, JET_prep.Insert);
-                try
+                using (var jetUpdate = jetSession.BeginUpdate(globalsTableId, JET_prep.Insert))
                 {
                     Api.SetColumn(jetSession, globalsTableId, flushColumnId, 0);
-                    Api.JetUpdate(jetSession, globalsTableId);
-                }
-                catch (Exception)
-                {
-                    Api.JetPrepareUpdate(jetSession, globalsTableId, JET_prep.Cancel);
+                    
+                    jetUpdate.Save();
                 }
 
                 Api.JetCloseTable(jetSession, globalsTableId);
@@ -434,16 +399,11 @@ namespace BitSharp.Esent
                     try
                     {
                         // reset flush column
-                        Api.JetPrepareUpdate(cursor.jetSession, cursor.globalsTableId, JET_prep.Replace);
-                        try
+                        using (var jetUpdate = cursor.jetSession.BeginUpdate(cursor.globalsTableId, JET_prep.Replace))
                         {
                             Api.SetColumn(cursor.jetSession, cursor.globalsTableId, cursor.flushColumnId, 0);
-                            Api.JetUpdate(cursor.jetSession, cursor.globalsTableId);
-                        }
-                        catch (Exception)
-                        {
-                            Api.JetPrepareUpdate(cursor.jetSession, cursor.globalsTableId, JET_prep.Cancel);
-                            throw;
+
+                            jetUpdate.Save();
                         }
                     }
                     finally
@@ -479,16 +439,10 @@ namespace BitSharp.Esent
             var cursor = this.OpenCursor();
             try
             {
-                Api.JetBeginTransaction(cursor.jetSession);
-                try
+                using (var jetTx = cursor.jetSession.BeginTransaction())
                 {
                     Api.EscrowUpdate(cursor.jetSession, cursor.globalsTableId, cursor.flushColumnId, 1);
-                    Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.None);
-                }
-                catch (Exception)
-                {
-                    Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
-                    throw;
+                    jetTx.Commit(CommitTransactionGrbit.None);
                 }
             }
             finally

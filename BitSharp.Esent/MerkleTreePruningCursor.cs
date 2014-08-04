@@ -96,8 +96,7 @@ namespace BitSharp.Esent
             if (this.blockId != Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value)
                 throw new InvalidOperationException();
 
-            Api.JetPrepareUpdate(cursor.jetSession, cursor.blocksTableId, JET_prep.Replace);
-            try
+            using (var jetUpdate = cursor.jetSession.BeginUpdate(cursor.blocksTableId, JET_prep.Replace))
             {
                 Debug.Assert(node.Index == Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value);
 
@@ -105,12 +104,7 @@ namespace BitSharp.Esent
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId, DbEncoder.EncodeUInt256(node.Hash));
                 Api.SetColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId, null);
 
-                Api.JetUpdate(cursor.jetSession, cursor.blocksTableId);
-            }
-            catch (Exception)
-            {
-                Api.JetPrepareUpdate(cursor.jetSession, cursor.blocksTableId, JET_prep.Cancel);
-                throw;
+                jetUpdate.Save();
             }
         }
 

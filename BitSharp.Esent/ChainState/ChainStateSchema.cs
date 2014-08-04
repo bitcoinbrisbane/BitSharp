@@ -38,16 +38,11 @@ namespace BitSharp.Esent.ChainState
             Api.JetAddColumn(jetSession, globalsTableId, "UnspentTxCount", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnEscrowUpdate }, defaultValue, defaultValue.Length, out unspentTxCountColumnId);
 
             // initialize global data
-            Api.JetPrepareUpdate(jetSession, globalsTableId, JET_prep.Insert);
-            try
+            using (var jetUpdate = jetSession.BeginUpdate(globalsTableId, JET_prep.Insert))
             {
                 Api.SetColumn(jetSession, globalsTableId, unspentTxCountColumnId, 0);
 
-                Api.JetUpdate(jetSession, globalsTableId);
-            }
-            catch (Exception)
-            {
-                Api.JetPrepareUpdate(jetSession, globalsTableId, JET_prep.Cancel);
+                jetUpdate.Save();
             }
 
             Api.JetCloseTable(jetSession, globalsTableId);

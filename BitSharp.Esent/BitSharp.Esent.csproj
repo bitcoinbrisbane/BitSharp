@@ -88,6 +88,7 @@
     <Compile Include="DbEncoder.cs" />
     <Compile Include="BlockCursor.cs" />
     <Compile Include="BlockTxesCursor.cs" />
+    <Compile Include="ExtensionMethods.cs" />
     <Compile Include="MerkleTreePruningCursor.cs" />
     <Compile Include="BlockStorage.cs" />
     <Compile Include="BlockTxesStorage.cs" />
