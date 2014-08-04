@@ -138,13 +138,18 @@ namespace BitSharp.Core.Workers
 
                             // prune the spent transactions from each block
                             pruneStopwatch.Start();
-                            //foreach (var keyPair in pruneData)
+                            var cancelled = false;
                             Parallel.ForEach(pruneData,
                                 new ParallelOptions { MaxDegreeOfParallelism = 4 },
-                                keyPair =>
+                                (keyPair, loopState) =>
                                 {
                                     // cooperative loop
-                                    this.ThrowIfCancelled();
+                                    if (!this.IsStarted)
+                                    {
+                                        cancelled = true;
+                                        loopState.Stop();
+                                        return;
+                                    }
 
                                     var confirmedBlockIndex = keyPair.Key;
                                     var confirmedBlockHash = chain.Blocks[confirmedBlockIndex].Hash;
@@ -153,6 +158,8 @@ namespace BitSharp.Core.Workers
 
                                     this.coreStorage.PruneElements(confirmedBlockHash, spentTxIndices);
                                 });
+                            if (cancelled)
+                                throw new OperationCanceledException();
                             pruneStopwatch.Stop();
 
                             flushStopwatch.Start();
