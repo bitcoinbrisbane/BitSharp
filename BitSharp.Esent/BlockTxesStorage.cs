@@ -204,48 +204,43 @@ namespace BitSharp.Esent
 
         private IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash, int blockId, BlockTxesCursor cursor, CursorFreer cursorFreer)
         {
-            try
+            using (cursorFreer)
+            using (var jetTx = cursor.jetSession.BeginTransaction())
             {
                 var sha256 = new SHA256Managed();
-                using (var jetTx = cursor.jetSession.BeginTransaction())
+
+                do
                 {
-                    do
+                    if (blockId != Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value)
+                        yield break;
+
+                    var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
+                    var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
+                    var txHash = DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
+                    var txBytes = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId);
+
+                    // determine if transaction is pruned by its depth
+                    var pruned = depth >= 0;
+                    depth = Math.Max(0, depth);
+
+                    BitSharp.Core.Domain.Transaction tx;
+                    if (!pruned)
                     {
-                        if (blockId != Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value)
-                            yield break;
+                        // verify transaction is not corrupt
+                        if (txHash != new UInt256(sha256.ComputeDoubleHash(txBytes)))
+                            throw new MissingDataException(blockHash);
 
-                        var txIndex = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockTxIndexColumnId).Value;
-                        var depth = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockDepthColumnId).Value;
-                        var txHash = DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
-                        var txBytes = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId);
+                        tx = DataEncoder.DecodeTransaction(txBytes);
+                    }
+                    else
+                    {
+                        tx = null;
+                    }
 
-                        // determine if transaction is pruned by its depth
-                        var pruned = depth >= 0;
-                        depth = Math.Max(0, depth);
+                    var blockTx = new BlockTx(txIndex, depth, txHash, pruned, tx);
 
-                        BitSharp.Core.Domain.Transaction tx;
-                        if (!pruned)
-                        {
-                            // verify transaction is not corrupt
-                            if (txHash != new UInt256(sha256.ComputeDoubleHash(txBytes)))
-                                throw new MissingDataException(blockHash);
-
-                            tx = DataEncoder.DecodeTransaction(txBytes);
-                        }
-                        else
-                        {
-                            tx = null;
-                        }
-
-                        var blockTx = new BlockTx(txIndex, depth, txHash, pruned, tx);
-
-                        yield return blockTx;
-                    } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));
-                }
-            }
-            finally
-            {
-                cursorFreer.Dispose();
+                    yield return blockTx;
+                } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));
             }
         }
 
@@ -502,7 +497,7 @@ namespace BitSharp.Esent
                         {
                             blockId = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blockIdsTableId, cursor.blockIdsIdColumnId, RetrieveColumnGrbit.RetrieveCopy).Value;
                             Api.SetColumn(cursor.jetSession, cursor.blockIdsTableId, cursor.blockIdsHashColumnId, DbEncoder.EncodeUInt256(blockHash));
-                            
+
                             jetUpdate.Save();
                         }
 
