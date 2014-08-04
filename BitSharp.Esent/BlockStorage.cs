@@ -512,7 +512,7 @@ namespace BitSharp.Esent
                     int actualPages;
                     Windows8Api.JetResizeDatabase(cursor.jetSession, cursor.blockDbId, 0, out actualPages, Windows81Grbits.OnlyShrink);
 
-                    this.logger.Info("Finished shrinking block database: {0:#,##0} pages".Format2(actualPages));
+                    this.logger.Info("Finished shrinking block database: {0:#,##0} MB".Format2((float)actualPages * SystemParameters.DatabasePageSize / 1.MILLION()));
                 }
             }
             finally
