@@ -68,6 +68,7 @@ namespace BitSharp.Core.Storage
                 {
                     if (!this.parentCursor.TryMoveToIndex(index))
                     {
+                        this.parentCurrentIndex = -1;
                         this.cachedNodes[index] = null;
                         return false;
                     }
