@@ -114,6 +114,7 @@ namespace BitSharp.Esent
                 catch (Exception)
                 {
                     pruningCursor.RollbackTransaction();
+                    throw;
                 }
             }
         }
