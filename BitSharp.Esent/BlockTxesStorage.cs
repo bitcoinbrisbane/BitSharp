@@ -228,6 +228,7 @@ namespace BitSharp.Esent
             }
             finally
             {
+                //TODO if the enumerable isn't used, the cursor will never be freed
                 this.FreeCursor(cursor);
             }
         }
@@ -525,11 +526,13 @@ namespace BitSharp.Esent
                 var cursor = this.OpenCursor();
                 try
                 {
+                    int blockId;
+                    if (this.TryGetBlockId(cursor, blockHash, out blockId))
+                        return false;
+
                     Api.JetBeginTransaction(cursor.jetSession);
                     try
                     {
-                        int blockId;
-
                         Api.JetPrepareUpdate(cursor.jetSession, cursor.blockIdsTableId, JET_prep.Insert);
                         try
                         {
