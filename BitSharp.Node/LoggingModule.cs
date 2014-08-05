@@ -6,6 +6,7 @@ using NLog.Targets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,10 +15,12 @@ namespace BitSharp.Node
 {
     public class LoggingModule : NinjectModule
     {
+        private readonly string directory;
         private readonly LogLevel logLevel;
 
-        public LoggingModule(LogLevel logLevel)
+        public LoggingModule(string baseDirectory, LogLevel logLevel)
         {
+            this.directory = baseDirectory;
             this.logLevel = logLevel;
         }
 
@@ -44,10 +47,7 @@ namespace BitSharp.Node
             config.AddTarget("file", fileTarget);
 
             // file settings
-            if (Debugger.IsAttached)
-                fileTarget.FileName = "${specialfolder:folder=localapplicationdata}/BitSharp/Debugger/BitSharp.log";
-            else
-                fileTarget.FileName = "${specialfolder:folder=localapplicationdata}/BitSharp/BitSharp.log";
+            fileTarget.FileName = Path.Combine(this.directory, "BitSharp.log");
             
             fileTarget.Layout = layout;
             fileTarget.DeleteOldFileOnStartup = true;

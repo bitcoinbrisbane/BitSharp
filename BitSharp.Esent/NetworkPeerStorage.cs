@@ -23,17 +23,10 @@ namespace BitSharp.Esent
         private readonly string directory;
         private readonly PersistentByteDictionary dict;
 
-        public NetworkPeerStorage(RulesEnum rulesType)
+        public NetworkPeerStorage(string baseDirectory, RulesEnum rulesType)
         {
             this.name = "KnownAddresses";
-            
-            string baseDirectory;
-            if (Debugger.IsAttached)
-                baseDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp", "Debugger");
-            else
-                baseDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BitSharp");
-
-            this.directory = Path.Combine(Path.Combine(baseDirectory, "Peers", rulesType.ToString(), this.name));
+            this.directory = Path.Combine(baseDirectory, this.name);
             this.dict = new PersistentByteDictionary(this.directory);
         }
 

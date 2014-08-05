@@ -22,13 +22,17 @@ namespace BitSharp.Esent
     public class EsentStorageModule : NinjectModule
     {
         private readonly string baseDirectory;
+        private readonly string dataDirectory;
+        private readonly string peersDirectory;
         private readonly RulesEnum rulesType;
         private readonly long? cacheSizeMinBytes;
         private readonly long? cacheSizeMaxBytes;
 
         public EsentStorageModule(string baseDirectory, RulesEnum rulesType, long? cacheSizeMinBytes = null, long? cacheSizeMaxBytes = null)
         {
-            this.baseDirectory = Path.Combine(baseDirectory, rulesType.ToString());
+            this.baseDirectory = baseDirectory;
+            this.dataDirectory = Path.Combine(baseDirectory, "Data", rulesType.ToString());
+            this.peersDirectory = Path.Combine(baseDirectory, "Peers", rulesType.ToString());
             this.rulesType = rulesType;
             this.cacheSizeMinBytes = cacheSizeMinBytes;
             this.cacheSizeMaxBytes = cacheSizeMaxBytes;
@@ -47,9 +51,9 @@ namespace BitSharp.Esent
                 SystemParameters.CacheSizeMax = (this.cacheSizeMaxBytes.Value / SystemParameters.DatabasePageSize).ToIntChecked();
 
             // bind concrete storage providers
-            this.Bind<EsentStorageManager>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.baseDirectory);
+            this.Bind<EsentStorageManager>().ToSelf().InSingletonScope().WithConstructorArgument("baseDirectory", this.dataDirectory);
             this.Bind<NetworkPeerStorage>().ToSelf().InSingletonScope()
-                .WithConstructorArgument("baseDirectory", this.baseDirectory)
+                .WithConstructorArgument("baseDirectory", this.peersDirectory)
                 .WithConstructorArgument("rulesType", this.rulesType);
 
             // bind storage providers interfaces
