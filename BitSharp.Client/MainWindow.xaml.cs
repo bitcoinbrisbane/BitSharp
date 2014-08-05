@@ -63,11 +63,16 @@ namespace BitSharp.Client
                 var rulesType = RulesEnum.MainNet;
 #endif
 
+                // directories
+                var baseDirectory = Config.LocalStoragePath;
+                if (false && Debugger.IsAttached)
+                    baseDirectory = Path.Combine(baseDirectory, "Debugger");
+
                 // initialize kernel
                 this.kernel = new StandardKernel();
 
                 // add logging module
-                this.kernel.Load(new LoggingModule(LogLevel.Info));
+                this.kernel.Load(new LoggingModule(baseDirectory, LogLevel.Info));
 
                 // log startup
                 this.logger = kernel.Get<Logger>();
@@ -81,12 +86,6 @@ namespace BitSharp.Client
 #elif MEMORY
                 modules.Add(new MemoryStorageModule());
 #else
-                string baseDirectory;
-                if (Debugger.IsAttached)
-                    baseDirectory = Path.Combine(Config.LocalStoragePath, "Debugger", "Data");
-                else
-                    baseDirectory = Path.Combine(Config.LocalStoragePath, "Data");
-                
                 modules.Add(new EsentStorageModule(baseDirectory, rulesType, cacheSizeMaxBytes: int.MaxValue - 1));
                 //ChainStateCursor.IndexOutputs = true;
 #endif
@@ -186,7 +185,7 @@ namespace BitSharp.Client
             }.DisposeList();
 
             base.OnClosed(e);
-            
+
             this.logger.Info("Finished shutting down");
         }
 
