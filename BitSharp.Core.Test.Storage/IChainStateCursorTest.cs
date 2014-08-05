@@ -106,21 +106,9 @@ namespace BitSharp.Core.Test.Storage
         }
 
         [TestMethod]
-        public void TestTryGetBlockSpentTxes()
+        public void TestTryAddGetRemoveBlockSpentTxes()
         {
-            RunTest(TestTryGetBlockSpentTxes);
-        }
-
-        [TestMethod]
-        public void TestTryAddBlockSpentTxes()
-        {
-            RunTest(TestTryAddBlockSpentTxes);
-        }
-
-        [TestMethod]
-        public void TestTryRemoveBlockSpentTxes()
-        {
-            RunTest(TestTryRemoveBlockSpentTxes);
+            RunTest(TestTryAddGetRemoveBlockSpentTxes);
         }
 
         [TestMethod]
@@ -647,9 +635,59 @@ namespace BitSharp.Core.Test.Storage
             }
         }
 
-        public void TestTryGetBlockSpentTxes(ITestStorageProvider provider)
+        public void TestTryAddGetRemoveBlockSpentTxes(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            var spentTxes0 = ImmutableList.Create(
+                new SpentTx(txHash: 0, confirmedBlockIndex: 0, txIndex: 0, outputCount: 1, spentBlockIndex: 0),
+                new SpentTx(txHash: 1, confirmedBlockIndex: 0, txIndex: 1, outputCount: 2, spentBlockIndex: 0),
+                new SpentTx(txHash: 2, confirmedBlockIndex: 0, txIndex: 2, outputCount: 3, spentBlockIndex: 0));
+
+            var spentTxes1 = ImmutableList.Create(
+                new SpentTx(txHash: 100, confirmedBlockIndex: 1, txIndex: 0, outputCount: 1, spentBlockIndex: 1),
+                new SpentTx(txHash: 101, confirmedBlockIndex: 1, txIndex: 1, outputCount: 2, spentBlockIndex: 1));
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            {
+                chainStateCursor.BeginTransaction();
+
+                // verify initial empty state
+                IImmutableList<SpentTx> actualSpentTxes0, actualSpentTxes1;
+                Assert.IsFalse(chainStateCursor.TryGetBlockSpentTxes(0, out actualSpentTxes0));
+                Assert.IsFalse(chainStateCursor.TryGetBlockSpentTxes(1, out actualSpentTxes1));
+
+                // add spent txes 0
+                Assert.IsTrue(chainStateCursor.TryAddBlockSpentTxes(0, spentTxes0));
+
+                // verify spent txes
+                Assert.IsTrue(chainStateCursor.TryGetBlockSpentTxes(0, out actualSpentTxes0));
+                CollectionAssert.AreEqual(spentTxes0, (ICollection)actualSpentTxes0);
+                Assert.IsFalse(chainStateCursor.TryGetBlockSpentTxes(1, out actualSpentTxes1));
+
+                // add spent txes 1
+                Assert.IsTrue(chainStateCursor.TryAddBlockSpentTxes(1, spentTxes1));
+
+                // verify spent txes
+                Assert.IsTrue(chainStateCursor.TryGetBlockSpentTxes(0, out actualSpentTxes0));
+                CollectionAssert.AreEqual(spentTxes0, (ICollection)actualSpentTxes0);
+                Assert.IsTrue(chainStateCursor.TryGetBlockSpentTxes(1, out actualSpentTxes1));
+                CollectionAssert.AreEqual(spentTxes1, (ICollection)actualSpentTxes1);
+
+                // remove spent txes 1
+                Assert.IsTrue(chainStateCursor.TryRemoveBlockSpentTxes(1));
+
+                // verify spent txes
+                Assert.IsTrue(chainStateCursor.TryGetBlockSpentTxes(0, out actualSpentTxes0));
+                CollectionAssert.AreEqual(spentTxes0, (ICollection)actualSpentTxes0);
+                Assert.IsFalse(chainStateCursor.TryGetBlockSpentTxes(1, out actualSpentTxes1));
+
+                // remove spent txes 0
+                Assert.IsTrue(chainStateCursor.TryRemoveBlockSpentTxes(0));
+
+                // verify spent txes
+                Assert.IsFalse(chainStateCursor.TryGetBlockSpentTxes(0, out actualSpentTxes0));
+                Assert.IsFalse(chainStateCursor.TryGetBlockSpentTxes(1, out actualSpentTxes1));
+            }
         }
 
         public void TestTryAddBlockSpentTxes(ITestStorageProvider provider)
