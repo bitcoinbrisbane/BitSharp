@@ -690,16 +690,6 @@ namespace BitSharp.Core.Test.Storage
             }
         }
 
-        public void TestTryAddBlockSpentTxes(ITestStorageProvider provider)
-        {
-            Assert.Inconclusive("TODO");
-        }
-
-        public void TestTryRemoveBlockSpentTxes(ITestStorageProvider provider)
-        {
-            Assert.Inconclusive("TODO");
-        }
-
         public void TestRemoveSpentTransactionsToHeight(ITestStorageProvider provider)
         {
             Assert.Inconclusive("TODO");
