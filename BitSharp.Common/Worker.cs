@@ -120,7 +120,10 @@ namespace BitSharp.Common
 
                 // terminate if still alive
                 if (this.workerThread.IsAlive)
+                {
+                    this.logger.Warn("Worker thread aborted: {0}".Format2(this.Name));
                     this.workerThread.Abort();
+                }
             }
 
             // dispose events
