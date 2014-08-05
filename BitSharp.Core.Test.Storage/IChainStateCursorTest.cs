@@ -599,7 +599,52 @@ namespace BitSharp.Core.Test.Storage
 
         public void TestContainsBlockSpentTxes(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            var spentTxes0 = ImmutableList.Create(
+                new SpentTx(txHash: 0, confirmedBlockIndex: 0, txIndex: 0, outputCount: 1, spentBlockIndex: 0),
+                new SpentTx(txHash: 1, confirmedBlockIndex: 0, txIndex: 1, outputCount: 2, spentBlockIndex: 0),
+                new SpentTx(txHash: 2, confirmedBlockIndex: 0, txIndex: 2, outputCount: 3, spentBlockIndex: 0));
+
+            var spentTxes1 = ImmutableList.Create(
+                new SpentTx(txHash: 100, confirmedBlockIndex: 1, txIndex: 0, outputCount: 1, spentBlockIndex: 1),
+                new SpentTx(txHash: 101, confirmedBlockIndex: 1, txIndex: 1, outputCount: 2, spentBlockIndex: 1));
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            {
+                chainStateCursor.BeginTransaction();
+
+                // verify presence
+                Assert.IsFalse(chainStateCursor.ContainsBlockSpentTxes(0));
+                Assert.IsFalse(chainStateCursor.ContainsBlockSpentTxes(1));
+
+                // add spent txes 0
+                chainStateCursor.TryAddBlockSpentTxes(0, spentTxes0);
+
+                // verify presence
+                Assert.IsTrue(chainStateCursor.ContainsBlockSpentTxes(0));
+                Assert.IsFalse(chainStateCursor.ContainsBlockSpentTxes(1));
+
+                // add unspent tx 1
+                chainStateCursor.TryAddBlockSpentTxes(1, spentTxes1);
+
+                // verify presence
+                Assert.IsTrue(chainStateCursor.ContainsBlockSpentTxes(0));
+                Assert.IsTrue(chainStateCursor.ContainsBlockSpentTxes(1));
+
+                // remove unspent tx 1
+                chainStateCursor.TryRemoveBlockSpentTxes(1);
+
+                // verify presence
+                Assert.IsTrue(chainStateCursor.ContainsBlockSpentTxes(0));
+                Assert.IsFalse(chainStateCursor.ContainsBlockSpentTxes(1));
+
+                // remove unspent tx 0
+                chainStateCursor.TryRemoveBlockSpentTxes(0);
+
+                // verify presence
+                Assert.IsFalse(chainStateCursor.ContainsBlockSpentTxes(0));
+                Assert.IsFalse(chainStateCursor.ContainsBlockSpentTxes(1));
+            }
         }
 
         public void TestTryGetBlockSpentTxes(ITestStorageProvider provider)
