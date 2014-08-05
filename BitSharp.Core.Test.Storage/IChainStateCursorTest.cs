@@ -547,7 +547,54 @@ namespace BitSharp.Core.Test.Storage
 
         public void TestReadUnspentTransactions(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            var unspentTx0 = new UnspentTx(txHash: 0, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
+            var unspentTx1 = new UnspentTx(txHash: 1, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
+            var unspentTx2 = new UnspentTx(txHash: 2, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            {
+                chainStateCursor.BeginTransaction();
+
+                // verify initial empty state
+                Assert.AreEqual(0, chainStateCursor.ReadUnspentTransactions().Count());
+
+                // add unspent tx 0
+                Assert.IsTrue(chainStateCursor.TryAddUnspentTx(unspentTx0));
+
+                // verify unspent txes
+                CollectionAssert.AreEquivalent(new[] { unspentTx0 }, chainStateCursor.ReadUnspentTransactions().ToList());
+
+                // add unspent tx 1
+                Assert.IsTrue(chainStateCursor.TryAddUnspentTx(unspentTx1));
+
+                // verify unspent txes
+                CollectionAssert.AreEquivalent(new[] { unspentTx0, unspentTx1 }, chainStateCursor.ReadUnspentTransactions().ToList());
+
+                // add unspent tx 2
+                Assert.IsTrue(chainStateCursor.TryAddUnspentTx(unspentTx2));
+
+                // verify unspent txes
+                CollectionAssert.AreEquivalent(new[] { unspentTx0, unspentTx1, unspentTx2 }, chainStateCursor.ReadUnspentTransactions().ToList());
+
+                // remove unspent tx 2
+                Assert.IsTrue(chainStateCursor.TryRemoveUnspentTx(unspentTx2.TxHash));
+
+                // verify unspent txes
+                CollectionAssert.AreEquivalent(new[] { unspentTx0, unspentTx1 }, chainStateCursor.ReadUnspentTransactions().ToList());
+
+                // remove unspent tx 1
+                Assert.IsTrue(chainStateCursor.TryRemoveUnspentTx(unspentTx1.TxHash));
+
+                // verify unspent txes
+                CollectionAssert.AreEquivalent(new[] { unspentTx0 }, chainStateCursor.ReadUnspentTransactions().ToList());
+
+                // remove unspent tx 0
+                Assert.IsTrue(chainStateCursor.TryRemoveUnspentTx(unspentTx0.TxHash));
+
+                // verify unspent txes
+                Assert.AreEqual(0, chainStateCursor.ReadUnspentTransactions().Count());
+            }
         }
 
         public void TestContainsBlockSpentTxes(ITestStorageProvider provider)
