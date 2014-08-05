@@ -33,7 +33,7 @@ namespace BitSharp.Esent
         private readonly BlockCursor[] cursors;
         private readonly object cursorsLock;
 
-        public BlockStorage(string baseDirectory, Instance jetInstance, Logger logger)
+        public BlockStorage(string baseDirectory, Logger logger)
         {
             this.logger = logger;
             this.jetDirectory = Path.Combine(baseDirectory, "Blocks");
@@ -42,9 +42,17 @@ namespace BitSharp.Esent
             this.cursors = new BlockCursor[16];
             this.cursorsLock = new object();
 
-            this.jetInstance = jetInstance;
-
-            this.CreateOrOpenDatabase();
+            this.jetInstance = CreateInstance(this.jetDirectory);
+            try
+            {
+                this.jetInstance.Init();
+                this.CreateOrOpenDatabase();
+            }
+            catch (Exception)
+            {
+                this.jetInstance.Dispose();
+                throw;
+            }
         }
 
         public void Dispose()
@@ -54,6 +62,8 @@ namespace BitSharp.Esent
             {
                 this.cursors.DisposeList();
             }
+
+            this.jetInstance.Dispose();
         }
 
         public bool ContainsChainedHeader(UInt256 blockHash)
@@ -269,6 +279,35 @@ namespace BitSharp.Esent
             {
                 this.FreeCursor(cursor);
             }
+        }
+
+        private static Instance CreateInstance(string directory)
+        {
+            var instance = new Instance(Guid.NewGuid().ToString());
+
+            instance.Parameters.SystemDirectory = directory;
+            instance.Parameters.LogFileDirectory = directory;
+            instance.Parameters.TempDirectory = directory;
+            instance.Parameters.AlternateDatabaseRecoveryDirectory = directory;
+            instance.Parameters.CreatePathIfNotExist = true;
+            instance.Parameters.BaseName = "epc";
+            instance.Parameters.EnableIndexChecking = false;
+            instance.Parameters.CircularLog = true;
+            instance.Parameters.CheckpointDepthMax = 64 * 1024 * 1024;
+            instance.Parameters.LogFileSize = 1024 * 32;
+            instance.Parameters.LogBuffers = 1024 * 32;
+            instance.Parameters.MaxTemporaryTables = 1;
+            instance.Parameters.MaxVerPages = 1024 * 256;
+            instance.Parameters.NoInformationEvent = true;
+            instance.Parameters.WaypointLatency = 1;
+            instance.Parameters.MaxSessions = 256;
+            instance.Parameters.MaxOpenTables = 256;
+            if (EsentVersion.SupportsWindows81Features)
+            {
+                instance.Parameters.EnableShrinkDatabase = ShrinkDatabaseGrbit.On | ShrinkDatabaseGrbit.Realtime;
+            }
+
+            return instance;
         }
 
         private void CreateOrOpenDatabase()

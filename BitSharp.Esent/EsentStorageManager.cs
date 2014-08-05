@@ -25,28 +25,23 @@ namespace BitSharp.Esent
     {
         private readonly Logger logger;
         private readonly string baseDirectory;
-        private readonly BlockStorage blockStorage;
-        private readonly BlockTxesStorage blockTxesStorage;
-        private readonly EsentChainStateManager chainStateManager;
+
+        private readonly object blockStorageLock;
+        private readonly object blockTxesStorageLock;
+        private readonly object chainStateManagerLock;
+
+        private BlockStorage blockStorage;
+        private BlockTxesStorage blockTxesStorage;
+        private EsentChainStateManager chainStateManager;
 
         public EsentStorageManager(string baseDirectory, Logger logger)
         {
             this.logger = logger;
             this.baseDirectory = baseDirectory;
 
-            try
-            {
-                this.blockTxesStorage = new BlockTxesStorage(this.baseDirectory, this.logger);
-                this.blockStorage = new BlockStorage(this.baseDirectory, this.blockTxesStorage.JetInstance, this.logger);
-                this.chainStateManager = new EsentChainStateManager(this.baseDirectory, this.logger);
-            }
-            catch (Exception)
-            {
-                // ensure any storage that was opened during construction gets closed on an error
-                this.Dispose();
-
-                throw;
-            }
+            this.blockStorageLock = new object();
+            this.blockTxesStorageLock = new object();
+            this.chainStateManagerLock = new object();
         }
 
         public void Dispose()
@@ -60,16 +55,37 @@ namespace BitSharp.Esent
 
         public IBlockStorage BlockStorage
         {
-            get { return this.blockStorage; }
+            get
+            {
+                if (this.blockStorage == null)
+                    lock (this.blockStorageLock)
+                        if (this.blockStorage == null)
+                            this.blockStorage = new BlockStorage(this.baseDirectory, this.logger);
+
+                return this.blockStorage;
+            }
         }
 
         public IBlockTxesStorage BlockTxesStorage
         {
-            get { return this.blockTxesStorage; }
+            get
+            {
+                if (this.blockTxesStorage == null)
+                    lock (this.blockTxesStorageLock)
+                        if (this.blockTxesStorage == null)
+                            this.blockTxesStorage = new BlockTxesStorage(this.baseDirectory, this.logger);
+
+                return this.blockTxesStorage;
+            }
         }
 
         public IChainStateCursor OpenChainStateCursor()
         {
+            if (this.chainStateManager == null)
+                lock (this.chainStateManagerLock)
+                    if (this.chainStateManager == null)
+                        this.chainStateManager = new EsentChainStateManager(this.baseDirectory, this.logger);
+
             return this.chainStateManager.OpenChainStateCursor();
         }
     }

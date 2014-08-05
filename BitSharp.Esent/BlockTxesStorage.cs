@@ -36,16 +36,16 @@ namespace BitSharp.Esent
         public BlockTxesStorage(string baseDirectory, Logger logger)
         {
             this.logger = logger;
-            this.jetDirectory = Path.Combine(baseDirectory, "Blocks");
+            this.jetDirectory = Path.Combine(baseDirectory, "BlockTxes");
             this.jetDatabase = Path.Combine(this.jetDirectory, "BlockTxes.edb");
 
             this.cursors = new BlockTxesCursor[16];
             this.cursorsLock = new object();
 
             this.jetInstance = CreateInstance(this.jetDirectory);
-            this.jetInstance.Init();
             try
             {
+                this.jetInstance.Init();
                 this.CreateOrOpenDatabase();
             }
             catch (Exception)
