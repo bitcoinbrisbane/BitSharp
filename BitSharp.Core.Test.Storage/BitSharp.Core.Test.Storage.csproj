@@ -80,7 +80,6 @@
   </Choose>
   <ItemGroup>
     <Compile Include="IChainStateCursorTest.cs" />
-    <Compile Include="IChainStateStorageTest.cs" />
     <Compile Include="IBlockTxesStorageTest.cs" />
     <Compile Include="IBlockStorageTest.cs" />
     <Compile Include="StorageIntegrationTest.cs" />
