@@ -70,7 +70,7 @@ namespace BitSharp.Node.Workers
             }
             catch (Exception e)
             {
-                this.logger.ErrorException("Failed to start listener socket.", e);
+                this.logger.Error("Failed to start listener socket.", e);
                 DisposeSocket();
                 throw;
             }
@@ -101,7 +101,7 @@ namespace BitSharp.Node.Workers
             }
             catch (Exception e)
             {
-                this.logger.WarnException("Failed incoming connection.", e);
+                this.logger.Warn("Failed incoming connection.", e);
             }
         }
 

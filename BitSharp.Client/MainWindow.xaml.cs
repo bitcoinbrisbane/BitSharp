@@ -158,7 +158,7 @@ namespace BitSharp.Client
             {
                 if (this.logger != null)
                 {
-                    this.logger.FatalException("Application failed", e);
+                    this.logger.Fatal("Application failed", e);
                     LogManager.Flush();
                 }
                 else

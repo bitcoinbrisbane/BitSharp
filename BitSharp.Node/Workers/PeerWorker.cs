@@ -96,7 +96,7 @@ namespace BitSharp.Node.Workers
         public void DisconnectPeer(Peer peer, Exception e)
         {
             if (e != null)
-                this.logger.DebugException("Remote peer failed: {0}".Format2(peer.RemoteEndPoint), e);
+                this.logger.Debug("Remote peer failed: {0}".Format2(peer.RemoteEndPoint), e);
 
             RaisePeerDisconnected(peer);
 
@@ -210,7 +210,7 @@ namespace BitSharp.Node.Workers
                 }
                 catch (Exception e)
                 {
-                    this.logger.DebugException("Could not connect to {0}".Format2(remoteEndPoint), e);
+                    this.logger.Debug("Could not connect to {0}".Format2(remoteEndPoint), e);
                     DisconnectPeer(peer, e);
                     return null;
                 }

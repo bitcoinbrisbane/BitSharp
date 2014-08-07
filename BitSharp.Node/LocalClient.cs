@@ -177,7 +177,7 @@ namespace BitSharp.Node
                     }
                     catch (SocketException e)
                     {
-                        this.logger.WarnException("Failed to add seed peer {0}".Format2(hostNameOrAddress), e);
+                        this.logger.Warn("Failed to add seed peer {0}".Format2(hostNameOrAddress), e);
                     }
                 };
 

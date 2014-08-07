@@ -256,7 +256,7 @@ namespace BitSharp.Common
                         catch (OperationCanceledException) { throw; }
                         catch (Exception e)
                         {
-                            this.logger.ErrorException("Unhandled worker exception", e);
+                            this.logger.Error("Unhandled worker exception", e);
                             Debugger.Break();
                         }
                         finally
@@ -288,7 +288,7 @@ namespace BitSharp.Common
             }
             catch (Exception e)
             {
-                this.logger.FatalException("Unhandled worker exception", e);
+                this.logger.Fatal("Unhandled worker exception", e);
                 Debugger.Break();
             }
             finally
