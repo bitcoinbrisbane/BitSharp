@@ -16,6 +16,7 @@ using System.IO;
 using System.Threading;
 using System.Collections.Immutable;
 using System.Security.Cryptography;
+using Microsoft.Isam.Esent.Interop.Server2003;
 using Microsoft.Isam.Esent.Interop.Vista;
 using Microsoft.Isam.Esent.Interop.Windows81;
 using NLog;
@@ -560,6 +561,8 @@ namespace BitSharp.Esent
                     Api.EscrowUpdate(cursor.jetSession, cursor.globalsTableId, cursor.flushColumnId, 1);
                     jetTx.Commit(CommitTransactionGrbit.None);
                 }
+
+                Api.JetCommitTransaction(cursor.jetSession, Server2003Grbits.WaitAllLevel0Commit);
             }
             finally
             {

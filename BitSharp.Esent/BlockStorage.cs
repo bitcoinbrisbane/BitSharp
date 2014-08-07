@@ -20,6 +20,7 @@ using Microsoft.Isam.Esent.Interop.Vista;
 using Microsoft.Isam.Esent.Interop.Windows8;
 using Microsoft.Isam.Esent.Interop.Windows81;
 using NLog;
+using Microsoft.Isam.Esent.Interop.Server2003;
 
 namespace BitSharp.Esent
 {
@@ -483,6 +484,8 @@ namespace BitSharp.Esent
                     Api.EscrowUpdate(cursor.jetSession, cursor.globalsTableId, cursor.flushColumnId, 1);
                     jetTx.Commit(CommitTransactionGrbit.None);
                 }
+                
+                Api.JetCommitTransaction(cursor.jetSession, Server2003Grbits.WaitAllLevel0Commit);
             }
             finally
             {
