@@ -93,7 +93,7 @@ namespace BitSharp.Core.Workers
                     var direction = pathElement.Item1;
                     var chainedHeader = pathElement.Item2;
                     IEnumerable<BlockTx> blockTxes;
-                    if (!this.coreStorage.TryReadBlockTransactions(chainedHeader.Hash, chainedHeader.MerkleRoot, /*requireTransaction:*/false, out blockTxes))
+                    if (!this.coreStorage.TryReadBlockTransactions(chainedHeader.Hash, chainedHeader.MerkleRoot, /*requireTransaction:*/true, out blockTxes))
                     {
                         RaiseBlockMissed(chainedHeader.Hash);
                         break;
@@ -152,7 +152,7 @@ namespace BitSharp.Core.Workers
             }
             else
             {
-                this.logger.WarnException("ChainStateWorker exception.", e);
+                this.logger.Warn("ChainStateWorker exception.", e);
 
                 var validationException = e as ValidationException;
                 if (validationException != null)
