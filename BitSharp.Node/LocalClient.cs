@@ -34,6 +34,7 @@ namespace BitSharp.Node
 
         private readonly Logger logger;
         private readonly CancellationTokenSource shutdownToken;
+        private readonly Random random = new Random();
 
         private readonly RulesEnum type;
         private readonly IKernel kernel;
@@ -118,11 +119,11 @@ namespace BitSharp.Node
             this.peerWorker.Start();
             this.statsWorker.Start();
 
-            // add seed peers
-            AddSeedPeers();
-
             // add known peers
             AddKnownPeers();
+
+            // add seed peers
+            Task.Run(() => AddSeedPeers());
         }
 
         public void Dispose()
@@ -171,7 +172,7 @@ namespace BitSharp.Node
                             new CandidatePeer
                             {
                                 IPEndPoint = new IPEndPoint(ipAddress, Messaging.Port),
-                                Time = DateTime.UtcNow,
+                                Time = DateTime.MinValue,
                                 IsSeed = this.Type == RulesEnum.MainNet ? true : false
                             });
                     }
@@ -210,7 +211,7 @@ namespace BitSharp.Node
                     new CandidatePeer
                     {
                         IPEndPoint = knownAddress.NetworkAddress.ToIPEndPoint(),
-                        Time = knownAddress.Time.UnixTimeToDateTime(),
+                        Time = knownAddress.Time.UnixTimeToDateTime() + TimeSpan.FromDays(random.NextDouble(-2, +2)),
                         IsSeed = false
                     });
                 count++;
@@ -222,7 +223,7 @@ namespace BitSharp.Node
         private void HandlePeerConnected(Peer peer)
         {
             var remoteAddressWithTime = new NetworkAddressWithTime(DateTime.UtcNow.ToUnixTime(), peer.RemoteEndPoint.ToNetworkAddress(/*TODO*/services: 0));
-            this.networkPeerCache[remoteAddressWithTime.GetKey()] = remoteAddressWithTime;
+            this.networkPeerCache[remoteAddressWithTime.NetworkAddress.GetKey()] = remoteAddressWithTime;
 
             WirePeerEvents(peer);
 
@@ -327,7 +328,16 @@ namespace BitSharp.Node
 
             foreach (var address in addresses)
             {
-                this.peerWorker.AddCandidatePeer(address.NetworkAddress.ToIPEndPoint().ToCandidatePeerKey());
+                this.peerWorker.AddCandidatePeer(address.ToCandidatePeer());
+
+                // store the received address
+                // insert if not present, or update if the address time is newer
+                NetworkAddressWithTime knownAddress;
+                if (!this.networkPeerCache.TryGetValue(address.NetworkAddress.GetKey(), out knownAddress)
+                    || knownAddress.Time < address.Time)
+                {
+                    this.networkPeerCache[address.NetworkAddress.GetKey()] = address;
+                }
             }
         }
 
@@ -447,7 +457,7 @@ namespace BitSharp.Node
         {
             this.logger.Info(
                 "UNCONNECTED: {0,3}, PENDING: {1,3}, CONNECTED: {2,3}, BAD: {3,3}, INCOMING: {4,3}, MESSAGES/SEC: {5,6:#,##0}".Format2(
-                /*0*/ this.peerWorker.UnconnectedPeers.Count,
+                /*0*/ this.peerWorker.UnconnectedPeersCount,
                 /*1*/ this.peerWorker.PendingPeers.Count,
                 /*2*/ this.peerWorker.ConnectedPeers.Count,
                 /*3*/ this.peerWorker.BadPeers.Count,
@@ -486,7 +496,7 @@ namespace BitSharp.Node
             else if (y.Time.Ticks > x.Time.Ticks)
                 return +1;
             else
-                return 0;
+                return x.IPEndPoint.Equals(y.IPEndPoint) ? 0 : +1;
         }
     }
 
@@ -494,9 +504,9 @@ namespace BitSharp.Node
     {
         internal static class LocalClientExtensionMethods
         {
-            public static NetworkAddressKey GetKey(this NetworkAddressWithTime knownAddress)
+            public static NetworkAddressKey GetKey(this NetworkAddress knownAddress)
             {
-                return new NetworkAddressKey(knownAddress.NetworkAddress.IPv6Address, knownAddress.NetworkAddress.Port);
+                return new NetworkAddressKey(knownAddress.IPv6Address, knownAddress.Port);
             }
 
             public static NetworkAddressKey ToNetworkAddressKey(this IPEndPoint ipEndPoint)
@@ -516,6 +526,11 @@ namespace BitSharp.Node
                     IPv6Address: Messaging.IPAddressToBytes(ipEndPoint.Address).ToImmutableArray(),
                     Port: (UInt16)ipEndPoint.Port
                 );
+            }
+
+            public static CandidatePeer ToCandidatePeer(this NetworkAddressWithTime address)
+            {
+                return new CandidatePeer { IPEndPoint = address.NetworkAddress.ToIPEndPoint(), Time = address.Time.UnixTimeToDateTime() };
             }
 
             public static CandidatePeer ToCandidatePeerKey(this IPEndPoint ipEndPoint)

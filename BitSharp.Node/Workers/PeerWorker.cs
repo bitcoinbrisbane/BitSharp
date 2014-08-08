@@ -33,7 +33,8 @@ namespace BitSharp.Node.Workers
         private readonly LocalClient localClient;
         private readonly CoreDaemon coreDaemon;
 
-        private readonly ConcurrentSet<CandidatePeer> unconnectedPeers = new ConcurrentSet<CandidatePeer>();
+        private readonly SortedSet<CandidatePeer> unconnectedPeers = new SortedSet<CandidatePeer>(new CandidatePeerComparer());
+        private readonly SemaphoreSlim unconnectedPeersLock = new SemaphoreSlim(1);
         private readonly ConcurrentSet<IPEndPoint> badPeers = new ConcurrentSet<IPEndPoint>();
         private readonly ConcurrentSet<Peer> pendingPeers = new ConcurrentSet<Peer>();
         private readonly ConcurrentSet<Peer> connectedPeers = new ConcurrentSet<Peer>();
@@ -52,7 +53,14 @@ namespace BitSharp.Node.Workers
 
         public event Action<Peer> PeerDisconnected;
 
-        internal ConcurrentSet<CandidatePeer> UnconnectedPeers { get { return this.unconnectedPeers; } }
+        internal int UnconnectedPeersCount
+        {
+            get
+            {
+                return this.unconnectedPeersLock.Do(() =>
+                    this.unconnectedPeers.Count);
+            }
+        }
 
         internal ConcurrentSet<IPEndPoint> BadPeers { get { return this.badPeers; } }
 
@@ -67,7 +75,8 @@ namespace BitSharp.Node.Workers
             if (this.badPeers.Contains(peer.IPEndPoint))
                 return;
 
-            this.unconnectedPeers.TryAdd(peer);
+            this.unconnectedPeersLock.Do(() =>
+                this.unconnectedPeers.Add(peer));
         }
 
         public void AddIncomingPeer(Socket socket)
@@ -102,7 +111,8 @@ namespace BitSharp.Node.Workers
 
             this.badPeers.Add(peer.RemoteEndPoint); //TODO
 
-            this.unconnectedPeers.TryRemove(peer.RemoteEndPoint.ToCandidatePeerKey());
+            this.unconnectedPeersLock.Do(() =>
+                this.unconnectedPeers.Remove(peer.RemoteEndPoint.ToCandidatePeerKey()));
             this.pendingPeers.TryRemove(peer);
             this.connectedPeers.TryRemove(peer);
 
@@ -146,31 +156,27 @@ namespace BitSharp.Node.Workers
             // get peer counts
             var connectedCount = this.connectedPeers.Count;
             var pendingCount = this.pendingPeers.Count;
-            var unconnectedCount = this.unconnectedPeers.Count;
             var maxConnections = CONNECTED_MAX; // Math.Max(CONNECTED_MAX + 20, PENDING_MAX);
 
             // if there aren't enough peers connected and there is a pending connection slot available, make another connection
             if (connectedCount < CONNECTED_MAX
                  && pendingCount < PENDING_MAX
-                 && (connectedCount + pendingCount) < maxConnections
-                 && unconnectedCount > 0)
+                 && (connectedCount + pendingCount) < maxConnections)
             {
                 // get number of connections to attempt
-                var connectCount = Math.Min(unconnectedCount, maxConnections - (connectedCount + pendingCount));
+                var connectCount = maxConnections - (connectedCount + pendingCount);
 
-                var unconnectedPeersSorted = this.unconnectedPeers.OrderBy(x => -x.Time.Ticks).ToArray();
-                var unconnectedPeerIndex = 0;
+                // take a selection of unconnected peers, ordered by time
+                var unconnectedPeersLocal = this.unconnectedPeersLock.Do(() =>
+                    this.unconnectedPeers.Take(connectCount).ToArray());
 
                 var connectTasks = new List<Task>();
-                for (var i = 0; i < connectCount && unconnectedPeerIndex < unconnectedPeersSorted.Length; i++)
+                foreach (var candidatePeer in unconnectedPeersLocal)
                 {
                     // cooperative loop
                     this.ThrowIfCancelled();
 
-                    // get a random peer to connect to
-                    var candidatePeer = unconnectedPeersSorted[unconnectedPeerIndex];
-                    unconnectedPeerIndex++;
-
+                    // connect to peer
                     connectTasks.Add(ConnectToPeer(candidatePeer.IPEndPoint, candidatePeer.IsSeed));
                 }
 
@@ -200,7 +206,8 @@ namespace BitSharp.Node.Workers
                 var peer = new Peer(remoteEndPoint, isSeed, this.logger);
                 try
                 {
-                    this.unconnectedPeers.TryRemove(remoteEndPoint.ToCandidatePeerKey());
+                    this.unconnectedPeersLock.Do(() =>
+                        this.unconnectedPeers.Remove(remoteEndPoint.ToCandidatePeerKey()));
                     this.pendingPeers.TryAdd(peer);
 
                     await ConnectAndHandshake(peer, isIncoming: false);
@@ -218,7 +225,8 @@ namespace BitSharp.Node.Workers
             catch (Exception)
             {
                 this.badPeers.Add(remoteEndPoint); //TODO
-                this.unconnectedPeers.TryRemove(remoteEndPoint.ToCandidatePeerKey());
+                this.unconnectedPeersLock.Do(() =>
+                    this.unconnectedPeers.Remove(remoteEndPoint.ToCandidatePeerKey()));
                 throw;
             }
         }

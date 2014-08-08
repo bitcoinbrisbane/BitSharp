@@ -530,5 +530,14 @@ namespace BitSharp.Common.ExtensionMethods
                 return false;
             }
         }
+
+        public static double NextDouble(this Random random, double minValue, double maxValue)
+        {
+            if (maxValue < minValue)
+                throw new ArgumentException();
+
+            var range = maxValue - minValue;
+            return (random.NextDouble() * range) + minValue;
+        }
     }
 }
