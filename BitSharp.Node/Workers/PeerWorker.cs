@@ -150,7 +150,10 @@ namespace BitSharp.Node.Workers
 
                 // disconnect slow peers
                 if (peer.BlockMissCount >= 5)
+                {
+                    this.logger.Info("Disconnecting slow peer: {0}".Format2(peer.RemoteEndPoint));
                     DisconnectPeer(peer, null);
+                }
             }
 
             // get peer counts
