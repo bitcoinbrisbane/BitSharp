@@ -1,4 +1,5 @@
 ﻿using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
 using BitSharp.Core.Domain;
 using BitSharp.Core.Storage;
 using NLog;
@@ -8,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace BitSharp.Core.Storage
@@ -25,8 +27,14 @@ namespace BitSharp.Core.Storage
         private readonly ConcurrentSetBuilder<UInt256> missingHeaders;
         private readonly ConcurrentSetBuilder<UInt256> missingBlockTxes;
 
+        private readonly ConcurrentDictionary<UInt256, bool> presentBlockTxes = new ConcurrentDictionary<UInt256, bool>();
+        private readonly object[] presentBlockTxesLocks = new object[64];
+
         public CoreStorage(IStorageManager storageManager, Logger logger)
         {
+            for (var i = 0; i < this.presentBlockTxesLocks.Length; i++)
+                presentBlockTxesLocks[i] = new object();
+
             this.logger = logger;
             this.storageManager = storageManager;
             this.blockStorage = storageManager.BlockStorage;
@@ -186,23 +194,43 @@ namespace BitSharp.Core.Storage
 
         public bool ContainsBlockTxes(UInt256 blockHash)
         {
-            return this.blockTxesStorage.ContainsBlock(blockHash);
+            lock (GetBlockLock(blockHash))
+            {
+                bool present;
+                if (this.presentBlockTxes.TryGetValue(blockHash, out present))
+                {
+                    return present;
+                }
+                else
+                {
+                    present = this.blockTxesStorage.ContainsBlock(blockHash);
+                    this.presentBlockTxes.TryAdd(blockHash, present);
+                    return present;
+                }
+            };
         }
 
         public bool TryAddBlock(Block block)
         {
-            ChainedHeader chainedHeader;
-            if (TryGetChainedHeader(block.Hash, out chainedHeader) || TryChainHeader(block.Header, out chainedHeader))
-            {
-                if (this.blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions))
-                {
-                    this.missingBlockTxes.Remove(block.Hash);
-                    RaiseBlockTxesAdded(chainedHeader);
-                    return true;
-                }
-            }
+            if (this.ContainsBlockTxes(block.Hash))
+                return false;
 
-            return false;
+            lock (GetBlockLock(block.Hash))
+            {
+                ChainedHeader chainedHeader;
+                if (TryGetChainedHeader(block.Hash, out chainedHeader) || TryChainHeader(block.Header, out chainedHeader))
+                {
+                    if (this.blockTxesStorage.TryAddBlockTransactions(block.Hash, block.Transactions))
+                    {
+                        this.presentBlockTxes[block.Hash] = true;
+                        this.missingBlockTxes.Remove(block.Hash);
+                        RaiseBlockTxesAdded(chainedHeader);
+                        return true;
+                    }
+                }
+
+                return false;
+            };
         }
 
         public bool TryGetBlock(UInt256 blockHash, out Block block)
@@ -250,19 +278,58 @@ namespace BitSharp.Core.Storage
 
         private IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash, UInt256 merkleRoot, bool requireTransactions, IEnumerable<BlockTx> blockTxes)
         {
-            foreach (var blockTx in MerkleTree.ReadMerkleTreeNodes(merkleRoot, blockTxes))
-            {
-                if (requireTransactions && blockTx.Pruned)
+            Action<UInt256> HandleMissingBlock =
+                missingBlockHash =>
                 {
-                    //TODO distinguish different kinds of missing: pruned and missing entirely
+                    lock (GetBlockLock(blockHash))
+                        this.presentBlockTxes[missingBlockHash] = false;
 
-                    //this.containsBlockTxes[blockHash] = false;
-                    //this.missingBlockTxes.Add(blockHash);
-                    RaiseBlockTxesMissed(blockHash);
-                    throw new MissingDataException(blockHash);
+                    RaiseBlockTxesMissed(missingBlockHash);
+                };
+
+            IEnumerator<BlockTx> blockTxesEnumerator;
+            try
+            {
+
+                blockTxesEnumerator = MerkleTree.ReadMerkleTreeNodes(merkleRoot, blockTxes).GetEnumerator();
+            }
+            catch (MissingDataException e)
+            {
+                HandleMissingBlock((UInt256)e.Key);
+                throw;
+            }
+            using (blockTxesEnumerator)
+            {
+                while (true)
+                {
+                    bool read;
+                    try
+                    {
+                        read = blockTxesEnumerator.MoveNext();
+                    }
+                    catch (MissingDataException e)
+                    {
+                        HandleMissingBlock((UInt256)e.Key);
+                        throw;
+                    }
+
+                    if (read)
+                    {
+                        var blockTx = blockTxesEnumerator.Current;
+                        if (requireTransactions && blockTx.Pruned)
+                        {
+                            //TODO distinguish different kinds of missing: pruned and missing entirely
+                            RaiseBlockTxesMissed(blockHash);
+                            throw new MissingDataException(blockHash);
+                        }
+
+                        yield return blockTx;
+                    }
+                    else
+                    {
+                        yield break;
+                    }
                 }
-
-                yield return blockTx;
             }
         }
 
@@ -324,6 +391,11 @@ namespace BitSharp.Core.Storage
             var handler = this.BlockInvalidated;
             if (handler != null)
                 handler(blockHash);
+        }
+
+        private object GetBlockLock(UInt256 blockHash)
+        {
+            return this.presentBlockTxesLocks[Math.Abs(blockHash.GetHashCode()) % this.presentBlockTxesLocks.Length];
         }
     }
 }
