@@ -33,7 +33,7 @@ namespace BitSharp.Node.Workers
         private readonly LocalClient localClient;
         private readonly CoreDaemon coreDaemon;
 
-        private readonly SortedSet<CandidatePeer> unconnectedPeers = new SortedSet<CandidatePeer>(new CandidatePeerComparer());
+        private readonly SortedSet<CandidatePeer> unconnectedPeers = new SortedSet<CandidatePeer>();
         private readonly SemaphoreSlim unconnectedPeersLock = new SemaphoreSlim(1);
         private readonly ConcurrentSet<IPEndPoint> badPeers = new ConcurrentSet<IPEndPoint>();
         private readonly ConcurrentSet<Peer> pendingPeers = new ConcurrentSet<Peer>();

@@ -170,11 +170,11 @@ namespace BitSharp.Node
                         var ipAddress = Dns.GetHostEntry(hostNameOrAddress).AddressList.First();
                         this.peerWorker.AddCandidatePeer(
                             new CandidatePeer
-                            {
-                                IPEndPoint = new IPEndPoint(ipAddress, Messaging.Port),
-                                Time = DateTime.MinValue,
-                                IsSeed = this.Type == RulesEnum.MainNet ? true : false
-                            });
+                            (
+                                ipEndPoint: new IPEndPoint(ipAddress, Messaging.Port),
+                                time: DateTime.MinValue,
+                                isSeed: this.Type == RulesEnum.MainNet ? true : false
+                            ));
                     }
                     catch (SocketException e)
                     {
@@ -209,11 +209,11 @@ namespace BitSharp.Node
             {
                 this.peerWorker.AddCandidatePeer(
                     new CandidatePeer
-                    {
-                        IPEndPoint = knownAddress.NetworkAddress.ToIPEndPoint(),
-                        Time = knownAddress.Time.UnixTimeToDateTime() + TimeSpan.FromDays(random.NextDouble(-2, +2)),
-                        IsSeed = false
-                    });
+                    (
+                        ipEndPoint: knownAddress.NetworkAddress.ToIPEndPoint(),
+                        time: knownAddress.Time.UnixTimeToDateTime() + TimeSpan.FromDays(random.NextDouble(-2, +2)),
+                        isSeed: false
+                    ));
                 count++;
             }
 
@@ -466,11 +466,26 @@ namespace BitSharp.Node
         }
     }
 
-    internal sealed class CandidatePeer
+    internal sealed class CandidatePeer : IComparable<CandidatePeer>
     {
-        public IPEndPoint IPEndPoint { get; set; }
-        public DateTime Time { get; set; }
-        public bool IsSeed { get; set; }
+        private readonly IPEndPoint ipEndPoint;
+        private readonly DateTime time;
+        private readonly bool isSeed;
+        private readonly string ipEndPointString;
+
+        public CandidatePeer(IPEndPoint ipEndPoint, DateTime time, bool isSeed)
+        {
+            this.ipEndPoint = ipEndPoint;
+            this.time = time;
+            this.isSeed = isSeed;
+            this.ipEndPointString = ipEndPoint.ToString();
+        }
+
+        public IPEndPoint IPEndPoint { get { return this.ipEndPoint; } }
+
+        public DateTime Time { get { return this.time; } }
+
+        public bool IsSeed { get { return this.isSeed; } }
 
         public override bool Equals(object obj)
         {
@@ -485,18 +500,17 @@ namespace BitSharp.Node
         {
             return this.IPEndPoint.GetHashCode();
         }
-    }
 
-    internal sealed class CandidatePeerComparer : IComparer<CandidatePeer>
-    {
-        public int Compare(CandidatePeer x, CandidatePeer y)
+        // candidate peers are ordered according to time
+        public int CompareTo(CandidatePeer other)
         {
-            if (y.Time.Ticks < x.Time.Ticks)
-                return -1;
-            else if (y.Time.Ticks > x.Time.Ticks)
+            if (this.Time.Ticks < other.Time.Ticks)
                 return +1;
+            else if (this.Time.Ticks > other.Time.Ticks)
+                return -1;
             else
-                return x.IPEndPoint.Equals(y.IPEndPoint) ? 0 : +1;
+                // ensure peers with identical times are compared deterministically
+                return this.ipEndPointString.CompareTo(other.ipEndPointString);
         }
     }
 
@@ -530,12 +544,12 @@ namespace BitSharp.Node
 
             public static CandidatePeer ToCandidatePeer(this NetworkAddressWithTime address)
             {
-                return new CandidatePeer { IPEndPoint = address.NetworkAddress.ToIPEndPoint(), Time = address.Time.UnixTimeToDateTime() };
+                return new CandidatePeer(address.NetworkAddress.ToIPEndPoint(), address.Time.UnixTimeToDateTime(), isSeed: false);
             }
 
             public static CandidatePeer ToCandidatePeerKey(this IPEndPoint ipEndPoint)
             {
-                return new CandidatePeer { IPEndPoint = ipEndPoint };
+                return new CandidatePeer(ipEndPoint, DateTime.MinValue, false);
             }
         }
     }
