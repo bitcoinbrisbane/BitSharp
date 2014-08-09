@@ -40,25 +40,6 @@ namespace BitSharp.Core.Storage
             this.currentIndex = -1;
         }
 
-        public void Dispose()
-        {
-        }
-
-        public void BeginTransaction()
-        {
-            throw new NotSupportedException();
-        }
-
-        public void CommitTransaction()
-        {
-            throw new NotSupportedException();
-        }
-
-        public void RollbackTransaction()
-        {
-            throw new NotSupportedException();
-        }
-
         public bool TryMoveToIndex(int index)
         {
             MerkleTreeNode node;

@@ -85,18 +85,16 @@ namespace BitSharp.Core.Storage.Memory
             ImmutableSortedDictionary<int, BlockTx> blockTxes;
             if (this.allBlockTxes.TryGetValue(blockHash, out blockTxes))
             {
-                using (var pruningCursor = new MemoryMerkleTreePruningCursor(blockTxes.Values))
-                {
-                    foreach (var index in txIndices)
-                        MerkleTree.PruneNode(pruningCursor, index);
+                var pruningCursor = new MemoryMerkleTreePruningCursor(blockTxes.Values);
+                foreach (var index in txIndices)
+                    MerkleTree.PruneNode(pruningCursor, index);
 
-                    var prunedBlockTxes =
-                        ImmutableSortedDictionary.CreateRange<int, BlockTx>(
-                            pruningCursor.ReadNodes().Select(blockTx =>
-                                new KeyValuePair<int, BlockTx>(blockTx.Index, blockTx)));
+                var prunedBlockTxes =
+                    ImmutableSortedDictionary.CreateRange<int, BlockTx>(
+                        pruningCursor.ReadNodes().Select(blockTx =>
+                            new KeyValuePair<int, BlockTx>(blockTx.Index, blockTx)));
 
-                    this.allBlockTxes[blockHash] = prunedBlockTxes;
-                }
+                this.allBlockTxes[blockHash] = prunedBlockTxes;
             }
         }
 

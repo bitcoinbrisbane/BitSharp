@@ -7,14 +7,8 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core
 {
-    public interface IMerkleTreePruningCursor : IDisposable
+    public interface IMerkleTreePruningCursor
     {
-        void BeginTransaction();
-
-        void CommitTransaction();
-
-        void RollbackTransaction();
-
         bool TryMoveToIndex(int index);
 
         bool TryMoveLeft();

@@ -24,25 +24,6 @@ namespace BitSharp.Core.Storage.Memory
             this.index = -2;
         }
 
-        public void Dispose()
-        {
-        }
-
-        public void BeginTransaction()
-        {
-            //TODO
-        }
-
-        public void CommitTransaction()
-        {
-            //TODO
-        }
-
-        public void RollbackTransaction()
-        {
-            //TODO
-        }
-
         public bool TryMoveToIndex(int index)
         {
             this.index = this.nodes.FindIndex(x => x.Index == index);

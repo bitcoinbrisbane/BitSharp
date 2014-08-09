@@ -19,38 +19,16 @@ using System.Security.Cryptography;
 
 namespace BitSharp.Esent
 {
-    internal class MerkleTreePruningCursor : IMerkleTreePruningCursor, IDisposable
+    internal class MerkleTreePruningCursor : IMerkleTreePruningCursor
     {
         private readonly int blockId;
         private readonly BlockTxesCursor cursor;
-        private readonly Action disposeAction;
 
-        public MerkleTreePruningCursor(int blockId, BlockTxesCursor cursor, Action disposeAction)
+        public MerkleTreePruningCursor(int blockId, BlockTxesCursor cursor)
         {
             this.blockId = blockId;
             this.cursor = cursor;
-            this.disposeAction = disposeAction;
-        }
-
-        public void Dispose()
-        {
-            this.disposeAction();
-        }
-
-        public void BeginTransaction()
-        {
-            Api.JetBeginTransaction2(cursor.jetSession, BeginTransactionGrbit.None);
             Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockIdTxIndex");
-        }
-
-        public void CommitTransaction()
-        {
-            Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.LazyFlush);
-        }
-
-        public void RollbackTransaction()
-        {
-            Api.JetRollback(cursor.jetSession, RollbackTransactionGrbit.None);
         }
 
         public bool TryMoveToIndex(int index)
