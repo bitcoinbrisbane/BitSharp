@@ -92,6 +92,7 @@
     <Compile Include="CountMeasure.cs" />
     <Compile Include="RateMeasure.cs" />
     <Compile Include="ReadOnlyDictionaryOfDictionary.cs" />
+    <Compile Include="SortedValueDictionary.cs" />
     <Compile Include="UInt256.cs" />
     <Compile Include="Worker.cs" />
     <Compile Include="WorkerMethod.cs" />

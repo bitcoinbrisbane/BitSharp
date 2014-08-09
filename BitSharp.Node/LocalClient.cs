@@ -160,6 +160,17 @@ namespace BitSharp.Node
             return this.coreDaemon.GetBlockMissCount();
         }
 
+        internal void DiscouragePeer(IPEndPoint peerEndPoint)
+        {
+            // discourage a peer by reducing their last seen time
+            NetworkAddressWithTime address;
+            if (this.networkPeerCache.TryGetValue(peerEndPoint.ToNetworkAddressKey(), out address))
+            {
+                var newTime = (address.Time.UnixTimeToDateTime() - TimeSpan.FromDays(7)).ToUnixTime();
+                this.networkPeerCache[address.NetworkAddress.GetKey()] = address.With(Time: newTime);
+            }
+        }
+
         private void AddSeedPeers()
         {
             Action<string> addSeed =
@@ -504,13 +515,7 @@ namespace BitSharp.Node
         // candidate peers are ordered according to time
         public int CompareTo(CandidatePeer other)
         {
-            if (this.Time.Ticks < other.Time.Ticks)
-                return +1;
-            else if (this.Time.Ticks > other.Time.Ticks)
-                return -1;
-            else
-                // ensure peers with identical times are compared deterministically
-                return this.ipEndPointString.CompareTo(other.ipEndPointString);
+            return other.time.CompareTo(this.time);
         }
     }
 
@@ -545,11 +550,6 @@ namespace BitSharp.Node
             public static CandidatePeer ToCandidatePeer(this NetworkAddressWithTime address)
             {
                 return new CandidatePeer(address.NetworkAddress.ToIPEndPoint(), address.Time.UnixTimeToDateTime(), isSeed: false);
-            }
-
-            public static CandidatePeer ToCandidatePeerKey(this IPEndPoint ipEndPoint)
-            {
-                return new CandidatePeer(ipEndPoint, DateTime.MinValue, false);
             }
         }
     }
