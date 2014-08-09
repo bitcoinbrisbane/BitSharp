@@ -119,11 +119,12 @@ namespace BitSharp.Node
             this.peerWorker.Start();
             this.statsWorker.Start();
 
+            //TODO: load seed peers in a task once the fact that they are seeds is persisted
+            // add seed peers
+            AddSeedPeers();
+            
             // add known peers
             AddKnownPeers();
-
-            // add seed peers
-            Task.Run(() => AddSeedPeers());
         }
 
         public void Dispose()
@@ -198,7 +199,7 @@ namespace BitSharp.Node
                 case RulesEnum.MainNet:
                     addSeed("seed.bitcoin.sipa.be");
                     addSeed("dnsseed.bluematt.me");
-                    addSeed("dnsseed.bitcoin.dashjr.org");
+                    //addSeed("dnsseed.bitcoin.dashjr.org");
                     addSeed("seed.bitcoinstats.com");
                     addSeed("seed.bitnodes.io");
                     addSeed("seeds.bitcoin.open-nodes.org");
@@ -343,12 +344,12 @@ namespace BitSharp.Node
 
                 // store the received address
                 // insert if not present, or update if the address time is newer
-                NetworkAddressWithTime knownAddress;
-                if (!this.networkPeerCache.TryGetValue(address.NetworkAddress.GetKey(), out knownAddress)
-                    || knownAddress.Time < address.Time)
-                {
-                    this.networkPeerCache[address.NetworkAddress.GetKey()] = address;
-                }
+                //NetworkAddressWithTime knownAddress;
+                //if (!this.networkPeerCache.TryGetValue(address.NetworkAddress.GetKey(), out knownAddress)
+                //    || knownAddress.Time < address.Time)
+                //{
+                //    this.networkPeerCache[address.NetworkAddress.GetKey()] = address;
+                //}
             }
         }
 
@@ -512,10 +513,19 @@ namespace BitSharp.Node
             return this.IPEndPoint.GetHashCode();
         }
 
-        // candidate peers are ordered according to time
+        // candidate peers are ordered with seeds last, and then by time
         public int CompareTo(CandidatePeer other)
         {
-            return other.time.CompareTo(this.time);
+            if (other.isSeed && !this.isSeed)
+                return -1;
+            else if (this.isSeed && !other.isSeed)
+                return +1;
+            else if (other.time < this.time)
+                return -1;
+            else if (other.time > this.time)
+                return +1;
+            else
+                return this.ipEndPointString.CompareTo(other.ipEndPointString);
         }
     }
 
