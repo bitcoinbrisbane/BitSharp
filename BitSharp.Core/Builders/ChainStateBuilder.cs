@@ -306,6 +306,9 @@ namespace BitSharp.Core.Builders
 
         public sealed class BuilderStats : IDisposable
         {
+            private static readonly TimeSpan sampleCutoff = TimeSpan.FromMinutes(5);
+            private static readonly TimeSpan sampleResolution = TimeSpan.FromSeconds(5);
+
             public Stopwatch durationStopwatch = Stopwatch.StartNew();
             public Stopwatch validateStopwatch = new Stopwatch();
 
@@ -313,9 +316,9 @@ namespace BitSharp.Core.Builders
             public long txCount;
             public long inputCount;
 
-            public readonly RateMeasure blockRateMeasure = new RateMeasure();
-            public readonly RateMeasure txRateMeasure = new RateMeasure();
-            public readonly RateMeasure inputRateMeasure = new RateMeasure();
+            public readonly RateMeasure blockRateMeasure = new RateMeasure(sampleCutoff, sampleResolution);
+            public readonly RateMeasure txRateMeasure = new RateMeasure(sampleCutoff, sampleResolution);
+            public readonly RateMeasure inputRateMeasure = new RateMeasure(sampleCutoff, sampleResolution);
 
             public DateTime lastLogTime = DateTime.UtcNow;
 
