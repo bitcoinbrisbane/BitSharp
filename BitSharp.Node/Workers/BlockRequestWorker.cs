@@ -37,6 +37,7 @@ namespace BitSharp.Node.Workers
         private List<ChainedHeader> targetChainQueue;
         private int targetChainQueueIndex;
         private DateTime targetChainQueueTime;
+        private bool targetChainChanged;
 
         private readonly DurationMeasure blockRequestDurationMeasure;
         private readonly RateMeasure blockDownloadRateMeasure;
@@ -162,11 +163,14 @@ namespace BitSharp.Node.Workers
 
         private void UpdateTargetChainQueue()
         {
+            // force update if the target chain changed
+            if (this.targetChainChanged)
+                this.targetChainChanged = false;
             // update the target chain queue at most once per second
-            if (this.targetChainQueueTime != null && DateTime.UtcNow - targetChainQueueTime < TimeSpan.FromSeconds(1))
+            else if (this.targetChainQueueTime != null && DateTime.UtcNow - targetChainQueueTime < TimeSpan.FromSeconds(1))
                 return;
-            else
-                this.targetChainQueueTime = DateTime.UtcNow;
+
+            this.targetChainQueueTime = DateTime.UtcNow;
 
             var currentChainLocal = this.coreDaemon.CurrentChain;
             var targetChainLocal = this.coreDaemon.TargetChain;
@@ -365,6 +369,7 @@ namespace BitSharp.Node.Workers
 
         private void HandleTargetChainChanged(object sender, EventArgs e)
         {
+            this.targetChainChanged = true;
             this.NotifyWork();
         }
 
