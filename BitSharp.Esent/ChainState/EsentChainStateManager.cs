@@ -47,7 +47,7 @@ namespace BitSharp.Esent
 
             this.CreateOrOpenDatabase();
 
-            this.cursors = new IChainStateCursor[16];
+            this.cursors = new IChainStateCursor[64];
             this.cursorsLock = new object();
         }
 

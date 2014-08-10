@@ -40,7 +40,7 @@ namespace BitSharp.Esent
             this.jetDirectory = Path.Combine(baseDirectory, "Blocks");
             this.jetDatabase = Path.Combine(this.jetDirectory, "Blocks.edb");
 
-            this.cursors = new BlockCursor[16];
+            this.cursors = new BlockCursor[64];
             this.cursorsLock = new object();
 
             this.jetInstance = CreateInstance(this.jetDirectory);
