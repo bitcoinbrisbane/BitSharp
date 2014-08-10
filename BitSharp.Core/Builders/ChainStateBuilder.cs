@@ -107,22 +107,15 @@ namespace BitSharp.Core.Builders
                         // ignore transactions on geneis block
                         if (chainedHeader.Height > 0)
                         {
-                            try
+                            foreach (var pendingTx in this.utxoBuilder.CalculateUtxo(this.chain.ToImmutable(), blockTxes.Select(x => x.Transaction)))
                             {
-                                foreach (var pendingTx in this.utxoBuilder.CalculateUtxo(this.chain.ToImmutable(), blockTxes.Select(x => x.Transaction)))
-                                {
-                                    this.blockValidator.AddPendingTx(pendingTx);
+                                this.blockValidator.AddPendingTx(pendingTx);
 
-                                    // track stats
-                                    this.stats.txCount++;
-                                    this.stats.inputCount += pendingTx.Transaction.Inputs.Length;
-                                    this.stats.txRateMeasure.Tick();
-                                    this.stats.inputRateMeasure.Tick(pendingTx.Transaction.Inputs.Length);
-                                }
-                            }
-                            catch (Exception)
-                            {
-                                throw;
+                                // track stats
+                                this.stats.txCount++;
+                                this.stats.inputCount += pendingTx.Transaction.Inputs.Length;
+                                this.stats.txRateMeasure.Tick();
+                                this.stats.inputRateMeasure.Tick(pendingTx.Transaction.Inputs.Length);
                             }
                         }
 
