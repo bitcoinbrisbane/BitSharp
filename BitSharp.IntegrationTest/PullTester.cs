@@ -86,8 +86,6 @@ namespace BitSharp.IntegrationTest
                             javaProcess.ErrorDataReceived += (sender, e) =>
                                 logger.Error("[Pull Tester]: " + e.Data);
 
-                            javaProcess.Start();
-
                             javaProcess.BeginOutputReadLine();
                             javaProcess.BeginErrorReadLine();
 
