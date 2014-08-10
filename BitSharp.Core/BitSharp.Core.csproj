@@ -78,7 +78,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\NLog.3.1.0.0\lib\net45\NLog.dll</HintPath>
     </Reference>
-    <Reference Include="Secp256k1.NET, Version=1.0.5199.33368, Culture=neutral, processorArchitecture=AMD64">
+    <Reference Include="Secp256k1.NET, Version=1.0.5199.33368, Culture=neutral, processorArchitecture=AMD64" Condition="'$(Platform)' == 'x64'">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Script\Secp256k1.NET.dll</HintPath>
     </Reference>
@@ -185,7 +185,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Script\Secp256k1.NET.dll" />
+    <None Include="Script\Secp256k1.NET.dll" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
