@@ -1,5 +1,5 @@
-del pull-tests.jar
-rmdir -force -recurse bin
+if (Test-Path pull-tests.jar) { del -force pull-tests.jar }
+if (Test-Path bin) { rmdir -force -recurse bin }
 
 if (Test-Path bitcoinj)
 {
