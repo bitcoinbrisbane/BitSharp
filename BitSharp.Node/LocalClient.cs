@@ -115,16 +115,23 @@ namespace BitSharp.Node
             }
             this.blockRequestWorker.Start();
 
-            //this.listenWorker.Start();
             this.peerWorker.Start();
             this.statsWorker.Start();
 
-            //TODO: load seed peers in a task once the fact that they are seeds is persisted
-            // add seed peers
-            AddSeedPeers();
-            
-            // add known peers
-            AddKnownPeers();
+            if (this.Type != RulesEnum.ComparisonToolTestNet)
+            {
+                //TODO: load seed peers in a task once the fact that they are seeds is persisted
+                // add seed peers
+                AddSeedPeers();
+
+                // add known peers
+                AddKnownPeers();
+            }
+            else
+            {
+                Messaging.GetExternalIPEndPoint();
+                this.listenWorker.Start();
+            }
         }
 
         public void Dispose()

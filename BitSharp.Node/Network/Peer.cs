@@ -56,8 +56,9 @@ namespace BitSharp.Node.Network
             WireNode();
         }
 
-        public Peer(Socket socket, bool isSeed)
+        public Peer(Socket socket, bool isSeed, Logger logger)
         {
+            this.logger = logger;
             this.socket = socket;
             this.isConnected = true;
 

@@ -81,7 +81,7 @@ namespace BitSharp.Node.Workers
 
         public void AddIncomingPeer(Socket socket)
         {
-            var peer = new Peer(socket, isSeed: false);
+            var peer = new Peer(socket, isSeed: false, logger: this.logger);
             try
             {
                 ConnectAndHandshake(peer, isIncoming: true)
