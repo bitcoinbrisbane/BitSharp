@@ -10,10 +10,10 @@ namespace BitSharp.Core.Builders
 {
     internal class TxWithPrevOutputKeys
     {
-        public readonly Transaction transaction;
-        public readonly int txIndex;
-        public readonly ChainedHeader chainedHeader;
-        public readonly ImmutableArray<BlockTxKey> prevOutputTxKeys;
+        private readonly Transaction transaction;
+        private readonly int txIndex;
+        private readonly ChainedHeader chainedHeader;
+        private readonly ImmutableArray<BlockTxKey> prevOutputTxKeys;
 
         public TxWithPrevOutputKeys(int txIndex, Transaction transaction, ChainedHeader chainedHeader, ImmutableArray<BlockTxKey> prevOutputTxKeys)
         {

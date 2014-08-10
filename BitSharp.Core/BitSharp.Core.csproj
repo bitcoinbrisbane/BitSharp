@@ -97,13 +97,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Builders\BlockValidator.cs" />
     <Compile Include="Builders\UtxoBuilder.cs" />
     <Compile Include="Builders\TxInputWithPrevOutput.cs" />
     <Compile Include="Builders\TxWithPrevOutputs.cs" />
     <Compile Include="Builders\TxWithPrevOutputKeys.cs" />
     <Compile Include="Storage\CoreStorage.cs" />
     <Compile Include="Domain\BlockTxKey.cs" />
-    <Compile Include="Builders\TxValidator.cs" />
     <Compile Include="MerkleTree.cs" />
     <Compile Include="BlockchainWalker.cs" />
     <Compile Include="CoreDaemon.cs" />
@@ -134,8 +134,6 @@
     <Compile Include="JsonRpc\CoreRpcServer.cs" />
     <Compile Include="Domain\MerkleTreeNode.cs" />
     <Compile Include="Monitor\ChainStateMonitor.cs" />
-    <Compile Include="Builders\TxPrevOutputLoader.cs" />
-    <Compile Include="Builders\ScriptValidator.cs" />
     <Compile Include="Monitor\ChainPosition.cs" />
     <Compile Include="Monitor\ChainStateVisitorBase.cs" />
     <Compile Include="Monitor\IChainStateVisitor.cs" />

@@ -33,9 +33,7 @@ namespace BitSharp.Core.Builders
         private readonly IBlockchainRules rules;
         private readonly CoreStorage coreStorage;
 
-        private readonly TxPrevOutputLoader txPrevOutputLoader;
-        private readonly TxValidator txValidator;
-        private readonly ScriptValidator scriptValidator;
+        private readonly BlockValidator blockValidator;
 
         private bool inTransaction;
         private readonly IChainStateCursor chainStateCursor;
@@ -53,10 +51,7 @@ namespace BitSharp.Core.Builders
             this.rules = rules;
             this.coreStorage = coreStorage;
 
-            var isConcurrent = true;
-            this.scriptValidator = new ScriptValidator(this.logger, this.rules, isConcurrent);
-            this.txValidator = new TxValidator(this.scriptValidator, this.logger, this.rules, isConcurrent);
-            this.txPrevOutputLoader = new TxPrevOutputLoader(this.coreStorage, this.txValidator, this.logger, this.rules, isConcurrent);
+            this.blockValidator = new BlockValidator(this.coreStorage, this.rules, this.logger);
 
             this.chainStateCursor = coreStorage.OpenChainStateCursor();
 
@@ -80,9 +75,7 @@ namespace BitSharp.Core.Builders
             new IDisposable[]
             {
                 this.chainStateCursor,
-                this.txPrevOutputLoader,
-                this.txValidator,
-                this.scriptValidator,
+                this.blockValidator,
                 this.stats,
             }.DisposeList();
         }
@@ -98,23 +91,15 @@ namespace BitSharp.Core.Builders
 
         public void AddBlock(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes)
         {
-            using (this.txPrevOutputLoader.Start())
-            using (this.txValidator.Start())
-            using (this.scriptValidator.Start(/*isConcurrent: chainedHeader.Height > 150.THOUSAND()*/))
+            var savedChain = this.chain.ToImmutable();
+            this.BeginTransaction();
+            try
             {
-                var savedChain = this.chain.ToImmutable();
-                this.BeginTransaction();
-                try
+                using (var session = this.blockValidator.StartValidation(chainedHeader))
                 {
                     // add the block to the chain
                     this.chain.AddBlock(chainedHeader);
                     this.chainStateCursor.AddChainedHeader(chainedHeader);
-
-                    // validate the block
-                    //this.Stats.validateStopwatch.Start();
-                    //new MethodTimer(false).Time("ValidateBlock", () =>
-                    //    this.rules.ValidateBlock(chainedBlock, this));
-                    //this.Stats.validateStopwatch.Stop();
 
                     // calculate the new block utxo, double spends will be checked for
                     new MethodTimer(false).Time("CalculateUtxo", () =>
@@ -122,70 +107,79 @@ namespace BitSharp.Core.Builders
                         // ignore transactions on geneis block
                         if (chainedHeader.Height > 0)
                         {
-                            foreach (var pendingTx in this.utxoBuilder.CalculateUtxo(this.chain.ToImmutable(), blockTxes.Select(x => x.Transaction)))
+                            try
                             {
-                                this.txPrevOutputLoader.Add(pendingTx);
+                                foreach (var pendingTx in this.utxoBuilder.CalculateUtxo(this.chain.ToImmutable(), blockTxes.Select(x => x.Transaction)))
+                                {
+                                    this.blockValidator.AddPendingTx(pendingTx);
 
-                                // track stats
-                                this.stats.txCount++;
-                                this.stats.inputCount += pendingTx.transaction.Inputs.Length;
-                                this.stats.txRateMeasure.Tick();
-                                this.stats.inputRateMeasure.Tick(pendingTx.transaction.Inputs.Length);
+                                    // track stats
+                                    this.stats.txCount++;
+                                    this.stats.inputCount += pendingTx.Transaction.Inputs.Length;
+                                    this.stats.txRateMeasure.Tick();
+                                    this.stats.inputRateMeasure.Tick(pendingTx.Transaction.Inputs.Length);
+                                }
+                            }
+                            catch (Exception)
+                            {
+                                throw;
                             }
                         }
 
-                        this.txPrevOutputLoader.CompleteAdding();
+                        // finished queuing up block's txes
+                        this.blockValidator.CompleteAdding();
 
                         // track stats
                         this.stats.blockCount++;
                     });
 
-                    // wait for transactions to load
-                    this.txPrevOutputLoader.WaitToComplete();
-                    if (this.txPrevOutputLoader.Exceptions.Count > 0)
+                    // wait for block validation to complete
+                    this.blockValidator.WaitToComplete();
+
+                    // check tx loader results
+                    if (this.blockValidator.TxLoaderExceptions.Count > 0)
                     {
-                        throw new AggregateException(this.txPrevOutputLoader.Exceptions);
+                        throw new AggregateException(this.blockValidator.TxLoaderExceptions);
                     }
 
-                    // wait for transactions to validate
-                    this.txValidator.WaitToComplete();
-                    if (this.txValidator.Exceptions.Count > 0)
+                    // check tx validation results
+                    if (this.blockValidator.TxValidatorExceptions.Count > 0)
                     {
-                        throw new AggregateException(this.txValidator.Exceptions);
+                        throw new AggregateException(this.blockValidator.TxValidatorExceptions);
                     }
 
-                    // wait for scripts to validate
-                    this.scriptValidator.WaitToComplete();
-                    if (this.scriptValidator.Exceptions.Count > 0)
+                    // check script validation results
+                    if (this.blockValidator.ScriptValidatorExceptions.Count > 0)
                     {
                         if (!MainnetRules.IgnoreScriptErrors)
-                            throw new AggregateException(this.scriptValidator.Exceptions);
+                            throw new AggregateException(this.blockValidator.ScriptValidatorExceptions);
                         else
-                            this.logger.Info("Ignoring script errors in block: {0,9:#,##0}, errors: {1:#,##0}".Format2(chainedHeader.Height, this.scriptValidator.Exceptions.Count));
+                            this.logger.Info("Ignoring script errors in block: {0,9:#,##0}, errors: {1:#,##0}".Format2(chainedHeader.Height, this.blockValidator.ScriptValidatorExceptions.Count));
                     }
-
-                    // commit the chain state
-                    this.CommitTransaction();
-                }
-                catch (Exception)
-                {
-                    this.chain = savedChain.ToBuilder();
-                    this.RollbackTransaction();
-                    throw;
                 }
 
-                // MEASURE: Block Rate
-                this.stats.blockRateMeasure.Tick();
+                // commit the chain state
+                this.CommitTransaction();
+            }
+            catch (Exception)
+            {
+                // rollback the chain state on error
+                this.RollbackTransaction();
+                this.chain = savedChain.ToBuilder();
+                throw;
+            }
 
-                // blockchain processing statistics
-                this.Stats.blockCount++;
+            // MEASURE: Block Rate
+            this.stats.blockRateMeasure.Tick();
 
-                var logInterval = TimeSpan.FromSeconds(15);
-                if (DateTime.UtcNow - this.Stats.lastLogTime >= logInterval)
-                {
-                    this.LogBlockchainProgress();
-                    this.Stats.lastLogTime = DateTime.UtcNow;
-                }
+            // blockchain processing statistics
+            this.Stats.blockCount++;
+
+            var logInterval = TimeSpan.FromSeconds(15);
+            if (DateTime.UtcNow - this.Stats.lastLogTime >= logInterval)
+            {
+                this.LogBlockchainProgress();
+                this.Stats.lastLogTime = DateTime.UtcNow;
             }
         }
 
