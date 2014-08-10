@@ -258,7 +258,7 @@ namespace BitSharp.Core
             // startup workers
             this.targetChainWorker.Start();
             this.chainStateWorker.Start();
-            this.pruningWorker.Start();
+            //this.pruningWorker.Start();
             this.defragWorker.Start();
             this.gcWorker.Start();
             //this.utxoScanWorker.Start();
