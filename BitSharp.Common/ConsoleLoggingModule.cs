@@ -22,17 +22,16 @@ namespace BitSharp.Common
 
         public override void Load()
         {
+            // log layout format
+            var layout = "${pad:padding=6:inner=${level:uppercase=true}} ${message} ${exception:separator=\r\n:format=message,type,method,stackTrace}";
+
             // initialize logging configuration
             var config = new LoggingConfiguration();
 
             // create console target
             var consoleTarget = new ColoredConsoleTarget();
-            config.AddTarget("console", consoleTarget);
-
-            // console settings
-            consoleTarget.Layout = "${message} ${exception:separator=\r\n:format=message,type,method,stackTrace}";
-
-            // console rules
+            consoleTarget.Layout = layout;
+            config.AddTarget("debug", consoleTarget);
             config.LoggingRules.Add(new LoggingRule("*", this.logLevel, consoleTarget));
 
             // activate configuration and bind

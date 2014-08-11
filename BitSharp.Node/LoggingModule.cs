@@ -26,33 +26,24 @@ namespace BitSharp.Node
 
         public override void Load()
         {
+            // log layout format
+            var layout = "${pad:padding=6:inner=${level:uppercase=true}} ${message} ${exception:separator=\r\n:format=message,type,method,stackTrace}";
+
             // initialize logging configuration
             var config = new LoggingConfiguration();
 
-            // shared layout
-            var layout = "${message} ${exception:separator=\r\n:format=message,type,method,stackTrace}";
-
-            // create console target
-            var consoleTarget = new ColoredConsoleTarget();
-            config.AddTarget("console", consoleTarget);
-
-            // console settings
-            consoleTarget.Layout = layout;
-
-            // console rules
-            config.LoggingRules.Add(new LoggingRule("*", logLevel, consoleTarget));
+            // create debugger target
+            var debuggerTarget = new DebuggerTarget();
+            debuggerTarget.Layout = layout;
+            config.AddTarget("console", debuggerTarget);
+            config.LoggingRules.Add(new LoggingRule("*", logLevel, debuggerTarget));
 
             // create file target
             var fileTarget = new FileTarget() { AutoFlush = false };
-            config.AddTarget("file", fileTarget);
-
-            // file settings
-            fileTarget.FileName = Path.Combine(this.directory, "BitSharp.log");
-            
             fileTarget.Layout = layout;
+            fileTarget.FileName = Path.Combine(this.directory, "BitSharp.log");
             fileTarget.DeleteOldFileOnStartup = true;
-
-            // file rules
+            config.AddTarget("file", fileTarget);
             config.LoggingRules.Add(new LoggingRule("*", logLevel, fileTarget));
 
             // activate configuration and bind
