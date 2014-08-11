@@ -17,9 +17,13 @@ namespace BitSharp.Common
         private readonly Logger logger;
 
         private readonly WorkerMethod readWorker;
-        private readonly WorkerMethod consumeWorker;
         private ManualResetEventSlim completedReadingEvent = new ManualResetEventSlim(false);
-        private ManualResetEventSlim completedEvent = new ManualResetEventSlim(false);
+
+        private readonly WorkerMethod[] consumeWorkers;
+        private readonly bool[] consumeWorkersCompleted;
+        private readonly object consumeWorkersLock;
+
+        private readonly ManualResetEventSlim completedEvent = new ManualResetEventSlim(false);
 
         private IEnumerable<T> source;
         private Action<T> consumeAction;
@@ -34,20 +38,29 @@ namespace BitSharp.Common
             this.logger = logger;
 
             this.readWorker = new WorkerMethod(name + ".ReadWorker", ReadWorker, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: logger);
-            this.consumeWorker = new WorkerMethod(name + ".ConsumeWorker", ConsumeWorker, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: logger);
-
             this.readWorker.Start();
-            this.consumeWorker.Start();
+
+            this.consumeWorkers = new WorkerMethod[Environment.ProcessorCount * 2];
+            this.consumeWorkersCompleted = new bool[this.consumeWorkers.Length];
+            this.consumeWorkersLock = new object();
+
+            for (var i = 0; i < this.consumeWorkers.Length; i++)
+            {
+                this.consumeWorkers[i] = new WorkerMethod(name + ".ConsumeWorker." + i, ConsumeWorker, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: logger);
+                this.consumeWorkers[i].Data = i;
+                this.consumeWorkers[i].Start();
+            }
         }
 
         public void Dispose()
         {
             this.Stop();
 
+            this.consumeWorkers.DisposeList();
+
             new IDisposable[]
             {
                 this.readWorker,
-                this.consumeWorker,
                 this.completedReadingEvent,
                 this.completedEvent,
                 this.queue
@@ -71,7 +84,12 @@ namespace BitSharp.Common
             this.isStarted = true;
 
             this.readWorker.NotifyWork();
-            this.consumeWorker.NotifyWork();
+
+            Array.Clear(this.consumeWorkersCompleted, 0, this.consumeWorkersCompleted.Length);
+            for (var i = 0; i < this.consumeWorkers.Length; i++)
+            {
+                this.consumeWorkers[i].NotifyWork();
+            }
 
             return new Stopper(this);
         }
@@ -121,10 +139,27 @@ namespace BitSharp.Common
         {
             try
             {
-                Parallel.ForEach(this.queue.GetConsumingEnumerable(),
-                    value => this.consumeAction(value));
+                foreach (var value in this.queue.GetConsumingEnumerable())
+                    this.consumeAction(value);
             }
             finally
+            {
+                CompleteWorker((int)instance.Data);
+            }
+        }
+
+        private void CompleteWorker(int i)
+        {
+            bool wasCompleted;
+            bool completed;
+            lock (this.consumeWorkersLock)
+            {
+                wasCompleted = this.consumeWorkersCompleted.All(x => x);
+                this.consumeWorkersCompleted[i] = true;
+                completed = this.consumeWorkersCompleted.All(x => x);
+            }
+
+            if (!wasCompleted && completed)
             {
                 this.completedAction();
                 this.completedEvent.Set();
