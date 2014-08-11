@@ -33,7 +33,6 @@ namespace BitSharp.Core.Test
             }
         }
 
-        //TODO this test takes a very long time in debug mode and needs to be ignored
         [TestMethod]
         public void TestLongBlockchain()
         {
