@@ -104,11 +104,11 @@ namespace BitSharp.Core.Workers
                     var blockStopwatch = Stopwatch.StartNew();
                     if (direction > 0)
                     {
-                        this.chainStateBuilder.AddBlock(chainedHeader, blockTxes/*.LookAhead(1)*/);
+                        this.chainStateBuilder.AddBlock(chainedHeader, blockTxes.LookAhead(10));
                     }
                     else if (direction < 0)
                     {
-                        this.chainStateBuilder.RollbackBlock(chainedHeader, blockTxes/*.LookAhead(1)*/);
+                        this.chainStateBuilder.RollbackBlock(chainedHeader, blockTxes.LookAhead(10));
                     }
                     else
                     {

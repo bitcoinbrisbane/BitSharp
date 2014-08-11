@@ -17,7 +17,7 @@ namespace BitSharp.Common
             using (var readValues = new BlockingCollection<T>(1 + lookAhead))
             using (var abortToken = new CancellationTokenSource())
             using (var readTask =
-                Task.Factory.StartNew(
+                Task.Run(
                 () =>
                 {
                     try
