@@ -1,6 +1,4 @@
-﻿//#define TEST_TOOL
-#define TESTNET3
-//#define MEMORY
+﻿//#define MEMORY
 //#define DUMMY_MONITOR
 
 using BitSharp.Common.ExtensionMethods;
@@ -50,18 +48,12 @@ namespace BitSharp.Client
             try
             {
                 //TODO
-                //MainnetRules.BypassValidation = true;
-                MainnetRules.IgnoreScripts = true;
+                var rulesType = RulesEnum.TestNet3;
+                //var rulesType = RulesEnum.MainNet;
+                MainnetRules.BypassValidation = false;
+                MainnetRules.IgnoreScripts = false;
                 MainnetRules.IgnoreSignatures = false;
                 MainnetRules.IgnoreScriptErrors = true;
-
-#if TEST_TOOL
-                var rulesType = RulesEnum.ComparisonToolTestNet;
-#elif TESTNET3
-                var rulesType = RulesEnum.TestNet3;
-#else
-                var rulesType = RulesEnum.MainNet;
-#endif
 
                 // directories
                 var baseDirectory = Config.LocalStoragePath;
