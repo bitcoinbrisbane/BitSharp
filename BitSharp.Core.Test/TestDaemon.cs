@@ -77,6 +77,9 @@ namespace BitSharp.Core.Test
             this.coreDaemon = this.kernel.Get<CoreDaemon>();
             this.coreStorage = this.coreDaemon.CoreStorage;
 
+            // TODO ignore script errors in test daemon until scripting engine is completed
+            this.coreDaemon.IgnoreScriptErrors = true;
+
             // start the blockchain daemon
             this.coreDaemon.Start();
 
@@ -214,7 +217,8 @@ namespace BitSharp.Core.Test
 
         public void AddBlock(Block block)
         {
-            this.coreStorage.TryAddBlock(block);
+            if (!this.coreStorage.TryAddBlock(block))
+                Assert.Fail("Failed to store block: {0}".Format2(block.Hash));
         }
 
         public void WaitForDaemon(int expectedHeight, TimeSpan? timeout = null)
@@ -232,7 +236,7 @@ namespace BitSharp.Core.Test
                 if (height == expectedHeight)
                     break;
                 else if (now - start >= timeout)
-                    break;
+                    Assert.Fail("CoreDaemon timed out waiting for block {0:#,##0}, current block: {1:#,##0}".Format2(expectedHeight, this.coreDaemon.CurrentChain.Height));
                 else
                     Thread.Sleep(TimeSpan.FromMilliseconds(5));
             }

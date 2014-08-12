@@ -36,7 +36,7 @@ namespace BitSharp.Core.Script
 
             var generator = new ECKeyPairGenerator();
             generator.Init(new ECKeyGenerationParameters(domainParameters, new SecureRandom()));
-            var keyPair = new MethodTimer().Time("GenerateKeyPair", () => generator.GenerateKeyPair());
+            var keyPair = new MethodTimer(false).Time("GenerateKeyPair", () => generator.GenerateKeyPair());
 
             var privateKey = (ECPrivateKeyParameters)keyPair.Private;
             var publicKey = (ECPublicKeyParameters)keyPair.Public;

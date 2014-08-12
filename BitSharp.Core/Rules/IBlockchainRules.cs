@@ -24,6 +24,6 @@ namespace BitSharp.Core.Rules
 
         void ValidateTransaction(ChainedHeader chainedHeader, Transaction tx, int txIndex, ImmutableArray<TxOutput> prevTxOutputs);
 
-        void ValidationTransactionScript(ChainedHeader chainedHeader, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput);
+        void ValidationTransactionScript(ChainedHeader chainedHeader, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput, /*TODO*/bool ignoreSignatures);
     }
 }

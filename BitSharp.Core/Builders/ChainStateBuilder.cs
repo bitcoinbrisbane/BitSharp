@@ -31,6 +31,7 @@ namespace BitSharp.Core.Builders
         private readonly Logger logger;
         private readonly SHA256Managed sha256;
         private readonly IBlockchainRules rules;
+        private readonly CoreDaemon coreDaemon;
         private readonly CoreStorage coreStorage;
 
         private readonly BlockValidator blockValidator;
@@ -44,14 +45,15 @@ namespace BitSharp.Core.Builders
 
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(Logger logger, IBlockchainRules rules, CoreStorage coreStorage)
+        public ChainStateBuilder(Logger logger, IBlockchainRules rules, CoreDaemon coreDaemon, CoreStorage coreStorage)
         {
             this.logger = logger;
             this.sha256 = new SHA256Managed();
             this.rules = rules;
+            this.coreDaemon = coreDaemon;
             this.coreStorage = coreStorage;
 
-            this.blockValidator = new BlockValidator(this.coreStorage, this.rules, this.logger);
+            this.blockValidator = new BlockValidator(this.coreDaemon, this.coreStorage, this.rules, this.logger);
 
             this.chainStateCursor = coreStorage.OpenChainStateCursor();
 
@@ -144,7 +146,7 @@ namespace BitSharp.Core.Builders
                     // check script validation results
                     if (this.blockValidator.ScriptValidatorExceptions.Count > 0)
                     {
-                        if (!MainnetRules.IgnoreScriptErrors)
+                        if (!this.coreDaemon.IgnoreScriptErrors)
                             throw new AggregateException(this.blockValidator.ScriptValidatorExceptions);
                         else
                             this.logger.Info("Ignoring script errors in block: {0,9:#,##0}, errors: {1:#,##0}".Format2(chainedHeader.Height, this.blockValidator.ScriptValidatorExceptions.Count));

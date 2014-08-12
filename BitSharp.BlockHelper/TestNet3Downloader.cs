@@ -61,13 +61,13 @@ namespace BitSharp.BlockHelper
                 kernel.Load(new NodeCacheModule());
 
                 // add rules module
-                MainnetRules.BypassValidation = true;
                 var rulesType = RulesEnum.TestNet3;
                 kernel.Load(new RulesModule(rulesType));
 
                 // initialize the blockchain daemon
                 using (var coreDaemon = kernel.Get<CoreDaemon>())
                 {
+                    coreDaemon.BypassValidation = true;
                     kernel.Bind<CoreDaemon>().ToConstant(coreDaemon).InTransientScope();
 
                     // initialize p2p client

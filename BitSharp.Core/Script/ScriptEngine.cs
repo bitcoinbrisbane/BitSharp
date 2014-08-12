@@ -25,10 +25,19 @@ namespace BitSharp.Core.Script
     public class ScriptEngine
     {
         private readonly Logger logger;
+        private readonly bool ignoreSignatures;
 
         public ScriptEngine(Logger logger)
         {
             this.logger = logger;
+            this.ignoreSignatures = false;
+        }
+
+        //TODO
+        internal ScriptEngine(Logger logger, bool ignoreSignatures)
+        {
+            this.logger = logger;
+            this.ignoreSignatures = ignoreSignatures;
         }
 
         public bool VerifyScript(UInt256 blockHash, int txIndex, byte[] scriptPubKey, Transaction tx, int inputIndex, byte[] script)
@@ -305,7 +314,7 @@ Verifying script for block {0}, transaction {1}, input {2}
             var sha256 = new SHA256Managed();
             txSignatureHash = sha256.ComputeDoubleHash(txSignature);
 
-            if (MainnetRules.IgnoreSignatures)
+            if (this.ignoreSignatures)
             {
                 return true;
             }

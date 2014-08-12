@@ -67,6 +67,9 @@ namespace BitSharp.Core.Workers
         protected override void SubStart()
         {
             this.targetBlockWorker.Start();
+            
+            // acquire initial target block on startup
+            this.targetBlockWorker.ForceWorkAndWait();
         }
 
         protected override void SubStop()

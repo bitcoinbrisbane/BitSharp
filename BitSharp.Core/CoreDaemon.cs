@@ -79,7 +79,7 @@ namespace BitSharp.Core
             this.coreStorage.BlockTxesAdded += HandleBlockTxesAdded;
 
             // create chain state builder
-            this.chainStateBuilder = new ChainStateBuilder(this.logger, this.rules, this.coreStorage);
+            this.chainStateBuilder = new ChainStateBuilder(this.logger, this.rules, this, this.coreStorage);
 
             // add genesis block to chain state, if needed
             if (this.chainStateBuilder.Chain.Height < 0)
@@ -205,6 +205,12 @@ namespace BitSharp.Core
             }.DisposeList();
         }
 
+        //TODO
+        public bool BypassValidation { get; set; }
+        public bool IgnoreScripts { get; set; }
+        public bool IgnoreSignatures { get; set; }
+        public bool IgnoreScriptErrors { get; set; }
+
         public CoreStorage CoreStorage { get { return this.coreStorage; } }
 
         public ChainedHeader TargetBlock { get { return this.targetChainWorker.TargetBlock; } }
@@ -266,13 +272,13 @@ namespace BitSharp.Core
 
         public void Stop()
         {
-            // startup workers
-            this.targetChainWorker.Stop();
-            this.chainStateWorker.Stop();
+            // stop workers
+            this.utxoScanWorker.Stop();
             this.pruningWorker.Stop();
+            this.chainStateWorker.Stop();
+            this.targetChainWorker.Stop();
             this.defragWorker.Stop();
             this.gcWorker.Stop();
-            this.utxoScanWorker.Stop();
         }
 
         public void ForceWorkAndWait()

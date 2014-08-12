@@ -50,10 +50,13 @@ namespace BitSharp.Client
                 //TODO
                 var rulesType = RulesEnum.TestNet3;
                 //var rulesType = RulesEnum.MainNet;
-                MainnetRules.BypassValidation = false;
-                MainnetRules.IgnoreScripts = false;
-                MainnetRules.IgnoreSignatures = false;
-                MainnetRules.IgnoreScriptErrors = true;
+                var bypassValidation = false;
+                var ignoreScripts = false;
+                var ignoreSignatures = false;
+                var ignoreScriptErrors = true;
+
+                try { Directory.Delete(Path.Combine(Config.LocalStoragePath, "Data", rulesType.ToString(), "ChainState"), recursive: true); }
+                catch (Exception) { }
 
                 // directories
                 var baseDirectory = Config.LocalStoragePath;
@@ -93,6 +96,10 @@ namespace BitSharp.Client
 
                 // initialize the blockchain daemon
                 this.coreDaemon = this.kernel.Get<CoreDaemon>();
+                this.coreDaemon.BypassValidation = bypassValidation;
+                this.coreDaemon.IgnoreScripts = ignoreScripts;
+                this.coreDaemon.IgnoreSignatures = ignoreSignatures;
+                this.coreDaemon.IgnoreScriptErrors = ignoreScriptErrors;
                 this.kernel.Bind<CoreDaemon>().ToConstant(this.coreDaemon).InTransientScope();
 
 #if DUMMY_MONITOR

@@ -21,14 +21,6 @@ namespace BitSharp.Core.Rules
 {
     public class MainnetRules : IBlockchainRules
     {
-        public static bool BypassValidation { get; set; }
-
-        public static bool IgnoreScripts { get; set; }
-
-        public static bool IgnoreScriptErrors { get; set; }
-
-        public static bool IgnoreSignatures { get; set; }
-
         private const UInt64 SATOSHI_PER_BTC = 100 * 1000 * 1000;
 
         private readonly Logger logger;
@@ -323,9 +315,9 @@ namespace BitSharp.Core.Rules
             // all validation has passed
         }
 
-        public virtual void ValidationTransactionScript(ChainedHeader chainedHeader, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput)
+        public virtual void ValidationTransactionScript(ChainedHeader chainedHeader, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput, bool ignoreSignatures)
         {
-            var scriptEngine = new ScriptEngine(this.logger);
+            var scriptEngine = new ScriptEngine(this.logger, ignoreSignatures);
 
             // create the transaction script from the input and output
             var script = txInput.ScriptSignature.AddRange(prevTxOutput.ScriptPublicKey);
