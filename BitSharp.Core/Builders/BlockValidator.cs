@@ -135,7 +135,7 @@ namespace BitSharp.Core.Builders
             return this.txLoader.Start(pendingTxes.GetConsumingEnumerable(),
                 pendingTx =>
                 {
-                    if (this.coreDaemon.BypassValidation)
+                    if (this.coreDaemon != null && this.coreDaemon.BypassValidation)
                         return;
 
                     var loadedTx = LoadPendingTx(pendingTx, txCache);
@@ -150,7 +150,7 @@ namespace BitSharp.Core.Builders
             return this.txValidator.Start(loadedTxes.GetConsumingEnumerable(),
                 loadedTx =>
                 {
-                    if (!this.coreDaemon.IgnoreScripts)
+                    if (this.coreDaemon == null || !this.coreDaemon.IgnoreScripts)
                     {
                         var transaction = loadedTx.Transaction;
                         var txIndex = loadedTx.TxIndex;
@@ -265,7 +265,7 @@ namespace BitSharp.Core.Builders
         {
             try
             {
-                this.rules.ValidationTransactionScript(loadedTxInput.ChainedHeader, loadedTxInput.Transaction, loadedTxInput.TxIndex, loadedTxInput.TxInput, loadedTxInput.InputIndex, loadedTxInput.PrevTxOutput, this.coreDaemon.IgnoreSignatures);
+                this.rules.ValidationTransactionScript(loadedTxInput.ChainedHeader, loadedTxInput.Transaction, loadedTxInput.TxIndex, loadedTxInput.TxInput, loadedTxInput.InputIndex, loadedTxInput.PrevTxOutput, this.coreDaemon != null ? this.coreDaemon.IgnoreSignatures : false);
             }
             catch (Exception e)
             {

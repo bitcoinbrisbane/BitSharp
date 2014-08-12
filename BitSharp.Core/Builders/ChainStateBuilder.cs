@@ -146,7 +146,7 @@ namespace BitSharp.Core.Builders
                     // check script validation results
                     if (this.blockValidator.ScriptValidatorExceptions.Count > 0)
                     {
-                        if (!this.coreDaemon.IgnoreScriptErrors)
+                        if (this.coreDaemon == null || !this.coreDaemon.IgnoreScriptErrors)
                             throw new AggregateException(this.blockValidator.ScriptValidatorExceptions);
                         else
                             this.logger.Info("Ignoring script errors in block: {0,9:#,##0}, errors: {1:#,##0}".Format2(chainedHeader.Height, this.blockValidator.ScriptValidatorExceptions.Count));
