@@ -19,7 +19,6 @@ namespace BitSharp.Core.Builders
     internal class BlockValidator : IDisposable
     {
         private readonly Logger logger;
-        private readonly CoreDaemon coreDaemon;
         private readonly CoreStorage coreStorage;
         private readonly IBlockchainRules rules;
 
@@ -38,10 +37,9 @@ namespace BitSharp.Core.Builders
         private ConcurrentBag<Exception> txValidatorExceptions;
         private ConcurrentBag<Exception> scriptValidatorExceptions;
 
-        public BlockValidator(CoreDaemon coreDaemon, CoreStorage coreStorage, IBlockchainRules rules, Logger logger)
+        public BlockValidator(CoreStorage coreStorage, IBlockchainRules rules, Logger logger)
         {
             this.logger = logger;
-            this.coreDaemon = coreDaemon;
             this.coreStorage = coreStorage;
             this.rules = rules;
 
@@ -135,7 +133,7 @@ namespace BitSharp.Core.Builders
             return this.txLoader.Start(pendingTxes.GetConsumingEnumerable(),
                 pendingTx =>
                 {
-                    if (this.coreDaemon != null && this.coreDaemon.BypassValidation)
+                    if (this.rules.BypassValidation)
                         return;
 
                     var loadedTx = LoadPendingTx(pendingTx, txCache);
@@ -150,7 +148,7 @@ namespace BitSharp.Core.Builders
             return this.txValidator.Start(loadedTxes.GetConsumingEnumerable(),
                 loadedTx =>
                 {
-                    if (this.coreDaemon == null || !this.coreDaemon.IgnoreScripts)
+                    if (this.rules.IgnoreScripts)
                     {
                         var transaction = loadedTx.Transaction;
                         var txIndex = loadedTx.TxIndex;
@@ -265,7 +263,7 @@ namespace BitSharp.Core.Builders
         {
             try
             {
-                this.rules.ValidationTransactionScript(loadedTxInput.ChainedHeader, loadedTxInput.Transaction, loadedTxInput.TxIndex, loadedTxInput.TxInput, loadedTxInput.InputIndex, loadedTxInput.PrevTxOutput, this.coreDaemon != null ? this.coreDaemon.IgnoreSignatures : false);
+                this.rules.ValidationTransactionScript(loadedTxInput.ChainedHeader, loadedTxInput.Transaction, loadedTxInput.TxIndex, loadedTxInput.TxInput, loadedTxInput.InputIndex, loadedTxInput.PrevTxOutput);
             }
             catch (Exception e)
             {

@@ -97,6 +97,12 @@ namespace BitSharp.Core.Rules
             this.genesisChainedHeader = ChainedHeader.CreateForGenesisBlock(this.genesisBlock.Header);
         }
 
+        //TODO
+        public bool BypassValidation { get; set; }
+        public bool IgnoreScripts { get; set; }
+        public bool IgnoreSignatures { get; set; }
+        public bool IgnoreScriptErrors { get; set; }
+
         public virtual UInt256 HighestTarget { get { return this.highestTarget; } }
 
         public virtual Block GenesisBlock { get { return this.genesisBlock; } }
@@ -326,6 +332,11 @@ namespace BitSharp.Core.Rules
                 this.logger.Debug("Script did not pass in block: {0}, tx: {1}, {2}, input: {3}".Format2(chainedHeader.Hash, txIndex, tx.Hash, txInputIndex));
                 throw new ValidationException(chainedHeader.Hash);
             }
+        }
+
+        public void ValidationTransactionScript(ChainedHeader chainedHeader, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -94,12 +94,15 @@ namespace BitSharp.Client
                 // load modules
                 this.kernel.Load(modules.ToArray());
 
+                // initialize rules
+                var rules = this.kernel.Get<IBlockchainRules>();
+                rules.BypassValidation = bypassValidation;
+                rules.IgnoreScripts = ignoreScripts;
+                rules.IgnoreSignatures = ignoreSignatures;
+                rules.IgnoreScriptErrors = ignoreScriptErrors;
+
                 // initialize the blockchain daemon
                 this.coreDaemon = this.kernel.Get<CoreDaemon>();
-                this.coreDaemon.BypassValidation = bypassValidation;
-                this.coreDaemon.IgnoreScripts = ignoreScripts;
-                this.coreDaemon.IgnoreSignatures = ignoreSignatures;
-                this.coreDaemon.IgnoreScriptErrors = ignoreScriptErrors;
                 this.kernel.Bind<CoreDaemon>().ToConstant(this.coreDaemon).InTransientScope();
 
 #if DUMMY_MONITOR

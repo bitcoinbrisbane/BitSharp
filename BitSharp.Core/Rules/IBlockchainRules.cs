@@ -13,6 +13,12 @@ namespace BitSharp.Core.Rules
 {
     public interface IBlockchainRules
     {
+        //TODO
+        bool BypassValidation { get; set; }
+        bool IgnoreScripts { get; set; }
+        bool IgnoreSignatures { get; set; }
+        bool IgnoreScriptErrors { get; set; }
+
         UInt256 HighestTarget { get; }
 
         Block GenesisBlock { get; }
@@ -24,6 +30,6 @@ namespace BitSharp.Core.Rules
 
         void ValidateTransaction(ChainedHeader chainedHeader, Transaction tx, int txIndex, ImmutableArray<TxOutput> prevTxOutputs);
 
-        void ValidationTransactionScript(ChainedHeader chainedHeader, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput, /*TODO*/bool ignoreSignatures);
+        void ValidationTransactionScript(ChainedHeader chainedHeader, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput);
     }
 }

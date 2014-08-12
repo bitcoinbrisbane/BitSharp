@@ -67,8 +67,11 @@ namespace BitSharp.BlockHelper
                 // initialize the blockchain daemon
                 using (var coreDaemon = kernel.Get<CoreDaemon>())
                 {
-                    coreDaemon.BypassValidation = true;
                     kernel.Bind<CoreDaemon>().ToConstant(coreDaemon).InTransientScope();
+
+                    // ignore script errors
+                    var rules = kernel.Get<IBlockchainRules>();
+                    rules.IgnoreScriptErrors = true;
 
                     // initialize p2p client
                     using (var localClient = kernel.Get<LocalClient>())

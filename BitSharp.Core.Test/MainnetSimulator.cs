@@ -53,13 +53,14 @@ namespace BitSharp.Core.Test
             // add rules module
             this.kernel.Load(new RulesModule(RulesEnum.MainNet));
 
+            // TODO ignore script errors in test daemon until scripting engine is completed
+            var rules = this.kernel.Get<IBlockchainRules>();
+            rules.IgnoreScriptErrors = true;
+
             // initialize the blockchain daemon
             this.kernel.Bind<CoreDaemon>().ToSelf().InSingletonScope();
             this.coreDaemon = this.kernel.Get<CoreDaemon>();
             this.coreStorage = this.coreDaemon.CoreStorage;
-
-            // TODO ignore script errors in test daemon until scripting engine is completed
-            this.coreDaemon.IgnoreScriptErrors = true;
 
             // start the blockchain daemon
             this.coreDaemon.Start();
