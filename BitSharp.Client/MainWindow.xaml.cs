@@ -55,9 +55,6 @@ namespace BitSharp.Client
                 var ignoreSignatures = false;
                 var ignoreScriptErrors = true;
 
-                try { Directory.Delete(Path.Combine(Config.LocalStoragePath, "Data", rulesType.ToString(), "ChainState"), recursive: true); }
-                catch (Exception) { }
-
                 // directories
                 var baseDirectory = Config.LocalStoragePath;
                 if (false && Debugger.IsAttached)
