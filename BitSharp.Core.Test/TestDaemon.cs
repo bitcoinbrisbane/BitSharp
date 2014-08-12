@@ -229,25 +229,9 @@ namespace BitSharp.Core.Test
                 Assert.Fail("Failed to store block: {0}".Format2(block.Hash));
         }
 
-        public void WaitForDaemon(int expectedHeight, TimeSpan? timeout = null)
+        public void WaitForUpdate()
         {
-            timeout = timeout ?? TimeSpan.FromSeconds(5);
-            var start = DateTime.UtcNow;
-
-            while (true)
-            {
-                this.coreDaemon.WaitForUpdate();
-
-                var height = this.coreDaemon.CurrentChain.Height;
-                var now = DateTime.UtcNow;
-
-                if (height == expectedHeight)
-                    break;
-                else if (now - start >= timeout)
-                    Assert.Fail("CoreDaemon timed out waiting for block {0:#,##0}, current block: {1:#,##0}".Format2(expectedHeight, this.coreDaemon.CurrentChain.Height));
-                else
-                    Thread.Sleep(TimeSpan.FromMilliseconds(5));
-            }
+            this.coreDaemon.WaitForUpdate();
         }
     }
 }
