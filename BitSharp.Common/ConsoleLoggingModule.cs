@@ -5,6 +5,7 @@ using NLog.Config;
 using NLog.Targets;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,10 +30,20 @@ namespace BitSharp.Common
             var config = new LoggingConfiguration();
 
             // create console target
-            var consoleTarget = new ColoredConsoleTarget();
-            consoleTarget.Layout = layout;
-            config.AddTarget("debug", consoleTarget);
-            config.LoggingRules.Add(new LoggingRule("*", this.logLevel, consoleTarget));
+            if (!Debugger.IsAttached)
+            {
+                var consoleTarget = new ColoredConsoleTarget();
+                consoleTarget.Layout = layout;
+                config.AddTarget("console", consoleTarget);
+                config.LoggingRules.Add(new LoggingRule("*", this.logLevel, consoleTarget));
+            }
+            else
+            {
+                var consoleTarget = new DebuggerTarget();
+                consoleTarget.Layout = layout;
+                config.AddTarget("console", consoleTarget);
+                config.LoggingRules.Add(new LoggingRule("*", this.logLevel, consoleTarget));
+            }
 
             // activate configuration and bind
             LogManager.Configuration = config;
