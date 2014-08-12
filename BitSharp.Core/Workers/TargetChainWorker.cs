@@ -86,50 +86,39 @@ namespace BitSharp.Core.Workers
         {
             try
             {
-                while (this.WorkActionInner())
+                var targetBlockLocal = this.targetBlockWorker.TargetBlock;
+                var targetChainLocal = this.targetChain;
+
+                if (targetBlockLocal != null &&
+                    (targetChainLocal == null || targetBlockLocal.Hash != targetChainLocal.LastBlock.Hash))
                 {
-                    // cooperative loop
-                    this.ThrowIfCancelled();
+                    var newTargetChain =
+                        targetChainLocal != null
+                            ? targetChainLocal.ToBuilder()
+                            : new ChainBuilder(Chain.CreateForGenesisBlock(this.rules.GenesisChainedHeader));
+
+                    var deltaBlockPath = new MethodTimer(false).Time("deltaBlockPath", () =>
+                        new BlockchainWalker().GetBlockchainPath(newTargetChain.LastBlock, targetBlockLocal, blockHash => this.coreStorage.GetChainedHeader(blockHash)));
+
+                    foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
+                    {
+                        newTargetChain.RemoveBlock(rewindBlock);
+                    }
+
+                    foreach (var advanceBlock in deltaBlockPath.AdvanceBlocks)
+                    {
+                        newTargetChain.AddBlock(advanceBlock);
+                    }
+
+                    this.logger.Debug("Winning chained block {0} at height {1}, total work: {2}".Format2(newTargetChain.LastBlock.Hash.ToHexNumberString(), newTargetChain.Height, newTargetChain.LastBlock.TotalWork.ToString("X")));
+                    this.targetChain = newTargetChain.ToImmutable();
+
+                    var handler = this.OnTargetChainChanged;
+                    if (handler != null)
+                        handler();
                 }
             }
             catch (MissingDataException) { }
-        }
-
-        private bool WorkActionInner()
-        {
-            var targetBlockLocal = this.targetBlockWorker.TargetBlock;
-            var targetChainLocal = this.targetChain;
-
-            if (targetBlockLocal != null &&
-                (targetChainLocal == null || targetBlockLocal.Hash != targetChainLocal.LastBlock.Hash))
-            {
-                var newTargetChain =
-                    targetChainLocal != null
-                        ? targetChainLocal.ToBuilder()
-                        : new ChainBuilder(Chain.CreateForGenesisBlock(this.rules.GenesisChainedHeader));
-
-                var deltaBlockPath = new MethodTimer(false).Time("deltaBlockPath", () =>
-                    new BlockchainWalker().GetBlockchainPath(newTargetChain.LastBlock, targetBlockLocal, blockHash => this.coreStorage.GetChainedHeader(blockHash)));
-
-                foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
-                {
-                    newTargetChain.RemoveBlock(rewindBlock);
-                }
-
-                foreach (var advanceBlock in deltaBlockPath.AdvanceBlocks)
-                {
-                    newTargetChain.AddBlock(advanceBlock);
-                }
-
-                this.logger.Debug("Winning chained block {0} at height {1}, total work: {2}".Format2(newTargetChain.LastBlock.Hash.ToHexNumberString(), newTargetChain.Height, newTargetChain.LastBlock.TotalWork.ToString("X")));
-                this.targetChain = newTargetChain.ToImmutable();
-
-                var handler = this.OnTargetChainChanged;
-                if (handler != null)
-                    handler();
-            }
-
-            return false;
         }
 
         private void HandleTargetBlockChanged()
