@@ -66,12 +66,12 @@ namespace BitSharp.Core.Test
             this.coreDaemon.Start();
 
             // wait for initial work
-            this.coreDaemon.ForceWorkAndWait();
+            this.coreDaemon.WaitForUpdate();
 
             // verify initial state
-            Assert.AreEqual(0, this.coreDaemon.TargetBlock.Height);
-            //Assert.AreEqual(this.genesisBlock.Hash, this.blockchainDaemon.TargetChain.LastBlock.Hash);
-            //Assert.AreEqual(this.genesisBlock.Hash, this.blockchainDaemon.ChainState.LastBlockHash);
+            Assert.AreEqual(0, this.coreDaemon.TargetChainHeight);
+            Assert.AreEqual(rules.GenesisBlock.Hash, this.coreDaemon.TargetChain.LastBlockHash);
+            Assert.AreEqual(rules.GenesisBlock.Hash, this.coreDaemon.CurrentChain.LastBlockHash);
         }
 
         public void Dispose()
@@ -118,7 +118,7 @@ namespace BitSharp.Core.Test
 
             while (true)
             {
-                this.coreDaemon.ForceWorkAndWait();
+                this.coreDaemon.WaitForUpdate();
 
                 var height = this.coreDaemon.CurrentChain.Height;
                 var now = DateTime.UtcNow;

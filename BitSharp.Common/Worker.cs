@@ -160,34 +160,6 @@ namespace BitSharp.Common
                 handler();
         }
 
-        public void WaitForIdle()
-        {
-            CheckDisposed();
-
-            // wait for worker to idle
-            this.idleEvent.Wait();
-        }
-
-        public void ForceWorkAndWait()
-        {
-            CheckDisposed();
-
-            if (!this.isStarted)
-                throw new InvalidOperationException();
-
-            // wait for worker to idle
-            this.idleEvent.Wait();
-
-            // reset its idle state
-            this.idleEvent.Reset();
-
-            // force an execution
-            ForceWork();
-
-            // wait for worker to be idle again
-            this.idleEvent.Wait();
-        }
-
         public void ThrowIfCancelled()
         {
             CheckDisposed();
@@ -256,7 +228,7 @@ namespace BitSharp.Common
                         catch (OperationCanceledException) { throw; }
                         catch (Exception e)
                         {
-                            this.logger.Error("Unhandled worker exception", e);
+                            this.logger.Error("Unhandled worker exception in {0}: ".Format2(this.Name), e);
                             Debugger.Break();
                         }
                         finally
@@ -288,7 +260,7 @@ namespace BitSharp.Common
             }
             catch (Exception e)
             {
-                this.logger.Fatal("Unhandled worker exception", e);
+                this.logger.Fatal("Unhandled worker exception in {0}: ".Format2(this.Name), e);
                 Debugger.Break();
             }
             finally

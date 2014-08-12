@@ -404,7 +404,7 @@ namespace BitSharp.Node
         {
             if (this.Type == RulesEnum.ComparisonToolTestNet)
             {
-                this.coreDaemon.ForceWorkAndWait();
+                this.coreDaemon.WaitForUpdate();
             }
 
             var targetChainLocal = this.coreDaemon.TargetChain;

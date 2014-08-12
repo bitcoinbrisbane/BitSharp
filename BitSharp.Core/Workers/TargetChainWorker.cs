@@ -16,19 +16,23 @@ using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace BitSharp.Core.Workers
 {
     internal class TargetChainWorker : Worker
     {
-        public event Action OnTargetBlockChanged;
         public event Action OnTargetChainChanged;
 
         private readonly Logger logger;
         private readonly IBlockchainRules rules;
         private readonly CoreStorage coreStorage;
 
-        private readonly TargetBlockWorker targetBlockWorker;
+        private readonly ManualResetEventSlim updatedEvent = new ManualResetEventSlim();
+        private readonly object changedLock = new object();
+        private long changed;
+
+        private ChainedHeader targetBlock;
         private Chain targetChain;
 
         public TargetChainWorker(WorkerConfig workerConfig, Logger logger, IBlockchainRules rules, CoreStorage coreStorage)
@@ -38,11 +42,6 @@ namespace BitSharp.Core.Workers
             this.rules = rules;
             this.coreStorage = coreStorage;
 
-            this.targetBlockWorker = new TargetBlockWorker(
-                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.MaxValue),
-                this.logger, this.coreStorage);
-
-            this.targetBlockWorker.TargetBlockChanged += HandleTargetBlockChanged;
             this.coreStorage.ChainedHeaderAdded += HandleChainedHeaderAdded;
             this.coreStorage.BlockInvalidated += HandleBlockInvalidated;
         }
@@ -50,43 +49,53 @@ namespace BitSharp.Core.Workers
         protected override void SubDispose()
         {
             // cleanup events
-            this.targetBlockWorker.TargetBlockChanged -= HandleTargetBlockChanged;
             this.coreStorage.ChainedHeaderAdded -= HandleChainedHeaderAdded;
             this.coreStorage.BlockInvalidated -= HandleBlockInvalidated;
-
-            // cleanup workers
-            this.targetBlockWorker.Dispose();
         }
 
         public Chain TargetChain { get { return this.targetChain; } }
 
-        public ChainedHeader TargetBlock { get { return this.targetBlockWorker.TargetBlock; } }
-
-        internal TargetBlockWorker TargetBlockWorker { get { return this.targetBlockWorker; } }
-
-        protected override void SubStart()
+        public void WaitForUpdate()
         {
-            this.targetBlockWorker.Start();
-            
-            // acquire initial target block on startup
-            this.targetBlockWorker.ForceWorkAndWait();
+            this.updatedEvent.Wait();
         }
 
-        protected override void SubStop()
+        public bool WaitForUpdate(TimeSpan timeout)
         {
-            this.targetBlockWorker.Stop();
-        }
-
-        protected override void SubForceWork()
-        {
-            this.targetBlockWorker.ForceWorkAndWait();
+            return this.updatedEvent.Wait(timeout);
         }
 
         protected override void WorkAction()
         {
+            UpdateTargetBlock();
+            UpdateTargetChain();
+        }
+
+        private void UpdateTargetBlock()
+        {
+            var maxTotalWork = this.coreStorage.FindMaxTotalWork();
+            if (
+                // always update if there is no current target block
+                this.targetBlock == null
+                // or if the current target block is invalid
+                || this.coreStorage.IsBlockInvalid(this.targetBlock.Hash)
+                // otherwise, only change the current target if the amount of work differs
+                // this is to ensure the current target does not change on a blockchain split and tie
+                || this.targetBlock.TotalWork != maxTotalWork.TotalWork)
+            {
+                this.targetBlock = maxTotalWork;
+            }
+        }
+
+        private void UpdateTargetChain()
+        {
             try
             {
-                var targetBlockLocal = this.targetBlockWorker.TargetBlock;
+                long origChanged;
+                lock (this.changedLock)
+                    origChanged = this.changed;
+
+                var targetBlockLocal = this.targetBlock;
                 var targetChainLocal = this.targetChain;
 
                 if (targetBlockLocal != null &&
@@ -117,27 +126,36 @@ namespace BitSharp.Core.Workers
                     if (handler != null)
                         handler();
                 }
+
+                lock (this.changedLock)
+                {
+                    if (this.changed == origChanged)
+                        this.updatedEvent.Set();
+                    else
+                        this.NotifyWork();
+                }
             }
             catch (MissingDataException) { }
         }
 
-        private void HandleTargetBlockChanged()
+        private void HandleChanged()
         {
+            lock (this.changedLock)
+            {
+                this.changed++;
+                this.updatedEvent.Reset();
+            }
             this.NotifyWork();
-
-            var handler = this.OnTargetBlockChanged;
-            if (handler != null)
-                handler();
         }
 
         private void HandleChainedHeaderAdded(ChainedHeader chainedHeader)
         {
-            this.NotifyWork();
+            HandleChanged();
         }
 
         private void HandleBlockInvalidated(UInt256 blockHash)
         {
-            this.NotifyWork();
+            HandleChanged();
         }
     }
 }

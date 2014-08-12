@@ -184,9 +184,6 @@ namespace BitSharp.Common.Test
                 // stop worker
                 worker.Stop();
 
-                // wait for worker to idle
-                worker.WaitForIdle();
-
                 // verify workAction has not been called
                 wasCalled = callEvent.WaitOne(10);
                 Assert.IsFalse(wasCalled);
@@ -229,9 +226,6 @@ namespace BitSharp.Common.Test
 
                 // stop worker
                 worker.Stop();
-
-                // wait for worker to idle
-                worker.WaitForIdle();
 
                 // notify worker again
                 worker.NotifyWork();

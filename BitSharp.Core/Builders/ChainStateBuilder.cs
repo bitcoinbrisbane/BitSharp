@@ -74,8 +74,8 @@ namespace BitSharp.Core.Builders
 
             new IDisposable[]
             {
-                this.chainStateCursor,
                 this.blockValidator,
+                this.chainStateCursor,
                 this.stats,
             }.DisposeList();
         }

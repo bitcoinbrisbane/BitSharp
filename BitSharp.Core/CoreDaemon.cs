@@ -39,7 +39,6 @@ namespace BitSharp.Core
     //TODO compact UTXO's and other immutables in the blockchains on a thread
     public class CoreDaemon : IDisposable
     {
-        public event EventHandler OnTargetBlockChanged;
         public event EventHandler OnTargetChainChanged;
         public event EventHandler OnChainStateChanged;
         public event Action<UInt256> BlockMissed;
@@ -75,9 +74,6 @@ namespace BitSharp.Core
             this.coreStorage.AddGenesisBlock(this.rules.GenesisChainedHeader);
             this.coreStorage.TryAddBlock(this.rules.GenesisBlock);
 
-            // wire up cache events
-            this.coreStorage.BlockTxesAdded += HandleBlockTxesAdded;
-
             // create chain state builder
             this.chainStateBuilder = new ChainStateBuilder(this.logger, this.rules, this.coreStorage);
 
@@ -92,7 +88,7 @@ namespace BitSharp.Core
 
             this.chainStateWorker = new ChainStateWorker(
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(50), maxIdleTime: TimeSpan.FromSeconds(5)),
-                this.targetChainWorker, this.chainStateBuilder, () => this.targetChainWorker.TargetChain, this.logger, this.rules, this.coreStorage);
+                this.targetChainWorker, this.chainStateBuilder, this.logger, this.rules, this.coreStorage);
 
             this.pruningWorker = new PruningWorker(
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(60), maxIdleTime: TimeSpan.FromMinutes(15)),
@@ -107,19 +103,9 @@ namespace BitSharp.Core
 
             this.chainStateWorker.BlockMissed += HandleBlockMissed;
 
-            this.targetChainWorker.OnTargetBlockChanged +=
-                () =>
-                {
-                    var handler = this.OnTargetBlockChanged;
-                    if (handler != null)
-                        handler(this, EventArgs.Empty);
-                };
-
             this.targetChainWorker.OnTargetChainChanged +=
                 () =>
                 {
-                    this.chainStateWorker.NotifyWork();
-
                     var handler = this.OnTargetChainChanged;
                     if (handler != null)
                         handler(this, EventArgs.Empty);
@@ -184,7 +170,6 @@ namespace BitSharp.Core
             this.Stop();
 
             // cleanup events
-            this.coreStorage.BlockTxesAdded -= HandleBlockTxesAdded;
             this.pruningWorker.OnWorkFinished -= this.defragWorker.NotifyWork;
             this.chainStateWorker.BlockMissed -= HandleBlockMissed;
 
@@ -207,21 +192,19 @@ namespace BitSharp.Core
 
         public CoreStorage CoreStorage { get { return this.coreStorage; } }
 
-        public ChainedHeader TargetBlock { get { return this.targetChainWorker.TargetBlock; } }
+        public Chain TargetChain { get { return this.targetChainWorker.TargetChain; } }
 
-        public int TargetBlockHeight
+        public int TargetChainHeight
         {
             get
             {
-                var targetBlockLocal = this.targetChainWorker.TargetBlock;
-                if (targetBlockLocal != null)
-                    return targetBlockLocal.Height;
+                var targetChainLocal = this.targetChainWorker.TargetChain;
+                if (targetChainLocal != null)
+                    return targetChainLocal.Height;
                 else
                     return -1;
             }
         }
-
-        public Chain TargetChain { get { return this.targetChainWorker.TargetChain; } }
 
         public Chain CurrentChain
         {
@@ -275,10 +258,10 @@ namespace BitSharp.Core
             this.gcWorker.Stop();
         }
 
-        public void ForceWorkAndWait()
+        public void WaitForUpdate()
         {
-            this.targetChainWorker.ForceWorkAndWait();
-            this.chainStateWorker.ForceWorkAndWait();
+            this.targetChainWorker.WaitForUpdate();
+            this.chainStateWorker.WaitForUpdate();
         }
 
         public ChainState GetChainState()
@@ -291,15 +274,8 @@ namespace BitSharp.Core
             throw new NotImplementedException();
         }
 
-        private void HandleBlockTxesAdded(ChainedHeader chainedHeader)
-        {
-            this.chainStateWorker.NotifyWork();
-        }
-
         private void HandleBlockMissed(UInt256 blockHash)
         {
-            this.chainStateWorker.NotifyWork();
-
             var handler = this.BlockMissed;
             if (handler != null)
                 handler(blockHash);

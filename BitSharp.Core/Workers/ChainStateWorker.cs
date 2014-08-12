@@ -24,9 +24,12 @@ namespace BitSharp.Core.Workers
         public event Action OnChainStateChanged;
 
         private readonly Logger logger;
-        private readonly Func<Chain> getTargetChain;
         private readonly IBlockchainRules rules;
         private readonly CoreStorage coreStorage;
+
+        private readonly ManualResetEventSlim updatedEvent = new ManualResetEventSlim();
+        private readonly object changedLock = new object();
+        private long changed;
 
         private readonly DurationMeasure blockProcessingDurationMeasure;
         private readonly CountMeasure blockMissCountMeasure;
@@ -36,11 +39,10 @@ namespace BitSharp.Core.Workers
         private readonly ChainStateBuilder chainStateBuilder;
         private Chain currentChain;
 
-        public ChainStateWorker(WorkerConfig workerConfig, TargetChainWorker targetChainWorker, ChainStateBuilder chainStateBuilder, Func<Chain> getTargetChain, Logger logger, IBlockchainRules rules, CoreStorage coreStorage)
+        public ChainStateWorker(WorkerConfig workerConfig, TargetChainWorker targetChainWorker, ChainStateBuilder chainStateBuilder, Logger logger, IBlockchainRules rules, CoreStorage coreStorage)
             : base("ChainStateWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
-            this.getTargetChain = getTargetChain;
             this.rules = rules;
             this.coreStorage = coreStorage;
 
@@ -50,6 +52,13 @@ namespace BitSharp.Core.Workers
             this.targetChainWorker = targetChainWorker;
             this.chainStateBuilder = chainStateBuilder;
             this.currentChain = this.chainStateBuilder.Chain;
+
+            this.coreStorage.BlockInvalidated += HandleChanged;
+            this.coreStorage.BlockTxesAdded += HandleChanged;
+            this.coreStorage.BlockTxesMissed += HandleChanged;
+            this.coreStorage.BlockTxesRemoved += HandleChanged;
+            this.coreStorage.ChainedHeaderAdded += HandleChanged;
+            this.targetChainWorker.OnTargetChainChanged += HandleChanged;
         }
 
         public event Action<UInt256> BlockMissed;
@@ -69,8 +78,25 @@ namespace BitSharp.Core.Workers
             get { return this.currentChain; }
         }
 
+        public void WaitForUpdate()
+        {
+            this.updatedEvent.Wait();
+        }
+
+        public bool WaitForUpdate(TimeSpan timeout)
+        {
+            return this.updatedEvent.Wait(timeout);
+        }
+
         protected override void SubDispose()
         {
+            this.coreStorage.BlockInvalidated -= HandleChanged;
+            this.coreStorage.BlockTxesAdded -= HandleChanged;
+            this.coreStorage.BlockTxesMissed -= HandleChanged;
+            this.coreStorage.BlockTxesRemoved -= HandleChanged;
+            this.coreStorage.ChainedHeaderAdded -= HandleChanged;
+            this.targetChainWorker.OnTargetChainChanged -= HandleChanged;
+
             new IDisposable[]
             {
                 this.blockProcessingDurationMeasure,
@@ -82,9 +108,13 @@ namespace BitSharp.Core.Workers
         {
             try
             {
+                long origChanged;
+                lock (this.changedLock)
+                    origChanged = this.changed;
+
                 // calculate the new blockchain along the target path
                 var didWork = false;
-                foreach (var pathElement in this.chainStateBuilder.Chain.NavigateTowards(this.getTargetChain))
+                foreach (var pathElement in this.chainStateBuilder.Chain.NavigateTowards(() => this.targetChainWorker.TargetChain))
                 {
                     // cooperative loop
                     this.ThrowIfCancelled();
@@ -127,6 +157,14 @@ namespace BitSharp.Core.Workers
 
                 if (didWork)
                     this.chainStateBuilder.LogBlockchainProgress();
+
+                lock (this.changedLock)
+                {
+                    if (this.changed == origChanged)
+                        this.updatedEvent.Set();
+                    else
+                        this.NotifyWork();
+                }
             }
             catch (OperationCanceledException) { }
             catch (AggregateException e)
@@ -159,11 +197,28 @@ namespace BitSharp.Core.Workers
                 {
                     // mark block as invalid
                     this.coreStorage.MarkBlockInvalid(validationException.BlockHash);
-
-                    // immediately update the target chain if there is a validation error
-                    this.targetChainWorker.ForceWorkAndWait();
                 }
             }
+        }
+
+        private void HandleChanged()
+        {
+            lock (this.changedLock)
+            {
+                this.changed++;
+                this.updatedEvent.Reset();
+            }
+            this.NotifyWork();
+        }
+
+        private void HandleChanged(UInt256 blockHash)
+        {
+            HandleChanged();
+        }
+
+        private void HandleChanged(ChainedHeader chainedHeader)
+        {
+            HandleChanged();
         }
 
         private void RaiseBlockMissed(UInt256 blockHash)

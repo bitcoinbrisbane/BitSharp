@@ -85,7 +85,7 @@ namespace BitSharp.Client
 
             this.viewChain = this.coreDaemon.CurrentChain;
 
-            this.WinningBlockchainHeight = this.coreDaemon.TargetBlockHeight;
+            this.WinningBlockchainHeight = this.coreDaemon.TargetChainHeight;
             this.CurrentBlockchainHeight = this.coreDaemon.CurrentChain.Height;
             this.DownloadedBlockCount = this.coreStorage.BlockWithTxesCount;
 
@@ -97,9 +97,9 @@ namespace BitSharp.Client
                 (blockHash) =>
                     DownloadedBlockCount = this.coreStorage.BlockWithTxesCount;
 
-            this.coreDaemon.OnTargetBlockChanged +=
+            this.coreDaemon.OnTargetChainChanged +=
                 (sender, block) =>
-                    WinningBlockchainHeight = this.coreDaemon.TargetBlockHeight;
+                    WinningBlockchainHeight = this.coreDaemon.TargetChainHeight;
 
             this.coreDaemon.OnChainStateChanged +=
                 (sender, chainState) =>

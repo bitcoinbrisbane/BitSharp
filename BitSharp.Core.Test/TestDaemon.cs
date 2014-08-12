@@ -78,18 +78,26 @@ namespace BitSharp.Core.Test
             // initialize the blockchain daemon
             this.kernel.Bind<CoreDaemon>().ToSelf().InSingletonScope();
             this.coreDaemon = this.kernel.Get<CoreDaemon>();
-            this.coreStorage = this.coreDaemon.CoreStorage;
+            try
+            {
+                this.coreStorage = this.coreDaemon.CoreStorage;
 
-            // start the blockchain daemon
-            this.coreDaemon.Start();
+                // start the blockchain daemon
+                this.coreDaemon.Start();
 
-            // wait for initial work
-            this.coreDaemon.ForceWorkAndWait();
+                // wait for initial work
+                this.coreDaemon.WaitForUpdate();
 
-            // verify initial state
-            Assert.AreEqual(0, this.coreDaemon.TargetBlock.Height);
-            Assert.AreEqual(this.genesisBlock.Hash, this.coreDaemon.TargetChain.LastBlockHash);
-            Assert.AreEqual(this.genesisBlock.Hash, this.coreDaemon.CurrentChain.LastBlockHash);
+                // verify initial state
+                Assert.AreEqual(0, this.coreDaemon.TargetChainHeight);
+                Assert.AreEqual(this.genesisBlock.Hash, this.coreDaemon.TargetChain.LastBlockHash);
+                Assert.AreEqual(this.genesisBlock.Hash, this.coreDaemon.CurrentChain.LastBlockHash);
+            }
+            catch (Exception)
+            {
+                this.coreDaemon.Dispose();
+                throw;
+            }
         }
 
         public void Dispose()
@@ -228,7 +236,7 @@ namespace BitSharp.Core.Test
 
             while (true)
             {
-                this.coreDaemon.ForceWorkAndWait();
+                this.coreDaemon.WaitForUpdate();
 
                 var height = this.coreDaemon.CurrentChain.Height;
                 var now = DateTime.UtcNow;
