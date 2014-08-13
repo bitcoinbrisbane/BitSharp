@@ -56,7 +56,7 @@ namespace BitSharp.Core.Test.Workers
                 // monitor event firing
                 var targetChainChangedEvent = new AutoResetEvent(false);
                 var onTargetChainChangedCount = 0;
-                targetChainWorker.OnTargetChainChanged += () => { targetChainChangedEvent.Set(); onTargetChainChangedCount++; };
+                targetChainWorker.OnTargetChainChanged += () => { onTargetChainChangedCount++; targetChainChangedEvent.Set(); };
 
                 // start worker and wait for initial chain
                 targetChainWorker.Start();
@@ -137,7 +137,7 @@ namespace BitSharp.Core.Test.Workers
                 // monitor event firing
                 var targetChainChangedEvent = new AutoResetEvent(false);
                 var onTargetChainChangedCount = 0;
-                targetChainWorker.OnTargetChainChanged += () => { targetChainChangedEvent.Set(); onTargetChainChangedCount++; };
+                targetChainWorker.OnTargetChainChanged += () => { onTargetChainChangedCount++; targetChainChangedEvent.Set(); };
 
                 // start worker and wait for initial chain
                 targetChainWorker.Start();
