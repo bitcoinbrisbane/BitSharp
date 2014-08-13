@@ -22,7 +22,7 @@ namespace BitSharp.Node.Workers
     internal class BlockRequestWorker : Worker
     {
         private static readonly TimeSpan STALE_REQUEST_TIME = TimeSpan.FromMinutes(5);
-        private static readonly TimeSpan MISSING_STALE_REQUEST_TIME = TimeSpan.FromSeconds(3);
+        private static readonly TimeSpan MISSED_STALE_REQUEST_TIME = TimeSpan.FromSeconds(3);
         private static readonly int MAX_REQUESTS_PER_PEER = 100;
 
         private readonly Logger logger;
@@ -32,6 +32,7 @@ namespace BitSharp.Node.Workers
 
         private readonly ConcurrentDictionary<UInt256, BlockRequest> allBlockRequests;
         private readonly ConcurrentDictionary<Peer, ConcurrentDictionary<UInt256, DateTime>> blockRequestsByPeer;
+        private readonly ConcurrentDictionary<UInt256, BlockRequest> missedBlockRequests;
 
         private int targetChainLookAhead;
         private List<ChainedHeader> targetChainQueue;
@@ -59,6 +60,7 @@ namespace BitSharp.Node.Workers
 
             this.allBlockRequests = new ConcurrentDictionary<UInt256, BlockRequest>();
             this.blockRequestsByPeer = new ConcurrentDictionary<Peer, ConcurrentDictionary<UInt256, DateTime>>();
+            this.missedBlockRequests = new ConcurrentDictionary<UInt256, BlockRequest>();
 
             this.localClient.OnBlock += HandleBlock;
             this.coreDaemon.OnChainStateChanged += HandleChainStateChanged;
@@ -146,15 +148,11 @@ namespace BitSharp.Node.Workers
             }
             else
             {
-                // get average block request time
-                var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
-
                 // determine target chain look ahead
-                var lookAheadTime = avgBlockRequestTime + TimeSpan.FromSeconds(30);
+                var lookAheadTime = TimeSpan.FromSeconds(30);
                 this.targetChainLookAhead = 1 + (int)(lookAheadTime.TotalSeconds / blockProcessingTime.TotalSeconds);
 
                 this.logger.Debug(new string('-', 80));
-                this.logger.Debug("Block Request Time: {0}".Format2(avgBlockRequestTime));
                 this.logger.Debug("Look Ahead: {0:#,##0}".Format2(this.targetChainLookAhead));
                 this.logger.Debug("Block Request Count: {0:#,##0}".Format2(this.allBlockRequests.Count));
                 this.logger.Debug(new string('-', 80));
@@ -196,9 +194,15 @@ namespace BitSharp.Node.Workers
             var now = DateTime.UtcNow;
             var requestTasks = new List<Task>();
 
+            // take and remove any missed block requests that are now stale
+            var staleMissedBlockRequests = this.missedBlockRequests.TakeAndRemoveWhere(
+                x => (now - x.Value.RequestTime) > MISSED_STALE_REQUEST_TIME)
+                .ToDictionary();
+
             // remove any stale requests from the global list of requests
             this.allBlockRequests.RemoveWhere(x =>
                 (now - x.Value.RequestTime) > STALE_REQUEST_TIME
+                || staleMissedBlockRequests.ContainsKey(x.Key)
                 || !this.localClient.ConnectedPeers.Contains(x.Value.Peer));
 
             var peerCount = this.localClient.ConnectedPeers.Count;
@@ -265,6 +269,10 @@ namespace BitSharp.Node.Workers
             {
                 this.logger.Info("Request tasks timed out.");
             }
+
+            // notify for another loop of work when there are missed block requests remaining
+            if (this.missedBlockRequests.Count > 0)
+                this.NotifyWork();
 
             // notify for another loop of work when out of target chain queue to use
             if (this.targetChainQueueIndex >= this.targetChainQueue.Count)
@@ -360,6 +368,10 @@ namespace BitSharp.Node.Workers
             this.flushBlocks.Add(block.Hash);
             this.flushQueue.Enqueue(new FlushBlock(peer, block));
             this.flushWorker.NotifyWork();
+
+            // stop tracking any missed block requests for the received block
+            BlockRequest ignore;
+            this.missedBlockRequests.TryRemove(block.Hash, out ignore);
         }
 
         private void HandleChainStateChanged(object sender, EventArgs e)
@@ -384,33 +396,18 @@ namespace BitSharp.Node.Workers
             if (this.flushBlocks.Contains(blockHash))
                 return;
 
-            // on block miss, allow re-request of all blocks made to a slow peer
+            // retrieve the block request for the missed block and track it as missing
             BlockRequest blockRequest;
             if (this.allBlockRequests.TryGetValue(blockHash, out blockRequest))
             {
-                var avgBlockRequestTime = this.blockRequestDurationMeasure.GetAverage();
+                this.missedBlockRequests.TryAdd(blockHash, blockRequest);
 
-                var now = DateTime.UtcNow;
-                var requestTime = blockRequest.RequestTime;
-                if (now - requestTime > MISSING_STALE_REQUEST_TIME + avgBlockRequestTime)
-                {
-                    // track block miss against this peer
-                    blockRequest.Peer.AddBlockMiss();
-
-                    // remove all requests to the slow peer
-                    //ConcurrentDictionary<UInt256, DateTime> peerRequests;
-                    //if (this.blockRequestsByPeer.TryGetValue(blockRequest.Peer, out peerRequests))
-                    //{
-                    //    foreach (var peerRequest in peerRequests)
-                    //        this.allBlockRequests.TryRemove(peerRequest.Key, out blockRequest);
-                    //}
-
-                    // ensure missed block is removed from the global request list
-                    this.allBlockRequests.TryRemove(blockHash, out blockRequest);
-
-                    this.NotifyWork();
-                }
+                // track block miss against this peer
+                blockRequest.Peer.AddBlockMiss();
             }
+
+            // notify now that missed block request is being tracked
+            this.NotifyWork();
         }
 
         private sealed class HeightComparer : IComparer<ChainedHeader>

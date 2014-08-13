@@ -231,7 +231,7 @@ namespace BitSharp.Core.Storage.Memory
         {
             this.semaphore.Do(() =>
             {
-                this.blockSpentTxes.RemoveWhere(x => x.Key <= spentBlockIndex);
+                this.blockSpentTxes.RemoveRange(Enumerable.Range(0, spentBlockIndex));
                 this.blockSpentTxesVersion++;
             });
         }

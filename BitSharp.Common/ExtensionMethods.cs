@@ -360,15 +360,6 @@ namespace BitSharp.Common.ExtensionMethods
             return keyPairs.ToDictionary(x => x.Key, x => x.Value);
         }
 
-        public static bool RemoveRange<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, IEnumerable<TKey> keys)
-        {
-            bool success = true;
-            foreach (var key in keys.ToArray())
-                success &= dictionary.Remove(key);
-
-            return success;
-        }
-
         public static List<T> SafeToList<T>(this IEnumerable<T> enumerable)
         {
             var list = new List<T>();
@@ -471,9 +462,31 @@ namespace BitSharp.Common.ExtensionMethods
             builder.InsertRange(builder.Count, items);
         }
 
-        public static void RemoveWhere<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, Func<KeyValuePair<TKey, TValue>, bool> predicate)
+        public static void RemoveWhere<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, Func<KeyValuePair<TKey, TValue>, bool> predicate)
         {
-            dictionary.RemoveRange(dictionary.Where(predicate).Select(x => x.Key));
+            foreach (var item in dictionary)
+            {
+                if (predicate(item))
+                {
+                    TValue ignore;
+                    dictionary.TryRemove(item.Key, out ignore);
+                }
+            }
+        }
+
+        public static IEnumerable<KeyValuePair<TKey, TValue>> TakeAndRemoveWhere<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, Func<KeyValuePair<TKey, TValue>, bool> predicate)
+        {
+            foreach (var item in dictionary)
+            {
+                if (predicate(item))
+                {
+                    TValue value;
+                    if (dictionary.TryRemove(item.Key, out value))
+                    {
+                        yield return new KeyValuePair<TKey, TValue>(item.Key, value);
+                    }
+                }
+            }
         }
 
         public static void AddRange<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, IEnumerable<KeyValuePair<TKey, TValue>> keyPairs)
