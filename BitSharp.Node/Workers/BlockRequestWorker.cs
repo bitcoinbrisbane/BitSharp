@@ -392,6 +392,7 @@ namespace BitSharp.Node.Workers
 
         private void HandleBlockMissed(UInt256 blockHash)
         {
+            //TODO block should be tracked as soon as the block message is received so it isn't re-requested while it is still downloading
             // don't send re-requests against blocks in the flush queue
             if (this.flushBlocks.Contains(blockHash))
                 return;
