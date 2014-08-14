@@ -148,7 +148,7 @@ namespace BitSharp.Core.Builders
             return this.txValidator.Start(loadedTxes.GetConsumingEnumerable(),
                 loadedTx =>
                 {
-                    if (this.rules.IgnoreScripts)
+                    if (!this.rules.IgnoreScripts)
                     {
                         var transaction = loadedTx.Transaction;
                         var txIndex = loadedTx.TxIndex;

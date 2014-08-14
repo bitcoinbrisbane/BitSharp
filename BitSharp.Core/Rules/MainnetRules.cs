@@ -321,9 +321,9 @@ namespace BitSharp.Core.Rules
             // all validation has passed
         }
 
-        public virtual void ValidationTransactionScript(ChainedHeader chainedHeader, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput, bool ignoreSignatures)
+        public virtual void ValidationTransactionScript(ChainedHeader chainedHeader, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput)
         {
-            var scriptEngine = new ScriptEngine(this.logger, ignoreSignatures);
+            var scriptEngine = new ScriptEngine(this.logger, this.IgnoreSignatures);
 
             // create the transaction script from the input and output
             var script = txInput.ScriptSignature.AddRange(prevTxOutput.ScriptPublicKey);
@@ -332,11 +332,6 @@ namespace BitSharp.Core.Rules
                 this.logger.Debug("Script did not pass in block: {0}, tx: {1}, {2}, input: {3}".Format2(chainedHeader.Hash, txIndex, tx.Hash, txInputIndex));
                 throw new ValidationException(chainedHeader.Hash);
             }
-        }
-
-        public void ValidationTransactionScript(ChainedHeader chainedHeader, Transaction tx, int txIndex, TxInput txInput, int txInputIndex, TxOutput prevTxOutput)
-        {
-            throw new NotImplementedException();
         }
     }
 }
