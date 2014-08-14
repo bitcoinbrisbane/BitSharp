@@ -253,6 +253,8 @@ namespace BitSharp.Node.Workers
                         // track block requests
                         peerBlockRequests[requestBlock] = now;
                         this.allBlockRequests.TryAdd(requestBlock, new BlockRequest(peer, now));
+                        BlockRequest ignore;
+                        this.missedBlockRequests.TryRemove(requestBlock, out ignore);
 
                         // add block to inv request
                         invVectors.Add(new InventoryVector(InventoryVector.TYPE_MESSAGE_BLOCK, requestBlock));
@@ -401,10 +403,11 @@ namespace BitSharp.Node.Workers
             BlockRequest blockRequest;
             if (this.allBlockRequests.TryGetValue(blockHash, out blockRequest))
             {
-                this.missedBlockRequests.TryAdd(blockHash, blockRequest);
+                var wasAdded = this.missedBlockRequests.TryAdd(blockHash, blockRequest);
 
-                // track block miss against this peer
-                blockRequest.Peer.AddBlockMiss();
+                // count a block miss against this peer
+                if (wasAdded)
+                    blockRequest.Peer.AddBlockMiss();
             }
 
             // notify now that missed block request is being tracked
