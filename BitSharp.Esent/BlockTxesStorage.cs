@@ -21,6 +21,7 @@ using Microsoft.Isam.Esent.Interop.Vista;
 using Microsoft.Isam.Esent.Interop.Windows81;
 using NLog;
 using Microsoft.Isam.Esent.Interop.Windows8;
+using Transaction = BitSharp.Core.Domain.Transaction;
 
 namespace BitSharp.Esent
 {
@@ -147,7 +148,7 @@ namespace BitSharp.Esent
                         var pruned = depth >= 0;
                         depth = Math.Max(0, depth);
 
-                        BitSharp.Core.Domain.Transaction tx;
+                        Transaction tx;
                         if (!pruned)
                         {
                             // verify transaction is not corrupt
@@ -173,12 +174,12 @@ namespace BitSharp.Esent
             }
         }
 
-        public bool TryGetTransaction(UInt256 blockHash, int txIndex, out BitSharp.Core.Domain.Transaction transaction)
+        public bool TryGetTransaction(UInt256 blockHash, int txIndex, out Transaction transaction)
         {
             int blockId;
             if (!this.TryGetBlockId(blockHash, out blockId))
             {
-                transaction = default(BitSharp.Core.Domain.Transaction);
+                transaction = default(Transaction);
                 return false;
             }
 
@@ -200,13 +201,13 @@ namespace BitSharp.Esent
                         }
                         else
                         {
-                            transaction = default(BitSharp.Core.Domain.Transaction);
+                            transaction = default(Transaction);
                             return false;
                         }
                     }
                     else
                     {
-                        transaction = default(BitSharp.Core.Domain.Transaction);
+                        transaction = default(Transaction);
                         return false;
                     }
                 }
@@ -409,7 +410,7 @@ namespace BitSharp.Esent
             get { return "Blocks"; }
         }
 
-        public bool TryAddBlockTransactions(UInt256 blockHash, IEnumerable<BitSharp.Core.Domain.Transaction> blockTxes)
+        public bool TryAddBlockTransactions(UInt256 blockHash, IEnumerable<Transaction> blockTxes)
         {
             if (this.ContainsBlock(blockHash))
                 return false;
