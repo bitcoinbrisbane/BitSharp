@@ -32,7 +32,7 @@ namespace BitSharp.Common
 
         private bool isStarted;
 
-        public ParallelConsumer(string name, Logger logger)
+        public ParallelConsumer(string name, int consumerThreadCount, Logger logger)
         {
             this.name = name;
             this.logger = logger;
@@ -40,7 +40,7 @@ namespace BitSharp.Common
             this.readWorker = new WorkerMethod(name + ".ReadWorker", ReadWorker, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: logger);
             this.readWorker.Start();
 
-            this.consumeWorkers = new WorkerMethod[Environment.ProcessorCount * 2];
+            this.consumeWorkers = new WorkerMethod[consumerThreadCount];
             this.consumeWorkersCompleted = new bool[this.consumeWorkers.Length];
             this.consumeWorkersLock = new object();
 

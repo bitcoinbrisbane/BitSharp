@@ -43,9 +43,15 @@ namespace BitSharp.Core.Builders
             this.coreStorage = coreStorage;
             this.rules = rules;
 
-            this.txLoader = new ParallelConsumer<TxWithPrevOutputKeys>("ChainStateBuilder.TxLoader", logger);
-            this.txValidator = new ParallelConsumer<TxWithPrevOutputs>("ChainStateBuilder.TxValidator", logger);
-            this.scriptValidator = new ParallelConsumer<TxInputWithPrevOutput>("ChainStateBuilder.ScriptValidator", logger);
+            // thread count for i/o task (TxLoader)
+            var ioThreadCount = 4;
+
+            // thread count for cpu tasks (TxValidator, ScriptValidator)
+            var cpuThreadCount = Environment.ProcessorCount * 2;
+
+            this.txLoader = new ParallelConsumer<TxWithPrevOutputKeys>("ChainStateBuilder.TxLoader", ioThreadCount, logger);
+            this.txValidator = new ParallelConsumer<TxWithPrevOutputs>("ChainStateBuilder.TxValidator", cpuThreadCount, logger);
+            this.scriptValidator = new ParallelConsumer<TxInputWithPrevOutput>("ChainStateBuilder.ScriptValidator", cpuThreadCount, logger);
         }
 
         public void Dispose()
