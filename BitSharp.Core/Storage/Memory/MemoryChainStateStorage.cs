@@ -115,7 +115,11 @@ namespace BitSharp.Core.Storage.Memory
 
         public int UnspentTxCount
         {
-            get { return 0; }
+            get
+            {
+                return this.semaphore.Do(() =>
+                    this.unspentTransactions.Count);
+            }
         }
 
         public bool ContainsUnspentTx(UInt256 txHash)

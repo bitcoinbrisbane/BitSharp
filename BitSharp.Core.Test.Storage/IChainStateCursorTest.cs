@@ -207,7 +207,47 @@ namespace BitSharp.Core.Test.Storage
 
         private void TestCommitTransaction(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            var fakeHeaders = new FakeHeaders();
+            var chainedHeader0 = fakeHeaders.GenesisChained();
+            var unspentTx = new UnspentTx(txHash: 0, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
+            var spentTxes = ImmutableList.Create(new SpentTx(txHash: 1, confirmedBlockIndex: 0, txIndex: 0, outputCount: 1, spentBlockIndex: 0));
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            {
+                // begin transaction
+                chainStateCursor.BeginTransaction();
+
+                // add data
+                chainStateCursor.AddChainedHeader(chainedHeader0);
+                chainStateCursor.TryAddUnspentTx(unspentTx);
+                chainStateCursor.TryAddBlockSpentTxes(0, spentTxes);
+
+                // verify data
+                Assert.AreEqual(chainedHeader0, chainStateCursor.GetChainTip());
+                Assert.AreEqual(1, chainStateCursor.UnspentTxCount);
+
+                UnspentTx actualUnspentTx;
+                Assert.IsTrue(chainStateCursor.TryGetUnspentTx(unspentTx.TxHash, out actualUnspentTx));
+                Assert.AreEqual(unspentTx, actualUnspentTx);
+
+                IImmutableList<SpentTx> actualSpentTxes;
+                Assert.IsTrue(chainStateCursor.TryGetBlockSpentTxes(0, out actualSpentTxes));
+                CollectionAssert.AreEqual((ICollection)spentTxes, (ICollection)actualSpentTxes);
+
+                // commit transaction
+                chainStateCursor.CommitTransaction();
+
+                // verify data
+                Assert.AreEqual(chainedHeader0, chainStateCursor.GetChainTip());
+                Assert.AreEqual(1, chainStateCursor.UnspentTxCount);
+
+                Assert.IsTrue(chainStateCursor.TryGetUnspentTx(unspentTx.TxHash, out actualUnspentTx));
+                Assert.AreEqual(unspentTx, actualUnspentTx);
+
+                Assert.IsTrue(chainStateCursor.TryGetBlockSpentTxes(0, out actualSpentTxes));
+                CollectionAssert.AreEqual((ICollection)spentTxes, (ICollection)actualSpentTxes);
+            }
         }
 
         private void TestRollbackTransaction(ITestStorageProvider provider)
