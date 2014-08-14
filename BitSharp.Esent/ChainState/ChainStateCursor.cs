@@ -95,6 +95,11 @@ namespace BitSharp.Esent
             this.jetSession.Dispose();
         }
 
+        public bool InTransaction
+        {
+            get { return this.inTransaction; }
+        }
+
         public IEnumerable<ChainedHeader> ReadChain()
         {
             Api.JetSetCurrentIndex(this.jetSession, this.chainTableId, "IX_BlockHeight");
@@ -106,6 +111,21 @@ namespace BitSharp.Esent
                     var chainedHeader = DataEncoder.DecodeChainedHeader(Api.RetrieveColumn(this.jetSession, this.chainTableId, this.chainedHeaderBytesColumnId));
                     yield return chainedHeader;
                 } while (Api.TryMoveNext(this.jetSession, this.chainTableId));
+            }
+        }
+
+        public ChainedHeader GetChainTip()
+        {
+            Api.JetSetCurrentIndex(this.jetSession, this.chainTableId, "IX_BlockHeight");
+
+            if (Api.TryMoveLast(this.jetSession, this.chainTableId))
+            {
+                var chainedHeader = DataEncoder.DecodeChainedHeader(Api.RetrieveColumn(this.jetSession, this.chainTableId, this.chainedHeaderBytesColumnId));
+                return chainedHeader;
+            }
+            else
+            {
+                return null;
             }
         }
 

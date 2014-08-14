@@ -249,13 +249,10 @@ namespace BitSharp.Core.Test
                     using (var expectedChainState = daemon2.CoreDaemon.GetChainState())
                     using (var actualChainState = daemon1.CoreDaemon.GetChainState())
                     {
-                        var expectedUtxo = expectedChainState.Utxo;
-                        var expectedUnspentTransactions = expectedUtxo.GetUnspentTransactions().ToList();
+                        var expectedUtxo = expectedChainState.ReadUnspentTransactions().ToList();
+                        var actualUtxo = actualChainState.ReadUnspentTransactions().ToList();
 
-                        var actualUtxo = actualChainState.Utxo;
-                        var actualUnspentTransactions = actualUtxo.GetUnspentTransactions().ToList();
-
-                        CollectionAssert.AreEqual(expectedUnspentTransactions, actualUnspentTransactions);
+                        CollectionAssert.AreEqual(expectedUtxo, actualUtxo);
                     }
                 }
             }

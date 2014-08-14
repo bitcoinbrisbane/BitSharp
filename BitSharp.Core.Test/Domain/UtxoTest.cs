@@ -1,7 +1,6 @@
 ﻿using BitSharp.Common;
 using BitSharp.Core.Domain;
 using BitSharp.Core.Storage.Memory;
-using BitSharp.Domain;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -12,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Test.Domain
 {
+    //TODO turn this into a proper IChainStateTest
     [TestClass]
     public class UtxoTest
     {
@@ -19,6 +19,7 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_Unspent()
         {
             // prepare utxo storage
+            var chain = new Chain(ImmutableList.Create(new FakeHeaders().GenesisChained()));
             var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare unspent output
@@ -28,7 +29,8 @@ namespace BitSharp.Core.Test.Domain
             // prepare utxo
             var memoryStorage = new MemoryStorageManager(unspentTransactions: unspentTransactions.ToImmutable());
             var chainStateStorage = memoryStorage.OpenChainStateCursor();
-            var utxo = new Utxo(chainStateStorage);
+            chainStateStorage.AddChainedHeader(chain.GenesisBlock);
+            var utxo = new ChainState(chain, memoryStorage);
 
             // prepare output reference
             var prevTxOutput = new TxOutputKey(txHash, txOutputIndex: 0);
@@ -44,6 +46,7 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_Spent()
         {
             // prepare utxo storage
+            var chain = new Chain(ImmutableList.Create(new FakeHeaders().GenesisChained()));
             var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare spent output
@@ -53,7 +56,8 @@ namespace BitSharp.Core.Test.Domain
             // prepare utxo
             var memoryStorage = new MemoryStorageManager(unspentTransactions: unspentTransactions.ToImmutable());
             var chainStateStorage = memoryStorage.OpenChainStateCursor();
-            var utxo = new Utxo(chainStateStorage);
+            chainStateStorage.AddChainedHeader(chain.GenesisBlock);
+            var utxo = new ChainState(chain, memoryStorage);
 
             // prepare output reference
             var prevTxOutput = new TxOutputKey(txHash, txOutputIndex: 0);
@@ -69,9 +73,11 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_Missing()
         {
             // prepare utxo
+            var chain = new Chain(ImmutableList.Create(new FakeHeaders().GenesisChained()));
             var memoryStorage = new MemoryStorageManager();
             var chainStateStorage = memoryStorage.OpenChainStateCursor();
-            var utxo = new Utxo(chainStateStorage);
+            chainStateStorage.AddChainedHeader(chain.GenesisBlock);
+            var utxo = new ChainState(chain, memoryStorage);
 
             // prepare output reference
             var prevTxOutput = new TxOutputKey(txHash: 0, txOutputIndex: 0);
@@ -87,6 +93,7 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_NegativeIndex()
         {
             // prepare utxo storage
+            var chain = new Chain(ImmutableList.Create(new FakeHeaders().GenesisChained()));
             var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare unspent output
@@ -96,7 +103,8 @@ namespace BitSharp.Core.Test.Domain
             // prepare utxo
             var memoryStorage = new MemoryStorageManager(unspentTransactions: unspentTransactions.ToImmutable());
             var chainStateStorage = memoryStorage.OpenChainStateCursor();
-            var utxo = new Utxo(chainStateStorage);
+            chainStateStorage.AddChainedHeader(chain.GenesisBlock);
+            var utxo = new ChainState(chain, memoryStorage);
 
             // prepare output reference
             var prevTxOutput = new TxOutputKey(txHash, txOutputIndex: UInt32.MaxValue);
@@ -112,6 +120,7 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_IndexOutOfRange()
         {
             // prepare utxo storage
+            var chain = new Chain(ImmutableList.Create(new FakeHeaders().GenesisChained()));
             var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare unspent output
@@ -121,7 +130,8 @@ namespace BitSharp.Core.Test.Domain
             // prepare utxo
             var memoryStorage = new MemoryStorageManager(unspentTransactions: unspentTransactions.ToImmutable());
             var chainStateStorage = memoryStorage.OpenChainStateCursor();
-            var utxo = new Utxo(chainStateStorage);
+            chainStateStorage.AddChainedHeader(chain.GenesisBlock);
+            var utxo = new ChainState(chain, memoryStorage);
 
             // prepare output reference
             var prevTxOutput = new TxOutputKey(txHash, txOutputIndex: 1);

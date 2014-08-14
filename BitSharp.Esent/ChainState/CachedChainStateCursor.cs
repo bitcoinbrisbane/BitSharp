@@ -26,6 +26,11 @@ namespace BitSharp.Esent.ChainState
             this.disposeAction();
         }
 
+        public bool InTransaction
+        {
+            get { return this.chainStateCursor.InTransaction; }
+        }
+
         public void BeginTransaction()
         {
             this.chainStateCursor.BeginTransaction();
@@ -44,6 +49,11 @@ namespace BitSharp.Esent.ChainState
         public IEnumerable<ChainedHeader> ReadChain()
         {
             return this.chainStateCursor.ReadChain();
+        }
+
+        public ChainedHeader GetChainTip()
+        {
+            return this.chainStateCursor.GetChainTip();
         }
 
         public void AddChainedHeader(ChainedHeader chainedHeader)

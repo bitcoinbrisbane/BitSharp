@@ -20,7 +20,6 @@ using BitSharp.Core.Workers;
 using System.Security.Cryptography;
 using BitSharp.Core.Domain;
 using BitSharp.Core.Monitor;
-using BitSharp.Domain;
 using Ninject;
 using Ninject.Parameters;
 

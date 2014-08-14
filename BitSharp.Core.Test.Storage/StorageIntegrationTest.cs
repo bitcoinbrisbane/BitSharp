@@ -7,7 +7,6 @@ using BitSharp.Core.Rules;
 using BitSharp.Core.Storage;
 using BitSharp.Core.Test;
 using BitSharp.Core.Test.Rules;
-using BitSharp.Domain;
 using BitSharp.Esent.Test;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NLog;
@@ -67,7 +66,7 @@ namespace BitSharp.Core.Test.Storage
 
                     using (var chainState = chainStateBuilder.ToImmutable())
                     {
-                        expectedUtxos.Add(chainState.Utxo.GetUnspentTransactions().ToList());
+                        expectedUtxos.Add(chainState.ReadUnspentTransactions().ToList());
                     }
                 }
 
@@ -96,7 +95,7 @@ namespace BitSharp.Core.Test.Storage
                     List<UnspentTx> actualUtxo;
                     using (var chainState = chainStateBuilder.ToImmutable())
                     {
-                        actualUtxo = chainState.Utxo.GetUnspentTransactions().ToList();
+                        actualUtxo = chainState.ReadUnspentTransactions().ToList();
                     }
 
                     CollectionAssert.AreEqual(expectedUtxo, actualUtxo, "UTXO differs at height: {0}".Format2(blockIndex));

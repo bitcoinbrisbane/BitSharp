@@ -21,7 +21,6 @@ using BitSharp.Core.Rules;
 using System.Security.Cryptography;
 using BitSharp.Core.Monitor;
 using BitSharp.Core.Builders;
-using BitSharp.Domain;
 
 namespace BitSharp.Core
 {
@@ -142,26 +141,46 @@ namespace BitSharp.Core
             this.utxoScanWorker = new WorkerMethod("UTXO Scan Worker",
                 _ =>
                 {
-                    using (var chainStateLocal = this.GetChainState())
+                    // time taking chain state snapshots
+                    var stopwatch = Stopwatch.StartNew();
+                    int chainStateHeight;
+                    using (var chainState = this.GetChainState())
                     {
-                        new MethodTimer(this.logger).Time("UTXO Commitment: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
-                        {
-                            using (var utxoStream = new UtxoStream(this.logger, chainStateLocal.Utxo.GetUnspentTransactions()))
-                            {
-                                var sha256 = new SHA256Managed();
-                                var utxoHash = sha256.ComputeHash(utxoStream);
-                                this.logger.Info("UXO Commitment Hash: {0}".Format2(utxoHash.ToHexNumberString()));
-                            }
-                        });
-
-                        //new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
-                        //{
-                        //    var sha256 = new SHA256Managed();
-                        //    foreach (var output in chainStateLocal.Utxo.GetUnspentTransactions())
-                        //    {
-                        //    }
-                        //});
+                        chainStateHeight = chainState.Chain.Height;
                     }
+                    stopwatch.Stop();
+                    this.logger.Info("GetChainState at {0:#,##0}: {1:#,##0.00}s".Format2(chainStateHeight, stopwatch.Elapsed.TotalSeconds));
+
+                    // time enumerating chain state snapshots
+                    stopwatch = Stopwatch.StartNew();
+                    using (var chainState = this.GetChainState())
+                    {
+                        chainStateHeight = chainState.Chain.Height;
+                        chainState.ReadUnspentTransactions().Count();
+                    }
+                    stopwatch.Stop();
+                    this.logger.Info("Enumerate chain state at {0:#,##0}: {1:#,##0.00}s".Format2(chainStateHeight, stopwatch.Elapsed.TotalSeconds));
+
+                    //using (var chainStateLocal = this.GetChainState())
+                    //{
+                    //    new MethodTimer(this.logger).Time("UTXO Commitment: {0:#,##0}".Format2(chainStateLocal.UnspentTxCount), () =>
+                    //    {
+                    //        using (var utxoStream = new UtxoStream(this.logger, chainStateLocal.ReadUnspentTransactions()))
+                    //        {
+                    //            var sha256 = new SHA256Managed();
+                    //            var utxoHash = sha256.ComputeHash(utxoStream);
+                    //            this.logger.Info("UXO Commitment Hash: {0}".Format2(utxoHash.ToHexNumberString()));
+                    //        }
+                    //    });
+
+                    //    //new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
+                    //    //{
+                    //    //    var sha256 = new SHA256Managed();
+                    //    //    foreach (var output in chainStateLocal.Utxo.GetUnspentTransactions())
+                    //    //    {
+                    //    //    }
+                    //    //});
+                    //}
                 }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(60), maxIdleTime: TimeSpan.FromSeconds(60), logger: this.logger);
         }
 
@@ -264,7 +283,9 @@ namespace BitSharp.Core
             this.chainStateWorker.WaitForUpdate();
         }
 
-        public ChainState GetChainState()
+        //TODO need to implement functionality to prevent pruning from removing block data that is being used by chain state snapshots
+        //TODO i.e. don't prune past height X
+        public IChainState GetChainState()
         {
             return this.chainStateBuilder.ToImmutable();
         }

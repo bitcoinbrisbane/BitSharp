@@ -32,15 +32,15 @@ namespace BitSharp.Core.Builders
                 this.AddBlock(chainedHeader);
         }
 
-        public ChainedHeader GenesisBlock { get { return this.blocks.First(); } }
+        public ChainedHeader GenesisBlock { get { return this.blocks.FirstOrDefault(); } }
 
-        public ChainedHeader LastBlock { get { return this.blocks.Last(); } }
+        public ChainedHeader LastBlock { get { return this.blocks.LastOrDefault(); } }
 
-        public UInt256 LastBlockHash { get { return this.LastBlock.Hash; } }
+        public UInt256 LastBlockHash { get { return this.LastBlock != null ? this.LastBlock.Hash : UInt256.Zero; } }
 
         public int Height { get { return this.blocks.Count() - 1; } }
 
-        public BigInteger TotalWork { get { return this.LastBlock.TotalWork; } }
+        public BigInteger TotalWork { get { return this.LastBlock != null ? this.LastBlock.TotalWork : 0; } }
 
         public ImmutableList<ChainedHeader> Blocks { get { return this.blocks.ToImmutable(); } }
 
@@ -56,7 +56,7 @@ namespace BitSharp.Core.Builders
 
         public void AddBlock(ChainedHeader chainedHeader)
         {
-            var lastBlock = this.blocks.LastOrDefault();
+            var lastBlock = this.LastBlock;
             if (lastBlock != null
                 && (chainedHeader.PreviousBlockHash != lastBlock.Hash
                     || chainedHeader.Height != lastBlock.Height + 1))
@@ -68,7 +68,8 @@ namespace BitSharp.Core.Builders
         public void RemoveBlock(ChainedHeader chainedHeader)
         {
             var lastBlock = this.LastBlock;
-            if (chainedHeader != lastBlock
+            if (lastBlock == null
+                || chainedHeader != lastBlock
                 || this.blocks.Count == 0)
                 throw new InvalidOperationException();
 

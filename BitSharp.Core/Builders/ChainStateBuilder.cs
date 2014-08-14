@@ -20,7 +20,6 @@ using BitSharp.Core.Workers;
 using System.Security.Cryptography;
 using BitSharp.Core.Domain;
 using BitSharp.Core.Monitor;
-using BitSharp.Domain;
 using Ninject;
 using Ninject.Parameters;
 
@@ -250,14 +249,12 @@ namespace BitSharp.Core.Builders
             return new UInt256(this.sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
         }
 
+        //TODO cache the latest immutable snapshot
         public ChainState ToImmutable()
         {
             return this.commitLock.DoRead(() =>
             {
-                var chainStateCursor = this.coreStorage.OpenChainStateCursor();
-                chainStateCursor.BeginTransaction();
-
-                return new ChainState(this.chain.ToImmutable(), chainStateCursor);
+                return new ChainState(this.chain.ToImmutable(), this.coreStorage.StorageManager);
             });
         }
 

@@ -89,6 +89,12 @@ namespace BitSharp.Core.Storage.Memory
                 this.chain.ToImmutable()).Blocks;
         }
 
+        public ChainedHeader GetChainTip()
+        {
+            return this.semaphore.Do(() =>
+                this.chain.LastBlock);
+        }
+
         public void AddChainedHeader(ChainedHeader chainedHeader)
         {
             this.semaphore.Do(() =>

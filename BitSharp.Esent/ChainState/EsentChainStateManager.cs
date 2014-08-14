@@ -87,6 +87,10 @@ namespace BitSharp.Esent
         {
             var cached = false;
 
+            // ensure an open transaction is rolled back before returning the cursor to the cache
+            if (cursor.InTransaction)
+                cursor.RollbackTransaction();
+
             lock (this.cursorsLock)
             {
                 for (var i = 0; i < this.cursors.Length; i++)

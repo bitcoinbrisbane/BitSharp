@@ -7,7 +7,6 @@ using BitSharp.Core.Rules;
 using BitSharp.Core.Storage;
 using BitSharp.Core.Test;
 using BitSharp.Core.Test.Rules;
-using BitSharp.Domain;
 using BitSharp.Esent.Test;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NLog;

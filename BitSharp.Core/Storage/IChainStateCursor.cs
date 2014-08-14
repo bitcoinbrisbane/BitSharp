@@ -17,6 +17,11 @@ namespace BitSharp.Core.Storage
     public interface IChainStateCursor : IDisposable
     {
         /// <summary>
+        /// Whether the cursor is currently in a transaction.
+        /// </summary>
+        bool InTransaction { get; }
+
+        /// <summary>
         /// Begin a new transaction.
         /// </summary>
         void BeginTransaction();
@@ -34,8 +39,14 @@ namespace BitSharp.Core.Storage
         /// <summary>
         /// Enumerate the chain's headers.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>An enumerable of the chain's headers</returns>
         IEnumerable<ChainedHeader> ReadChain();
+
+        /// <summary>
+        /// Retrieve the tip of the chain.
+        /// </summary>
+        /// <returns>The chained header for the tip, or null for an empty chain.</returns>
+        ChainedHeader GetChainTip();
 
         /// <summary>
         /// Add a new header to the chain.

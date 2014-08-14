@@ -3,7 +3,6 @@ using BitSharp.Core.Domain;
 using BitSharp.Core.Builders;
 using BitSharp.Core.Storage;
 using BitSharp.Core.Storage.Memory;
-using BitSharp.Domain;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Ninject;

@@ -348,6 +348,11 @@ namespace BitSharp.Core.Storage
             return this.blockStorage.IsBlockInvalid(blockHash);
         }
 
+        internal IStorageManager StorageManager
+        {
+            get { return this.storageManager; }
+        }
+
         internal IChainStateCursor OpenChainStateCursor()
         {
             return this.storageManager.OpenChainStateCursor();

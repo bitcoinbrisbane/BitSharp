@@ -102,6 +102,7 @@
     <Compile Include="Builders\TxInputWithPrevOutput.cs" />
     <Compile Include="Builders\TxWithPrevOutputs.cs" />
     <Compile Include="Builders\TxWithPrevOutputKeys.cs" />
+    <Compile Include="Domain\IChainState.cs" />
     <Compile Include="Storage\CoreStorage.cs" />
     <Compile Include="Domain\BlockTxKey.cs" />
     <Compile Include="MerkleTree.cs" />
@@ -128,7 +129,6 @@
     <Compile Include="Domain\TxOutput.cs" />
     <Compile Include="Domain\TxOutputKey.cs" />
     <Compile Include="Domain\UnspentTx.cs" />
-    <Compile Include="Domain\Utxo.cs" />
     <Compile Include="Domain\UtxoStream.cs" />
     <Compile Include="IMerkleTreePruningCursor.cs" />
     <Compile Include="JsonRpc\CoreRpcServer.cs" />

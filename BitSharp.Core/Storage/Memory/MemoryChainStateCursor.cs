@@ -36,12 +36,73 @@ namespace BitSharp.Core.Storage.Memory
 
         internal ImmutableSortedDictionary<UInt256, UnspentTx>.Builder UnspentTransactionsDictionary { get { return this.unspentTransactions; } }
 
+        public void Dispose()
+        {
+        }
+
+        public bool InTransaction
+        {
+            get { return this.inTransaction; }
+        }
+
+        public void BeginTransaction()
+        {
+            if (this.inTransaction)
+                throw new InvalidOperationException();
+
+            this.chainStateStorage.BeginTransaction(out this.chain, out this.unspentTransactions, out this.blockSpentTxes, out this.chainVersion, out this.unspentTxesVersion, out this.spentTxesVersion);
+
+            this.chainModified = false;
+            this.unspentTxesModified = false;
+            this.spentTxesModified = false;
+
+            this.inTransaction = true;
+        }
+
+        public void CommitTransaction()
+        {
+            if (!this.inTransaction)
+                throw new InvalidOperationException();
+
+            this.chainStateStorage.CommitTransaction(
+                this.chainModified ? this.chain : null,
+                this.unspentTxesModified ? this.unspentTransactions : null,
+                this.spentTxesModified ? this.blockSpentTxes : null,
+                this.chainVersion, this.unspentTxesVersion, this.spentTxesVersion);
+
+            this.chain = null;
+            this.unspentTransactions = null;
+            this.blockSpentTxes = null;
+
+            this.inTransaction = false;
+        }
+
+        public void RollbackTransaction()
+        {
+            if (!this.inTransaction)
+                throw new InvalidOperationException();
+
+            this.chain = null;
+            this.unspentTransactions = null;
+            this.blockSpentTxes = null;
+
+            this.inTransaction = false;
+        }
+
         public IEnumerable<ChainedHeader> ReadChain()
         {
             if (this.inTransaction)
                 return this.chain.Blocks;
             else
                 return this.chainStateStorage.ReadChain();
+        }
+
+        public ChainedHeader GetChainTip()
+        {
+            if (this.inTransaction)
+                return this.chain.LastBlock;
+            else
+                return this.chainStateStorage.GetChainTip();
         }
 
         public void AddChainedHeader(ChainedHeader chainedHeader)
@@ -231,54 +292,6 @@ namespace BitSharp.Core.Storage.Memory
             {
                 this.chainStateStorage.RemoveSpentTransactionsToHeight(spentBlockIndex);
             }
-        }
-
-        public void Dispose()
-        {
-        }
-
-        public void BeginTransaction()
-        {
-            if (this.inTransaction)
-                throw new InvalidOperationException();
-
-            this.chainStateStorage.BeginTransaction(out this.chain, out this.unspentTransactions, out this.blockSpentTxes, out this.chainVersion, out this.unspentTxesVersion, out this.spentTxesVersion);
-
-            this.chainModified = false;
-            this.unspentTxesModified = false;
-            this.spentTxesModified = false;
-
-            this.inTransaction = true;
-        }
-
-        public void CommitTransaction()
-        {
-            if (!this.inTransaction)
-                throw new InvalidOperationException();
-
-            this.chainStateStorage.CommitTransaction(
-                this.chainModified ? this.chain : null,
-                this.unspentTxesModified ? this.unspentTransactions : null,
-                this.spentTxesModified ? this.blockSpentTxes : null,
-                this.chainVersion, this.unspentTxesVersion, this.spentTxesVersion);
-
-            this.chain = null;
-            this.unspentTransactions = null;
-            this.blockSpentTxes = null;
-
-            this.inTransaction = false;
-        }
-
-        public void RollbackTransaction()
-        {
-            if (!this.inTransaction)
-                throw new InvalidOperationException();
-
-            this.chain = null;
-            this.unspentTransactions = null;
-            this.blockSpentTxes = null;
-
-            this.inTransaction = false;
         }
 
         public void Defragment()
