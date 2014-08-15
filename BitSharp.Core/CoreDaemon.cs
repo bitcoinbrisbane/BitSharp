@@ -255,12 +255,13 @@ namespace BitSharp.Core
             return this.chainStateWorker.GetBlockMissCount();
         }
 
-        public void Start()
+        public void Start(bool enablePruning = false)
         {
             // startup workers
             this.targetChainWorker.Start();
             this.chainStateWorker.Start();
-            //this.pruningWorker.Start();
+            if (enablePruning)
+                this.pruningWorker.Start();
             this.defragWorker.Start();
             this.gcWorker.Start();
             //this.utxoScanWorker.Start();

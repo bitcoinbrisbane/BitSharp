@@ -48,17 +48,40 @@ namespace BitSharp.Client
             try
             {
                 //TODO
+                //**************************************************************
                 var rulesType = RulesEnum.TestNet3;
                 //var rulesType = RulesEnum.MainNet;
+
                 var bypassValidation = false;
                 var ignoreScripts = false;
                 var ignoreSignatures = false;
                 var ignoreScriptErrors = true;
 
+                var enablePruning = false;
+
+                var cleanData = false;
+                var cleanChainState = false;
+
+                //NOTE: Running with a cleaned chained state against a pruned blockchain does not work.
+                //      It will see the data is missing, but won't redownload the blocks.
+                //**************************************************************
+
                 // directories
                 var baseDirectory = Config.LocalStoragePath;
                 if (false && Debugger.IsAttached)
                     baseDirectory = Path.Combine(baseDirectory, "Debugger");
+
+                //TODO
+                if (cleanData)
+                {
+                    try { Directory.Delete(Path.Combine(baseDirectory, "Data", rulesType.ToString()), recursive: true); }
+                    catch (IOException) { }
+                }
+                else if (cleanChainState)
+                {
+                    try { Directory.Delete(Path.Combine(baseDirectory, "Data", rulesType.ToString(), "ChainState"), recursive: true); }
+                    catch (IOException) { }
+                }
 
                 // initialize kernel
                 this.kernel = new StandardKernel();
@@ -121,7 +144,7 @@ namespace BitSharp.Client
                 this.viewModel.ViewBlockchainLast();
 
                 // start the blockchain daemon
-                this.coreDaemon.Start();
+                this.coreDaemon.Start(enablePruning);
 
                 // start p2p client
                 var startThread = new Thread(() => this.localClient.Start());
