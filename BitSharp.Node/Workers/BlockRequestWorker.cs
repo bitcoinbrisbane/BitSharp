@@ -199,6 +199,10 @@ namespace BitSharp.Node.Workers
                 x => (now - x.Value.RequestTime) > MISSED_STALE_REQUEST_TIME)
                 .ToDictionary();
 
+            // count missed block requests against their peers
+            foreach (var peer in staleMissedBlockRequests.Values.Select(x => x.Peer))
+                peer.AddBlockMiss();
+
             // remove any stale requests from the global list of requests
             this.allBlockRequests.RemoveWhere(x =>
                 (now - x.Value.RequestTime) > STALE_REQUEST_TIME
@@ -403,11 +407,7 @@ namespace BitSharp.Node.Workers
             BlockRequest blockRequest;
             if (this.allBlockRequests.TryGetValue(blockHash, out blockRequest))
             {
-                var wasAdded = this.missedBlockRequests.TryAdd(blockHash, blockRequest);
-
-                // count a block miss against this peer
-                if (wasAdded)
-                    blockRequest.Peer.AddBlockMiss();
+                this.missedBlockRequests.TryAdd(blockHash, blockRequest);
             }
 
             // notify now that missed block request is being tracked
