@@ -35,7 +35,7 @@ namespace BitSharp.Core.Test.Builders
 
             // initialize memory utxo builder storage
             var memoryStorage = new MemoryStorageManager();
-            var memoryChainStateCursor = memoryStorage.OpenChainStateCursor();
+            var memoryChainStateCursor = memoryStorage.OpenChainStateCursor().Item;
 
             // initialize utxo builder
             var utxoBuilder = new UtxoBuilder(memoryChainStateCursor, LogManager.CreateNullLogger());
@@ -107,7 +107,7 @@ namespace BitSharp.Core.Test.Builders
 
             // initialize memory utxo builder storage
             var memoryStorage = new MemoryStorageManager();
-            var memoryChainStateCursor = memoryStorage.OpenChainStateCursor();
+            var memoryChainStateCursor = memoryStorage.OpenChainStateCursor().Item;
 
             // initialize utxo builder
             var utxoBuilder = new UtxoBuilder(memoryChainStateCursor, LogManager.CreateNullLogger());

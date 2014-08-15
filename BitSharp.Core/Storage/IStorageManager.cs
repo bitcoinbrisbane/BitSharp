@@ -14,6 +14,6 @@ namespace BitSharp.Core.Storage
 
         IBlockTxesStorage BlockTxesStorage { get; }
 
-        IChainStateCursor OpenChainStateCursor();
+        DisposeHandle<IChainStateCursor> OpenChainStateCursor();
     }
 }

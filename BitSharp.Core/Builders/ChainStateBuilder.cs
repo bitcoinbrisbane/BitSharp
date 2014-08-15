@@ -35,6 +35,7 @@ namespace BitSharp.Core.Builders
         private readonly BlockValidator blockValidator;
 
         private bool inTransaction;
+        private readonly DisposeHandle<IChainStateCursor> chainStateCursorHandle;
         private readonly IChainStateCursor chainStateCursor;
         private ChainBuilder chain;
         private readonly UtxoBuilder utxoBuilder;
@@ -52,7 +53,8 @@ namespace BitSharp.Core.Builders
 
             this.blockValidator = new BlockValidator(this.coreStorage, this.rules, this.logger);
 
-            this.chainStateCursor = coreStorage.OpenChainStateCursor();
+            this.chainStateCursorHandle = coreStorage.OpenChainStateCursor();
+            this.chainStateCursor = this.chainStateCursorHandle.Item;
 
             this.chain = new ChainBuilder(chainStateCursor.ReadChain());
             this.utxoBuilder = new UtxoBuilder(chainStateCursor, logger);
@@ -74,7 +76,7 @@ namespace BitSharp.Core.Builders
             new IDisposable[]
             {
                 this.blockValidator,
-                this.chainStateCursor,
+                this.chainStateCursorHandle,
                 this.stats,
             }.DisposeList();
         }

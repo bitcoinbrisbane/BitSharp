@@ -141,9 +141,12 @@ namespace BitSharp.Core.Test.Storage
 
             // open two chain state cursors
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor1 = storageManager.OpenChainStateCursor())
-            using (var chainStateCursor2 = storageManager.OpenChainStateCursor())
+            using (var handle1 = storageManager.OpenChainStateCursor())
+            using (var handle2 = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor1 = handle1.Item;
+                var chainStateCursor2 = handle2.Item;
+
                 // open transactions on both cursors
                 chainStateCursor1.BeginTransaction();
                 chainStateCursor2.BeginTransaction();
@@ -177,8 +180,10 @@ namespace BitSharp.Core.Test.Storage
         private void TestInTransaction(ITestStorageProvider provider)
         {
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
                 // verify initial InTransaction=false
                 Assert.IsFalse(chainStateCursor.InTransaction);
 
@@ -213,8 +218,10 @@ namespace BitSharp.Core.Test.Storage
             var spentTxes = ImmutableList.Create(new SpentTx(txHash: 1, confirmedBlockIndex: 0, txIndex: 0, outputCount: 1, spentBlockIndex: 0));
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
                 // begin transaction
                 chainStateCursor.BeginTransaction();
 
@@ -262,8 +269,10 @@ namespace BitSharp.Core.Test.Storage
             var spentTxes = ImmutableList.Create(new SpentTx(txHash: 1, confirmedBlockIndex: 0, txIndex: 0, outputCount: 1, spentBlockIndex: 0));
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
                 // begin transaction
                 chainStateCursor.BeginTransaction();
 
@@ -311,8 +320,11 @@ namespace BitSharp.Core.Test.Storage
             var chainedHeader2 = fakeHeaders.NextChained();
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
                 chainStateCursor.BeginTransaction();
 
                 // verify initial empty chain
@@ -364,8 +376,11 @@ namespace BitSharp.Core.Test.Storage
             var chainedHeader2 = fakeHeaders.NextChained();
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
                 chainStateCursor.BeginTransaction();
 
                 // verify initial empty chain
@@ -416,8 +431,11 @@ namespace BitSharp.Core.Test.Storage
             var chainedHeader1 = fakeHeaders.NextChained();
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
                 chainStateCursor.BeginTransaction();
 
                 // verify initial empty chain
@@ -450,8 +468,11 @@ namespace BitSharp.Core.Test.Storage
             var chainedHeader1 = fakeHeaders.NextChained();
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
                 chainStateCursor.BeginTransaction();
 
                 // add headers
@@ -488,8 +509,11 @@ namespace BitSharp.Core.Test.Storage
             var unspentTx2 = new UnspentTx(txHash: 2, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
                 chainStateCursor.BeginTransaction();
 
                 // verify initial count
@@ -539,8 +563,11 @@ namespace BitSharp.Core.Test.Storage
             var unspentTx1 = new UnspentTx(txHash: 1, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
                 chainStateCursor.BeginTransaction();
 
                 // verify presence
@@ -583,8 +610,11 @@ namespace BitSharp.Core.Test.Storage
             var unspentTx1 = new UnspentTx(txHash: 1, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
                 chainStateCursor.BeginTransaction();
 
                 // verify initial empty state
@@ -633,8 +663,11 @@ namespace BitSharp.Core.Test.Storage
             Assert.AreNotEqual(unspentTx, unspentTxUpdated);
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
                 chainStateCursor.BeginTransaction();
 
                 // verify can't update missing unspent tx
@@ -670,8 +703,11 @@ namespace BitSharp.Core.Test.Storage
             var unspentTx2 = new UnspentTx(txHash: 2, blockIndex: 0, txIndex: 0, outputStates: new OutputStates(1, OutputState.Unspent));
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
                 chainStateCursor.BeginTransaction();
 
                 // verify initial empty state
@@ -727,8 +763,11 @@ namespace BitSharp.Core.Test.Storage
                 new SpentTx(txHash: 101, confirmedBlockIndex: 1, txIndex: 1, outputCount: 2, spentBlockIndex: 1));
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
                 chainStateCursor.BeginTransaction();
 
                 // verify presence
@@ -777,8 +816,11 @@ namespace BitSharp.Core.Test.Storage
                 new SpentTx(txHash: 101, confirmedBlockIndex: 1, txIndex: 1, outputCount: 2, spentBlockIndex: 1));
 
             using (var storageManager = provider.OpenStorageManager())
-            using (var chainStateCursor = storageManager.OpenChainStateCursor())
+            using (var handle = storageManager.OpenChainStateCursor())
             {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
                 chainStateCursor.BeginTransaction();
 
                 // verify initial empty state

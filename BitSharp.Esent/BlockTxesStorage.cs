@@ -22,6 +22,7 @@ using Microsoft.Isam.Esent.Interop.Windows81;
 using NLog;
 using Microsoft.Isam.Esent.Interop.Windows8;
 using Transaction = BitSharp.Core.Domain.Transaction;
+using Microsoft.Isam.Esent.Interop.Windows7;
 
 namespace BitSharp.Esent
 {
@@ -32,8 +33,7 @@ namespace BitSharp.Esent
         private readonly string jetDatabase;
         private readonly Instance jetInstance;
 
-        private readonly BlockTxesCursor[] cursors;
-        private readonly object cursorsLock;
+        private readonly DisposableCache<BlockTxesCursor> cursorCache;
 
         public BlockTxesStorage(string baseDirectory, Logger logger)
         {
@@ -41,8 +41,8 @@ namespace BitSharp.Esent
             this.jetDirectory = Path.Combine(baseDirectory, "BlockTxes");
             this.jetDatabase = Path.Combine(this.jetDirectory, "BlockTxes.edb");
 
-            this.cursors = new BlockTxesCursor[64];
-            this.cursorsLock = new object();
+            this.cursorCache = new DisposableCache<BlockTxesCursor>(64,
+                createFunc: () => new BlockTxesCursor(this.jetDatabase, this.jetInstance));
 
             this.jetInstance = CreateInstance(this.jetDirectory);
             try
@@ -59,13 +59,11 @@ namespace BitSharp.Esent
 
         public void Dispose()
         {
-            //TODO should i lock in dispose?
-            lock (this.cursorsLock)
+            new IDisposable[]
             {
-                this.cursors.DisposeList();
-            }
-
-            this.jetInstance.Dispose();
+                this.cursorCache,
+                this.jetInstance
+            }.DisposeList();
         }
 
         internal Instance JetInstance { get { return this.jetInstance; } }
@@ -82,9 +80,10 @@ namespace BitSharp.Esent
             if (!this.TryGetBlockId(blockHash, out blockId))
                 throw new MissingDataException(blockHash);
 
-            var cursor = this.OpenCursor();
-            try
+            using (var handle = this.cursorCache.TakeItem())
             {
+                var cursor = handle.Item;
+
                 using (var jetTx = cursor.jetSession.BeginTransaction())
                 {
                     var pruningCursor = new MerkleTreePruningCursor(blockId, cursor);
@@ -96,10 +95,6 @@ namespace BitSharp.Esent
 
                     jetTx.CommitLazy();
                 }
-            }
-            finally
-            {
-                this.FreeCursor(cursor);
             }
         }
 
@@ -120,9 +115,10 @@ namespace BitSharp.Esent
 
         private IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash, int blockId)
         {
-            var cursor = this.OpenCursor();
-            try
+            using (var handle = this.cursorCache.TakeItem())
             {
+                var cursor = handle.Item;
+
                 using (var jetTx = cursor.jetSession.BeginTransaction())
                 {
                     var sha256 = new SHA256Managed();
@@ -168,10 +164,6 @@ namespace BitSharp.Esent
                     } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));
                 }
             }
-            finally
-            {
-                this.FreeCursor(cursor);
-            }
         }
 
         public bool TryGetTransaction(UInt256 blockHash, int txIndex, out Transaction transaction)
@@ -183,9 +175,10 @@ namespace BitSharp.Esent
                 return false;
             }
 
-            var cursor = this.OpenCursor();
-            try
+            using (var handle = this.cursorCache.TakeItem())
             {
+                var cursor = handle.Item;
+
                 using (var jetTx = cursor.jetSession.BeginTransaction())
                 {
                     Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockIdTxIndex");
@@ -211,10 +204,6 @@ namespace BitSharp.Esent
                         return false;
                     }
                 }
-            }
-            finally
-            {
-                this.FreeCursor(cursor);
             }
         }
 
@@ -359,9 +348,10 @@ namespace BitSharp.Esent
                     Api.JetOpenDatabase(jetSession, this.jetDatabase, "", out blockDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
                     try
                     {
-                        var cursor = this.OpenCursor();
-                        try
-                        {
+            using (var handle = this.cursorCache.TakeItem())
+            {
+                var cursor = handle.Item;
+
                             // reset flush column
                             using (var jetUpdate = cursor.jetSession.BeginUpdate(cursor.globalsTableId, JET_prep.Replace))
                             {
@@ -369,10 +359,6 @@ namespace BitSharp.Esent
 
                                 jetUpdate.Save();
                             }
-                        }
-                        finally
-                        {
-                            this.FreeCursor(cursor);
                         }
                     }
                     catch (Exception)
@@ -393,14 +379,11 @@ namespace BitSharp.Esent
         {
             get
             {
-                var cursor = this.OpenCursor();
-                try
+                using (var handle = this.cursorCache.TakeItem())
                 {
+                    var cursor = handle.Item;
+
                     return Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.globalsTableId, cursor.blockCountColumnId).Value;
-                }
-                finally
-                {
-                    this.FreeCursor(cursor);
                 }
             }
         }
@@ -417,9 +400,10 @@ namespace BitSharp.Esent
 
             try
             {
-                var cursor = this.OpenCursor();
-                try
+                using (var handle = this.cursorCache.TakeItem())
                 {
+                    var cursor = handle.Item;
+
                     using (var jetTx = cursor.jetSession.BeginTransaction())
                     {
                         int blockId;
@@ -445,10 +429,6 @@ namespace BitSharp.Esent
                         return true;
                     }
                 }
-                finally
-                {
-                    this.FreeCursor(cursor);
-                }
             }
             catch (EsentKeyDuplicateException)
             {
@@ -473,9 +453,10 @@ namespace BitSharp.Esent
 
         public bool TryRemoveBlockTransactions(UInt256 blockHash)
         {
-            var cursor = this.OpenCursor();
-            try
+            using (var handle = this.cursorCache.TakeItem())
             {
+                var cursor = handle.Item;
+
                 using (var jetTx = cursor.jetSession.BeginTransaction())
                 {
                     Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockIdsTableId, "IX_BlockHash");
@@ -516,17 +497,14 @@ namespace BitSharp.Esent
                     }
                 }
             }
-            finally
-            {
-                this.FreeCursor(cursor);
-            }
         }
 
         public void Flush()
         {
-            var cursor = this.OpenCursor();
-            try
+            using (var handle = this.cursorCache.TakeItem())
             {
+                var cursor = handle.Item;
+
                 using (var jetTx = cursor.jetSession.BeginTransaction())
                 {
                     Api.EscrowUpdate(cursor.jetSession, cursor.globalsTableId, cursor.flushColumnId, 1);
@@ -535,17 +513,14 @@ namespace BitSharp.Esent
 
                 Api.JetCommitTransaction(cursor.jetSession, Server2003Grbits.WaitAllLevel0Commit);
             }
-            finally
-            {
-                this.FreeCursor(cursor);
-            }
         }
 
         public void Defragment()
         {
-            var cursor = this.OpenCursor();
-            try
+            using (var handle = this.cursorCache.TakeItem())
             {
+                var cursor = handle.Item;
+
                 //int passes = -1, seconds = -1;
                 //Api.JetDefragment(cursor.jetSession, cursor.blockDbId, "BlockTxes", ref passes, ref seconds, DefragGrbit.BatchStart);
 
@@ -559,61 +534,14 @@ namespace BitSharp.Esent
                     this.logger.Info("Finished shrinking block txes database: {0:#,##0} MB".Format2((float)actualPages * SystemParameters.DatabasePageSize / 1.MILLION()));
                 }
             }
-            finally
-            {
-                this.FreeCursor(cursor);
-            }
-        }
-
-        private BlockTxesCursor OpenCursor()
-        {
-            BlockTxesCursor cursor = null;
-
-            lock (this.cursorsLock)
-            {
-                for (var i = 0; i < this.cursors.Length; i++)
-                {
-                    if (this.cursors[i] != null)
-                    {
-                        cursor = this.cursors[i];
-                        this.cursors[i] = null;
-                        break;
-                    }
-                }
-            }
-
-            if (cursor == null)
-                cursor = new BlockTxesCursor(this.jetDatabase, this.jetInstance);
-
-            return cursor;
-        }
-
-        private void FreeCursor(BlockTxesCursor cursor)
-        {
-            var cached = false;
-
-            lock (this.cursorsLock)
-            {
-                for (var i = 0; i < this.cursors.Length; i++)
-                {
-                    if (this.cursors[i] == null)
-                    {
-                        this.cursors[i] = cursor;
-                        cached = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!cached)
-                cursor.Dispose();
         }
 
         private bool TryGetBlockId(UInt256 blockHash, out int blockId)
         {
-            var cursor = this.OpenCursor();
-            try
+            using (var handle = this.cursorCache.TakeItem())
             {
+                var cursor = handle.Item;
+
                 using (var jetTx = cursor.jetSession.BeginTransaction())
                 {
                     Api.JetSetCurrentIndex(cursor.jetSession, cursor.blockIdsTableId, "IX_BlockHash");
@@ -630,10 +558,6 @@ namespace BitSharp.Esent
                         return false;
                     }
                 }
-            }
-            finally
-            {
-                this.FreeCursor(cursor);
             }
         }
     }

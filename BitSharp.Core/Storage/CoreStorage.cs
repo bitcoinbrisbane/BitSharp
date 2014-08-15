@@ -353,7 +353,7 @@ namespace BitSharp.Core.Storage
             get { return this.storageManager; }
         }
 
-        internal IChainStateCursor OpenChainStateCursor()
+        internal DisposeHandle<IChainStateCursor> OpenChainStateCursor()
         {
             return this.storageManager.OpenChainStateCursor();
         }

@@ -40,9 +40,9 @@ namespace BitSharp.Core.Storage.Memory
             get { return this.blockTxesStorage; }
         }
 
-        public IChainStateCursor OpenChainStateCursor()
+        public DisposeHandle<IChainStateCursor> OpenChainStateCursor()
         {
-            return new MemoryChainStateCursor(this.chainStateStorage);
+            return new DisposeHandle<IChainStateCursor>(null, new MemoryChainStateCursor(this.chainStateStorage));
         }
     }
 }

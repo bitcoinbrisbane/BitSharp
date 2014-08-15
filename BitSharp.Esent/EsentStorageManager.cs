@@ -79,7 +79,7 @@ namespace BitSharp.Esent
             }
         }
 
-        public IChainStateCursor OpenChainStateCursor()
+        public DisposeHandle<IChainStateCursor> OpenChainStateCursor()
         {
             if (this.chainStateManager == null)
                 lock (this.chainStateManagerLock)

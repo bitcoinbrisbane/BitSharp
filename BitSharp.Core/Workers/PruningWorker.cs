@@ -28,6 +28,7 @@ namespace BitSharp.Core.Workers
         private readonly ChainStateBuilder chainStateBuilder;
         private readonly IBlockchainRules rules;
 
+        private readonly DisposeHandle<IChainStateCursor> chainStateCursorHandle;
         private readonly IChainStateCursor chainStateCursor;
 
         //TODO
@@ -42,7 +43,8 @@ namespace BitSharp.Core.Workers
             this.chainStateBuilder = chainStateBuilder;
             this.rules = rules;
 
-            this.chainStateCursor = coreStorage.OpenChainStateCursor();
+            this.chainStateCursorHandle = coreStorage.OpenChainStateCursor();
+            this.chainStateCursor = this.chainStateCursorHandle.Item;
 
             this.lastPruneHeight = 0;
 
@@ -51,7 +53,7 @@ namespace BitSharp.Core.Workers
 
         protected override void SubDispose()
         {
-            this.chainStateCursor.Dispose();
+            this.chainStateCursorHandle.Dispose();
         }
 
         public PruningMode Mode { get; set; }

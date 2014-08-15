@@ -16,32 +16,39 @@ namespace BitSharp.Core.Domain
     {
         private readonly Chain chain;
 
-        private readonly IChainStateCursor[] cursors;
-        private readonly object cursorsLock = new object();
+        private readonly DisposableCache<DisposeHandle<IChainStateCursor>> cursorCache;
 
         public ChainState(Chain chain, IStorageManager storageManager)
         {
             this.chain = chain;
 
             // create a cache of cursors that are in an open snapshot transaction with the current chain state
-            this.cursors = new IChainStateCursor[16];
+            this.cursorCache = new DisposableCache<DisposeHandle<IChainStateCursor>>(16);
             try
             {
-                for (var i = 0; i < this.cursors.Length; i++)
+                for (var i = 0; i < this.cursorCache.Capacity; i++)
                 {
-                    // open the cursor and begin a transaction
-                    this.cursors[i] = storageManager.OpenChainStateCursor();
-                    this.cursors[i].BeginTransaction();
+                    // open the cursor
+                    var handle = storageManager.OpenChainStateCursor();
+                    var cursor = handle.Item;
+
+                    // cache the cursor
+                    // this must be done before beginning the transaction as caching will rollback any transactions
+                    this.cursorCache.CacheItem(handle);
+
+                    // begin transaction to take the snapshot
+                    cursor.BeginTransaction();
 
                     // verify the chain state matches the expected chain
-                    if (chain.LastBlock != this.cursors[i].GetChainTip())
+                    var chainTip = cursor.GetChainTip();
+                    if (chainTip != chain.LastBlock)
                         throw new InvalidOperationException();
                 }
             }
             catch (Exception)
             {
                 // ensure any opened cursors are cleaned up on an error
-                this.cursors.DisposeList();
+                this.cursorCache.Dispose();
                 throw;
             }
         }
@@ -55,7 +62,7 @@ namespace BitSharp.Core.Domain
         {
             GC.SuppressFinalize(this);
 
-            this.cursors.DisposeList();
+            this.cursorCache.Dispose();
         }
 
         public Chain Chain
@@ -67,131 +74,57 @@ namespace BitSharp.Core.Domain
         {
             get
             {
-                var cursor = this.OpenCursor();
-                try
+                using (var handle = this.cursorCache.TakeItem())
                 {
+                    var cursor = handle.Item.Item;
                     return cursor.UnspentTxCount;
-                }
-                finally
-                {
-                    this.FreeCursor(cursor);
                 }
             }
         }
 
         public bool ContainsUnspentTx(UInt256 txHash)
         {
-            var cursor = this.OpenCursor();
-            try
+            using (var handle = this.cursorCache.TakeItem())
             {
+                var cursor = handle.Item.Item;
                 return cursor.ContainsUnspentTx(txHash);
-            }
-            finally
-            {
-                this.FreeCursor(cursor);
             }
         }
 
         public bool TryGetUnspentTx(UInt256 txHash, out UnspentTx unspentTx)
         {
-            var cursor = this.OpenCursor();
-            try
+            using (var handle = this.cursorCache.TakeItem())
             {
+                var cursor = handle.Item.Item;
                 return cursor.TryGetUnspentTx(txHash, out unspentTx);
-            }
-            finally
-            {
-                this.FreeCursor(cursor);
             }
         }
 
         public IEnumerable<UnspentTx> ReadUnspentTransactions()
         {
-            var cursor = this.OpenCursor();
-            try
+            using (var handle = this.cursorCache.TakeItem())
             {
+                var cursor = handle.Item.Item;
                 foreach (var unspentTx in cursor.ReadUnspentTransactions())
                     yield return unspentTx;
-            }
-            finally
-            {
-                this.FreeCursor(cursor);
             }
         }
 
         public bool ContainsBlockSpentTxes(int blockIndex)
         {
-            var cursor = this.OpenCursor();
-            try
+            using (var handle = this.cursorCache.TakeItem())
             {
+                var cursor = handle.Item.Item;
                 return cursor.ContainsBlockSpentTxes(blockIndex);
-            }
-            finally
-            {
-                this.FreeCursor(cursor);
             }
         }
 
         public bool TryGetBlockSpentTxes(int blockIndex, out IImmutableList<SpentTx> spentTxes)
         {
-            var cursor = this.OpenCursor();
-            try
+            using (var handle = this.cursorCache.TakeItem())
             {
+                var cursor = handle.Item.Item;
                 return cursor.TryGetBlockSpentTxes(blockIndex, out spentTxes);
-            }
-            finally
-            {
-                this.FreeCursor(cursor);
-            }
-        }
-
-        private IChainStateCursor OpenCursor()
-        {
-            IChainStateCursor cursor = null;
-
-            lock (this.cursorsLock)
-            {
-                for (var i = 0; i < this.cursors.Length; i++)
-                {
-                    if (this.cursors[i] != null)
-                    {
-                        cursor = this.cursors[i];
-                        this.cursors[i] = null;
-                        break;
-                    }
-                }
-            }
-
-            if (cursor != null)
-                return cursor;
-            else
-                //TODO better error when cursors run out
-                //TODO there should be the ability to wait and timeout
-                throw new InvalidOperationException();
-        }
-
-        private void FreeCursor(IChainStateCursor cursor)
-        {
-            var cached = false;
-
-            lock (this.cursorsLock)
-            {
-                for (var i = 0; i < this.cursors.Length; i++)
-                {
-                    if (this.cursors[i] == null)
-                    {
-                        this.cursors[i] = cursor;
-                        cached = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!cached)
-            {
-                cursor.Dispose();
-                Debugger.Break();
-                throw new InvalidOperationException();
             }
         }
     }

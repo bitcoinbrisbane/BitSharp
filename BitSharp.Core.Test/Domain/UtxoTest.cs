@@ -28,7 +28,7 @@ namespace BitSharp.Core.Test.Domain
 
             // prepare utxo
             var memoryStorage = new MemoryStorageManager(unspentTransactions: unspentTransactions.ToImmutable());
-            var chainStateStorage = memoryStorage.OpenChainStateCursor();
+            var chainStateStorage = memoryStorage.OpenChainStateCursor().Item;
             chainStateStorage.AddChainedHeader(chain.GenesisBlock);
             var utxo = new ChainState(chain, memoryStorage);
 
@@ -55,7 +55,7 @@ namespace BitSharp.Core.Test.Domain
 
             // prepare utxo
             var memoryStorage = new MemoryStorageManager(unspentTransactions: unspentTransactions.ToImmutable());
-            var chainStateStorage = memoryStorage.OpenChainStateCursor();
+            var chainStateStorage = memoryStorage.OpenChainStateCursor().Item;
             chainStateStorage.AddChainedHeader(chain.GenesisBlock);
             var utxo = new ChainState(chain, memoryStorage);
 
@@ -75,7 +75,7 @@ namespace BitSharp.Core.Test.Domain
             // prepare utxo
             var chain = new Chain(ImmutableList.Create(new FakeHeaders().GenesisChained()));
             var memoryStorage = new MemoryStorageManager();
-            var chainStateStorage = memoryStorage.OpenChainStateCursor();
+            var chainStateStorage = memoryStorage.OpenChainStateCursor().Item;
             chainStateStorage.AddChainedHeader(chain.GenesisBlock);
             var utxo = new ChainState(chain, memoryStorage);
 
@@ -102,7 +102,7 @@ namespace BitSharp.Core.Test.Domain
 
             // prepare utxo
             var memoryStorage = new MemoryStorageManager(unspentTransactions: unspentTransactions.ToImmutable());
-            var chainStateStorage = memoryStorage.OpenChainStateCursor();
+            var chainStateStorage = memoryStorage.OpenChainStateCursor().Item;
             chainStateStorage.AddChainedHeader(chain.GenesisBlock);
             var utxo = new ChainState(chain, memoryStorage);
 
@@ -129,7 +129,7 @@ namespace BitSharp.Core.Test.Domain
 
             // prepare utxo
             var memoryStorage = new MemoryStorageManager(unspentTransactions: unspentTransactions.ToImmutable());
-            var chainStateStorage = memoryStorage.OpenChainStateCursor();
+            var chainStateStorage = memoryStorage.OpenChainStateCursor().Item;
             chainStateStorage.AddChainedHeader(chain.GenesisBlock);
             var utxo = new ChainState(chain, memoryStorage);
 
