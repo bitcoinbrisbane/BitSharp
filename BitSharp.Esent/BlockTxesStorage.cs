@@ -267,7 +267,11 @@ namespace BitSharp.Esent
 
             using (var jetSession = new Session(this.jetInstance))
             {
-                Api.JetCreateDatabase(jetSession, this.jetDatabase, "", out blockDbId, CreateDatabaseGrbit.None);
+                var createGrbit = CreateDatabaseGrbit.None;
+                if (EsentVersion.SupportsWindows7Features)
+                    createGrbit |= Windows7Grbits.EnableCreateDbBackgroundMaintenance;
+
+                Api.JetCreateDatabase(jetSession, jetDatabase, "", out blockDbId, createGrbit);
 
                 var defaultValue = BitConverter.GetBytes(0);
                 Api.JetCreateTable(jetSession, blockDbId, "Globals", 0, 0, out globalsTableId);
@@ -341,16 +345,22 @@ namespace BitSharp.Esent
 
             using (var jetSession = new Session(this.jetInstance))
             {
-                Api.JetAttachDatabase(jetSession, this.jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
+                var attachGrbit = AttachDatabaseGrbit.None;
+                if (readOnly)
+                    attachGrbit |= AttachDatabaseGrbit.ReadOnly;
+                if (EsentVersion.SupportsWindows7Features)
+                    attachGrbit |= Windows7Grbits.EnableAttachDbBackgroundMaintenance;
+
+                Api.JetAttachDatabase(jetSession, this.jetDatabase, attachGrbit);
                 try
                 {
                     JET_DBID blockDbId;
                     Api.JetOpenDatabase(jetSession, this.jetDatabase, "", out blockDbId, readOnly ? OpenDatabaseGrbit.ReadOnly : OpenDatabaseGrbit.None);
                     try
                     {
-            using (var handle = this.cursorCache.TakeItem())
-            {
-                var cursor = handle.Item;
+                        using (var handle = this.cursorCache.TakeItem())
+                        {
+                            var cursor = handle.Item;
 
                             // reset flush column
                             using (var jetUpdate = cursor.jetSession.BeginUpdate(cursor.globalsTableId, JET_prep.Replace))

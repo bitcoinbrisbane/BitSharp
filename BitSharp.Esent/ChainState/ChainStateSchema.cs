@@ -1,6 +1,7 @@
 ﻿using BitSharp.Core;
 using BitSharp.Core.Domain;
 using Microsoft.Isam.Esent.Interop;
+using Microsoft.Isam.Esent.Interop.Windows7;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -18,7 +19,11 @@ namespace BitSharp.Esent.ChainState
 
             using (var jetSession = new Session(jetInstance))
             {
-                Api.JetCreateDatabase(jetSession, jetDatabase, "", out utxoDbId, CreateDatabaseGrbit.None);
+                var createGrbit = CreateDatabaseGrbit.None;
+                if (EsentVersion.SupportsWindows7Features)
+                    createGrbit |= Windows7Grbits.EnableCreateDbBackgroundMaintenance;
+
+                Api.JetCreateDatabase(jetSession, jetDatabase, "", out utxoDbId, createGrbit);
 
                 CreateGlobalsTable(utxoDbId, jetSession);
                 CreateChainTable(utxoDbId, jetSession);
@@ -134,7 +139,13 @@ namespace BitSharp.Esent.ChainState
         {
             using (var jetSession = new Session(jetInstance))
             {
-                Api.JetAttachDatabase(jetSession, jetDatabase, readOnly ? AttachDatabaseGrbit.ReadOnly : AttachDatabaseGrbit.None);
+                var attachGrbit = AttachDatabaseGrbit.None;
+                if (readOnly)
+                    attachGrbit |= AttachDatabaseGrbit.ReadOnly;
+                if (EsentVersion.SupportsWindows7Features)
+                    attachGrbit |= Windows7Grbits.EnableAttachDbBackgroundMaintenance;
+
+                Api.JetAttachDatabase(jetSession, jetDatabase, attachGrbit);
                 try
                 {
                     var cursor = new ChainStateCursor(jetDatabase, jetInstance, logger);
