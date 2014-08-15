@@ -78,9 +78,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bits.cs" />
+    <Compile Include="DisposeHandle.cs" />
     <Compile Include="ConcurrentDictionaryBuilder.cs" />
     <Compile Include="ConcurrentSet.cs" />
     <Compile Include="ConcurrentSetBuilder.cs" />
+    <Compile Include="DisposableCache.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="ImmutableBitArray.cs" />
     <Compile Include="ConsoleLoggingModule.cs" />
