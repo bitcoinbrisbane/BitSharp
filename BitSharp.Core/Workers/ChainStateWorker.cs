@@ -225,6 +225,8 @@ namespace BitSharp.Core.Workers
         {
             if (this.lastBlockMissHash == null || this.lastBlockMissHash.Value != blockHash)
             {
+                this.logger.Info("ChainStateWorker stalled, missing block: {0}".Format2(blockHash));
+
                 this.lastBlockMissHash = blockHash;
                 this.blockMissCountMeasure.Tick();
             }
