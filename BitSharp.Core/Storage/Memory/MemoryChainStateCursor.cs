@@ -294,6 +294,10 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
+        public void Flush()
+        {
+        }
+
         public void Defragment()
         {
         }

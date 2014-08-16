@@ -64,6 +64,11 @@ namespace BitSharp.Core.Storage
         /// <param name="blockHash">The block's hash.</param>
         void MarkBlockInvalid(UInt256 blockHash);
 
+        /// <summary>
+        /// Fully flush storage.
+        /// </summary>
+        void Flush();
+
         //TODO keep this here? IStorageManager?
         void Defragment();
     }

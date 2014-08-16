@@ -129,6 +129,12 @@ namespace BitSharp.Core.Test.Storage
         }
 
         [TestMethod]
+        public void TestFlush()
+        {
+            RunTest(TestFlush);
+        }
+
+        [TestMethod]
         public void TestDefragment()
         {
             RunTest(TestDefragment);
@@ -863,6 +869,11 @@ namespace BitSharp.Core.Test.Storage
         }
 
         public void TestRemoveSpentTransactionsToHeight(ITestStorageProvider provider)
+        {
+            Assert.Inconclusive("TODO");
+        }
+
+        public void TestFlush(ITestStorageProvider provider)
         {
             Assert.Inconclusive("TODO");
         }

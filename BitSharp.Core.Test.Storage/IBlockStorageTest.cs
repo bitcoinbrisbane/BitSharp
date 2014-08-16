@@ -62,6 +62,18 @@ namespace BitSharp.Core.Test.Storage
             RunTest(TestMarkBlockInvalid);
         }
 
+        [TestMethod]
+        public void TestFlush()
+        {
+            RunTest(TestFlush);
+        }
+
+        [TestMethod]
+        public void TestDefragment()
+        {
+            RunTest(TestDefragment);
+        }
+
         // IBlockStorage.ContainsChainedHeader
         private void TestContainsChainedHeader(ITestStorageProvider provider)
         {
@@ -275,5 +287,28 @@ namespace BitSharp.Core.Test.Storage
                 Assert.IsTrue(blockStorage.IsBlockInvalid(chainedHeader1.Hash));
             }
         }
+
+        // IBlockStorage.Flush
+        private void TestFlush(ITestStorageProvider provider)
+        {
+            using (var storageManager = provider.OpenStorageManager())
+            {
+                var blockStorage = storageManager.BlockStorage;
+
+                Assert.Inconclusive("TODO");
+            }
+        }
+
+        // IBlockStorage.Defragment
+        private void TestDefragment(ITestStorageProvider provider)
+        {
+            using (var storageManager = provider.OpenStorageManager())
+            {
+                var blockStorage = storageManager.BlockStorage;
+
+                Assert.Inconclusive("TODO");
+            }
+        }
+
     }
 }

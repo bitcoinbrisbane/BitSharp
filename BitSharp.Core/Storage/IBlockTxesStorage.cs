@@ -62,7 +62,9 @@ namespace BitSharp.Core.Storage
         /// <param name="txIndices">An enumerable of the transaction indices for the transactions to be removed.</param>
         void PruneElements(UInt256 blockHash, IEnumerable<int> txIndices);
 
-        //TODO keep this around? pruning will probably need it
+        /// <summary>
+        /// Fully flush storage.
+        /// </summary>
         void Flush();
 
         //TODO keep this here? IStorageManager?

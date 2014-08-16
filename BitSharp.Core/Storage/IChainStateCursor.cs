@@ -137,6 +137,11 @@ namespace BitSharp.Core.Storage
         //TODO
         void RemoveSpentTransactionsToHeight(int spentBlockIndex);
 
+        /// <summary>
+        /// Fully flush storage.
+        /// </summary>
+        void Flush();
+
         //TODO
         void Defragment();
     }

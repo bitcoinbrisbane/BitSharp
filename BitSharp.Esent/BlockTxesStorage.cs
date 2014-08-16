@@ -521,7 +521,10 @@ namespace BitSharp.Esent
                     jetTx.Commit(CommitTransactionGrbit.None);
                 }
 
-                Api.JetCommitTransaction(cursor.jetSession, Server2003Grbits.WaitAllLevel0Commit);
+                if (EsentVersion.SupportsServer2003Features)
+                    Api.JetCommitTransaction(cursor.jetSession, Server2003Grbits.WaitAllLevel0Commit);
+                else
+                    Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.WaitLastLevel0Commit);
             }
         }
 
@@ -560,7 +563,6 @@ namespace BitSharp.Esent
                     {
                         blockId = Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blockIdsTableId, cursor.blockIdsIdColumnId).Value;
                         return true;
-
                     }
                     else
                     {

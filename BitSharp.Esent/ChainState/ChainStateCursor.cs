@@ -7,6 +7,7 @@ using BitSharp.Core.ExtensionMethods;
 using BitSharp.Core.Storage;
 using Microsoft.Isam.Esent.Collections.Generic;
 using Microsoft.Isam.Esent.Interop;
+using Microsoft.Isam.Esent.Interop.Server2003;
 using Microsoft.Isam.Esent.Interop.Windows8;
 using Microsoft.Isam.Esent.Interop.Windows81;
 using NLog;
@@ -38,6 +39,7 @@ namespace BitSharp.Esent
 
         public readonly JET_TABLEID globalsTableId;
         public readonly JET_COLUMNID unspentTxCountColumnId;
+        public readonly JET_COLUMNID flushColumnId;
 
         public readonly JET_TABLEID chainTableId;
         public readonly JET_COLUMNID blockHeightColumnId;
@@ -69,6 +71,7 @@ namespace BitSharp.Esent
                 out this.chainStateDbId,
                 out this.globalsTableId,
                     out this.unspentTxCountColumnId,
+                    out this.flushColumnId,
                 out this.chainTableId,
                     out this.blockHeightColumnId,
                     out this.chainedHeaderBytesColumnId,
@@ -424,6 +427,20 @@ namespace BitSharp.Esent
             this.inTransaction = false;
         }
 
+        public void Flush()
+        {
+            using (var jetTx = this.jetSession.BeginTransaction())
+            {
+                Api.EscrowUpdate(this.jetSession, this.globalsTableId, this.flushColumnId, 1);
+                jetTx.Commit(CommitTransactionGrbit.None);
+            }
+
+            if (EsentVersion.SupportsServer2003Features)
+                Api.JetCommitTransaction(this.jetSession, Server2003Grbits.WaitAllLevel0Commit);
+            else
+                Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.WaitLastLevel0Commit);
+        }
+
         public void Defragment()
         {
             //int passes = -1, seconds = -1;
@@ -446,6 +463,7 @@ namespace BitSharp.Esent
             out JET_DBID chainStateDbId,
             out JET_TABLEID globalsTableId,
             out JET_COLUMNID unspentTxCountColumnId,
+            out JET_COLUMNID flushColumnId,
             out JET_TABLEID chainTableId,
             out JET_COLUMNID blockHeightColumnId,
             out JET_COLUMNID chainedHeaderBytesColumnId,
@@ -465,6 +483,7 @@ namespace BitSharp.Esent
 
                 Api.JetOpenTable(jetSession, chainStateDbId, "Globals", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out globalsTableId);
                 unspentTxCountColumnId = Api.GetTableColumnid(jetSession, globalsTableId, "UnspentTxCount");
+                flushColumnId = Api.GetTableColumnid(jetSession, globalsTableId, "Flush");
 
                 if (!Api.TryMoveFirst(jetSession, globalsTableId))
                     throw new InvalidOperationException();

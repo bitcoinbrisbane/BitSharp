@@ -36,16 +36,19 @@ namespace BitSharp.Esent.ChainState
         {
             JET_TABLEID globalsTableId;
             JET_COLUMNID unspentTxCountColumnId;
+            JET_COLUMNID flushColumnId;
 
             var defaultValue = BitConverter.GetBytes(0);
 
             Api.JetCreateTable(jetSession, utxoDbId, "Globals", 0, 0, out globalsTableId);
             Api.JetAddColumn(jetSession, globalsTableId, "UnspentTxCount", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnEscrowUpdate }, defaultValue, defaultValue.Length, out unspentTxCountColumnId);
+            Api.JetAddColumn(jetSession, globalsTableId, "Flush", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnEscrowUpdate }, defaultValue, defaultValue.Length, out flushColumnId);
 
             // initialize global data
             using (var jetUpdate = jetSession.BeginUpdate(globalsTableId, JET_prep.Insert))
             {
                 Api.SetColumn(jetSession, globalsTableId, unspentTxCountColumnId, 0);
+                Api.SetColumn(jetSession, globalsTableId, flushColumnId, 0);
 
                 jetUpdate.Save();
             }
@@ -148,8 +151,16 @@ namespace BitSharp.Esent.ChainState
                 Api.JetAttachDatabase(jetSession, jetDatabase, attachGrbit);
                 try
                 {
-                    var cursor = new ChainStateCursor(jetDatabase, jetInstance, logger);
-                    cursor.Dispose();
+                    using (var cursor = new ChainStateCursor(jetDatabase, jetInstance, logger))
+                    {
+                        // reset flush column
+                        using (var jetUpdate = cursor.jetSession.BeginUpdate(cursor.globalsTableId, JET_prep.Replace))
+                        {
+                            Api.SetColumn(cursor.jetSession, cursor.globalsTableId, cursor.flushColumnId, 0);
+
+                            jetUpdate.Save();
+                        }
+                    }
                 }
                 catch (Exception)
                 {
