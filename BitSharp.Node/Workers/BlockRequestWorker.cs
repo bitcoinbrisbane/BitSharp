@@ -99,6 +99,7 @@ namespace BitSharp.Node.Workers
             this.coreDaemon.OnChainStateChanged -= HandleChainStateChanged;
             this.coreDaemon.OnTargetChainChanged -= HandleTargetChainChanged;
             this.coreStorage.BlockTxesMissed -= HandleBlockTxesMissed;
+            this.coreDaemon.BlockMissed -= HandleBlockMissed;
 
             this.blockRequestDurationMeasure.Dispose();
             this.blockDownloadRateMeasure.Dispose();
