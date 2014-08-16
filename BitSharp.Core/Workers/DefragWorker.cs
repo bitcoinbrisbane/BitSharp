@@ -22,21 +22,12 @@ namespace BitSharp.Core.Workers
     {
         private readonly Logger logger;
         private readonly CoreStorage coreStorage;
-        private readonly DisposeHandle<IChainStateCursor> chainStateCursorHandle;
-        private readonly IChainStateCursor chainStateCursor;
 
         public DefragWorker(WorkerConfig workerConfig, CoreStorage coreStorage, Logger logger)
             : base("DefragWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
             this.coreStorage = coreStorage;
-            this.chainStateCursorHandle = coreStorage.OpenChainStateCursor();
-            this.chainStateCursor = this.chainStateCursorHandle.Item;
-        }
-
-        protected override void SubDispose()
-        {
-            this.chainStateCursorHandle.Dispose();
         }
 
         protected override void WorkAction()
@@ -44,7 +35,12 @@ namespace BitSharp.Core.Workers
             this.logger.Info("Begin defragging");
 
             this.coreStorage.Defragment();
-            this.chainStateCursor.Defragment();
+
+            using (var handle = coreStorage.OpenChainStateCursor())
+            {
+                var chainStateCursor = handle.Item;
+                chainStateCursor.Defragment();
+            }
         }
     }
 }
