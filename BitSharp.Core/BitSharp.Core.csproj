@@ -169,7 +169,6 @@
     <Compile Include="Workers\ChainStateWorker.cs" />
     <Compile Include="Workers\DefragWorker.cs" />
     <Compile Include="Workers\PruningWorker.cs" />
-    <Compile Include="Workers\RevalidateWorker.cs" />
     <Compile Include="Workers\TargetChainWorker.cs" />
   </ItemGroup>
   <ItemGroup>
