@@ -43,7 +43,7 @@ namespace BitSharp.Common
         // an action to perform when all items have been read and consumed
         private Action completedAction;
 
-        // the queue of read items that  are waiting to be consumed
+        // the queue of read items that are waiting to be consumed
         private ConcurrentBlockingQueue<T> queue;
 
         // track consumer work thread completions
