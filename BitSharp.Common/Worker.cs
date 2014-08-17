@@ -178,96 +178,82 @@ namespace BitSharp.Common
         {
             try
             {
-                var working = false;
-                try
+                var totalTime = Stopwatch.StartNew();
+                var workerTime = new Stopwatch();
+                var lastReportTime = DateTime.Now;
+
+                while (!this.isDisposing)
                 {
-                    var totalTime = Stopwatch.StartNew();
-                    var workerTime = new Stopwatch();
-                    var lastReportTime = DateTime.Now;
+                    // notify worker is idle
+                    this.idleEvent.Set();
 
-                    while (!this.isDisposing)
+                    // wait for execution to start
+                    this.startEvent.Wait();
+
+                    // cooperative loop
+                    if (!this.isStarted)
+                        continue;
+
+                    // delay for the requested wait time, unless forced
+                    this.forceNotifyEvent.WaitOne(this.MinIdleTime);
+
+                    // wait for work notification
+                    if (this.MaxIdleTime == TimeSpan.MaxValue)
+                        this.notifyEvent.WaitOne();
+                    else
+                        this.notifyEvent.WaitOne(this.MaxIdleTime - this.MinIdleTime); // subtract time already spent waiting
+
+                    // cooperative loop
+                    if (!this.isStarted)
+                        continue;
+
+                    // notify that work is starting
+                    this.idleEvent.Reset();
+
+                    // notify work started
+                    var startHandler = this.OnWorkStarted;
+                    if (startHandler != null)
+                        startHandler();
+
+                    // perform the work
+                    workerTime.Start();
+                    try
                     {
-                        // notify worker is idle
-                        this.idleEvent.Set();
+                        WorkAction();
+                    }
+                    // ignore a cancellation exception
+                    // workers can throw this to stop the current work action
+                    catch (OperationCanceledException) { }
+                    // worker leaked an exception
+                    catch (Exception e)
+                    {
+                        this.logger.Error("Unhandled worker exception in {0}: ".Format2(this.Name), e);
+                        Debugger.Break();
+                    }
+                    finally
+                    {
+                        workerTime.Stop();
+                    }
 
-                        // wait for execution to start
-                        this.startEvent.Wait();
+                    // notify work stopped
+                    var stopHandler = this.OnWorkFinished;
+                    if (stopHandler != null)
+                        stopHandler();
 
-                        // cooperative loop
-                        if (!this.isStarted)
-                            continue;
-
-                        // delay for the requested wait time, unless forced
-                        this.forceNotifyEvent.WaitOne(this.MinIdleTime);
-
-                        // wait for work notification
-                        if (this.MaxIdleTime == TimeSpan.MaxValue)
-                            this.notifyEvent.WaitOne();
-                        else
-                            this.notifyEvent.WaitOne(this.MaxIdleTime - this.MinIdleTime); // subtract time already spent waiting
-
-                        // cooperative loop
-                        if (!this.isStarted)
-                            continue;
-
-                        // notify that work is starting
-                        this.idleEvent.Reset();
-
-                        // notify
-                        var startHandler = this.OnWorkStarted;
-                        if (startHandler != null)
-                            startHandler();
-
-                        // perform the work
-                        working = true;
-                        workerTime.Start();
-                        try
-                        {
-                            WorkAction();
-                        }
-                        catch (OperationCanceledException) { throw; }
-                        catch (Exception e)
-                        {
-                            this.logger.Error("Unhandled worker exception in {0}: ".Format2(this.Name), e);
-                            Debugger.Break();
-                        }
-                        finally
-                        {
-                            workerTime.Stop();
-                        }
-                        working = false;
-
-                        // notify
-                        var stopHandler = this.OnWorkFinished;
-                        if (stopHandler != null)
-                            stopHandler();
-
-                        if (DateTime.Now - lastReportTime > TimeSpan.FromSeconds(30))
-                        {
-                            lastReportTime = DateTime.Now;
-                            var percentWorkerTime = workerTime.Elapsed.TotalSeconds / totalTime.Elapsed.TotalSeconds;
-                            this.logger.Debug("{0,55} work time: {1,10:##0.00%}".Format2(this.Name, percentWorkerTime));
-                        }
+                    // log worker stats
+                    if (DateTime.Now - lastReportTime > TimeSpan.FromSeconds(30))
+                    {
+                        lastReportTime = DateTime.Now;
+                        var percentWorkerTime = workerTime.Elapsed.TotalSeconds / totalTime.Elapsed.TotalSeconds;
+                        this.logger.Debug("{0,55} work time: {1,10:##0.00%}".Format2(this.Name, percentWorkerTime));
                     }
                 }
-                catch (ObjectDisposedException)
-                {
-                    // only throw disposed exceptions that occur in WorkAction()
-                    if (!this.isDisposed && working)
-                        throw;
-                }
-                catch (OperationCanceledException) { }
             }
             catch (Exception e)
             {
                 this.logger.Fatal("Unhandled worker exception in {0}: ".Format2(this.Name), e);
                 Debugger.Break();
-            }
-            finally
-            {
-                // notify worker is idle
-                if (!this.isDisposing && !this.isDisposed)
-                    this.idleEvent.Set();
+                throw;
             }
         }
 

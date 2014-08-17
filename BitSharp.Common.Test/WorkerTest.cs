@@ -242,5 +242,44 @@ namespace BitSharp.Common.Test
                 Assert.IsTrue(wasCalled);
             }
         }
+
+        [TestMethod]
+        public void TestWorkAfterCancellation()
+        {
+            // create a work action that will throw a cancellation exception on its first call
+            var workedEvent = new AutoResetEvent(false);
+            var workCount = 0;
+            Action workAction = () =>
+                {
+                    try
+                    {
+                        workCount++;
+                        if (workCount == 1)
+                            throw new OperationCanceledException();
+                    }
+                    finally
+                    {
+                        workedEvent.Set();
+                    }
+                };
+
+            // initialize worker
+            using (var worker = new MockWorker(workAction))
+            {
+                worker.Start();
+
+                // notify and verify work was performed
+                worker.NotifyWork();
+                Assert.IsTrue(workedEvent.WaitOne(100));
+                Assert.AreEqual(1, workCount);
+
+                // the first work action cancelled, need to verify that a second work action can be performed
+
+                // notify and verify work was performed
+                worker.NotifyWork();
+                Assert.IsTrue(workedEvent.WaitOne(100));
+                Assert.AreEqual(2, workCount);
+            }
+        }
     }
 }
