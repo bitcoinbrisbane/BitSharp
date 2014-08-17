@@ -138,6 +138,7 @@ namespace BitSharp.Core.Workers
                     }
                     else if (direction < 0)
                     {
+                        this.logger.Info("Rolling back block {0:#,##0}: {1}".Format2(chainedHeader.Height, chainedHeader.Hash));
                         this.chainStateBuilder.RollbackBlock(chainedHeader, blockTxes.LookAhead(10));
                     }
                     else
