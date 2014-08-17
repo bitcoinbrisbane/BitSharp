@@ -18,8 +18,6 @@ namespace BitSharp.Common.ExtensionMethods
 {
     public static class ExtensionMethods
     {
-        private static readonly Random random = new Random();
-
         public static byte[] Concat(this byte[] first, byte[] second)
         {
             var buffer = new byte[first.Length + second.Length];
@@ -54,11 +52,6 @@ namespace BitSharp.Common.ExtensionMethods
             return Bits.ToString(value.Reverse().ToArray()).Replace("-", "").ToLower();
         }
 
-        public static string ToHexNumberString(this IEnumerable<byte> value)
-        {
-            return ToHexNumberString(value.ToArray());
-        }
-
         public static string ToHexNumberString(this UInt256 value)
         {
             return ToHexNumberString(value.ToByteArray());
@@ -72,11 +65,6 @@ namespace BitSharp.Common.ExtensionMethods
         public static string ToHexDataString(this byte[] value)
         {
             return string.Format("[{0}]", Bits.ToString(value).Replace("-", ",").ToLower());
-        }
-
-        public static string ToHexDataString(this IEnumerable<byte> value)
-        {
-            return ToHexDataString(value.ToArray());
         }
 
         public static string ToHexDataString(this UInt256 value)
@@ -150,35 +138,6 @@ namespace BitSharp.Common.ExtensionMethods
             {
                 semaphore.Release();
             }
-        }
-
-        public static string StringJoin(this IEnumerable<string> enumerable, string separator)
-        {
-            return string.Join(separator, enumerable);
-        }
-
-        public static T RandomOrDefault<T>(this ImmutableList<T> array)
-        {
-            if (array.Count == 0)
-                return default(T);
-
-            return array[random.Next(array.Count)];
-        }
-
-        public static T RandomOrDefault<T>(this IList<T> list)
-        {
-            if (list.Count == 0)
-                return default(T);
-
-            return list[random.Next(list.Count)];
-        }
-
-        public static T RandomOrDefault2<T>(this IReadOnlyList<T> list)
-        {
-            if (list.Count == 0)
-                return default(T);
-
-            return list[random.Next(list.Count)];
         }
 
         public static string Format2(this string value, params object[] args)
@@ -360,15 +319,6 @@ namespace BitSharp.Common.ExtensionMethods
             return keyPairs.ToDictionary(x => x.Key, x => x.Value);
         }
 
-        public static List<T> SafeToList<T>(this IEnumerable<T> enumerable)
-        {
-            var list = new List<T>();
-            foreach (var item in enumerable)
-                list.Add(item);
-
-            return list;
-        }
-
         public static List<T> SafeToList<T>(this ICollection<T> collection)
         {
             var list = new List<T>(collection.Count);
@@ -394,8 +344,7 @@ namespace BitSharp.Common.ExtensionMethods
 
         public static UInt32 NextUInt32(this Random random)
         {
-            // purposefully left unchecked to get full range of UInt32
-            return unchecked((UInt32)random.Next());
+            return (UInt32)random.Next(int.MinValue, int.MaxValue);
         }
 
         public static UInt64 NextUInt64(this Random random)
@@ -428,40 +377,6 @@ namespace BitSharp.Common.ExtensionMethods
             return new ImmutableBitArray(bitArray);
         }
 
-        public static void EnqueueRange<T>(this ConcurrentQueue<T> queue, IEnumerable<T> values)
-        {
-            foreach (var value in values)
-                queue.Enqueue(value);
-        }
-
-        public static bool TryAddRange<T>(this IProducerConsumerCollection<T> collection, IEnumerable<T> values)
-        {
-            foreach (var value in values)
-                if (!collection.TryAdd(value))
-                    return false;
-
-            return true;
-        }
-
-        public static BigInteger SumBigInteger<T>(this IEnumerable<T> values, Func<T, BigInteger> selector)
-        {
-            BigInteger sum = 0;
-            foreach (var value in values)
-                sum += selector(value);
-
-            return sum;
-        }
-
-        public static IReadOnlyDictionary<TOuterKey, IReadOnlyDictionary<TInnerKey, TInnerValue>> AsReadOnly<TOuterKey, TInnerKey, TInnerValue>(this Dictionary<TOuterKey, Dictionary<TInnerKey, TInnerValue>> outerDictionary)
-        {
-            return new ReadOnlyDictionaryOfDictionary<TOuterKey, TInnerKey, TInnerValue>(outerDictionary);
-        }
-
-        public static void AddRange<T>(this ImmutableList<T>.Builder builder, IEnumerable<T> items)
-        {
-            builder.InsertRange(builder.Count, items);
-        }
-
         public static void RemoveWhere<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, Func<KeyValuePair<TKey, TValue>, bool> predicate)
         {
             foreach (var item in dictionary)
@@ -486,25 +401,6 @@ namespace BitSharp.Common.ExtensionMethods
                         yield return new KeyValuePair<TKey, TValue>(item.Key, value);
                     }
                 }
-            }
-        }
-
-        public static void AddRange<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, IEnumerable<KeyValuePair<TKey, TValue>> keyPairs)
-        {
-            foreach (var keyPair in keyPairs)
-                dictionary.Add(keyPair);
-        }
-
-        public static double? AverageOrDefault<TSource>(this IEnumerable<TSource> source, Func<TSource, long> selector)
-        {
-            try
-            {
-                return source.Average(selector);
-            }
-            catch (InvalidOperationException)
-            {
-                //TODO something better than catching exception?
-                return null;
             }
         }
 
