@@ -183,7 +183,7 @@ namespace BitSharp.Core.Builders
             return this.scriptValidator.Start(loadedTxInputs.GetConsumingEnumerable(),
                 loadedTxInput =>
                 {
-                    ValidateTxInput(loadedTxInput);
+                    ValidateScript(loadedTxInput);
                 },
                 () => { });
         }
@@ -265,7 +265,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        private void ValidateTxInput(TxInputWithPrevOutput loadedTxInput)
+        private void ValidateScript(TxInputWithPrevOutput loadedTxInput)
         {
             try
             {
