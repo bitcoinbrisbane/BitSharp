@@ -89,7 +89,7 @@
     <Compile Include="LookAhead.cs" />
     <Compile Include="BlockingCollectionWorker.cs" />
     <Compile Include="ParallelConsumer.cs" />
-    <Compile Include="BlockingQueue.cs" />
+    <Compile Include="ConcurrentBlockingQueue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MethodTimer.cs" />
     <Compile Include="DurationMeasure.cs" />

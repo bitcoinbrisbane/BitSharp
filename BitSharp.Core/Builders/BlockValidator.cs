@@ -27,9 +27,9 @@ namespace BitSharp.Core.Builders
         private readonly ParallelConsumer<TxInputWithPrevOutput> scriptValidator;
 
         private ConcurrentDictionary<UInt256, Transaction> txCache;
-        private BlockingQueue<TxWithPrevOutputKeys> pendingTxes;
-        private BlockingQueue<TxWithPrevOutputs> loadedTxes;
-        private BlockingQueue<TxInputWithPrevOutput> loadedTxInputs;
+        private ConcurrentBlockingQueue<TxWithPrevOutputKeys> pendingTxes;
+        private ConcurrentBlockingQueue<TxWithPrevOutputs> loadedTxes;
+        private ConcurrentBlockingQueue<TxInputWithPrevOutput> loadedTxInputs;
         private IDisposable txLoaderStopper;
         private IDisposable txValidatorStopper;
         private IDisposable scriptValidatorStopper;
@@ -74,9 +74,9 @@ namespace BitSharp.Core.Builders
         {
             this.txCache = new ConcurrentDictionary<UInt256, Transaction>();
 
-            this.pendingTxes = new BlockingQueue<TxWithPrevOutputKeys>();
-            this.loadedTxes = new BlockingQueue<TxWithPrevOutputs>();
-            this.loadedTxInputs = new BlockingQueue<TxInputWithPrevOutput>();
+            this.pendingTxes = new ConcurrentBlockingQueue<TxWithPrevOutputKeys>();
+            this.loadedTxes = new ConcurrentBlockingQueue<TxWithPrevOutputs>();
+            this.loadedTxInputs = new ConcurrentBlockingQueue<TxInputWithPrevOutput>();
 
             this.txLoaderExceptions = new ConcurrentBag<Exception>();
             this.txValidatorExceptions = new ConcurrentBag<Exception>();

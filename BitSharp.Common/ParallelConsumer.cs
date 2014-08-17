@@ -27,7 +27,7 @@ namespace BitSharp.Common
         private IEnumerable<T> source;
         private Action<T> consumeAction;
         private Action completedAction;
-        private BlockingQueue<T> queue;
+        private ConcurrentBlockingQueue<T> queue;
 
         private bool isStarted;
 
@@ -80,7 +80,7 @@ namespace BitSharp.Common
             this.source = source;
             this.consumeAction = consumeAction;
             this.completedAction = completedAction;
-            this.queue = new BlockingQueue<T>();
+            this.queue = new ConcurrentBlockingQueue<T>();
 
             this.completedReadingEvent.Reset();
             this.completedEvent.Reset();
