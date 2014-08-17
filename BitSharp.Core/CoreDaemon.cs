@@ -24,18 +24,6 @@ using BitSharp.Core.Builders;
 
 namespace BitSharp.Core
 {
-    //TODO have a class for building blockchain, and a class for cleaning?
-
-    // blockchain rules here:
-    //
-    // https://github.com/bitcoin/bitcoin/blob/4ad73c6b080c46808b0c53b62ab6e4074e48dc75/src/main.cpp
-    //
-    // bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck)
-    // https://github.com/bitcoin/bitcoin/blob/4ad73c6b080c46808b0c53b62ab6e4074e48dc75/src/main.cpp#L1734
-    //
-    //TODO BIP-030
-
-    //TODO compact UTXO's and other immutables in the blockchains on a thread
     public class CoreDaemon : IDisposable
     {
         public event EventHandler OnTargetChainChanged;
@@ -47,8 +35,6 @@ namespace BitSharp.Core
         private readonly IBlockchainRules rules;
         private readonly IStorageManager storageManager;
         private readonly CoreStorage coreStorage;
-
-        private readonly CancellationTokenSource shutdownToken;
 
         private readonly ChainStateBuilder chainStateBuilder;
 
@@ -62,7 +48,6 @@ namespace BitSharp.Core
         public CoreDaemon(Logger logger, IKernel kernel, IBlockchainRules rules, IStorageManager storageManager)
         {
             this.logger = logger;
-            this.shutdownToken = new CancellationTokenSource();
 
             this.kernel = kernel;
             this.rules = rules;
@@ -97,103 +82,28 @@ namespace BitSharp.Core
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMinutes(5), maxIdleTime: TimeSpan.FromMinutes(5)),
                 this.coreStorage, this.logger);
 
-            // notify defrag worker after pruning
-            this.pruningWorker.OnWorkFinished += this.defragWorker.NotifyWork;
+            this.gcWorker = new WorkerMethod("GC Worker", GcWorker,
+                initialNotify: true, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromSeconds(30), logger: this.logger);
 
+            this.utxoScanWorker = new WorkerMethod("UTXO Scan Worker", UtxoScanWorker,
+                initialNotify: true, minIdleTime: TimeSpan.FromSeconds(60), maxIdleTime: TimeSpan.FromSeconds(60), logger: this.logger);
+
+            // wire events
             this.chainStateWorker.BlockMissed += HandleBlockMissed;
-
-            this.targetChainWorker.OnTargetChainChanged +=
-                () =>
-                {
-                    var handler = this.OnTargetChainChanged;
-                    if (handler != null)
-                        handler(this, EventArgs.Empty);
-                };
-
-            this.chainStateWorker.OnChainStateChanged +=
-                () =>
-                {
-                    this.pruningWorker.NotifyWork();
-                    this.utxoScanWorker.NotifyWork();
-
-                    var handler = this.OnChainStateChanged;
-                    if (handler != null)
-                        handler(this, EventArgs.Empty);
-                };
-
-            this.gcWorker = new WorkerMethod("GC Worker",
-                _ =>
-                {
-                    this.logger.Info(
-                        string.Join("\n",
-                            new string('-', 80),
-                            "GC Memory:      {0,10:#,##0.00} MB",
-                            "Process Memory: {1,10:#,##0.00} MB",
-                            new string('-', 80)
-                        )
-                        .Format2
-                        (
-                        /*0*/ (float)GC.GetTotalMemory(false) / 1.MILLION(),
-                        /*1*/ (float)Process.GetCurrentProcess().PrivateMemorySize64 / 1.MILLION()
-                        ));
-                }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromSeconds(30), logger: this.logger);
-
-            this.utxoScanWorker = new WorkerMethod("UTXO Scan Worker",
-                _ =>
-                {
-                    // time taking chain state snapshots
-                    var stopwatch = Stopwatch.StartNew();
-                    int chainStateHeight;
-                    using (var chainState = this.GetChainState())
-                    {
-                        chainStateHeight = chainState.Chain.Height;
-                    }
-                    stopwatch.Stop();
-                    this.logger.Info("GetChainState at {0:#,##0}: {1:#,##0.00}s".Format2(chainStateHeight, stopwatch.Elapsed.TotalSeconds));
-
-                    // time enumerating chain state snapshots
-                    stopwatch = Stopwatch.StartNew();
-                    using (var chainState = this.GetChainState())
-                    {
-                        chainStateHeight = chainState.Chain.Height;
-                        chainState.ReadUnspentTransactions().Count();
-                    }
-                    stopwatch.Stop();
-                    this.logger.Info("Enumerate chain state at {0:#,##0}: {1:#,##0.00}s".Format2(chainStateHeight, stopwatch.Elapsed.TotalSeconds));
-
-                    //using (var chainStateLocal = this.GetChainState())
-                    //{
-                    //    new MethodTimer(this.logger).Time("UTXO Commitment: {0:#,##0}".Format2(chainStateLocal.UnspentTxCount), () =>
-                    //    {
-                    //        using (var utxoStream = new UtxoStream(this.logger, chainStateLocal.ReadUnspentTransactions()))
-                    //        {
-                    //            var sha256 = new SHA256Managed();
-                    //            var utxoHash = sha256.ComputeHash(utxoStream);
-                    //            this.logger.Info("UXO Commitment Hash: {0}".Format2(utxoHash.ToHexNumberString()));
-                    //        }
-                    //    });
-
-                    //    //new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
-                    //    //{
-                    //    //    var sha256 = new SHA256Managed();
-                    //    //    foreach (var output in chainStateLocal.Utxo.GetUnspentTransactions())
-                    //    //    {
-                    //    //    }
-                    //    //});
-                    //}
-                }, initialNotify: true, minIdleTime: TimeSpan.FromSeconds(60), maxIdleTime: TimeSpan.FromSeconds(60), logger: this.logger);
+            this.targetChainWorker.OnTargetChainChanged += HandleTargetChainChanged;
+            this.chainStateWorker.OnChainStateChanged += HandleChainStateChanged;
+            this.pruningWorker.OnWorkFinished += this.defragWorker.NotifyWork;
         }
 
         public void Dispose()
         {
             this.Stop();
 
-            // cleanup events
-            this.pruningWorker.OnWorkFinished -= this.defragWorker.NotifyWork;
+            // unwire events
             this.chainStateWorker.BlockMissed -= HandleBlockMissed;
-
-            // notify threads to begin shutting down
-            this.shutdownToken.Cancel();
+            this.targetChainWorker.OnTargetChainChanged -= HandleTargetChainChanged;
+            this.chainStateWorker.OnChainStateChanged -= HandleChainStateChanged;
+            this.pruningWorker.OnWorkFinished -= this.defragWorker.NotifyWork;
 
             // cleanup workers
             new IDisposable[]
@@ -204,8 +114,7 @@ namespace BitSharp.Core
                 this.targetChainWorker,
                 this.gcWorker,
                 this.utxoScanWorker,
-                this.chainStateBuilder,
-                this.shutdownToken
+                this.chainStateBuilder
             }.DisposeList();
         }
 
@@ -296,11 +205,88 @@ namespace BitSharp.Core
             throw new NotImplementedException();
         }
 
+        private void GcWorker(WorkerMethod instance)
+        {
+            this.logger.Info(
+                string.Join("\n",
+                    new string('-', 80),
+                    "GC Memory:      {0,10:#,##0.00} MB",
+                    "Process Memory: {1,10:#,##0.00} MB",
+                    new string('-', 80)
+                )
+                .Format2
+                (
+                /*0*/ (float)GC.GetTotalMemory(false) / 1.MILLION(),
+                /*1*/ (float)Process.GetCurrentProcess().PrivateMemorySize64 / 1.MILLION()
+                ));
+        }
+
+        private void UtxoScanWorker(WorkerMethod instance)
+        {
+            // time taking chain state snapshots
+            var stopwatch = Stopwatch.StartNew();
+            int chainStateHeight;
+            using (var chainState = this.GetChainState())
+            {
+                chainStateHeight = chainState.Chain.Height;
+            }
+            stopwatch.Stop();
+            this.logger.Info("GetChainState at {0:#,##0}: {1:#,##0.00}s".Format2(chainStateHeight, stopwatch.Elapsed.TotalSeconds));
+
+            // time enumerating chain state snapshots
+            stopwatch = Stopwatch.StartNew();
+            using (var chainState = this.GetChainState())
+            {
+                chainStateHeight = chainState.Chain.Height;
+                chainState.ReadUnspentTransactions().Count();
+            }
+            stopwatch.Stop();
+            this.logger.Info("Enumerate chain state at {0:#,##0}: {1:#,##0.00}s".Format2(chainStateHeight, stopwatch.Elapsed.TotalSeconds));
+
+            //using (var chainStateLocal = this.GetChainState())
+            //{
+            //    new MethodTimer(this.logger).Time("UTXO Commitment: {0:#,##0}".Format2(chainStateLocal.UnspentTxCount), () =>
+            //    {
+            //        using (var utxoStream = new UtxoStream(this.logger, chainStateLocal.ReadUnspentTransactions()))
+            //        {
+            //            var sha256 = new SHA256Managed();
+            //            var utxoHash = sha256.ComputeHash(utxoStream);
+            //            this.logger.Info("UXO Commitment Hash: {0}".Format2(utxoHash.ToHexNumberString()));
+            //        }
+            //    });
+
+            //    //new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
+            //    //{
+            //    //    var sha256 = new SHA256Managed();
+            //    //    foreach (var output in chainStateLocal.Utxo.GetUnspentTransactions())
+            //    //    {
+            //    //    }
+            //    //});
+            //}
+        }
+
         private void HandleBlockMissed(UInt256 blockHash)
         {
             var handler = this.BlockMissed;
             if (handler != null)
                 handler(blockHash);
+        }
+
+        private void HandleTargetChainChanged()
+        {
+            var handler = this.OnTargetChainChanged;
+            if (handler != null)
+                handler(this, EventArgs.Empty);
+        }
+
+        private void HandleChainStateChanged()
+        {
+            this.pruningWorker.NotifyWork();
+            this.utxoScanWorker.NotifyWork();
+
+            var handler = this.OnChainStateChanged;
+            if (handler != null)
+                handler(this, EventArgs.Empty);
         }
     }
 }
