@@ -20,8 +20,7 @@ namespace BitSharp.Common
         private ManualResetEventSlim completedReadingEvent = new ManualResetEventSlim(false);
 
         private readonly WorkerMethod[] consumeWorkers;
-        private readonly bool[] consumeWorkersCompleted;
-        private readonly object consumeWorkersLock;
+        private readonly Barrier consumeBarrier;
 
         private readonly ManualResetEventSlim completedEvent = new ManualResetEventSlim(false);
 
@@ -41,15 +40,18 @@ namespace BitSharp.Common
             this.readWorker.Start();
 
             this.consumeWorkers = new WorkerMethod[consumerThreadCount];
-            this.consumeWorkersCompleted = new bool[this.consumeWorkers.Length];
-            this.consumeWorkersLock = new object();
-
             for (var i = 0; i < this.consumeWorkers.Length; i++)
             {
                 this.consumeWorkers[i] = new WorkerMethod(name + ".ConsumeWorker." + i, ConsumeWorker, initialNotify: false, minIdleTime: TimeSpan.Zero, maxIdleTime: TimeSpan.MaxValue, logger: logger);
-                this.consumeWorkers[i].Data = i;
                 this.consumeWorkers[i].Start();
             }
+            
+            this.consumeBarrier = new Barrier(0,
+                b =>
+                {
+                    this.completedAction();
+                    this.completedEvent.Set();
+                });
         }
 
         public void Dispose()
@@ -63,7 +65,8 @@ namespace BitSharp.Common
                 this.readWorker,
                 this.completedReadingEvent,
                 this.completedEvent,
-                this.queue
+                this.queue,
+                this.consumeBarrier
             }.DisposeList();
         }
 
@@ -84,8 +87,8 @@ namespace BitSharp.Common
             this.isStarted = true;
 
             this.readWorker.NotifyWork();
-
-            Array.Clear(this.consumeWorkersCompleted, 0, this.consumeWorkersCompleted.Length);
+            
+            this.consumeBarrier.AddParticipants(this.consumeWorkers.Length);
             for (var i = 0; i < this.consumeWorkers.Length; i++)
             {
                 this.consumeWorkers[i].NotifyWork();
@@ -110,6 +113,7 @@ namespace BitSharp.Common
 
             this.WaitToComplete();
 
+            this.consumeBarrier.RemoveParticipants(this.consumeBarrier.ParticipantCount);
             this.queue.Dispose();
             this.source = null;
             this.consumeAction = null;
@@ -144,25 +148,7 @@ namespace BitSharp.Common
             }
             finally
             {
-                CompleteWorker((int)instance.Data);
-            }
-        }
-
-        private void CompleteWorker(int i)
-        {
-            bool wasCompleted;
-            bool completed;
-            lock (this.consumeWorkersLock)
-            {
-                wasCompleted = this.consumeWorkersCompleted.All(x => x);
-                this.consumeWorkersCompleted[i] = true;
-                completed = this.consumeWorkersCompleted.All(x => x);
-            }
-
-            if (!wasCompleted && completed)
-            {
-                this.completedAction();
-                this.completedEvent.Set();
+                this.consumeBarrier.SignalAndWait();
             }
         }
 
