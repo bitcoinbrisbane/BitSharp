@@ -215,14 +215,17 @@ namespace BitSharp.Common
                 }
             }
         }
-
+        
+        /// <summary>
+        /// Stop the worker and release all resources.
+        /// </summary>
         public void Dispose()
         {
             if (this.isDisposed)
                 return;
 
             // stop worker
-            this.Stop();
+            this.Stop(DISPOSE_STOP_TIMEOUT);
 
             // invoke the dispose hook for the sub-class
             this.SubDispose();
