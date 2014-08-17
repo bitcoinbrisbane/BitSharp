@@ -96,7 +96,7 @@ namespace BitSharp.Core.Builders
             this.BeginTransaction();
             try
             {
-                using (var session = this.blockValidator.StartValidation(chainedHeader))
+                using (this.blockValidator.StartValidation(chainedHeader))
                 {
                     // add the block to the chain
                     this.chain.AddBlock(chainedHeader);
