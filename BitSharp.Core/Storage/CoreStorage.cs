@@ -278,27 +278,7 @@ namespace BitSharp.Core.Storage
 
         private IEnumerable<BlockTx> ReadBlockTransactions(UInt256 blockHash, UInt256 merkleRoot, bool requireTransactions, IEnumerable<BlockTx> blockTxes)
         {
-            Action<UInt256> HandleMissingBlock =
-                missingBlockHash =>
-                {
-                    lock (GetBlockLock(blockHash))
-                        this.presentBlockTxes[missingBlockHash] = false;
-
-                    RaiseBlockTxesMissed(missingBlockHash);
-                };
-
-            IEnumerator<BlockTx> blockTxesEnumerator;
-            try
-            {
-
-                blockTxesEnumerator = MerkleTree.ReadMerkleTreeNodes(merkleRoot, blockTxes).GetEnumerator();
-            }
-            catch (MissingDataException e)
-            {
-                HandleMissingBlock((UInt256)e.Key);
-                throw;
-            }
-            using (blockTxesEnumerator)
+            using (var blockTxesEnumerator = MerkleTree.ReadMerkleTreeNodes(merkleRoot, blockTxes).GetEnumerator())
             {
                 while (true)
                 {
@@ -309,7 +289,12 @@ namespace BitSharp.Core.Storage
                     }
                     catch (MissingDataException e)
                     {
-                        HandleMissingBlock((UInt256)e.Key);
+                        var missingBlockHash = (UInt256)e.Key;
+
+                        lock (GetBlockLock(blockHash))
+                            this.presentBlockTxes[missingBlockHash] = false;
+
+                        RaiseBlockTxesMissed(missingBlockHash);
                         throw;
                     }
 
