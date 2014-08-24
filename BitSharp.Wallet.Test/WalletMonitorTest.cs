@@ -23,7 +23,6 @@ using BitSharp.Core.Test;
 
 namespace BitSharp.Wallet.Test
 {
-    [Ignore]
     [TestClass]
     public class WalletMonitorTest
     {
@@ -31,10 +30,6 @@ namespace BitSharp.Wallet.Test
         public void TestMonitorAddress()
         {
             var sha256 = new SHA256Managed();
-
-            //var publicKey =
-            //    "04ea1feff861b51fe3f5f8a3b12d0f4712db80e919548a80839fc47c6a21e66d957e9c5d8cd108c7a2d2324bad71f9904ac0ae7336507d785b17a2c115e427a32f"
-            //    .HexToByteArray();
 
             var publicKey =
                 "04f9804cfb86fb17441a6562b07c4ee8f012bdb2da5be022032e4b87100350ccc7c0f4d47078b06c9d22b0ec10bdce4c590e0d01aed618987a6caa8c94d74ee6dc"
