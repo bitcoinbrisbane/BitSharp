@@ -82,17 +82,12 @@ namespace BitSharp.Core.Builders
 
             this.pendingTxes = new ConcurrentBlockingQueue<TxWithPrevOutputKeys>();
             this.loadedTxes = new ConcurrentBlockingQueue<TxWithPrevOutputs>();
-            //this.loadedTxInputs = new ConcurrentBlockingQueue<TxInputWithPrevOutput>();
 
             this.pendingTxLoaderExceptions = new ConcurrentBag<Exception>();
             this.txLoaderExceptions = new ConcurrentBag<Exception>();
-            //this.txValidatorExceptions = new ConcurrentBag<Exception>();
-            //this.scriptValidatorExceptions = new ConcurrentBag<Exception>();
 
             this.pendingTxLoaderStopper = StartPendingTxLoader(blockTxes);
             this.txLoaderStopper = StartTxLoader();
-            //this.txValidatorStopper = StartTxValidator(chainedHeader);
-            //this.scriptValidatorStopper = StartScriptValidator();
 
             return new Stopper(this);
         }
@@ -105,38 +100,17 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        //public void AddPendingTx(TxWithPrevOutputKeys pendingTx)
-        //{
-        //    this.pendingTxes.Add(pendingTx);
-        //}
-
-        //public void CompleteAdding()
-        //{
-        //    this.pendingTxes.CompleteAdding();
-        //}
-
-        //public void WaitToComplete()
-        //{
-        //    this.txLoader.WaitToComplete();
-        //    this.txValidator.WaitToComplete();
-        //    this.scriptValidator.WaitToComplete();
-        //}
-
         private void StopReplay()
         {
             this.pendingTxes.CompleteAdding();
             this.loadedTxes.CompleteAdding();
-            //this.loadedTxInputs.CompleteAdding();
 
             new IDisposable[]
             {
                 this.pendingTxLoaderStopper,
                 this.txLoaderStopper,
-                //this.txValidatorStopper,
-                //this.scriptValidatorStopper,
                 this.pendingTxes,
                 this.loadedTxes,
-                //this.loadedTxInputs
             }.DisposeList();
 
             this.chainState = null;
@@ -144,15 +118,10 @@ namespace BitSharp.Core.Builders
             this.txCache = null;
             this.pendingTxes = null;
             this.loadedTxes = null;
-            //this.loadedTxInputs = null;
             this.pendingTxLoaderStopper = null;
             this.txLoaderStopper = null;
-            //this.txValidatorStopper = null;
-            //this.scriptValidatorStopper = null;
             this.pendingTxLoaderExceptions = null;
             this.txLoaderExceptions = null;
-            //this.txValidatorExceptions = null;
-            //this.scriptValidatorExceptions = null;
         }
 
         private IDisposable StartPendingTxLoader(IEnumerable<BlockTx> blockTxes)
