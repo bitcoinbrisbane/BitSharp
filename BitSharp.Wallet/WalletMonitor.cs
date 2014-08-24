@@ -152,6 +152,10 @@ namespace BitSharp.Wallet
                         {
                             //TODO no wallet state is saved, so missing data will be thrown when started up again due to pruning
                         }
+                        catch (AggregateException)
+                        {
+                            //TODO no wallet state is saved, so missing data will be thrown when started up again due to pruning
+                        }
 
                         this.chainBuilder.AddBlock(chainedHeader);
                     }

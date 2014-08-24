@@ -96,8 +96,23 @@ namespace BitSharp.Core.Builders
         {
             foreach (var tx in this.loadedTxes.GetConsumingEnumerable())
             {
+                // fail early if there are any errors
+                this.ThrowIfFailed();
+
                 yield return tx;
             }
+            
+            // ensure any errors that occurred are thrown
+            this.ThrowIfFailed();
+        }
+
+        private void ThrowIfFailed()
+        {
+            if (this.pendingTxLoaderExceptions.Count > 0)
+                throw new AggregateException(this.pendingTxLoaderExceptions);
+
+            if (this.txLoaderExceptions.Count > 0)
+                throw new AggregateException(this.txLoaderExceptions);
         }
 
         private void StopReplay()

@@ -58,7 +58,7 @@ namespace BitSharp.Client
                 var ignoreScriptErrors = true;
 
                 var enablePruning = false;
-                var enableDummyWallet = false;
+                var enableDummyWallet = true;
 
                 var runInMemory = false;
 
