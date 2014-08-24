@@ -97,6 +97,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BlockReplayer.cs" />
     <Compile Include="Builders\BlockValidator.cs" />
     <Compile Include="Builders\UtxoBuilder.cs" />
     <Compile Include="Builders\TxInputWithPrevOutput.cs" />

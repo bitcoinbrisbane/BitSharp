@@ -13,13 +13,17 @@ namespace BitSharp.Core.Domain
     public class Chain
     {
         private readonly ImmutableList<ChainedHeader> blocks;
+        private readonly ImmutableDictionary<UInt256, ChainedHeader> blocksByHash;
 
-        public Chain(ImmutableList<ChainedHeader> blocks)
+        public Chain(ImmutableList<ChainedHeader> blocks, ImmutableDictionary<UInt256, ChainedHeader> blocksByHash)
         {
             if (blocks == null)
                 throw new ArgumentNullException("blocks");
+            if (blocksByHash == null)
+                throw new ArgumentNullException("blocksByHash");
 
             this.blocks = blocks;
+            this.blocksByHash = blocksByHash;
         }
 
         public ChainedHeader GenesisBlock { get { return this.blocks.First(); } }
@@ -33,6 +37,8 @@ namespace BitSharp.Core.Domain
         public BigInteger TotalWork { get { return this.LastBlock.TotalWork; } }
 
         public ImmutableList<ChainedHeader> Blocks { get { return this.blocks; } }
+
+        public ImmutableDictionary<UInt256, ChainedHeader> BlocksByHash { get { return this.blocksByHash; } }
 
         public IEnumerable<ChainedHeader> ReadFromGenesis()
         {
@@ -115,7 +121,9 @@ namespace BitSharp.Core.Domain
 
         public static Chain CreateForGenesisBlock(ChainedHeader genesisBlock)
         {
-            return new Chain(ImmutableList.Create<ChainedHeader>(genesisBlock));
+            var chainBuilder = new ChainBuilder();
+            chainBuilder.AddBlock(genesisBlock);
+            return chainBuilder.ToImmutable();
         }
     }
 }

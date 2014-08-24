@@ -102,6 +102,7 @@
   <ItemGroup>
     <Compile Include="AssertMethods.cs" />
     <Compile Include="BlockchainWalkerTest.cs" />
+    <Compile Include="BlockReplayerTest.cs" />
     <Compile Include="MerkleTreeTest.cs" />
     <Compile Include="FakeHeaders.cs" />
     <Compile Include="MainnetTestData.cs" />

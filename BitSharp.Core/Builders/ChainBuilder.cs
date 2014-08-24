@@ -13,20 +13,24 @@ namespace BitSharp.Core.Builders
     public class ChainBuilder
     {
         private readonly ImmutableList<ChainedHeader>.Builder blocks;
+        private readonly ImmutableDictionary<UInt256, ChainedHeader>.Builder blocksByHash;
 
         public ChainBuilder()
         {
             this.blocks = ImmutableList.CreateBuilder<ChainedHeader>();
+            this.blocksByHash = ImmutableDictionary.CreateBuilder<UInt256, ChainedHeader>();
         }
 
         public ChainBuilder(Chain parentChain)
         {
             this.blocks = parentChain.Blocks.ToBuilder();
+            this.blocksByHash = parentChain.BlocksByHash.ToBuilder();
         }
 
         public ChainBuilder(IEnumerable<ChainedHeader> chainedHeaders)
         {
             this.blocks = ImmutableList.CreateBuilder<ChainedHeader>();
+            this.blocksByHash = ImmutableDictionary.CreateBuilder<UInt256, ChainedHeader>();
 
             foreach (var chainedHeader in chainedHeaders)
                 this.AddBlock(chainedHeader);
@@ -43,6 +47,8 @@ namespace BitSharp.Core.Builders
         public BigInteger TotalWork { get { return this.LastBlock != null ? this.LastBlock.TotalWork : 0; } }
 
         public ImmutableList<ChainedHeader> Blocks { get { return this.blocks.ToImmutable(); } }
+
+        public ImmutableDictionary<UInt256, ChainedHeader> BlocksByHash { get { return this.blocksByHash.ToImmutable(); } }
 
         public IEnumerable<Tuple<int, ChainedHeader>> NavigateTowards(Chain targetChain)
         {
@@ -63,6 +69,7 @@ namespace BitSharp.Core.Builders
                 throw new InvalidOperationException();
 
             this.blocks.Add(chainedHeader);
+            this.blocksByHash.Add(chainedHeader.Hash, chainedHeader);
         }
 
         public void RemoveBlock(ChainedHeader chainedHeader)
@@ -74,11 +81,12 @@ namespace BitSharp.Core.Builders
                 throw new InvalidOperationException();
 
             this.blocks.RemoveAt(this.blocks.Count - 1);
+            this.blocksByHash.Remove(chainedHeader.Hash);
         }
 
         public Chain ToImmutable()
         {
-            return new Chain(this.blocks.ToImmutable());
+            return new Chain(this.blocks.ToImmutable(), this.blocksByHash.ToImmutable());
         }
     }
 }

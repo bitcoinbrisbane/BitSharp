@@ -19,7 +19,7 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_Unspent()
         {
             // prepare utxo storage
-            var chain = new Chain(ImmutableList.Create(new FakeHeaders().GenesisChained()));
+            var chain = Chain.CreateForGenesisBlock(new FakeHeaders().GenesisChained());
             var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare unspent output
@@ -46,7 +46,7 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_Spent()
         {
             // prepare utxo storage
-            var chain = new Chain(ImmutableList.Create(new FakeHeaders().GenesisChained()));
+            var chain = Chain.CreateForGenesisBlock(new FakeHeaders().GenesisChained());
             var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare spent output
@@ -73,7 +73,7 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_Missing()
         {
             // prepare utxo
-            var chain = new Chain(ImmutableList.Create(new FakeHeaders().GenesisChained()));
+            var chain = Chain.CreateForGenesisBlock(new FakeHeaders().GenesisChained());
             var memoryStorage = new MemoryStorageManager();
             var chainStateStorage = memoryStorage.OpenChainStateCursor().Item;
             chainStateStorage.AddChainedHeader(chain.GenesisBlock);
@@ -93,7 +93,7 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_NegativeIndex()
         {
             // prepare utxo storage
-            var chain = new Chain(ImmutableList.Create(new FakeHeaders().GenesisChained()));
+            var chain = Chain.CreateForGenesisBlock(new FakeHeaders().GenesisChained());
             var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare unspent output
@@ -120,7 +120,7 @@ namespace BitSharp.Core.Test.Domain
         public void TestCanSpend_IndexOutOfRange()
         {
             // prepare utxo storage
-            var chain = new Chain(ImmutableList.Create(new FakeHeaders().GenesisChained()));
+            var chain = Chain.CreateForGenesisBlock(new FakeHeaders().GenesisChained());
             var unspentTransactions = ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
 
             // prepare unspent output
