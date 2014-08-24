@@ -111,25 +111,9 @@ namespace BitSharp.Core.Test
             this.coreStorage.TryAddBlock(block);
         }
 
-        public void WaitForDaemon(int expectedHeight, TimeSpan? timeout = null)
+        public void WaitForUpdate()
         {
-            timeout = timeout ?? TimeSpan.FromSeconds(5);
-            var start = DateTime.UtcNow;
-
-            while (true)
-            {
-                this.coreDaemon.WaitForUpdate();
-
-                var height = this.coreDaemon.CurrentChain.Height;
-                var now = DateTime.UtcNow;
-
-                if (height == expectedHeight)
-                    break;
-                else if (now - start >= timeout)
-                    break;
-                else
-                    Thread.Sleep(TimeSpan.FromMilliseconds(5));
-            }
+            this.coreDaemon.WaitForUpdate();
         }
     }
 }

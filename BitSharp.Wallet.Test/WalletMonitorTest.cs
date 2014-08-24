@@ -53,7 +53,7 @@ namespace BitSharp.Wallet.Test
                 var block9999 = simulator.BlockProvider.GetBlock(9999);
 
                 simulator.AddBlockRange(0, 9999);
-                simulator.WaitForDaemon(expectedHeight: 9999);
+                simulator.WaitForUpdate();
                 AssertMethods.AssertDaemonAtBlock(9999, block9999.Hash, simulator.CoreDaemon);
 
                 var minedTxOutputs = walletMonitor.Entries.Where(x => x.Type == EnumWalletEntryType.Mine).ToList();
