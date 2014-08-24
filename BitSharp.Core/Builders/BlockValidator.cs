@@ -136,7 +136,7 @@ namespace BitSharp.Core.Builders
 
         private IDisposable StartTxLoader()
         {
-            return this.txLoader.Start(pendingTxes.GetConsumingEnumerable(),
+            return this.txLoader.Start(this.pendingTxes.GetConsumingEnumerable(),
                 pendingTx =>
                 {
                     if (this.rules.BypassValidation)
@@ -144,14 +144,14 @@ namespace BitSharp.Core.Builders
 
                     var loadedTx = LoadPendingTx(pendingTx, txCache);
                     if (loadedTx != null)
-                        loadedTxes.Add(loadedTx);
+                        this.loadedTxes.Add(loadedTx);
                 },
-                () => loadedTxes.CompleteAdding());
+                () => this.loadedTxes.CompleteAdding());
         }
 
         private IDisposable StartTxValidator(ChainedHeader chainedHeader)
         {
-            return this.txValidator.Start(loadedTxes.GetConsumingEnumerable(),
+            return this.txValidator.Start(this.loadedTxes.GetConsumingEnumerable(),
                 loadedTx =>
                 {
                     if (!this.rules.IgnoreScripts)
@@ -175,12 +175,12 @@ namespace BitSharp.Core.Builders
 
                     ValidateTransaction(loadedTx);
                 },
-                () => loadedTxInputs.CompleteAdding());
+                () => this.loadedTxInputs.CompleteAdding());
         }
 
         private IDisposable StartScriptValidator()
         {
-            return this.scriptValidator.Start(loadedTxInputs.GetConsumingEnumerable(),
+            return this.scriptValidator.Start(this.loadedTxInputs.GetConsumingEnumerable(),
                 loadedTxInput =>
                 {
                     ValidateScript(loadedTxInput);

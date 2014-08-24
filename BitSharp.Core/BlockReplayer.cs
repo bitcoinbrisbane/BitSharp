@@ -131,21 +131,21 @@ namespace BitSharp.Core.Builders
                 {
                     var pendingTx = LoadPendingTx(blockTx);
                     if (pendingTx != null)
-                        pendingTxes.Add(pendingTx);
+                        this.pendingTxes.Add(pendingTx);
                 },
-                () => pendingTxes.CompleteAdding());
+                () => this.pendingTxes.CompleteAdding());
         }
 
         private IDisposable StartTxLoader()
         {
-            return this.txLoader.Start(pendingTxes.GetConsumingEnumerable(),
+            return this.txLoader.Start(this.pendingTxes.GetConsumingEnumerable(),
                 pendingTx =>
                 {
                     var loadedTx = LoadPendingTx(pendingTx, txCache);
                     if (loadedTx != null)
-                        loadedTxes.Add(loadedTx);
+                        this.loadedTxes.Add(loadedTx);
                 },
-                () => loadedTxes.CompleteAdding());
+                () => this.loadedTxes.CompleteAdding());
         }
 
         //TODO conflicting names
