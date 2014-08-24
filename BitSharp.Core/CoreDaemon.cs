@@ -139,6 +139,12 @@ namespace BitSharp.Core
             get { return this.chainStateWorker.CurrentChain; }
         }
 
+        public PruningMode PruningMode
+        {
+            get { return this.pruningWorker.Mode; }
+            set { this.pruningWorker.Mode = value; }
+        }
+
         public float GetBlockRate(TimeSpan perUnitTime)
         {
             return this.chainStateBuilder.Stats.blockRateMeasure.GetAverage(perUnitTime);
@@ -164,13 +170,12 @@ namespace BitSharp.Core
             return this.chainStateWorker.GetBlockMissCount();
         }
 
-        public void Start(bool enablePruning = false)
+        public void Start()
         {
             // startup workers
             this.targetChainWorker.Start();
             this.chainStateWorker.Start();
-            if (enablePruning)
-                this.pruningWorker.Start();
+            this.pruningWorker.Start();
             this.defragWorker.Start();
             this.gcWorker.Start();
             //this.utxoScanWorker.Start();

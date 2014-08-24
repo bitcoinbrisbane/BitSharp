@@ -87,7 +87,10 @@ namespace BitSharp.Core.Domain
             using (var handle = this.cursorCache.TakeItem())
             {
                 var cursor = handle.Item.Item;
-                return cursor.ContainsUnspentTx(txHash);
+
+                UnspentTx unspentTx;
+                return cursor.TryGetUnspentTx(txHash, out unspentTx)
+                    && !unspentTx.IsFullySpent;
             }
         }
 
@@ -105,8 +108,10 @@ namespace BitSharp.Core.Domain
             using (var handle = this.cursorCache.TakeItem())
             {
                 var cursor = handle.Item.Item;
-                foreach (var unspentTx in cursor.ReadUnspentTransactions())
+                foreach (var unspentTx in cursor.ReadUnspentTransactions().Where(x => !x.IsFullySpent))
+                {
                     yield return unspentTx;
+                }
             }
         }
 

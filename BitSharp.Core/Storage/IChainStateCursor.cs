@@ -134,9 +134,6 @@ namespace BitSharp.Core.Storage
         /// <returns>true if the block's spent transactions were removed; otherwise, false</returns>
         bool TryRemoveBlockSpentTxes(int blockIndex);
 
-        //TODO
-        void RemoveSpentTransactionsToHeight(int spentBlockIndex);
-
         /// <summary>
         /// Fully flush storage.
         /// </summary>

@@ -123,6 +123,7 @@ namespace BitSharp.Client
 
                 // initialize the blockchain daemon
                 this.coreDaemon = this.kernel.Get<CoreDaemon>();
+                this.coreDaemon.PruningMode = enablePruning ? PruningMode.RollbackAndBlocks : PruningMode.RollbackOnly;
                 this.kernel.Bind<CoreDaemon>().ToConstant(this.coreDaemon).InTransientScope();
 
 #if DUMMY_MONITOR
@@ -144,7 +145,7 @@ namespace BitSharp.Client
                 this.viewModel.ViewBlockchainLast();
 
                 // start the blockchain daemon
-                this.coreDaemon.Start(enablePruning);
+                this.coreDaemon.Start();
 
                 // start p2p client
                 var startThread = new Thread(() => this.localClient.Start());
@@ -196,6 +197,7 @@ namespace BitSharp.Client
 
         protected override void OnClosed(EventArgs e)
         {
+            var stopwatch = Stopwatch.StartNew();
             this.logger.Info("Shutting down");
 
             // shutdown
@@ -208,7 +210,7 @@ namespace BitSharp.Client
 
             base.OnClosed(e);
 
-            this.logger.Info("Finished shutting down");
+            this.logger.Info("Finished shutting down: {0:#,##0.00}s".Format2(stopwatch.Elapsed.TotalSeconds));
         }
 
         private void ViewFirst_Click(object sender, RoutedEventArgs e)

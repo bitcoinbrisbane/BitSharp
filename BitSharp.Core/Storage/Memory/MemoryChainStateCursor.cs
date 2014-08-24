@@ -281,19 +281,6 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
-        public void RemoveSpentTransactionsToHeight(int spentBlockIndex)
-        {
-            if (this.inTransaction)
-            {
-                this.blockSpentTxes.RemoveRange(Enumerable.Range(0, spentBlockIndex));
-                this.spentTxesModified = true;
-            }
-            else
-            {
-                this.chainStateStorage.RemoveSpentTransactionsToHeight(spentBlockIndex);
-            }
-        }
-
         public void Flush()
         {
         }

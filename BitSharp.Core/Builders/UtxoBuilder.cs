@@ -131,22 +131,13 @@ namespace BitSharp.Core.Builders
             unspentTx = unspentTx.SetOutputState(outputIndex, OutputState.Spent);
 
             // update transaction output states in the utxo
-            if (!unspentTx.IsFullySpent)
-            {
-                var wasUpdated = this.chainStateCursor.TryUpdateUnspentTx(unspentTx);
-                if (!wasUpdated)
-                    throw new ValidationException(chainedHeader.Hash);
-            }
-            // remove fully spent transaction from the utxo
-            else
-            {
-                var wasRemoved = this.chainStateCursor.TryRemoveUnspentTx(input.PreviousTxOutputKey.TxHash);
-                if (!wasRemoved)
-                    throw new ValidationException(chainedHeader.Hash);
+            var wasUpdated = this.chainStateCursor.TryUpdateUnspentTx(unspentTx);
+            if (!wasUpdated)
+                throw new ValidationException(chainedHeader.Hash);
 
-                // store rollback/pruning information
+            // store pruning information for a fully spent transaction
+            if (unspentTx.IsFullySpent)
                 blockSpentTxes.Add(unspentTx.ToSpentTx(chainedHeader.Height));
-            }
 
             return unspentTx;
         }

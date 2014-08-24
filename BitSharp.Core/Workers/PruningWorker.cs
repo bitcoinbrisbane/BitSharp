@@ -41,14 +41,16 @@ namespace BitSharp.Core.Workers
             this.rules = rules;
 
             this.lastPruneHeight = 0;
-
-            this.Mode = PruningMode.RollbackAndBlocks;
+            this.Mode = PruningMode.None;
         }
 
         public PruningMode Mode { get; set; }
 
         protected override void WorkAction()
         {
+            if (this.Mode == PruningMode.None)
+                return;
+
             var blocksPerDay = 144;
             var pruneBuffer = blocksPerDay * 7;
 
@@ -66,22 +68,61 @@ namespace BitSharp.Core.Workers
 
             switch (this.Mode)
             {
+                // remove just the information required to rollback blocks and to replay them
                 case PruningMode.RollbackOnly:
                     using (var handle = coreStorage.OpenChainStateCursor())
                     {
                         var chainStateCursor = handle.Item;
 
-                        // ensure chain state is flushed before pruning
-                        chainStateCursor.Flush();
+                        // stats
+                        var totalStopwatch = Stopwatch.StartNew();
+                        var txCount = 0;
 
-                        chainStateCursor.BeginTransaction();
+                        for (var blockHeight = minHeight; blockHeight <= maxHeight; blockHeight++)
+                        {
+                            // cooperative loop
+                            this.ThrowIfCancelled();
 
-                        chainStateCursor.RemoveSpentTransactionsToHeight(maxHeight);
+                            chainStateCursor.BeginTransaction();
 
-                        chainStateCursor.CommitTransaction();
+                            // retrieve the spent txes for this block
+                            IImmutableList<SpentTx> spentTxes;
+                            if (chainStateCursor.TryGetBlockSpentTxes(blockHeight, out spentTxes))
+                            {
+                                // remove each spent tx
+                                foreach (var spentTx in spentTxes)
+                                {
+                                    // cooperative loop
+                                    this.ThrowIfCancelled();
+
+                                    txCount++;
+
+                                    var wasRemoved = chainStateCursor.TryRemoveUnspentTx(spentTx.TxHash);
+                                    //if (!wasRemoved)
+                                    //    throw new Exception("TODO");
+                                }
+
+                                // remove spent txes for this block
+                                var wasRemoved2 = chainStateCursor.TryRemoveBlockSpentTxes(blockHeight);
+                                //if (!wasRemoved2)
+                                //    throw new Exception("TODO");
+                            }
+
+                            chainStateCursor.CommitTransaction();
+                            this.lastPruneHeight = maxHeight;
+                        }
+
+                        var txRate = txCount / totalStopwatch.Elapsed.TotalSeconds;
+                        this.logger.Info(
+@"Pruned from block {0:#,##0} to {1:#,##0}:
+- tx count: {2,10:#,##0}
+- tx rate:  {3,10:#,##0}/s
+- TOTAL:        {4,10:#,##0.000}s"
+                            .Format2(minHeight, maxHeight, txCount, txRate, totalStopwatch.Elapsed.TotalSeconds));
                     }
                     break;
 
+                // remove spent transactions from block storage, in addition to the information required to rollback blocks and to replay them
                 case PruningMode.RollbackAndBlocks:
                     using (var handle = coreStorage.OpenChainStateCursor())
                     {
@@ -196,11 +237,5 @@ namespace BitSharp.Core.Workers
             this.chainStateWorker.Start();
             this.chainStateWorker.NotifyWork();
         }
-    }
-
-    public enum PruningMode
-    {
-        RollbackOnly,
-        RollbackAndBlocks
     }
 }

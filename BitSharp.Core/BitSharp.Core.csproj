@@ -103,6 +103,7 @@
     <Compile Include="Builders\TxWithPrevOutputs.cs" />
     <Compile Include="Builders\TxWithPrevOutputKeys.cs" />
     <Compile Include="Domain\IChainState.cs" />
+    <Compile Include="PruningMode.cs" />
     <Compile Include="Storage\CoreStorage.cs" />
     <Compile Include="Domain\BlockTxKey.cs" />
     <Compile Include="MerkleTree.cs" />

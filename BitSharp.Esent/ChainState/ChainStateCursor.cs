@@ -113,7 +113,8 @@ namespace BitSharp.Esent
                 {
                     var chainedHeader = DataEncoder.DecodeChainedHeader(Api.RetrieveColumn(this.jetSession, this.chainTableId, this.chainedHeaderBytesColumnId));
                     yield return chainedHeader;
-                } while (Api.TryMoveNext(this.jetSession, this.chainTableId));
+                }
+                while (Api.TryMoveNext(this.jetSession, this.chainTableId));
             }
         }
 
@@ -294,7 +295,8 @@ namespace BitSharp.Esent
                     var outputStates = DataEncoder.DecodeOutputStates(Api.RetrieveColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId));
 
                     yield return new UnspentTx(txHash, blockIndex, txIndex, outputStates);
-                } while (Api.TryMoveNext(this.jetSession, this.unspentTxTableId));
+                }
+                while (Api.TryMoveNext(this.jetSession, this.unspentTxTableId));
             }
         }
 
@@ -372,28 +374,6 @@ namespace BitSharp.Esent
             else
             {
                 return false;
-            }
-        }
-
-        public void RemoveSpentTransactionsToHeight(int spentBlockIndex)
-        {
-            Api.JetSetCurrentIndex(this.jetSession, this.spentTxTableId, "IX_SpentBlockIndex");
-
-            Api.MakeKey(this.jetSession, this.spentTxTableId, -1, MakeKeyGrbit.NewKey);
-
-            if (Api.TrySeek(this.jetSession, this.spentTxTableId, SeekGrbit.SeekGE))
-            {
-                do
-                {
-                    if (spentBlockIndex >= Api.RetrieveColumnAsInt32(this.jetSession, this.spentTxTableId, this.spentSpentBlockIndexColumnId).Value)
-                    {
-                        Api.JetDelete(this.jetSession, this.spentTxTableId);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                } while (Api.TryMoveNext(this.jetSession, this.spentTxTableId));
             }
         }
 

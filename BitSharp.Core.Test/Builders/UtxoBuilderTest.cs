@@ -90,7 +90,8 @@ namespace BitSharp.Core.Test.Builders
             utxoBuilder.CalculateUtxo(chain.ToImmutable(), new[] { emptyCoinbaseTx2, tx2 }).ToList();
 
             // verify utxo storage
-            Assert.IsFalse(memoryChainStateCursor.ContainsUnspentTx(txHash));
+            Assert.IsTrue(memoryChainStateCursor.TryGetUnspentTx(txHash, out actualUnspentTx));
+            Assert.IsTrue(actualUnspentTx.IsFullySpent);
         }
 
         [TestMethod]
@@ -128,7 +129,9 @@ namespace BitSharp.Core.Test.Builders
             utxoBuilder.CalculateUtxo(chain.ToImmutable(), new[] { emptyCoinbaseTx0, tx }).ToList();
 
             // verify utxo storage
-            Assert.IsFalse(memoryChainStateCursor.ContainsUnspentTx(txHash));
+            UnspentTx actualUnspentTx;
+            Assert.IsTrue(memoryChainStateCursor.TryGetUnspentTx(txHash, out actualUnspentTx));
+            Assert.IsTrue(actualUnspentTx.IsFullySpent);
 
             // attempt to spend the input again
             chain.AddBlock(chainedHeader1);
