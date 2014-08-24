@@ -24,7 +24,7 @@ namespace BitSharp.Common
         public override void Load()
         {
             // log layout format
-            var layout = "${pad:padding=6:inner=${level:uppercase=true}} ${message} ${exception:separator=\r\n:format=message,type,method,stackTrace}";
+            var layout = "${pad:padding=6:inner=${level:uppercase=true}} ${message} ${exception:separator=\r\n:format=message,type,method,stackTrace:maxInnerExceptionLevel=10}";
 
             // initialize logging configuration
             var config = new LoggingConfiguration();
