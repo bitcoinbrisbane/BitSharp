@@ -1,7 +1,4 @@
-﻿//#define MEMORY
-#define DUMMY_MONITOR
-
-using BitSharp.Common.ExtensionMethods;
+﻿using BitSharp.Common.ExtensionMethods;
 using BitSharp.Node;
 using System;
 using System.Collections.Generic;
@@ -29,6 +26,8 @@ using BitSharp.Esent;
 using BitSharp.Node.Storage;
 using BitSharp.Wallet;
 using BitSharp.Wallet.Address;
+using BitSharp.Node.Storage.Memory;
+using BitSharp.Core.Storage.Memory;
 
 namespace BitSharp.Client
 {
@@ -59,6 +58,9 @@ namespace BitSharp.Client
                 var ignoreScriptErrors = true;
 
                 var enablePruning = false;
+                var enableDummyWallet = false;
+
+                var runInMemory = false;
 
                 var cleanData = false;
                 var cleanChainState = false;
@@ -97,14 +99,15 @@ namespace BitSharp.Client
                 var modules = new List<INinjectModule>();
 
                 // add storage module
-#if TEST_TOOL
-                modules.Add(new MemoryStorageModule());
-#elif MEMORY
-                modules.Add(new MemoryStorageModule());
-#else
-                modules.Add(new EsentStorageModule(baseDirectory, rulesType, cacheSizeMaxBytes: int.MaxValue - 1));
-                //ChainStateCursor.IndexOutputs = true;
-#endif
+                if (runInMemory)
+                {
+                    modules.Add(new MemoryStorageModule());
+                    modules.Add(new NodeMemoryStorageModule());
+                }
+                else
+                {
+                    modules.Add(new EsentStorageModule(baseDirectory, rulesType, cacheSizeMaxBytes: int.MaxValue - 1));
+                }
 
                 // add cache modules
                 modules.Add(new NodeCacheModule());
@@ -129,20 +132,22 @@ namespace BitSharp.Client
 
                 // initialize dummy wallet monitor
                 this.dummyMonitor = new DummyMonitor(this.coreDaemon, this.logger);
-#if DUMMY_MONITOR
-                this.dummyMonitor.Start();
-#endif
+                if (enableDummyWallet)
+                {
+                    this.dummyMonitor.Start();
+                }
+                else
+                {
+                    // allow pruning to any height when not using the wallet
+                    this.coreDaemon.PrunableHeight = int.MaxValue;
+                }
 
                 // initialize p2p client
                 this.localClient = this.kernel.Get<LocalClient>();
                 this.kernel.Bind<LocalClient>().ToConstant(this.localClient).InTransientScope();
 
                 // setup view model
-#if DUMMY_MONITOR
-                this.viewModel = new MainWindowViewModel(this.kernel, dummyMonitor);
-#else
-                this.viewModel = new MainWindowViewModel(this.kernel);
-#endif
+                this.viewModel = new MainWindowViewModel(this.kernel, this.dummyMonitor);
                 InitializeComponent();
                 this.viewModel.ViewBlockchainLast();
 
@@ -155,29 +160,6 @@ namespace BitSharp.Client
                 startThread.Start();
 
                 this.DataContext = this.viewModel;
-
-#if TEST_TOOL
-                var bitcoinjThread = new Thread(
-                    ()=>
-                    {
-                        var projectFolder = Environment.CurrentDirectory;
-                        while (projectFolder.Contains(@"\BitSharp.Client"))
-                            projectFolder = Path.GetDirectoryName(projectFolder);
-
-                        File.Delete(Path.Combine(projectFolder, "Bitcoinj-comparison.log"));
-
-                        var javaProcessStartInfo = new ProcessStartInfo
-                            {
-                                FileName = @"C:\Program Files\Java\jdk1.7.0_25\bin\java.exe",
-                                WorkingDirectory = projectFolder,
-                                Arguments = @"-Djava.util.logging.config.file={0}\bitcoinj.log.properties -jar {0}\bitcoinj.jar".Format2(projectFolder),
-                                UseShellExecute = false
-                            };
-
-                        var javaProcess = Process.Start(javaProcessStartInfo);
-                    });
-                bitcoinjThread.Start();
-#endif
             }
             catch (Exception e)
             {
