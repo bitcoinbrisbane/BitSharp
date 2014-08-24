@@ -27,6 +27,7 @@ namespace BitSharp.Wallet
     {
         private readonly Logger logger;
         private readonly CoreDaemon coreDaemon;
+        private readonly BlockReplayer blockReplayer;
 
         private ChainBuilder chainBuilder;
         private int walletHeight;
@@ -48,6 +49,7 @@ namespace BitSharp.Wallet
         {
             this.logger = logger;
             this.coreDaemon = coreDaemon;
+            this.blockReplayer = new BlockReplayer(coreDaemon.CoreStorage, coreDaemon.Rules, logger);
 
             this.chainBuilder = Chain.CreateForGenesisBlock(coreDaemon.Rules.GenesisChainedHeader).ToBuilder();
 
@@ -63,6 +65,8 @@ namespace BitSharp.Wallet
         protected override void SubDispose()
         {
             this.coreDaemon.OnChainStateChanged -= HandleChainStateChanged;
+
+            this.blockReplayer.Dispose();
         }
 
         public event Action OnScanned;
@@ -183,20 +187,23 @@ namespace BitSharp.Wallet
         {
             var sha256 = new SHA256Managed();
 
-            foreach (var txWithPrevOutputs in this.coreDaemon.ReplayBlock(chainState, scanBlock.Hash))
+            using (this.blockReplayer.StartReplay(chainState, scanBlock.Hash))
             {
-                var tx = txWithPrevOutputs.Transaction;
-                var txIndex = txWithPrevOutputs.TxIndex;
-
-                for (var outputIndex = 0; outputIndex < tx.Outputs.Length; outputIndex++)
+                foreach (var txWithPrevOutputs in this.blockReplayer.ReplayBlock())
                 {
-                    var output = tx.Outputs[outputIndex];
-                    var outputScriptHash = new UInt256(sha256.ComputeHash(output.ScriptPublicKey.ToArray()));
+                    var tx = txWithPrevOutputs.Transaction;
+                    var txIndex = txWithPrevOutputs.TxIndex;
 
-                    var chainPosition = ChainPosition.Fake();
-                    var entryType = txIndex == 0 ? EnumWalletEntryType.Mine : EnumWalletEntryType.Receive;
+                    for (var outputIndex = 0; outputIndex < tx.Outputs.Length; outputIndex++)
+                    {
+                        var output = tx.Outputs[outputIndex];
+                        var outputScriptHash = new UInt256(sha256.ComputeHash(output.ScriptPublicKey.ToArray()));
 
-                    ScanForEntry(chainPosition, entryType, output, outputScriptHash);
+                        var chainPosition = ChainPosition.Fake();
+                        var entryType = txIndex == 0 ? EnumWalletEntryType.Mine : EnumWalletEntryType.Receive;
+
+                        ScanForEntry(chainPosition, entryType, output, outputScriptHash);
+                    }
                 }
             }
         }

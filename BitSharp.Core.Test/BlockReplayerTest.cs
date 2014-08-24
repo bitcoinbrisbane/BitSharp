@@ -8,6 +8,7 @@ using BitSharp.Common.ExtensionMethods;
 using System.Collections;
 using BitSharp.Core.Domain;
 using BitSharp.Core.Builders;
+using NLog;
 
 namespace BitSharp.Core.Test
 {
@@ -17,6 +18,7 @@ namespace BitSharp.Core.Test
         [TestMethod]
         public void TestReplayBlock()
         {
+            var logger = LogManager.CreateNullLogger();
             using (var simulator = new MainnetSimulator())
             {
                 //simulator.CoreDaemon.SubscribeChainStateVisitor(walletMonitor);
@@ -26,15 +28,20 @@ namespace BitSharp.Core.Test
 
                 simulator.WaitForUpdate();
 
+                using (var blockReplayer = new BlockReplayer(simulator.CoreDaemon.CoreStorage, simulator.CoreDaemon.Rules, logger))
                 using (var chainState = simulator.CoreDaemon.GetChainState())
                 {
                     for (var blockHeight = 0; blockHeight <= chainState.Chain.Height; blockHeight++)
                     {
-                        var expectedTransactions = simulator.BlockProvider.GetBlock(blockHeight).Transactions;
+                        var blockHash = chainState.Chain.Blocks[blockHeight].Hash;
 
-                        var actualTransactions = simulator.CoreDaemon.ReplayBlock(chainState, chainState.Chain.Blocks[blockHeight].Hash).ToList();
+                        using (blockReplayer.StartReplay(chainState, blockHash))
+                        {
+                            var expectedTransactions = simulator.BlockProvider.GetBlock(blockHeight).Transactions;
+                            var actualTransactions = blockReplayer.ReplayBlock().OrderBy(x => x.TxIndex).ToList();
 
-                        CollectionAssert.AreEqual(expectedTransactions, actualTransactions, new TxHashComparer(), "Transactions differ at block {0:#,##0}".Format2(blockHeight));
+                            CollectionAssert.AreEqual(expectedTransactions, actualTransactions, new TxHashComparer(), "Transactions differ at block {0:#,##0}".Format2(blockHeight));
+                        }
                     }
                 }
             }

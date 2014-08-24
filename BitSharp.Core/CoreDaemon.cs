@@ -213,22 +213,6 @@ namespace BitSharp.Core
             return this.chainStateBuilder.ToImmutable();
         }
 
-        public IEnumerable<TxWithPrevOutputs> ReplayBlock(IChainState chainState, UInt256 blockHash)
-        {
-            ChainedHeader replayBlock;
-            if (!chainState.Chain.BlocksByHash.TryGetValue(blockHash, out replayBlock))
-            {
-                //TODO when a block is rolled back i'll need to store information to allow the rollback to be replayed, and then look it up here
-                throw new Exception("TODO");
-            }
-
-            using (var blockReplayer = new BlockReplayer(chainState, replayBlock, this.coreStorage, this.rules, this.logger))
-            {
-                foreach (var replayItem in blockReplayer.ReplayBlock())
-                    yield return replayItem;
-            }
-        }
-
         private void GcWorker(WorkerMethod instance)
         {
             this.logger.Info(

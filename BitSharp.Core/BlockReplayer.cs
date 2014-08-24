@@ -16,73 +16,176 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Builders
 {
-    internal class BlockReplayer : IDisposable
+    public class BlockReplayer : IDisposable
     {
         private readonly Logger logger;
-        private readonly IChainState chainState;
-        private readonly ChainedHeader replayBlock;
         private readonly CoreStorage coreStorage;
         private readonly IBlockchainRules rules;
 
-        //private readonly ParallelConsumer<TxWithPrevOutputKeys> txLoader;
-        //private readonly ParallelConsumer<TxWithPrevOutputs> txValidator;
-        //private readonly ParallelConsumer<TxInputWithPrevOutput> scriptValidator;
+        private readonly ParallelConsumer<BlockTx> pendingTxLoader;
+        private readonly ParallelConsumer<TxWithPrevOutputKeys> txLoader;
 
-        //private ConcurrentDictionary<UInt256, Transaction> txCache;
-        //private ConcurrentBlockingQueue<TxWithPrevOutputKeys> pendingTxes;
-        //private ConcurrentBlockingQueue<TxWithPrevOutputs> loadedTxes;
-        //private ConcurrentBlockingQueue<TxInputWithPrevOutput> loadedTxInputs;
-        //private IDisposable txLoaderStopper;
-        //private IDisposable txValidatorStopper;
-        //private IDisposable scriptValidatorStopper;
-        //private ConcurrentBag<Exception> txLoaderExceptions;
-        //private ConcurrentBag<Exception> txValidatorExceptions;
-        //private ConcurrentBag<Exception> scriptValidatorExceptions;
+        private IChainState chainState;
+        private ChainedHeader replayBlock;
+        private ConcurrentDictionary<UInt256, Transaction> txCache;
+        private ConcurrentBlockingQueue<TxWithPrevOutputKeys> pendingTxes;
+        private ConcurrentBlockingQueue<TxWithPrevOutputs> loadedTxes;
+        private IDisposable pendingTxLoaderStopper;
+        private IDisposable txLoaderStopper;
+        private ConcurrentBag<Exception> pendingTxLoaderExceptions;
+        private ConcurrentBag<Exception> txLoaderExceptions;
 
-        public BlockReplayer(IChainState chainState, ChainedHeader replayBlock, CoreStorage coreStorage, IBlockchainRules rules, Logger logger)
+        public BlockReplayer(CoreStorage coreStorage, IBlockchainRules rules, Logger logger)
         {
             this.logger = logger;
-            this.chainState = chainState;
-            this.replayBlock = replayBlock;
             this.coreStorage = coreStorage;
             this.rules = rules;
 
-            //    // thread count for i/o task (TxLoader)
-            //    var ioThreadCount = 4;
+            // thread count for i/o task (TxLoader)
+            var ioThreadCount = 4;
 
-            //    // thread count for cpu tasks (TxValidator, ScriptValidator)
-            //    var cpuThreadCount = Environment.ProcessorCount * 2;
+            // thread count for cpu tasks (TxValidator, ScriptValidator)
+            var cpuThreadCount = Environment.ProcessorCount * 2;
 
-            //    this.txLoader = new ParallelConsumer<TxWithPrevOutputKeys>("ChainStateBuilder.TxLoader", ioThreadCount, logger);
-            //    this.txValidator = new ParallelConsumer<TxWithPrevOutputs>("ChainStateBuilder.TxValidator", cpuThreadCount, logger);
-            //    this.scriptValidator = new ParallelConsumer<TxInputWithPrevOutput>("ChainStateBuilder.ScriptValidator", cpuThreadCount, logger);
+            this.pendingTxLoader = new ParallelConsumer<BlockTx>("BlockReplayer.PendingTxLoader", ioThreadCount, logger);
+            this.txLoader = new ParallelConsumer<TxWithPrevOutputKeys>("BlockReplayer.TxLoader", ioThreadCount, logger);
         }
 
         public void Dispose()
         {
-            //    new IDisposable[]
-            //    {
-            //        this.txLoader,
-            //        this.txValidator,
-            //        this.scriptValidator
-            //    }.DisposeList();
+            new IDisposable[]
+            {
+                this.pendingTxLoader,
+                this.txLoader
+            }.DisposeList();
+        }
+
+        public IDisposable StartReplay(IChainState chainState, UInt256 blockHash)
+        {
+            ChainedHeader replayBlock;
+            if (!chainState.Chain.BlocksByHash.TryGetValue(blockHash, out replayBlock))
+            {
+                //TODO when a block is rolled back i'll need to store information to allow the rollback to be replayed, and then look it up here
+                throw new Exception("TODO");
+            }
+
+            IEnumerable<BlockTx> blockTxes;
+            if (!this.coreStorage.TryReadBlockTransactions(replayBlock.Hash, replayBlock.MerkleRoot, /*requireTransaction:*/true, out blockTxes))
+            {
+                throw new MissingDataException(replayBlock.Hash);
+            }
+
+            this.chainState = chainState;
+            this.replayBlock = replayBlock;
+
+            this.txCache = new ConcurrentDictionary<UInt256, Transaction>();
+
+            this.pendingTxes = new ConcurrentBlockingQueue<TxWithPrevOutputKeys>();
+            this.loadedTxes = new ConcurrentBlockingQueue<TxWithPrevOutputs>();
+            //this.loadedTxInputs = new ConcurrentBlockingQueue<TxInputWithPrevOutput>();
+
+            this.pendingTxLoaderExceptions = new ConcurrentBag<Exception>();
+            this.txLoaderExceptions = new ConcurrentBag<Exception>();
+            //this.txValidatorExceptions = new ConcurrentBag<Exception>();
+            //this.scriptValidatorExceptions = new ConcurrentBag<Exception>();
+
+            this.pendingTxLoaderStopper = StartPendingTxLoader(blockTxes);
+            this.txLoaderStopper = StartTxLoader();
+            //this.txValidatorStopper = StartTxValidator(chainedHeader);
+            //this.scriptValidatorStopper = StartScriptValidator();
+
+            return new Stopper(this);
         }
 
         public IEnumerable<TxWithPrevOutputs> ReplayBlock()
         {
-            IEnumerable<BlockTx> blockTxes;
-            if (!this.coreStorage.TryReadBlockTransactions(this.replayBlock.Hash, this.replayBlock.MerkleRoot, /*requireTransaction:*/true, out blockTxes))
+            foreach (var tx in this.loadedTxes.GetConsumingEnumerable())
             {
-                throw new MissingDataException(this.replayBlock.Hash);
+                yield return tx;
             }
+        }
 
-            var txCache = new ConcurrentDictionary<UInt256, Transaction>();
+        //public void AddPendingTx(TxWithPrevOutputKeys pendingTx)
+        //{
+        //    this.pendingTxes.Add(pendingTx);
+        //}
 
-            var txIndex = -1;
-            foreach (var blockTx in blockTxes.LookAhead(10))
+        //public void CompleteAdding()
+        //{
+        //    this.pendingTxes.CompleteAdding();
+        //}
+
+        //public void WaitToComplete()
+        //{
+        //    this.txLoader.WaitToComplete();
+        //    this.txValidator.WaitToComplete();
+        //    this.scriptValidator.WaitToComplete();
+        //}
+
+        private void StopReplay()
+        {
+            this.pendingTxes.CompleteAdding();
+            this.loadedTxes.CompleteAdding();
+            //this.loadedTxInputs.CompleteAdding();
+
+            new IDisposable[]
             {
-                txIndex++;
+                this.pendingTxLoaderStopper,
+                this.txLoaderStopper,
+                //this.txValidatorStopper,
+                //this.scriptValidatorStopper,
+                this.pendingTxes,
+                this.loadedTxes,
+                //this.loadedTxInputs
+            }.DisposeList();
+
+            this.chainState = null;
+            this.replayBlock = null;
+            this.txCache = null;
+            this.pendingTxes = null;
+            this.loadedTxes = null;
+            //this.loadedTxInputs = null;
+            this.pendingTxLoaderStopper = null;
+            this.txLoaderStopper = null;
+            //this.txValidatorStopper = null;
+            //this.scriptValidatorStopper = null;
+            this.pendingTxLoaderExceptions = null;
+            this.txLoaderExceptions = null;
+            //this.txValidatorExceptions = null;
+            //this.scriptValidatorExceptions = null;
+        }
+
+        private IDisposable StartPendingTxLoader(IEnumerable<BlockTx> blockTxes)
+        {
+            return this.pendingTxLoader.Start(blockTxes.LookAhead(10),
+                blockTx =>
+                {
+                    var pendingTx = LoadPendingTx(blockTx);
+                    if (pendingTx != null)
+                        pendingTxes.Add(pendingTx);
+                },
+                () => pendingTxes.CompleteAdding());
+        }
+
+        private IDisposable StartTxLoader()
+        {
+            return this.txLoader.Start(pendingTxes.GetConsumingEnumerable(),
+                pendingTx =>
+                {
+                    var loadedTx = LoadPendingTx(pendingTx, txCache);
+                    if (loadedTx != null)
+                        loadedTxes.Add(loadedTx);
+                },
+                () => loadedTxes.CompleteAdding());
+        }
+
+        //TODO conflicting names
+        private TxWithPrevOutputKeys LoadPendingTx(BlockTx blockTx)
+        {
+            try
+            {
                 var tx = blockTx.Transaction;
+                var txIndex = blockTx.Index;
 
                 var prevOutputTxKeys = ImmutableArray.CreateBuilder<BlockTxKey>(tx.Inputs.Length);
 
@@ -103,237 +206,89 @@ namespace BitSharp.Core.Builders
                 }
 
                 var pendingTx = new TxWithPrevOutputKeys(txIndex, tx, this.replayBlock, prevOutputTxKeys.ToImmutable());
-
-                yield return LoadPendingTx(pendingTx, txCache);
+                return pendingTx;
+            }
+            catch (Exception e)
+            {
+                this.pendingTxLoaderExceptions.Add(e);
+                //TODO
+                return null;
             }
         }
 
-        //public ConcurrentBag<Exception> TxLoaderExceptions { get { return this.txLoaderExceptions; } }
-
-        //public ConcurrentBag<Exception> TxValidatorExceptions { get { return this.txValidatorExceptions; } }
-
-        //public ConcurrentBag<Exception> ScriptValidatorExceptions { get { return this.scriptValidatorExceptions; } }
-
-        //public IDisposable StartValidation(ChainedHeader chainedHeader)
-        //{
-        //    this.txCache = new ConcurrentDictionary<UInt256, Transaction>();
-
-        //    this.pendingTxes = new ConcurrentBlockingQueue<TxWithPrevOutputKeys>();
-        //    this.loadedTxes = new ConcurrentBlockingQueue<TxWithPrevOutputs>();
-        //    this.loadedTxInputs = new ConcurrentBlockingQueue<TxInputWithPrevOutput>();
-
-        //    this.txLoaderExceptions = new ConcurrentBag<Exception>();
-        //    this.txValidatorExceptions = new ConcurrentBag<Exception>();
-        //    this.scriptValidatorExceptions = new ConcurrentBag<Exception>();
-
-        //    this.txLoaderStopper = StartTxLoader();
-        //    this.txValidatorStopper = StartTxValidator(chainedHeader);
-        //    this.scriptValidatorStopper = StartScriptValidator();
-
-        //    return new Stopper(this);
-        //}
-
-        //public void AddPendingTx(TxWithPrevOutputKeys pendingTx)
-        //{
-        //    this.pendingTxes.Add(pendingTx);
-        //}
-
-        //public void CompleteAdding()
-        //{
-        //    this.pendingTxes.CompleteAdding();
-        //}
-
-        //public void WaitToComplete()
-        //{
-        //    this.txLoader.WaitToComplete();
-        //    this.txValidator.WaitToComplete();
-        //    this.scriptValidator.WaitToComplete();
-        //}
-
-        //private void StopValidation()
-        //{
-        //    this.pendingTxes.CompleteAdding();
-        //    this.loadedTxes.CompleteAdding();
-        //    this.loadedTxInputs.CompleteAdding();
-
-        //    new IDisposable[]
-        //    {
-        //        this.txLoaderStopper,
-        //        this.txValidatorStopper,
-        //        this.scriptValidatorStopper,
-        //        this.pendingTxes,
-        //        this.loadedTxes,
-        //        this.loadedTxInputs
-        //    }.DisposeList();
-
-        //    this.txCache = null;
-        //    this.pendingTxes = null;
-        //    this.loadedTxes = null;
-        //    this.loadedTxInputs = null;
-        //    this.txLoaderStopper = null;
-        //    this.txValidatorStopper = null;
-        //    this.scriptValidatorStopper = null;
-        //    this.txLoaderExceptions = null;
-        //    this.txValidatorExceptions = null;
-        //    this.scriptValidatorExceptions = null;
-        //}
-
-        //private IDisposable StartTxLoader()
-        //{
-        //    return this.txLoader.Start(pendingTxes.GetConsumingEnumerable(),
-        //        pendingTx =>
-        //        {
-        //            if (this.rules.BypassValidation)
-        //                return;
-
-        //            var loadedTx = LoadPendingTx(pendingTx, txCache);
-        //            if (loadedTx != null)
-        //                loadedTxes.Add(loadedTx);
-        //        },
-        //        () => loadedTxes.CompleteAdding());
-        //}
-
-        //private IDisposable StartTxValidator(ChainedHeader chainedHeader)
-        //{
-        //    return this.txValidator.Start(loadedTxes.GetConsumingEnumerable(),
-        //        loadedTx =>
-        //        {
-        //            if (!this.rules.IgnoreScripts)
-        //            {
-        //                var transaction = loadedTx.Transaction;
-        //                var txIndex = loadedTx.TxIndex;
-        //                var prevTxOutputs = loadedTx.PrevTxOutputs;
-
-        //                if (txIndex > 0)
-        //                {
-        //                    for (var inputIndex = 0; inputIndex < transaction.Inputs.Length; inputIndex++)
-        //                    {
-        //                        var txInput = transaction.Inputs[inputIndex];
-        //                        var prevTxOutput = prevTxOutputs[inputIndex];
-
-        //                        var txInputWithPrevOutput = new TxInputWithPrevOutput(chainedHeader, transaction, txIndex, txInput, inputIndex, prevTxOutput);
-        //                        loadedTxInputs.Add(txInputWithPrevOutput);
-        //                    }
-        //                }
-        //            }
-
-        //            ValidateTransaction(loadedTx);
-        //        },
-        //        () => loadedTxInputs.CompleteAdding());
-        //}
-
-        //private IDisposable StartScriptValidator()
-        //{
-        //    return this.scriptValidator.Start(loadedTxInputs.GetConsumingEnumerable(),
-        //        loadedTxInput =>
-        //        {
-        //            ValidateScript(loadedTxInput);
-        //        },
-        //        () => { });
-        //}
-
         private TxWithPrevOutputs LoadPendingTx(TxWithPrevOutputKeys pendingTx, ConcurrentDictionary<UInt256, Transaction> txCache)
         {
-            //try
-            //{
-            var txIndex = pendingTx.TxIndex;
-            var transaction = pendingTx.Transaction;
-            var chainedHeader = pendingTx.ChainedHeader;
-            var spentTxes = pendingTx.PrevOutputTxKeys;
-
-            var prevTxOutputs = ImmutableArray.CreateBuilder<TxOutput>(transaction.Inputs.Length);
-
-            // load previous transactions for each input, unless this is a coinbase transaction
-            if (txIndex > 0)
+            try
             {
-                for (var inputIndex = 0; inputIndex < transaction.Inputs.Length; inputIndex++)
+                var txIndex = pendingTx.TxIndex;
+                var transaction = pendingTx.Transaction;
+                var chainedHeader = pendingTx.ChainedHeader;
+                var spentTxes = pendingTx.PrevOutputTxKeys;
+
+                var prevTxOutputs = ImmutableArray.CreateBuilder<TxOutput>(transaction.Inputs.Length);
+
+                // load previous transactions for each input, unless this is a coinbase transaction
+                if (txIndex > 0)
                 {
-                    var input = transaction.Inputs[inputIndex];
-
-                    Transaction cachedPrevTx;
-                    if (txCache.TryGetValue(input.PreviousTxOutputKey.TxHash, out cachedPrevTx))
+                    for (var inputIndex = 0; inputIndex < transaction.Inputs.Length; inputIndex++)
                     {
-                        var prevTxOutput = cachedPrevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
-                        prevTxOutputs.Add(prevTxOutput);
-                    }
-                    else
-                    {
-                        var spentTx = spentTxes[inputIndex];
+                        var input = transaction.Inputs[inputIndex];
 
-                        Transaction prevTx;
-                        if (this.coreStorage.TryGetTransaction(spentTx.BlockHash, spentTx.TxIndex, out prevTx))
+                        Transaction cachedPrevTx;
+                        if (txCache.TryGetValue(input.PreviousTxOutputKey.TxHash, out cachedPrevTx))
                         {
-                            if (input.PreviousTxOutputKey.TxHash != prevTx.Hash)
-                                throw new Exception("TODO");
-
-                            txCache.TryAdd(prevTx.Hash, prevTx);
-
-                            var prevTxOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
+                            var prevTxOutput = cachedPrevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
                             prevTxOutputs.Add(prevTxOutput);
                         }
                         else
                         {
-                            throw new Exception("TODO");
+                            var spentTx = spentTxes[inputIndex];
+
+                            Transaction prevTx;
+                            if (this.coreStorage.TryGetTransaction(spentTx.BlockHash, spentTx.TxIndex, out prevTx))
+                            {
+                                if (input.PreviousTxOutputKey.TxHash != prevTx.Hash)
+                                    throw new Exception("TODO");
+
+                                txCache.TryAdd(prevTx.Hash, prevTx);
+
+                                var prevTxOutput = prevTx.Outputs[input.PreviousTxOutputKey.TxOutputIndex.ToIntChecked()];
+                                prevTxOutputs.Add(prevTxOutput);
+                            }
+                            else
+                            {
+                                throw new Exception("TODO");
+                            }
                         }
                     }
+
+                    Debug.Assert(prevTxOutputs.Count == transaction.Inputs.Length);
                 }
 
-                Debug.Assert(prevTxOutputs.Count == transaction.Inputs.Length);
+                var txWithPrevOutputs = new TxWithPrevOutputs(txIndex, transaction, chainedHeader, prevTxOutputs.ToImmutableArray());
+                return txWithPrevOutputs;
             }
-
-            var txWithPrevOutputs = new TxWithPrevOutputs(txIndex, transaction, chainedHeader, prevTxOutputs.ToImmutableArray());
-            return txWithPrevOutputs;
-            //}
-            //catch (Exception e)
-            //{
-            //    this.txLoaderExceptions.Add(e);
-            //    //TODO
-            //    return null;
-            //}
+            catch (Exception e)
+            {
+                this.txLoaderExceptions.Add(e);
+                //TODO
+                return null;
+            }
         }
 
-        //private void ValidateTransaction(TxWithPrevOutputs loadedTx)
-        //{
-        //    try
-        //    {
-        //        var chainedHeader = loadedTx.ChainedHeader;
-        //        var transaction = loadedTx.Transaction;
-        //        var txIndex = loadedTx.TxIndex;
-        //        var prevTxOutputs = loadedTx.PrevTxOutputs;
+        private sealed class Stopper : IDisposable
+        {
+            private readonly BlockReplayer blockReplayer;
 
-        //        this.rules.ValidateTransaction(chainedHeader, transaction, txIndex, prevTxOutputs);
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        this.txValidatorExceptions.Add(e);
-        //    }
-        //}
+            public Stopper(BlockReplayer blockReplayer)
+            {
+                this.blockReplayer = blockReplayer;
+            }
 
-        //private void ValidateScript(TxInputWithPrevOutput loadedTxInput)
-        //{
-        //    try
-        //    {
-        //        this.rules.ValidationTransactionScript(loadedTxInput.ChainedHeader, loadedTxInput.Transaction, loadedTxInput.TxIndex, loadedTxInput.TxInput, loadedTxInput.InputIndex, loadedTxInput.PrevTxOutput);
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        this.scriptValidatorExceptions.Add(e);
-        //    }
-        //}
-
-        //private sealed class Stopper : IDisposable
-        //{
-        //    private readonly BlockValidator blockValidator;
-
-        //    public Stopper(BlockValidator blockValidator)
-        //    {
-        //        this.blockValidator = blockValidator;
-        //    }
-
-        //    public void Dispose()
-        //    {
-        //        this.blockValidator.StopValidation();
-        //    }
-        //}
+            public void Dispose()
+            {
+                this.blockReplayer.StopReplay();
+            }
+        }
     }
 }
