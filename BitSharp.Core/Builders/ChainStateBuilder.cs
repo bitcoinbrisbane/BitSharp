@@ -148,7 +148,7 @@ namespace BitSharp.Core.Builders
                         if (!this.rules.IgnoreScriptErrors)
                             throw new AggregateException(this.blockValidator.ScriptValidatorExceptions);
                         else
-                            this.logger.Info("Ignoring script errors in block: {0,9:#,##0}, errors: {1:#,##0}".Format2(chainedHeader.Height, this.blockValidator.ScriptValidatorExceptions.Count));
+                            this.logger.Debug("Ignoring script errors in block: {0,9:#,##0}, errors: {1:#,##0}".Format2(chainedHeader.Height, this.blockValidator.ScriptValidatorExceptions.Count));
                     }
                 }
 
