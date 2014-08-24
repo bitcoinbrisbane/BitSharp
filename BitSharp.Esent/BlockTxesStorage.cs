@@ -151,7 +151,7 @@ namespace BitSharp.Esent
                             if (txHash != new UInt256(sha256.ComputeDoubleHash(txBytes)))
                                 throw new MissingDataException(blockHash);
 
-                            tx = DataEncoder.DecodeTransaction(txBytes);
+                            tx = DataEncoder.DecodeTransaction(txBytes, txHash);
                         }
                         else
                         {
@@ -190,7 +190,13 @@ namespace BitSharp.Esent
                         var txBytes = Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxBytesColumnId);
                         if (txBytes != null)
                         {
-                            transaction = DataEncoder.DecodeTransaction(txBytes);
+                            // verify transaction is not corrupt
+                            var sha256 = new SHA256Managed();
+                            var txHash = DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
+                            if (txHash != new UInt256(sha256.ComputeDoubleHash(txBytes)))
+                                throw new MissingDataException(blockHash);
+
+                            transaction = DataEncoder.DecodeTransaction(txBytes, txHash);
                             return true;
                         }
                         else
