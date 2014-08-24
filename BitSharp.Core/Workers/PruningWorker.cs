@@ -46,6 +46,8 @@ namespace BitSharp.Core.Workers
 
         public PruningMode Mode { get; set; }
 
+        public int PrunableHeight { get; set; }
+
         protected override void WorkAction()
         {
             if (this.Mode == PruningMode.None)
@@ -56,7 +58,7 @@ namespace BitSharp.Core.Workers
 
             var chain = this.chainStateBuilder.Chain;
             var minHeight = this.lastPruneHeight + 1;
-            var maxHeight = chain.Height - pruneBuffer;
+            var maxHeight = Math.Min(chain.Height - pruneBuffer, this.PrunableHeight);
 
             if (maxHeight <= minHeight)
                 return;
@@ -234,8 +236,8 @@ namespace BitSharp.Core.Workers
                     break;
             }
 
-            this.chainStateWorker.Start();
-            this.chainStateWorker.NotifyWork();
+            //this.chainStateWorker.Start();
+            //this.chainStateWorker.NotifyWork();
         }
     }
 }

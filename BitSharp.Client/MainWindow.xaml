@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:BitSharp.Client"
         DataContext="{Binding ViewModel}"
-        Title="BitSharp 0.0.0" Height="240" Width="536" WindowStartupLocation="CenterScreen">
+        Title="BitSharp 0.0.0" Height="470" Width="536" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <Style TargetType="ListViewItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -68,9 +68,12 @@
                 </GridView>
             </ListView.View>
         </ListView>
-        <Label Content="Wallet Entries:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,200,0,0"/>
-        <Label Content="{Binding WalletEntries.Count}" ContentStringFormat="#,##0" HorizontalContentAlignment="Right" HorizontalAlignment="Left" Margin="106,200,0,0" VerticalAlignment="Top" Width="75"/>
-        <Label Content="Balance:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="200,200,0,0"/>
-        <Label Content="{Binding BitBalance}" ContentStringFormat="#,##0.00ƀ" HorizontalContentAlignment="Right" HorizontalAlignment="Left" Margin="256,200,0,0" VerticalAlignment="Top" Width="175"/>
+        
+        <Label Content="Wallet Height:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,200,0,0"/>
+        <Label Content="{Binding WalletHeight}" ContentStringFormat="#,##0" HorizontalContentAlignment="Right" HorizontalAlignment="Left" Margin="106,200,0,0" VerticalAlignment="Top" Width="75"/>
+        <Label Content="Wallet Entries:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="185,200,0,0"/>
+        <Label Content="{Binding WalletEntries.Count}" ContentStringFormat="#,##0" HorizontalContentAlignment="Right" HorizontalAlignment="Left" Margin="271,200,0,0" VerticalAlignment="Top" Width="75"/>
+        <Label Content="Balance:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="360,200,0,0"/>
+        <Label Content="{Binding BtcBalance}" ContentStringFormat="#,##0.00Ƀ" HorizontalContentAlignment="Right" HorizontalAlignment="Left" Margin="416,200,0,0" VerticalAlignment="Top" Width="100"/>
     </Grid>
 </Window>

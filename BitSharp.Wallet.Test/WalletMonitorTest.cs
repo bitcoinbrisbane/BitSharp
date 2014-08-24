@@ -30,9 +30,6 @@ namespace BitSharp.Wallet.Test
         [TestMethod]
         public void TestMonitorAddress()
         {
-            if (Debugger.IsAttached)
-                Assert.Inconclusive();
-
             var sha256 = new SHA256Managed();
 
             //var publicKey =
@@ -43,12 +40,11 @@ namespace BitSharp.Wallet.Test
                 "04f9804cfb86fb17441a6562b07c4ee8f012bdb2da5be022032e4b87100350ccc7c0f4d47078b06c9d22b0ec10bdce4c590e0d01aed618987a6caa8c94d74ee6dc"
                 .HexToByteArray().ToImmutableArray();
 
-            var walletMonitor = new WalletMonitor(LogManager.CreateNullLogger());
-            walletMonitor.AddAddress(new PublicKeyAddress(publicKey));
-
             using (var simulator = new MainnetSimulator())
+            using (var walletMonitor = new WalletMonitor(simulator.CoreDaemon, LogManager.CreateNullLogger()))
             {
-                simulator.CoreDaemon.SubscribeChainStateVisitor(walletMonitor);
+                walletMonitor.AddAddress(new PublicKeyAddress(publicKey));
+                walletMonitor.Start();
 
                 var block9999 = simulator.BlockProvider.GetBlock(9999);
 

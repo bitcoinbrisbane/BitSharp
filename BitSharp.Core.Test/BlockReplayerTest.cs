@@ -26,15 +26,16 @@ namespace BitSharp.Core.Test
 
                 simulator.WaitForUpdate();
 
-                var chain = simulator.CoreDaemon.CurrentChain;
-
-                for (var blockHeight = 0; blockHeight <= chain.Height; blockHeight++)
+                using (var chainState = simulator.CoreDaemon.GetChainState())
                 {
-                    var expectedTransactions = simulator.BlockProvider.GetBlock(blockHeight).Transactions;
+                    for (var blockHeight = 0; blockHeight <= chainState.Chain.Height; blockHeight++)
+                    {
+                        var expectedTransactions = simulator.BlockProvider.GetBlock(blockHeight).Transactions;
 
-                    var actualTransactions = simulator.CoreDaemon.ReplayBlock(chain.Blocks[blockHeight].Hash).ToList();
+                        var actualTransactions = simulator.CoreDaemon.ReplayBlock(chainState, chainState.Chain.Blocks[blockHeight].Hash).ToList();
 
-                    CollectionAssert.AreEqual(expectedTransactions, actualTransactions, new TxHashComparer(), "Transactions differ at block {0:#,##0}".Format2(blockHeight));
+                        CollectionAssert.AreEqual(expectedTransactions, actualTransactions, new TxHashComparer(), "Transactions differ at block {0:#,##0}".Format2(blockHeight));
+                    }
                 }
             }
         }

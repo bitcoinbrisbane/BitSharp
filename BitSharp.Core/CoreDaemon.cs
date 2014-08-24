@@ -120,6 +120,8 @@ namespace BitSharp.Core
 
         public CoreStorage CoreStorage { get { return this.coreStorage; } }
 
+        public IBlockchainRules Rules { get { return this.rules; } }
+
         public Chain TargetChain { get { return this.targetChainWorker.TargetChain; } }
 
         public int TargetChainHeight
@@ -143,6 +145,12 @@ namespace BitSharp.Core
         {
             get { return this.pruningWorker.Mode; }
             set { this.pruningWorker.Mode = value; }
+        }
+
+        public int PrunableHeight
+        {
+            get { return this.pruningWorker.PrunableHeight; }
+            set { this.pruningWorker.PrunableHeight = value; }
         }
 
         public float GetBlockRate(TimeSpan perUnitTime)
@@ -210,22 +218,19 @@ namespace BitSharp.Core
             throw new NotImplementedException();
         }
 
-        public IEnumerable<TxWithPrevOutputs> ReplayBlock(UInt256 blockHash)
+        public IEnumerable<TxWithPrevOutputs> ReplayBlock(IChainState chainState, UInt256 blockHash)
         {
-            using (var chainState = this.GetChainState())
+            ChainedHeader replayBlock;
+            if (!chainState.Chain.BlocksByHash.TryGetValue(blockHash, out replayBlock))
             {
-                ChainedHeader replayBlock;
-                if (!chainState.Chain.BlocksByHash.TryGetValue(blockHash, out replayBlock))
-                {
-                    //TODO when a block is rolled back i'll need to store information to allow the rollback to be replayed, and then look it up here
-                    throw new Exception("TODO");
-                }
+                //TODO when a block is rolled back i'll need to store information to allow the rollback to be replayed, and then look it up here
+                throw new Exception("TODO");
+            }
 
-                using (var blockReplayer = new BlockReplayer(chainState, replayBlock, this.coreStorage, this.rules, this.logger))
-                {
-                    foreach (var replayItem in blockReplayer.ReplayBlock())
-                        yield return replayItem;
-                }
+            using (var blockReplayer = new BlockReplayer(chainState, replayBlock, this.coreStorage, this.rules, this.logger))
+            {
+                foreach (var replayItem in blockReplayer.ReplayBlock())
+                    yield return replayItem;
             }
         }
 

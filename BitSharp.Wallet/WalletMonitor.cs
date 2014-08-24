@@ -1,5 +1,7 @@
 ﻿using BitSharp.Common;
 using BitSharp.Common.ExtensionMethods;
+using BitSharp.Core;
+using BitSharp.Core.Builders;
 using BitSharp.Core.Domain;
 using BitSharp.Core.Monitor;
 using NLog;
@@ -9,6 +11,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,9 +23,13 @@ namespace BitSharp.Wallet
     //TODO i could potentially use the saved blocks & stored rollback information to replay any blocks that the wallet is behind on
     //TODO this would be useful to have in general, as wallets could then be turned off & on and then catch up properly
 
-    public class WalletMonitor : ChainStateVisitorBase
+    public class WalletMonitor : Worker
     {
         private readonly Logger logger;
+        private readonly CoreDaemon coreDaemon;
+
+        private ChainBuilder chainBuilder;
+        private int walletHeight;
 
         // addresses
         private readonly Dictionary<UInt256, List<MonitoredWalletAddress>> addressesByOutputScriptHash;
@@ -36,15 +43,29 @@ namespace BitSharp.Wallet
 
         private decimal bitBalance;
 
-        public WalletMonitor(Logger logger)
+        public WalletMonitor(CoreDaemon coreDaemon, Logger logger)
+            : base("WalletMonitor", initialNotify: true, minIdleTime: TimeSpan.FromMilliseconds(100), maxIdleTime: TimeSpan.MaxValue, logger: logger)
         {
             this.logger = logger;
+            this.coreDaemon = coreDaemon;
+
+            this.chainBuilder = Chain.CreateForGenesisBlock(coreDaemon.Rules.GenesisChainedHeader).ToBuilder();
+
             this.addressesByOutputScriptHash = new Dictionary<UInt256, List<MonitoredWalletAddress>>();
             this.matcherAddresses = new List<MonitoredWalletAddress>();
             this.entries = ImmutableList.CreateBuilder<WalletEntry>();
             this.entriesLock = new ReaderWriterLockSlim();
             this.bitBalance = 0;
+
+            this.coreDaemon.OnChainStateChanged += HandleChainStateChanged;
         }
+
+        protected override void SubDispose()
+        {
+            this.coreDaemon.OnChainStateChanged -= HandleChainStateChanged;
+        }
+
+        public event Action OnScanned;
 
         public event Action<WalletEntry> OnEntryAdded;
 
@@ -57,6 +78,11 @@ namespace BitSharp.Wallet
             }
         }
 
+        public int WalletHeight
+        {
+            get { return this.walletHeight; }
+        }
+
         public decimal BitBalance
         {
             get
@@ -64,6 +90,11 @@ namespace BitSharp.Wallet
                 return this.entriesLock.DoRead(() =>
                     this.bitBalance);
             }
+        }
+
+        public decimal BtcBalance
+        {
+            get { return this.BitBalance / 1.MILLION(); }
         }
 
         //TODO thread safety
@@ -92,14 +123,82 @@ namespace BitSharp.Wallet
             }
         }
 
-        public override void MintTxOutput(ChainPosition chainPosition, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash, bool isCoinbase)
+        protected override void WorkAction()
         {
-            this.ScanForEntry(chainPosition, isCoinbase ? EnumWalletEntryType.Mine : EnumWalletEntryType.Receive, txOutput, outputScriptHash);
+            using (var chainState = this.coreDaemon.GetChainState())
+            {
+                var stopwatch = Stopwatch.StartNew();
+                foreach (var pathElement in this.chainBuilder.NavigateTowards(chainState.Chain))
+                {
+                    // cooperative loop
+                    this.ThrowIfCancelled();
+
+                    // get block and metadata for next link in blockchain
+                    var direction = pathElement.Item1;
+                    var chainedHeader = pathElement.Item2;
+
+                    var blockStopwatch = Stopwatch.StartNew();
+                    if (direction > 0)
+                    {
+                        try
+                        {
+                            ScanBlock(chainState, chainedHeader);
+                        }
+                        catch (MissingDataException)
+                        {
+                            //TODO no wallet state is saved, so missing data will be thrown when started up again due to pruning
+                        }
+
+                        this.chainBuilder.AddBlock(chainedHeader);
+                    }
+                    else if (direction < 0)
+                    {
+                        // TODO i need to store the info to replay a rolled back block
+                        throw new Exception("TODO");
+                    }
+                    else
+                    {
+                        Debugger.Break();
+                        throw new InvalidOperationException();
+                    }
+
+                    this.walletHeight = chainedHeader.Height;
+                    this.coreDaemon.PrunableHeight = this.walletHeight;
+
+                    var handler = this.OnScanned;
+                    if (handler != null)
+                        handler();
+
+                    // limit how long the chain state snapshot will be kept open
+                    if (stopwatch.Elapsed > TimeSpan.FromSeconds(15))
+                    {
+                        this.NotifyWork();
+                        return;
+                    }
+                }
+            }
         }
 
-        public override void SpendTxOutput(ChainPosition chainPosition, ChainedHeader chainedHeader, Transaction tx, TxInput txInput, TxOutputKey txOutputKey, TxOutput txOutput, UInt256 outputScriptHash)
+        private void ScanBlock(IChainState chainState, ChainedHeader scanBlock)
         {
-            this.ScanForEntry(chainPosition, EnumWalletEntryType.Spend, txOutput, outputScriptHash);
+            var sha256 = new SHA256Managed();
+
+            foreach (var txWithPrevOutputs in this.coreDaemon.ReplayBlock(chainState, scanBlock.Hash))
+            {
+                var tx = txWithPrevOutputs.Transaction;
+                var txIndex = txWithPrevOutputs.TxIndex;
+
+                for (var outputIndex = 0; outputIndex < tx.Outputs.Length; outputIndex++)
+                {
+                    var output = tx.Outputs[outputIndex];
+                    var outputScriptHash = new UInt256(sha256.ComputeHash(output.ScriptPublicKey.ToArray()));
+
+                    var chainPosition = ChainPosition.Fake();
+                    var entryType = txIndex == 0 ? EnumWalletEntryType.Mine : EnumWalletEntryType.Receive;
+
+                    ScanForEntry(chainPosition, entryType, output, outputScriptHash);
+                }
+            }
         }
 
         private void ScanForEntry(ChainPosition chainPosition, EnumWalletEntryType walletEntryType, TxOutput txOutput, UInt256 outputScriptHash)
@@ -145,6 +244,11 @@ namespace BitSharp.Wallet
                 if (handler != null)
                     handler(entry);
             }
+        }
+
+        private void HandleChainStateChanged(object sender, EventArgs e)
+        {
+            this.NotifyWork();
         }
     }
 }

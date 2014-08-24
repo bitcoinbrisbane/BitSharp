@@ -47,8 +47,10 @@ namespace BitSharp.Client
         private int duplicateBlockDownloadCount;
         private int blockMissCount;
 
+        private int walletHeight;
         private readonly WalletMonitor walletMonitor;
         private decimal bitBalance;
+        private decimal btcBalance;
         private readonly Dispatcher dispatcher;
 
         public MainWindowViewModel(IKernel kernel, WalletMonitor walletMonitor = null)
@@ -109,6 +111,7 @@ namespace BitSharp.Client
             {
                 this.walletMonitor = walletMonitor;
                 this.WalletEntries = new ObservableCollection<WalletEntry>();
+                this.walletMonitor.OnScanned += HandleWalletScanned;
                 this.walletMonitor.OnEntryAdded += HandleOnWalletEntryAdded;
             }
         }
@@ -196,12 +199,24 @@ namespace BitSharp.Client
 
         public IList<TxOutputKey> ViewBlockchainReceiveOutputs { get; protected set; }
 
+        public int WalletHeight
+        {
+            get { return this.walletHeight; }
+            set { SetValue(ref this.walletHeight, value); }
+        }
+
         public ObservableCollection<WalletEntry> WalletEntries { get; protected set; }
 
         public decimal BitBalance
         {
             get { return this.bitBalance; }
             set { SetValue(ref this.bitBalance, value); }
+        }
+
+        public decimal BtcBalance
+        {
+            get { return this.btcBalance; }
+            set { SetValue(ref this.btcBalance, value); }
         }
 
         public void ViewBlockchainFirst()
@@ -315,12 +330,18 @@ namespace BitSharp.Client
             }
         }
 
+        private void HandleWalletScanned()
+        {
+            this.WalletHeight = this.walletMonitor.WalletHeight;
+        }
+
         private void HandleOnWalletEntryAdded(WalletEntry walletEntry)
         {
             this.dispatcher.BeginInvoke((Action)(() =>
                 this.WalletEntries.Insert(0, walletEntry)));
 
             this.BitBalance = this.walletMonitor.BitBalance;
+            this.BtcBalance = this.walletMonitor.BtcBalance;
         }
 
         private void SetValue<T>(ref T currentValue, T newValue, [CallerMemberName] string propertyName = "") where T : IEquatable<T>

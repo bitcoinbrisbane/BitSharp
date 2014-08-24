@@ -1,5 +1,5 @@
 ﻿//#define MEMORY
-//#define DUMMY_MONITOR
+#define DUMMY_MONITOR
 
 using BitSharp.Common.ExtensionMethods;
 using BitSharp.Node;
@@ -40,6 +40,7 @@ namespace BitSharp.Client
         private IKernel kernel;
         private Logger logger;
         private CoreDaemon coreDaemon;
+        private DummyMonitor dummyMonitor;
         private LocalClient localClient;
         private MainWindowViewModel viewModel;
 
@@ -126,9 +127,10 @@ namespace BitSharp.Client
                 this.coreDaemon.PruningMode = enablePruning ? PruningMode.RollbackAndBlocks : PruningMode.RollbackOnly;
                 this.kernel.Bind<CoreDaemon>().ToConstant(this.coreDaemon).InTransientScope();
 
+                // initialize dummy wallet monitor
+                this.dummyMonitor = new DummyMonitor(this.coreDaemon, this.logger);
 #if DUMMY_MONITOR
-                var dummyMonitor = new DummyMonitor(this.logger);
-                blockchainDaemon.SubscribeChainStateVisitor(dummyMonitor);
+                this.dummyMonitor.Start();
 #endif
 
                 // initialize p2p client
@@ -204,6 +206,7 @@ namespace BitSharp.Client
             new IDisposable[]
             {
                 this.localClient,
+                this.dummyMonitor,
                 this.coreDaemon,
                 this.kernel
             }.DisposeList();
@@ -233,16 +236,14 @@ namespace BitSharp.Client
             this.viewModel.ViewBlockchainLast();
         }
 
-#if DUMMY_MONITOR
         private sealed class DummyMonitor : WalletMonitor
         {
-            public DummyMonitor(Logger logger)
-                : base(logger)
+            public DummyMonitor(CoreDaemon coreDaemon, Logger logger)
+                : base(coreDaemon, logger)
             {
                 this.AddAddress(new First10000Address());
                 this.AddAddress(new Top10000Address());
             }
         }
-#endif
     }
 }
