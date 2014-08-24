@@ -113,7 +113,6 @@
     <Compile Include="Domain\BlockHeaderTest.cs" />
     <Compile Include="Domain\ChainedHeaderTest.cs" />
     <Compile Include="JsonRpc\CoreRpcServerTest.cs" />
-    <Compile Include="Monitor\ChainStateMonitorTest.cs" />
     <Compile Include="RandomData.cs" />
     <Compile Include="Domain\TxOutputKeyTest.cs" />
     <Compile Include="ExtensionMethods.cs" />

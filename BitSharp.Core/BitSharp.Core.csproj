@@ -135,10 +135,7 @@
     <Compile Include="IMerkleTreePruningCursor.cs" />
     <Compile Include="JsonRpc\CoreRpcServer.cs" />
     <Compile Include="Domain\MerkleTreeNode.cs" />
-    <Compile Include="Monitor\ChainStateMonitor.cs" />
     <Compile Include="Monitor\ChainPosition.cs" />
-    <Compile Include="Monitor\ChainStateVisitorBase.cs" />
-    <Compile Include="Monitor\IChainStateVisitor.cs" />
     <Compile Include="Rules\IBlockchainRules.cs" />
     <Compile Include="Rules\MainnetRules.cs" />
     <Compile Include="Rules\RulesModule.cs" />

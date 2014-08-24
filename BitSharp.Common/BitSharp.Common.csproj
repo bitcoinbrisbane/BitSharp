@@ -87,7 +87,6 @@
     <Compile Include="ImmutableBitArray.cs" />
     <Compile Include="ConsoleLoggingModule.cs" />
     <Compile Include="LookAhead.cs" />
-    <Compile Include="BlockingCollectionWorker.cs" />
     <Compile Include="ParallelConsumer.cs" />
     <Compile Include="ConcurrentBlockingQueue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

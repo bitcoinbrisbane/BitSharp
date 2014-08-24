@@ -213,11 +213,6 @@ namespace BitSharp.Core
             return this.chainStateBuilder.ToImmutable();
         }
 
-        public IDisposable SubscribeChainStateVisitor(IChainStateVisitor visitor)
-        {
-            throw new NotImplementedException();
-        }
-
         public IEnumerable<TxWithPrevOutputs> ReplayBlock(IChainState chainState, UInt256 blockHash)
         {
             ChainedHeader replayBlock;
