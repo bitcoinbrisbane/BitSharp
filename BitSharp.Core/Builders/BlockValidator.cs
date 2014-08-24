@@ -49,9 +49,9 @@ namespace BitSharp.Core.Builders
             // thread count for cpu tasks (TxValidator, ScriptValidator)
             var cpuThreadCount = Environment.ProcessorCount * 2;
 
-            this.txLoader = new ParallelConsumer<TxWithPrevOutputKeys>("ChainStateBuilder.TxLoader", ioThreadCount, logger);
-            this.txValidator = new ParallelConsumer<TxWithPrevOutputs>("ChainStateBuilder.TxValidator", cpuThreadCount, logger);
-            this.scriptValidator = new ParallelConsumer<TxInputWithPrevOutput>("ChainStateBuilder.ScriptValidator", cpuThreadCount, logger);
+            this.txLoader = new ParallelConsumer<TxWithPrevOutputKeys>("BlockValidator.TxLoader", ioThreadCount, logger);
+            this.txValidator = new ParallelConsumer<TxWithPrevOutputs>("BlockValidator.TxValidator", cpuThreadCount, logger);
+            this.scriptValidator = new ParallelConsumer<TxInputWithPrevOutput>("BlockValidator.ScriptValidator", cpuThreadCount, logger);
         }
 
         public void Dispose()
