@@ -161,7 +161,8 @@ namespace BitSharp.Esent
                         var blockTx = new BlockTx(txIndex, depth, txHash, pruned, tx);
 
                         yield return blockTx;
-                    } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));
+                    }
+                    while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId));
                 }
             }
         }
@@ -490,7 +491,8 @@ namespace BitSharp.Esent
                             do
                             {
                                 Api.JetDelete(cursor.jetSession, cursor.blocksTableId);
-                            } while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId)
+                            }
+                            while (Api.TryMoveNext(cursor.jetSession, cursor.blocksTableId)
                                 && blockId == Api.RetrieveColumnAsInt32(cursor.jetSession, cursor.blocksTableId, cursor.blockIdColumnId).Value);
                         }
 

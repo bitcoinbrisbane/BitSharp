@@ -180,7 +180,8 @@ namespace BitSharp.Esent
                             var chainedHeader = DataEncoder.DecodeChainedHeader(Api.RetrieveColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderBytesColumnId));
                             return chainedHeader;
                         }
-                    } while (Api.TryMoveNext(cursor.jetSession, cursor.blockHeadersTableId));
+                    }
+                    while (Api.TryMoveNext(cursor.jetSession, cursor.blockHeadersTableId));
                 }
 
                 // no valid chained header found
@@ -203,7 +204,8 @@ namespace BitSharp.Esent
                         // decode chained header and return
                         var chainedHeader = DataEncoder.DecodeChainedHeader(Api.RetrieveColumn(cursor.jetSession, cursor.blockHeadersTableId, cursor.blockHeaderBytesColumnId));
                         yield return chainedHeader;
-                    } while (Api.TryMoveNext(cursor.jetSession, cursor.blockHeadersTableId));
+                    }
+                    while (Api.TryMoveNext(cursor.jetSession, cursor.blockHeadersTableId));
                 }
             }
         }

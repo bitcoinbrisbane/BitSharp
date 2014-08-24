@@ -110,7 +110,8 @@ namespace BitSharp.Core.Storage
                     nodeToLeft = this.parentCursor.ReadNode();
                 else
                     nodeToLeft = null;
-                //} while (nodeToLeft != null); // && this.deletedIndices.Contains(nodeToLeft.Index));
+                //}
+                //while (nodeToLeft != null); // && this.deletedIndices.Contains(nodeToLeft.Index));
 
                 this.indicesToLeft[this.currentIndex] = (nodeToLeft != null ? nodeToLeft.Index : (int?)null);
                 if (nodeToLeft != null)
@@ -169,7 +170,8 @@ namespace BitSharp.Core.Storage
                     nodeToRight = this.parentCursor.ReadNode();
                 else
                     nodeToRight = null;
-                //} while (nodeToRight != null); // && this.deletedIndices.Contains(nodeToRight.Index));
+                //}
+                //while (nodeToRight != null); // && this.deletedIndices.Contains(nodeToRight.Index));
 
                 this.indicesToRight[this.currentIndex] = (nodeToRight != null ? nodeToRight.Index : (int?)null);
                 if (nodeToRight != null)

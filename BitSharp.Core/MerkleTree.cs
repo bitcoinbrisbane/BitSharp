@@ -84,7 +84,8 @@ namespace BitSharp.Core
                         }
                     }
                 }
-            } while (didWork);
+            }
+            while (didWork);
         }
 
         public static UInt256 CalculateMerkleRoot(IEnumerable<Transaction> transactions)

@@ -97,7 +97,8 @@ namespace BitSharp.Common
                 }
 
                 // otherwise, wait for additional items to be added and continue
-            } while (this.workEvent.WaitOne());
+            }
+            while (this.workEvent.WaitOne());
         }
 
         private void CheckDisposed()
