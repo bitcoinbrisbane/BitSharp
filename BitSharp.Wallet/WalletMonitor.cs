@@ -194,6 +194,21 @@ namespace BitSharp.Wallet
                     var tx = txWithPrevOutputs.Transaction;
                     var txIndex = txWithPrevOutputs.TxIndex;
 
+                    if (txIndex > 0)
+                    {
+                        for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+                        {
+                            var input = tx.Inputs[inputIndex];
+                            var prevOutput = txWithPrevOutputs.PrevTxOutputs[inputIndex];
+                            var prevOutputScriptHash = new UInt256(sha256.ComputeHash(prevOutput.ScriptPublicKey.ToArray()));
+
+                            var chainPosition = ChainPosition.Fake();
+                            var entryType = EnumWalletEntryType.Spend;
+
+                            ScanForEntry(chainPosition, entryType, prevOutput, prevOutputScriptHash);
+                        }
+                    }
+
                     for (var outputIndex = 0; outputIndex < tx.Outputs.Length; outputIndex++)
                     {
                         var output = tx.Outputs[outputIndex];
