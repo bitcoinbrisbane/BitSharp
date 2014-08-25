@@ -49,6 +49,7 @@ namespace BitSharp.Client
 
         private int walletHeight;
         private readonly WalletMonitor walletMonitor;
+        private int walletEntriesCount;
         private decimal bitBalance;
         private decimal btcBalance;
         private readonly Dispatcher dispatcher;
@@ -207,6 +208,12 @@ namespace BitSharp.Client
 
         public ObservableCollection<WalletEntry> WalletEntries { get; protected set; }
 
+        public int WalletEntriesCount
+        {
+            get { return this.walletEntriesCount; }
+            set { SetValue(ref this.walletEntriesCount, value); }
+        }
+
         public decimal BitBalance
         {
             get { return this.bitBalance; }
@@ -337,9 +344,10 @@ namespace BitSharp.Client
 
         private void HandleOnWalletEntryAdded(WalletEntry walletEntry)
         {
-            this.dispatcher.BeginInvoke((Action)(() =>
-                this.WalletEntries.Insert(0, walletEntry)));
+            //this.dispatcher.BeginInvoke((Action)(() =>
+            //    this.WalletEntries.Insert(0, walletEntry)));
 
+            this.WalletEntriesCount++;
             this.BitBalance = this.walletMonitor.BitBalance;
             this.BtcBalance = this.walletMonitor.BtcBalance;
         }
