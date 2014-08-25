@@ -31,8 +31,9 @@ namespace BitSharp.Common
         // the pool of worker threads where the source items will be consumed
         private readonly WorkerMethod[] consumeWorkers;
 
-        // event to track when reading and consuming have been completed
-        private readonly ManualResetEventSlim completedEvent = new ManualResetEventSlim(false);
+        // events to track when reading and consuming have been completed
+        private readonly ManualResetEventSlim completedReadingEvent = new ManualResetEventSlim(false);
+        private readonly ManualResetEventSlim completedConsumingEvent = new ManualResetEventSlim(false);
 
         // the source enumerable to read
         private IEnumerable<T> source;
@@ -93,7 +94,8 @@ namespace BitSharp.Common
             new IDisposable[]
             {
                 this.readWorker,
-                this.completedEvent,
+                this.completedReadingEvent,
+                this.completedConsumingEvent,
                 this.queue
             }.DisposeList();
 
@@ -128,7 +130,8 @@ namespace BitSharp.Common
             this.consumeCompletedCount = 0;
 
             // set to the started state
-            this.completedEvent.Reset();
+            this.completedReadingEvent.Reset();
+            this.completedConsumingEvent.Reset();
             this.isStarted = true;
 
             // notify the read worker to begin
@@ -152,7 +155,8 @@ namespace BitSharp.Common
                 throw new InvalidOperationException();
 
             // wait for reading and consuming to completed
-            this.completedEvent.Wait();
+            this.completedReadingEvent.Wait();
+            this.completedConsumingEvent.Wait();
 
             // if any exceptions were thrown, rethrow them here
             if (this.exceptions.Count > 0)
@@ -166,7 +170,8 @@ namespace BitSharp.Common
 
             // wait for the completed state
             this.isStarted = false;
-            this.completedEvent.Wait();
+            this.completedReadingEvent.Wait();
+            this.completedConsumingEvent.Wait();
 
             // dispose the queue
             this.queue.Dispose();
@@ -203,6 +208,9 @@ namespace BitSharp.Common
             finally
             {
                 this.queue.CompleteAdding();
+
+                // notify that reading has been completed
+                this.completedReadingEvent.Set();
             }
         }
 
@@ -236,8 +244,8 @@ namespace BitSharp.Common
                     if (this.exceptions.Count == 0)
                         this.completedAction();
 
-                    // notify that reading and consuming have been completed
-                    this.completedEvent.Set();
+                    // notify that consuming has been completed
+                    this.completedConsumingEvent.Set();
                 }
             }
         }

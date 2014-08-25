@@ -102,6 +102,10 @@ namespace BitSharp.Core.Builders
                 yield return tx;
             }
             
+            // wait for loaders to finish
+            this.pendingTxLoader.WaitToComplete();
+            this.txLoader.WaitToComplete();
+
             // ensure any errors that occurred are thrown
             this.ThrowIfFailed();
         }
