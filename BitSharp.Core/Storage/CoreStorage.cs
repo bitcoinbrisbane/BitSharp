@@ -343,6 +343,7 @@ namespace BitSharp.Core.Storage
             return this.storageManager.OpenChainStateCursor();
         }
 
+        //TODO this should mark any blocks chained on top as invalid
         internal void MarkBlockInvalid(UInt256 blockHash)
         {
             this.blockStorage.MarkBlockInvalid(blockHash);
