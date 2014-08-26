@@ -107,7 +107,7 @@ namespace BitSharp.Client
                 }
                 else
                 {
-                    modules.Add(new EsentStorageModule(baseDirectory, rulesType, cacheSizeMaxBytes: int.MaxValue - 1));
+                    modules.Add(new EsentStorageModule(baseDirectory, rulesType));
                 }
 
                 // add cache modules
