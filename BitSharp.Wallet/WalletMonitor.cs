@@ -140,35 +140,16 @@ namespace BitSharp.Wallet
                     // get block and metadata for next link in blockchain
                     var direction = pathElement.Item1;
                     var chainedHeader = pathElement.Item2;
+                    var forward = direction > 0;
 
-                    var blockStopwatch = Stopwatch.StartNew();
-                    if (direction > 0)
+                    try
                     {
-                        try
-                        {
-                            ScanBlock(chainState, chainedHeader);
-                        }
-                        catch (MissingDataException)
-                        {
-                            //TODO no wallet state is saved, so missing data will be thrown when started up again due to pruning
-                        }
-                        catch (AggregateException)
-                        {
-                            //TODO no wallet state is saved, so missing data will be thrown when started up again due to pruning
-                        }
+                        ScanBlock(chainState, chainedHeader, forward);
+                    }
+                    catch (MissingDataException) {/*TODO no wallet state is saved, so missing data will be thrown when started up again due to pruning*/}
+                    catch (AggregateException) {/*TODO no wallet state is saved, so missing data will be thrown when started up again due to pruning*/}
 
-                        this.chainBuilder.AddBlock(chainedHeader);
-                    }
-                    else if (direction < 0)
-                    {
-                        // TODO i need to store the info to replay a rolled back block
-                        throw new Exception("TODO");
-                    }
-                    else
-                    {
-                        Debugger.Break();
-                        throw new InvalidOperationException();
-                    }
+                    this.chainBuilder.AddBlock(chainedHeader);
 
                     this.walletHeight = chainedHeader.Height;
                     this.coreDaemon.PrunableHeight = this.walletHeight;
@@ -187,7 +168,7 @@ namespace BitSharp.Wallet
             }
         }
 
-        private void ScanBlock(IChainState chainState, ChainedHeader scanBlock)
+        private void ScanBlock(IChainState chainState, ChainedHeader scanBlock, bool forward)
         {
             var sha256 = new SHA256Managed();
 
@@ -207,7 +188,7 @@ namespace BitSharp.Wallet
                             var prevOutputScriptHash = new UInt256(sha256.ComputeHash(prevOutput.ScriptPublicKey.ToArray()));
 
                             var chainPosition = ChainPosition.Fake();
-                            var entryType = EnumWalletEntryType.Spend;
+                            var entryType = forward ? EnumWalletEntryType.Spend : EnumWalletEntryType.UnSpend;
 
                             ScanForEntry(chainPosition, entryType, prevOutput, prevOutputScriptHash);
                         }
@@ -219,7 +200,10 @@ namespace BitSharp.Wallet
                         var outputScriptHash = new UInt256(sha256.ComputeHash(output.ScriptPublicKey.ToArray()));
 
                         var chainPosition = ChainPosition.Fake();
-                        var entryType = txIndex == 0 ? EnumWalletEntryType.Mine : EnumWalletEntryType.Receive;
+                        var entryType =
+                            txIndex == 0 ?
+                                (forward ? EnumWalletEntryType.Mine : EnumWalletEntryType.UnMine)
+                                : (forward ? EnumWalletEntryType.Receive : EnumWalletEntryType.UnReceieve);
 
                         ScanForEntry(chainPosition, entryType, output, outputScriptHash);
                     }
@@ -260,10 +244,7 @@ namespace BitSharp.Wallet
                     this.logger.Debug("{0,-10}   {1,20:#,##0.000_000_00} BTC, Entries: {2:#,##0}".Format2(walletEntryType.ToString() + ":", txOutput.Value / (decimal)(100.MILLION()), this.entries.Count));
 
                     this.entries.Add(entry);
-                    if (walletEntryType == EnumWalletEntryType.Spend)
-                        this.bitBalance -= entry.BitValue;
-                    else
-                        this.bitBalance += entry.BitValue;
+                    this.bitBalance += entry.BitValue * walletEntryType.Direction();
                 });
 
                 var handler = this.OnEntryAdded;

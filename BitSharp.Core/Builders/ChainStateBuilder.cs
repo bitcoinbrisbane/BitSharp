@@ -192,16 +192,23 @@ namespace BitSharp.Core.Builders
                 if (!this.chainStateCursor.TryGetBlockSpentTxes(chainedHeader.Height, out spentTxes))
                     throw new ValidationException(chainedHeader.Height);
 
+                //TODO this can be read in reverse instead of doing a dictionary
                 var spentTxesDictionary =
                     ImmutableDictionary.CreateRange(
                         spentTxes.Select(spentTx => new KeyValuePair<UInt256, SpentTx>(spentTx.TxHash, spentTx)));
 
-                // rollback the utxo
-                this.utxoBuilder.RollbackUtxo(chainedHeader, blockTxes, spentTxesDictionary);
+                // keep track of the previoux tx output information for all unminted transactions
+                // the information is removed and will be needed to enable a replay of the rolled back block
+                var unmintedTxes = ImmutableList.CreateBuilder<UnmintedTx>();
 
-                //TODO this needs to happen in the same transaction
+                // rollback the utxo
+                this.utxoBuilder.RollbackUtxo(this.chain.ToImmutable(), chainedHeader, blockTxes, spentTxesDictionary, unmintedTxes);
+
                 // remove the rollback information
                 this.chainStateCursor.TryRemoveBlockSpentTxes(chainedHeader.Height);
+
+                // store the replay information
+                this.chainStateCursor.TryAddBlockUnmintedTxes(chainedHeader.Hash, unmintedTxes.ToImmutable());
 
                 // commit the chain state
                 this.CommitTransaction();

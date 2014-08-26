@@ -27,6 +27,8 @@ namespace BitSharp.Core.Builders
 
         private IChainState chainState;
         private ChainedHeader replayBlock;
+        private bool replayForward;
+        private ConcurrentDictionary<UInt256, UnmintedTx> unmintedTxes;
         private ConcurrentDictionary<UInt256, Transaction> txCache;
         private ConcurrentBlockingQueue<TxWithPrevOutputKeys> pendingTxes;
         private ConcurrentBlockingQueue<TxWithPrevOutputs> loadedTxes;
@@ -62,21 +64,32 @@ namespace BitSharp.Core.Builders
 
         public IDisposable StartReplay(IChainState chainState, UInt256 blockHash)
         {
-            ChainedHeader replayBlock;
-            if (!chainState.Chain.BlocksByHash.TryGetValue(blockHash, out replayBlock))
+            this.chainState = chainState;
+            this.replayBlock = this.coreStorage.GetChainedHeader(blockHash);
+
+            if (chainState.Chain.BlocksByHash.ContainsKey(replayBlock.Hash))
             {
-                //TODO when a block is rolled back i'll need to store information to allow the rollback to be replayed, and then look it up here
-                throw new Exception("TODO");
+                this.replayForward = true;
+            }
+            else
+            {
+                this.replayForward = false;
+
+                IImmutableList<UnmintedTx> unmintedTxesList;
+                if (!this.chainState.TryGetBlockUnmintedTxes(this.replayBlock.Hash, out unmintedTxesList))
+                {
+                    throw new MissingDataException(this.replayBlock.Hash);
+                }
+
+                this.unmintedTxes = new ConcurrentDictionary<UInt256, UnmintedTx>(
+                    unmintedTxesList.Select(x => new KeyValuePair<UInt256, UnmintedTx>(x.TxHash, x)));
             }
 
             IEnumerable<BlockTx> blockTxes;
-            if (!this.coreStorage.TryReadBlockTransactions(replayBlock.Hash, replayBlock.MerkleRoot, /*requireTransaction:*/true, out blockTxes))
+            if (!this.coreStorage.TryReadBlockTransactions(this.replayBlock.Hash, this.replayBlock.MerkleRoot, /*requireTransaction:*/true, out blockTxes))
             {
-                throw new MissingDataException(replayBlock.Hash);
+                throw new MissingDataException(this.replayBlock.Hash);
             }
-
-            this.chainState = chainState;
-            this.replayBlock = replayBlock;
 
             this.txCache = new ConcurrentDictionary<UInt256, Transaction>();
 
@@ -92,6 +105,11 @@ namespace BitSharp.Core.Builders
             return new Stopper(this);
         }
 
+        //public IDisposable StartReplayRollback(IChainState chainState, UInt256 blockHash)
+        //{
+        //}
+
+        //TODO result should indicate whether block was played forwards or rolled back
         public IEnumerable<TxWithPrevOutputs> ReplayBlock()
         {
             foreach (var tx in this.loadedTxes.GetConsumingEnumerable())
@@ -101,7 +119,7 @@ namespace BitSharp.Core.Builders
 
                 yield return tx;
             }
-            
+
             // wait for loaders to finish
             this.pendingTxLoader.WaitToComplete();
             this.txLoader.WaitToComplete();
@@ -134,6 +152,7 @@ namespace BitSharp.Core.Builders
 
             this.chainState = null;
             this.replayBlock = null;
+            this.unmintedTxes = null;
             this.txCache = null;
             this.pendingTxes = null;
             this.loadedTxes = null;
@@ -179,17 +198,29 @@ namespace BitSharp.Core.Builders
 
                 if (txIndex > 0)
                 {
-                    // spend each of the transaction's inputs in the utxo
-                    for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+                    if (this.replayForward)
                     {
-                        var input = tx.Inputs[inputIndex];
+                        for (var inputIndex = 0; inputIndex < tx.Inputs.Length; inputIndex++)
+                        {
+                            var input = tx.Inputs[inputIndex];
 
-                        UnspentTx unspentTx;
-                        if (!this.chainState.TryGetUnspentTx(input.PreviousTxOutputKey.TxHash, out unspentTx))
+                            UnspentTx unspentTx;
+                            if (!this.chainState.TryGetUnspentTx(input.PreviousTxOutputKey.TxHash, out unspentTx))
+                                throw new MissingDataException(this.replayBlock.Hash);
+
+                            var prevOutputBlockHash = this.chainState.Chain.Blocks[unspentTx.BlockIndex].Hash;
+                            var prevOutputTxIndex = unspentTx.TxIndex;
+                            
+                            prevOutputTxKeys.Add(new BlockTxKey(prevOutputBlockHash, prevOutputTxIndex));
+                        }
+                    }
+                    else
+                    {
+                        UnmintedTx unmintedTx;
+                        if (!this.unmintedTxes.TryGetValue(tx.Hash, out unmintedTx))
                             throw new MissingDataException(this.replayBlock.Hash);
 
-                        var unspentTxBlockHash = this.chainState.Chain.Blocks[unspentTx.BlockIndex].Hash;
-                        prevOutputTxKeys.Add(new BlockTxKey(unspentTxBlockHash, unspentTx.TxIndex));
+                        prevOutputTxKeys.AddRange(unmintedTx.PrevOutputTxKeys);
                     }
                 }
 

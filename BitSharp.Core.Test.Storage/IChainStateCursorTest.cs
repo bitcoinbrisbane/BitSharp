@@ -123,9 +123,15 @@ namespace BitSharp.Core.Test.Storage
         }
 
         [TestMethod]
-        public void TestRemoveSpentTransactionsToHeight()
+        public void TestContainsBlockUnmintedTxes()
         {
-            RunTest(TestRemoveSpentTransactionsToHeight);
+            RunTest(TestContainsBlockUnmintedTxes);
+        }
+
+        [TestMethod]
+        public void TestTryAddGetRemoveBlockUnmintedTxes()
+        {
+            RunTest(TestTryAddGetRemoveBlockUnmintedTxes);
         }
 
         [TestMethod]
@@ -868,9 +874,141 @@ namespace BitSharp.Core.Test.Storage
             }
         }
 
-        public void TestRemoveSpentTransactionsToHeight(ITestStorageProvider provider)
+        public void TestContainsBlockUnmintedTxes(ITestStorageProvider provider)
         {
-            Assert.Inconclusive("TODO");
+            var unmintedTxes0 = ImmutableList.Create(
+                new UnmintedTx(txHash: 0,
+                    prevOutputTxKeys: ImmutableArray.Create(
+                        new BlockTxKey(blockHash: 0, txIndex: 0),
+                        new BlockTxKey(blockHash: 0, txIndex: 1),
+                        new BlockTxKey(blockHash: 0, txIndex: 2))),
+                new UnmintedTx(txHash: 1,
+                    prevOutputTxKeys: ImmutableArray.Create(
+                        new BlockTxKey(blockHash: 0, txIndex: 3),
+                        new BlockTxKey(blockHash: 0, txIndex: 4),
+                        new BlockTxKey(blockHash: 0, txIndex: 5))));
+
+            var unmintedTxes1 = ImmutableList.Create(
+                new UnmintedTx(txHash: 2,
+                    prevOutputTxKeys: ImmutableArray.Create(
+                        new BlockTxKey(blockHash: 1, txIndex: 0),
+                        new BlockTxKey(blockHash: 1, txIndex: 1))),
+                new UnmintedTx(txHash: 3,
+                    prevOutputTxKeys: ImmutableArray.Create(
+                        new BlockTxKey(blockHash: 1, txIndex: 2),
+                        new BlockTxKey(blockHash: 1, txIndex: 3))));
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var handle = storageManager.OpenChainStateCursor())
+            {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
+                chainStateCursor.BeginTransaction();
+
+                // verify presence
+                Assert.IsFalse(chainStateCursor.ContainsBlockUnmintedTxes(0));
+                Assert.IsFalse(chainStateCursor.ContainsBlockUnmintedTxes(1));
+
+                // add unminted txes 0
+                chainStateCursor.TryAddBlockUnmintedTxes(0, unmintedTxes0);
+
+                // verify presence
+                Assert.IsTrue(chainStateCursor.ContainsBlockUnmintedTxes(0));
+                Assert.IsFalse(chainStateCursor.ContainsBlockUnmintedTxes(1));
+
+                // add ununminted tx 1
+                chainStateCursor.TryAddBlockUnmintedTxes(1, unmintedTxes1);
+
+                // verify presence
+                Assert.IsTrue(chainStateCursor.ContainsBlockUnmintedTxes(0));
+                Assert.IsTrue(chainStateCursor.ContainsBlockUnmintedTxes(1));
+
+                // remove ununminted tx 1
+                chainStateCursor.TryRemoveBlockUnmintedTxes(1);
+
+                // verify presence
+                Assert.IsTrue(chainStateCursor.ContainsBlockUnmintedTxes(0));
+                Assert.IsFalse(chainStateCursor.ContainsBlockUnmintedTxes(1));
+
+                // remove ununminted tx 0
+                chainStateCursor.TryRemoveBlockUnmintedTxes(0);
+
+                // verify presence
+                Assert.IsFalse(chainStateCursor.ContainsBlockUnmintedTxes(0));
+                Assert.IsFalse(chainStateCursor.ContainsBlockUnmintedTxes(1));
+            }
+        }
+
+        public void TestTryAddGetRemoveBlockUnmintedTxes(ITestStorageProvider provider)
+        {
+            var unmintedTxes0 = ImmutableList.Create(
+                new UnmintedTx(txHash: 0,
+                    prevOutputTxKeys: ImmutableArray.Create(
+                        new BlockTxKey(blockHash: 0, txIndex: 0),
+                        new BlockTxKey(blockHash: 0, txIndex: 1),
+                        new BlockTxKey(blockHash: 0, txIndex: 2))),
+                new UnmintedTx(txHash: 1,
+                    prevOutputTxKeys: ImmutableArray.Create(
+                        new BlockTxKey(blockHash: 0, txIndex: 3),
+                        new BlockTxKey(blockHash: 0, txIndex: 4),
+                        new BlockTxKey(blockHash: 0, txIndex: 5))));
+
+            var unmintedTxes1 = ImmutableList.Create(
+                new UnmintedTx(txHash: 2,
+                    prevOutputTxKeys: ImmutableArray.Create(
+                        new BlockTxKey(blockHash: 1, txIndex: 0),
+                        new BlockTxKey(blockHash: 1, txIndex: 1))),
+                new UnmintedTx(txHash: 3,
+                    prevOutputTxKeys: ImmutableArray.Create(
+                        new BlockTxKey(blockHash: 1, txIndex: 2),
+                        new BlockTxKey(blockHash: 1, txIndex: 3))));
+
+            using (var storageManager = provider.OpenStorageManager())
+            using (var handle = storageManager.OpenChainStateCursor())
+            {
+                var chainStateCursor = handle.Item;
+
+                // begin transaction
+                chainStateCursor.BeginTransaction();
+
+                // verify initial empty state
+                IImmutableList<UnmintedTx> actualUnmintedTxes0, actualUnmintedTxes1;
+                Assert.IsFalse(chainStateCursor.TryGetBlockUnmintedTxes(0, out actualUnmintedTxes0));
+                Assert.IsFalse(chainStateCursor.TryGetBlockUnmintedTxes(1, out actualUnmintedTxes1));
+
+                // add unminted txes 0
+                Assert.IsTrue(chainStateCursor.TryAddBlockUnmintedTxes(0, unmintedTxes0));
+
+                // verify unminted txes
+                Assert.IsTrue(chainStateCursor.TryGetBlockUnmintedTxes(0, out actualUnmintedTxes0));
+                CollectionAssert.AreEqual(unmintedTxes0, (ICollection)actualUnmintedTxes0);
+                Assert.IsFalse(chainStateCursor.TryGetBlockUnmintedTxes(1, out actualUnmintedTxes1));
+
+                // add unminted txes 1
+                Assert.IsTrue(chainStateCursor.TryAddBlockUnmintedTxes(1, unmintedTxes1));
+
+                // verify unminted txes
+                Assert.IsTrue(chainStateCursor.TryGetBlockUnmintedTxes(0, out actualUnmintedTxes0));
+                CollectionAssert.AreEqual(unmintedTxes0, (ICollection)actualUnmintedTxes0);
+                Assert.IsTrue(chainStateCursor.TryGetBlockUnmintedTxes(1, out actualUnmintedTxes1));
+                CollectionAssert.AreEqual(unmintedTxes1, (ICollection)actualUnmintedTxes1);
+
+                // remove unminted txes 1
+                Assert.IsTrue(chainStateCursor.TryRemoveBlockUnmintedTxes(1));
+
+                // verify unminted txes
+                Assert.IsTrue(chainStateCursor.TryGetBlockUnmintedTxes(0, out actualUnmintedTxes0));
+                CollectionAssert.AreEqual(unmintedTxes0, (ICollection)actualUnmintedTxes0);
+                Assert.IsFalse(chainStateCursor.TryGetBlockUnmintedTxes(1, out actualUnmintedTxes1));
+
+                // remove unminted txes 0
+                Assert.IsTrue(chainStateCursor.TryRemoveBlockUnmintedTxes(0));
+
+                // verify unminted txes
+                Assert.IsFalse(chainStateCursor.TryGetBlockUnmintedTxes(0, out actualUnmintedTxes0));
+                Assert.IsFalse(chainStateCursor.TryGetBlockUnmintedTxes(1, out actualUnmintedTxes1));
+            }
         }
 
         public void TestFlush(ITestStorageProvider provider)

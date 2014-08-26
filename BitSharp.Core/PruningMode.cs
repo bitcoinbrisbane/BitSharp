@@ -9,7 +9,8 @@ namespace BitSharp.Core
     public enum PruningMode
     {
         None,
-        RollbackOnly,
-        RollbackAndBlocks
+        ReplayOnly,
+        ReplayAndRollback,
+        ReplayAndRollbackAndTxes
     }
 }

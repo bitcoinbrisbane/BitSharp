@@ -114,25 +114,55 @@ namespace BitSharp.Core.Storage
         /// <summary>
         /// Retreive a block's spent transactions.
         /// </summary>
-        /// <param name="blockIndex">The blocks's index (height) in the chain.</param>
-        /// <param name="spentTxesBytes">Contains the spent transactions when successful; otherwise, null.</param>
+        /// <param name="blockIndex">The block's index (height) in the chain.</param>
+        /// <param name="spentTxes">Contains the spent transactions when successful; otherwise, null.</param>
         /// <returns>true if the block's spent transactions were retrieved; otherwise, false</returns>
         bool TryGetBlockSpentTxes(int blockIndex, out IImmutableList<SpentTx> spentTxes);
 
         /// <summary>
         /// Add a block's spent transactions.
         /// </summary>
-        /// <param name="blockIndex">The blocks's index (height) in the chain.</param>
-        /// <param name="spentTxesBytes">The spent transactions.</param>
+        /// <param name="blockIndex">The block's index (height) in the chain.</param>
+        /// <param name="spentTxes">The spent transactions.</param>
         /// <returns>true if the block's spent transactions were added; otherwise, false</returns>
         bool TryAddBlockSpentTxes(int blockIndex, IImmutableList<SpentTx> spentTxes);
 
         /// <summary>
         /// Remove a block's spent transactions.
         /// </summary>
-        /// <param name="blockIndex">The blocks's index (height) in the chain.</param>
+        /// <param name="blockIndex">The block's index (height) in the chain.</param>
         /// <returns>true if the block's spent transactions were removed; otherwise, false</returns>
         bool TryRemoveBlockSpentTxes(int blockIndex);
+
+        /// <summary>
+        /// Determine whether unminted transactions are present for a block.
+        /// </summary>
+        /// <param name="blockHash">The block's hash.</param>
+        /// <returns>true if the block's unminted transactions are present; otherwise, false</returns>
+        bool ContainsBlockUnmintedTxes(UInt256 blockHash);
+
+        /// <summary>
+        /// Retreive a block's unminted transactions.
+        /// </summary>
+        /// <param name="blockHash">The block's hash.</param>
+        /// <param name="unmintedTxes">Contains the unminted transactions when successful; otherwise, null.</param>
+        /// <returns>true if the block's unminted transactions were retrieved; otherwise, false</returns>
+        bool TryGetBlockUnmintedTxes(UInt256 blockHash, out IImmutableList<UnmintedTx> unmintedTxes);
+
+        /// <summary>
+        /// Add a block's unminted transactions.
+        /// </summary>
+        /// <param name="blockHash">The block's hash.</param>
+        /// <param name="unmintedTxes">The unminted transactions.</param>
+        /// <returns>true if the block's unminted transactions were added; otherwise, false</returns>
+        bool TryAddBlockUnmintedTxes(UInt256 blockHash, IImmutableList<UnmintedTx> unmintedTxes);
+
+        /// <summary>
+        /// Remove a block's unminted transactions.
+        /// </summary>
+        /// <param name="blockHash">The block's hash.</param>
+        /// <returns>true if the block's unminted transactions were removed; otherwise, false</returns>
+        bool TryRemoveBlockUnmintedTxes(UInt256 blockHash);
 
         /// <summary>
         /// Fully flush storage.

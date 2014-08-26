@@ -53,10 +53,25 @@ namespace BitSharp.Core.Domain
         /// <summary>
         /// Retreive a block's spent transactions.
         /// </summary>
-        /// <param name="blockIndex">The blocks's index (height) in the chain.</param>
-        /// <param name="spentTxesBytes">Contains the spent transactions when successful; otherwise, null.</param>
+        /// <param name="blockIndex">The block's index (height) in the chain.</param>
+        /// <param name="spentTxes">Contains the spent transactions when successful; otherwise, null.</param>
         /// <returns>true if the block's spent transactions were retrieved; otherwise, false</returns>
         bool TryGetBlockSpentTxes(int blockIndex, out IImmutableList<SpentTx> spentTxes);
+
+        /// <summary>
+        /// Determine whether unminted transactions are present for a block.
+        /// </summary>
+        /// <param name="blockHash">The block's hash.</param>
+        /// <returns>true if the block's unminted transactions are present; otherwise, false</returns>
+        bool ContainsBlockUnmintedTxes(UInt256 blockHash);
+
+        /// <summary>
+        /// Retreive a block's unminted transactions.
+        /// </summary>
+        /// <param name="blockHash">The block's hash.</param>
+        /// <param name="unmintedTxes">Contains the unminted transactions when successful; otherwise, null.</param>
+        /// <returns>true if the block's unminted transactions were retrieved; otherwise, false</returns>
+        bool TryGetBlockUnmintedTxes(UInt256 blockHash, out IImmutableList<UnmintedTx> unmintedTxes);
     }
 
     public static class IChainStateExtensions

@@ -19,23 +19,26 @@ namespace BitSharp.Core.Storage.Memory
         private ChainBuilder chain;
         private ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
         private ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes;
+        private ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>>.Builder blockUnmintedTxes;
 
         private long chainVersion;
         private long unspentTxesVersion;
         private long blockSpentTxesVersion;
+        private long blockUnmintedTxesVersion;
 
-        public MemoryChainStateStorage(Chain chain = null, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions = null, ImmutableDictionary<int, IImmutableList<SpentTx>> blockSpentTxes = null)
+        public MemoryChainStateStorage(Chain chain = null, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions = null, ImmutableDictionary<int, IImmutableList<SpentTx>> blockSpentTxes = null, ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>> blockUnmintedTxes = null)
         {
             this.chain = chain != null ? chain.ToBuilder() : new ChainBuilder();
             this.unspentTransactions = unspentTransactions != null ? unspentTransactions.ToBuilder() : ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
             this.blockSpentTxes = blockSpentTxes != null ? blockSpentTxes.ToBuilder() : ImmutableDictionary.CreateBuilder<int, IImmutableList<SpentTx>>();
+            this.blockUnmintedTxes = blockUnmintedTxes != null ? blockUnmintedTxes.ToBuilder() : ImmutableDictionary.CreateBuilder<UInt256, IImmutableList<UnmintedTx>>();
         }
 
         public void Dispose()
         {
         }
 
-        public void BeginTransaction(out ChainBuilder chain, out ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, out ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes, out long chainVersion, out long unspentTxesVersion, out long spentTxesVersion)
+        public void BeginTransaction(out ChainBuilder chain, out ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, out ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes, out ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>>.Builder blockUnmintedTxes, out long chainVersion, out long unspentTxesVersion, out long spentTxesVersion, out long unmintedTxesVersion)
         {
             this.semaphore.Wait();
             try
@@ -43,10 +46,12 @@ namespace BitSharp.Core.Storage.Memory
                 chain = this.chain.ToImmutable().ToBuilder();
                 unspentTransactions = this.unspentTransactions.ToImmutable().ToBuilder();
                 blockSpentTxes = this.blockSpentTxes.ToImmutable().ToBuilder();
+                blockUnmintedTxes = this.blockUnmintedTxes.ToImmutable().ToBuilder();
 
                 chainVersion = this.chainVersion;
                 unspentTxesVersion = this.unspentTxesVersion;
                 spentTxesVersion = this.blockSpentTxesVersion;
+                unmintedTxesVersion = this.blockUnmintedTxesVersion;
             }
             finally
             {
@@ -54,13 +59,14 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
-        public void CommitTransaction(ChainBuilder chain, ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes, long chainVersion, long unspentTxesVersion, long blockSpentTxesVersion)
+        public void CommitTransaction(ChainBuilder chain, ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes, ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>>.Builder blockUnmintedTxes, long chainVersion, long unspentTxesVersion, long blockSpentTxesVersion, long blockUnmintedTxesVersion)
         {
             this.semaphore.Do(() =>
             {
                 if (chain != null && this.chainVersion != chainVersion
                     || unspentTransactions != null && unspentTxesVersion != this.unspentTxesVersion
-                    || blockSpentTxes != null && blockSpentTxesVersion != this.blockSpentTxesVersion)
+                    || blockSpentTxes != null && blockSpentTxesVersion != this.blockSpentTxesVersion
+                    || blockUnmintedTxes != null && blockUnmintedTxesVersion != this.blockUnmintedTxesVersion)
                     throw new InvalidOperationException();
 
                 if (chain != null)
@@ -79,6 +85,12 @@ namespace BitSharp.Core.Storage.Memory
                 {
                     this.blockSpentTxes = blockSpentTxes.ToImmutable().ToBuilder();
                     this.blockSpentTxesVersion++;
+                }
+
+                if (blockUnmintedTxes != null)
+                {
+                    this.blockUnmintedTxes = blockUnmintedTxes.ToImmutable().ToBuilder();
+                    this.blockUnmintedTxesVersion++;
                 }
             });
         }
@@ -237,12 +249,51 @@ namespace BitSharp.Core.Storage.Memory
             });
         }
 
-        public void RemoveSpentTransactionsToHeight(int spentBlockIndex)
+        public bool ContainsBlockUnmintedTxes(UInt256 blockHash)
         {
-            this.semaphore.Do(() =>
+            return this.semaphore.Do(() =>
+                this.blockUnmintedTxes.ContainsKey(blockHash));
+        }
+
+        public bool TryGetBlockUnmintedTxes(UInt256 blockHash, out IImmutableList<UnmintedTx> unmintedTxes)
+        {
+            this.semaphore.Wait();
+            try
             {
-                this.blockSpentTxes.RemoveRange(Enumerable.Range(0, spentBlockIndex));
-                this.blockSpentTxesVersion++;
+                return this.blockUnmintedTxes.TryGetValue(blockHash, out unmintedTxes);
+            }
+            finally
+            {
+                this.semaphore.Release();
+            }
+        }
+
+        public bool TryAddBlockUnmintedTxes(UInt256 blockHash, IImmutableList<UnmintedTx> unmintedTxes)
+        {
+            return this.semaphore.Do(() =>
+            {
+                try
+                {
+                    this.blockUnmintedTxes.Add(blockHash, ImmutableArray.CreateRange(unmintedTxes));
+                    this.blockUnmintedTxesVersion++;
+                    return true;
+                }
+                catch (ArgumentException)
+                {
+                    return false;
+                }
+            });
+        }
+
+        public bool TryRemoveBlockUnmintedTxes(UInt256 blockHash)
+        {
+            return this.semaphore.Do(() =>
+            {
+                var wasRemoved = this.blockUnmintedTxes.Remove(blockHash);
+                if (wasRemoved)
+                    this.blockUnmintedTxesVersion++;
+
+                return wasRemoved;
             });
         }
 

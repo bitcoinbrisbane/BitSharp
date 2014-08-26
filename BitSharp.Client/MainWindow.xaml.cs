@@ -127,7 +127,7 @@ namespace BitSharp.Client
 
                 // initialize the blockchain daemon
                 this.coreDaemon = this.kernel.Get<CoreDaemon>();
-                this.coreDaemon.PruningMode = enablePruning ? PruningMode.RollbackAndBlocks : PruningMode.RollbackOnly;
+                this.coreDaemon.PruningMode = enablePruning ? PruningMode.ReplayAndRollbackAndTxes : PruningMode.ReplayAndRollback;
                 this.kernel.Bind<CoreDaemon>().ToConstant(this.coreDaemon).InTransientScope();
 
                 // initialize dummy wallet monitor

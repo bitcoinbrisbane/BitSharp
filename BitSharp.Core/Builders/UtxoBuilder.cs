@@ -143,34 +143,35 @@ namespace BitSharp.Core.Builders
         }
 
         //TODO with the rollback information that's now being stored, rollback could be down without needing the block
-        public void RollbackUtxo(ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes, ImmutableDictionary<UInt256, SpentTx> spentTxes)
+        public void RollbackUtxo(Chain chain, ChainedHeader chainedHeader, IEnumerable<BlockTx> blockTxes, ImmutableDictionary<UInt256, SpentTx> spentTxes, ImmutableList<UnmintedTx>.Builder unmintedTxes)
         {
             //TODO don't reverse here, storage should be read in reverse
             foreach (var blockTx in blockTxes.Reverse())
             {
+                var tx = blockTx.Transaction;
                 var txIndex = blockTx.Index;
 
-                if (txIndex == 0)
+                // remove transaction outputs
+                this.Unmint(tx, chainedHeader, isCoinbase: true);
+
+                var prevOutputTxKeys = ImmutableArray.CreateBuilder<BlockTxKey>(tx.Inputs.Length);
+
+                if (txIndex > 0)
                 {
-                    var coinbaseTx = blockTx.Transaction;
-
-                    // remove coinbase outputs
-                    this.Unmint(coinbaseTx, chainedHeader, isCoinbase: true);
-                }
-                else
-                {
-                    var tx = blockTx.Transaction;
-
-                    // remove outputs
-                    this.Unmint(tx, chainedHeader, isCoinbase: false);
-
                     // remove inputs in reverse order
                     for (var inputIndex = tx.Inputs.Length - 1; inputIndex >= 0; inputIndex--)
                     {
                         var input = tx.Inputs[inputIndex];
-                        this.Unspend(input, chainedHeader, spentTxes);
+                        var unspentTx = this.Unspend(input, chainedHeader, spentTxes);
+
+                        // store rollback replay information
+                        var unspentTxBlockHash = chain.Blocks[unspentTx.BlockIndex].Hash;
+                        prevOutputTxKeys.Add(new BlockTxKey(unspentTxBlockHash, unspentTx.TxIndex));
                     }
                 }
+
+                // store rollback replay information
+                unmintedTxes.Add(new UnmintedTx(tx.Hash, prevOutputTxKeys.ToImmutable()));
             }
         }
 
@@ -207,7 +208,7 @@ namespace BitSharp.Core.Builders
             }
         }
 
-        private void Unspend(TxInput input, ChainedHeader chainedHeader, ImmutableDictionary<UInt256, SpentTx> spentTxes)
+        private UnspentTx Unspend(TxInput input, ChainedHeader chainedHeader, ImmutableDictionary<UInt256, SpentTx> spentTxes)
         {
             bool wasRestored;
 
@@ -254,6 +255,8 @@ namespace BitSharp.Core.Builders
                 if (!wasAdded)
                     throw new ValidationException(chainedHeader.Hash);
             }
+
+            return unspentTx;
         }
     }
 }

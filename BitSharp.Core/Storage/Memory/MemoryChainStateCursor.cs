@@ -20,14 +20,17 @@ namespace BitSharp.Core.Storage.Memory
         private ChainBuilder chain;
         private ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
         private ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes;
+        private ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>>.Builder blockUnmintedTxes;
 
         private long chainVersion;
         private long unspentTxesVersion;
         private long spentTxesVersion;
+        private long unmintedTxesVersion;
 
         private bool chainModified;
         private bool unspentTxesModified;
         private bool spentTxesModified;
+        private bool unmintedTxesModified;
 
         internal MemoryChainStateCursor(MemoryChainStateStorage chainStateStorage)
         {
@@ -50,11 +53,12 @@ namespace BitSharp.Core.Storage.Memory
             if (this.inTransaction)
                 throw new InvalidOperationException();
 
-            this.chainStateStorage.BeginTransaction(out this.chain, out this.unspentTransactions, out this.blockSpentTxes, out this.chainVersion, out this.unspentTxesVersion, out this.spentTxesVersion);
+            this.chainStateStorage.BeginTransaction(out this.chain, out this.unspentTransactions, out this.blockSpentTxes, out this.blockUnmintedTxes, out this.chainVersion, out this.unspentTxesVersion, out this.spentTxesVersion, out this.unmintedTxesVersion);
 
             this.chainModified = false;
             this.unspentTxesModified = false;
             this.spentTxesModified = false;
+            this.unmintedTxesModified = false;
 
             this.inTransaction = true;
         }
@@ -68,11 +72,13 @@ namespace BitSharp.Core.Storage.Memory
                 this.chainModified ? this.chain : null,
                 this.unspentTxesModified ? this.unspentTransactions : null,
                 this.spentTxesModified ? this.blockSpentTxes : null,
-                this.chainVersion, this.unspentTxesVersion, this.spentTxesVersion);
+                this.unmintedTxesModified ? this.blockUnmintedTxes : null,
+                this.chainVersion, this.unspentTxesVersion, this.spentTxesVersion, this.unmintedTxesVersion);
 
             this.chain = null;
             this.unspentTransactions = null;
             this.blockSpentTxes = null;
+            this.blockUnmintedTxes = null;
 
             this.inTransaction = false;
         }
@@ -85,6 +91,7 @@ namespace BitSharp.Core.Storage.Memory
             this.chain = null;
             this.unspentTransactions = null;
             this.blockSpentTxes = null;
+            this.blockUnmintedTxes = null;
 
             this.inTransaction = false;
         }
@@ -278,6 +285,63 @@ namespace BitSharp.Core.Storage.Memory
             else
             {
                 return this.chainStateStorage.TryRemoveBlockSpentTxes(blockIndex);
+            }
+        }
+
+        public bool ContainsBlockUnmintedTxes(UInt256 blockHash)
+        {
+            if (this.inTransaction)
+                return this.blockUnmintedTxes.ContainsKey(blockHash);
+            else
+                return this.chainStateStorage.ContainsBlockUnmintedTxes(blockHash);
+        }
+
+        public bool TryGetBlockUnmintedTxes(UInt256 blockHash, out IImmutableList<UnmintedTx> unmintedTxes)
+        {
+            if (this.inTransaction)
+            {
+                return this.blockUnmintedTxes.TryGetValue(blockHash, out unmintedTxes);
+            }
+            else
+            {
+                return this.chainStateStorage.TryGetBlockUnmintedTxes(blockHash, out unmintedTxes);
+            }
+        }
+
+        public bool TryAddBlockUnmintedTxes(UInt256 blockHash, IImmutableList<UnmintedTx> unmintedTxes)
+        {
+            if (this.inTransaction)
+            {
+                try
+                {
+                    this.blockUnmintedTxes.Add(blockHash, unmintedTxes);
+                    this.unmintedTxesModified = true;
+                    return true;
+                }
+                catch (ArgumentException)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return this.chainStateStorage.TryAddBlockUnmintedTxes(blockHash, unmintedTxes);
+            }
+        }
+
+        public bool TryRemoveBlockUnmintedTxes(UInt256 blockHash)
+        {
+            if (this.inTransaction)
+            {
+                var wasRemoved = this.blockUnmintedTxes.Remove(blockHash);
+                if (wasRemoved)
+                    this.unmintedTxesModified = true;
+
+                return wasRemoved;
+            }
+            else
+            {
+                return this.chainStateStorage.TryRemoveBlockUnmintedTxes(blockHash);
             }
         }
 

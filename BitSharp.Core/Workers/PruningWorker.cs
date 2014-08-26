@@ -68,10 +68,13 @@ namespace BitSharp.Core.Workers
 
             this.logger.Info(@"Begin pruning from block {0:#,##0} to {1:#,##0}".Format2(minHeight, maxHeight));
 
+            //TODO the replay information about blocks that have been rolled back also needs to be pruned
+
             switch (this.Mode)
             {
                 // remove just the information required to rollback blocks and to replay them
-                case PruningMode.RollbackOnly:
+                case PruningMode.ReplayOnly:
+                case PruningMode.ReplayAndRollback:
                     using (var handle = coreStorage.OpenChainStateCursor())
                     {
                         var chainStateCursor = handle.Item;
@@ -99,15 +102,13 @@ namespace BitSharp.Core.Workers
 
                                     txCount++;
 
-                                    var wasRemoved = chainStateCursor.TryRemoveUnspentTx(spentTx.TxHash);
-                                    //if (!wasRemoved)
-                                    //    throw new Exception("TODO");
+                                    // remove spent tx from chain state
+                                    chainStateCursor.TryRemoveUnspentTx(spentTx.TxHash);
                                 }
 
                                 // remove spent txes for this block
-                                var wasRemoved2 = chainStateCursor.TryRemoveBlockSpentTxes(blockHeight);
-                                //if (!wasRemoved2)
-                                //    throw new Exception("TODO");
+                                if (this.Mode == PruningMode.ReplayAndRollback)
+                                    chainStateCursor.TryRemoveBlockSpentTxes(blockHeight);
                             }
 
                             chainStateCursor.CommitTransaction();
@@ -125,7 +126,7 @@ namespace BitSharp.Core.Workers
                     break;
 
                 // remove spent transactions from block storage, in addition to the information required to rollback blocks and to replay them
-                case PruningMode.RollbackAndBlocks:
+                case PruningMode.ReplayAndRollbackAndTxes:
                     using (var handle = coreStorage.OpenChainStateCursor())
                     {
                         var chainStateCursor = handle.Item;
@@ -135,7 +136,6 @@ namespace BitSharp.Core.Workers
                         var gatherStopwatch = new Stopwatch();
                         var pruneStopwatch = new Stopwatch();
                         var flushStopwatch = new Stopwatch();
-                        var cleanStopwatch = new Stopwatch();
                         var commitStopwatch = new Stopwatch();
                         var txCount = 0;
 
@@ -164,12 +164,19 @@ namespace BitSharp.Core.Workers
                                     // cooperative loop
                                     this.ThrowIfCancelled();
 
+                                    txCount++;
+
+                                    // remove spent tx from chain state
+                                    chainStateCursor.TryRemoveUnspentTx(spentTx.TxHash);
+
+                                    // queue up spent tx to be pruned from block txes
                                     if (!pruneData.ContainsKey(spentTx.ConfirmedBlockIndex))
                                         pruneData[spentTx.ConfirmedBlockIndex] = new List<int>();
-
-                                    txCount++;
                                     pruneData[spentTx.ConfirmedBlockIndex].Add(spentTx.TxIndex);
                                 }
+
+                                // remove the pruning information
+                                chainStateCursor.TryRemoveBlockSpentTxes(blockHeight);
                             }
                             gatherStopwatch.Stop();
                         }
@@ -192,7 +199,6 @@ namespace BitSharp.Core.Workers
                                 var confirmedBlockIndex = keyPair.Key;
                                 var confirmedBlockHash = chain.Blocks[confirmedBlockIndex].Hash;
                                 var spentTxIndices = keyPair.Value;
-                                spentTxIndices.Sort();
 
                                 this.coreStorage.PruneElements(confirmedBlockHash, spentTxIndices);
                             });
@@ -200,20 +206,15 @@ namespace BitSharp.Core.Workers
                             throw new OperationCanceledException();
                         pruneStopwatch.Stop();
 
+                        // blocks must be flushed as the pruning information has been removed from the chain state
+                        // if the system crashed and the pruned chain state was persisted while the pruned blocks were not,
+                        // the information to prune them again would be lost
                         flushStopwatch.Start();
                         this.coreStorage.FlushBlockTxes();
                         flushStopwatch.Stop();
 
-                        //TODO properly sync commits before removing
-                        // remove the pruning information
-                        cleanStopwatch.Start();
-                        for (var blockHeight = minHeight; blockHeight <= maxHeight; blockHeight++)
-                        {
-                            chainStateCursor.TryRemoveBlockSpentTxes(blockHeight);
-                        }
-                        cleanStopwatch.Stop();
-                        //}
-
+                        // commit pruned chain state
+                        // flush is not needed here, at worst pruning will be performed again against already pruned transactions
                         commitStopwatch.Start();
                         chainStateCursor.CommitTransaction();
                         commitStopwatch.Stop();
@@ -228,10 +229,9 @@ namespace BitSharp.Core.Workers
 - gather:       {4,10:#,##0.000}s
 - prune:        {5,10:#,##0.000}s
 - flush:        {6,10:#,##0.000}s
-- clean:        {7,10:#,##0.000}s
-- commit:       {8,10:#,##0.000}s
-- TOTAL:        {9,10:#,##0.000}s"
-                            .Format2(minHeight, maxHeight, txCount, txRate, gatherStopwatch.Elapsed.TotalSeconds, pruneStopwatch.Elapsed.TotalSeconds, flushStopwatch.Elapsed.TotalSeconds, cleanStopwatch.Elapsed.TotalSeconds, commitStopwatch.Elapsed.TotalSeconds, totalStopwatch.Elapsed.TotalSeconds));
+- commit:       {7,10:#,##0.000}s
+- TOTAL:        {8,10:#,##0.000}s"
+                            .Format2(minHeight, maxHeight, txCount, txRate, gatherStopwatch.Elapsed.TotalSeconds, pruneStopwatch.Elapsed.TotalSeconds, flushStopwatch.Elapsed.TotalSeconds, commitStopwatch.Elapsed.TotalSeconds, totalStopwatch.Elapsed.TotalSeconds));
                     }
                     break;
             }

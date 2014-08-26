@@ -29,6 +29,7 @@ namespace BitSharp.Esent.ChainState
                 CreateChainTable(utxoDbId, jetSession);
                 CreateUnspentTxTable(utxoDbId, jetSession);
                 CreateSpentTxTable(utxoDbId, jetSession);
+                CreateUnmintedTxTable(utxoDbId, jetSession);
             }
         }
 
@@ -102,7 +103,7 @@ namespace BitSharp.Esent.ChainState
                         new JET_INDEXCREATE
                         {
                             cbKeyMost = 255,
-                            grbit = CreateIndexGrbit.IndexUnique | CreateIndexGrbit.IndexDisallowNull,
+                            grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
                             szIndexName = "IX_TxHash",
                             szKey = "+TxHash\0\0",
                             cbKey = "+TxHash\0\0".Length
@@ -136,6 +137,32 @@ namespace BitSharp.Esent.ChainState
                     }, 1);
 
             Api.JetCloseTable(jetSession, spentTxTableId);
+        }
+
+        private static void CreateUnmintedTxTable(JET_DBID utxoDbId, Session jetSession)
+        {
+            JET_TABLEID unmintedTxTableId;
+            JET_COLUMNID unmintedBlockHashColumnId;
+            JET_COLUMNID unmintedDataColumnId;
+
+            Api.JetCreateTable(jetSession, utxoDbId, "UnmintedTx", 0, 0, out unmintedTxTableId);
+            Api.JetAddColumn(jetSession, unmintedTxTableId, "BlockHash", new JET_COLUMNDEF { coltyp = JET_coltyp.Binary, cbMax = 32, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out unmintedBlockHashColumnId);
+            Api.JetAddColumn(jetSession, unmintedTxTableId, "UnmintedData", new JET_COLUMNDEF { coltyp = JET_coltyp.LongBinary, grbit = ColumndefGrbit.ColumnNotNULL }, null, 0, out unmintedDataColumnId);
+
+            Api.JetCreateIndex2(jetSession, unmintedTxTableId,
+                new JET_INDEXCREATE[]
+                    {
+                        new JET_INDEXCREATE
+                        {
+                            cbKeyMost = 255,
+                            grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                            szIndexName = "IX_UnmintedBlockHash",
+                            szKey = "+BlockHash\0\0",
+                            cbKey = "+BlockHash\0\0".Length
+                        }
+                    }, 1);
+
+            Api.JetCloseTable(jetSession, unmintedTxTableId);
         }
 
         public static void OpenDatabase(string jetDatabase, Instance jetInstance, bool readOnly, Logger logger)

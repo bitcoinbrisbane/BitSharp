@@ -132,5 +132,23 @@ namespace BitSharp.Core.Domain
                 return cursor.TryGetBlockSpentTxes(blockIndex, out spentTxes);
             }
         }
+
+        public bool ContainsBlockUnmintedTxes(UInt256 blockHash)
+        {
+            using (var handle = this.cursorCache.TakeItem())
+            {
+                var cursor = handle.Item.Item;
+                return cursor.ContainsBlockUnmintedTxes(blockHash);
+            }
+        }
+
+        public bool TryGetBlockUnmintedTxes(UInt256 blockHash, out IImmutableList<UnmintedTx> unmintedTxes)
+        {
+            using (var handle = this.cursorCache.TakeItem())
+            {
+                var cursor = handle.Item.Item;
+                return cursor.TryGetBlockUnmintedTxes(blockHash, out unmintedTxes);
+            }
+        }
     }
 }

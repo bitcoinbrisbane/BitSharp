@@ -55,6 +55,10 @@ namespace BitSharp.Esent
         public readonly JET_COLUMNID spentSpentBlockIndexColumnId;
         public readonly JET_COLUMNID spentDataColumnId;
 
+        public readonly JET_TABLEID unmintedTxTableId;
+        public readonly JET_COLUMNID unmintedBlockHashColumnId;
+        public readonly JET_COLUMNID unmintedDataColumnId;
+
         private bool inTransaction;
 
         public ChainStateCursor(string jetDatabase, Instance jetInstance, Logger logger)
@@ -82,7 +86,10 @@ namespace BitSharp.Esent
                     out this.outputStatesColumnId,
                 out spentTxTableId,
                     out spentSpentBlockIndexColumnId,
-                    out spentDataColumnId);
+                    out spentDataColumnId,
+                out unmintedTxTableId,
+                    out unmintedBlockHashColumnId,
+                    out unmintedDataColumnId);
         }
 
         ~ChainStateCursor()
@@ -377,6 +384,83 @@ namespace BitSharp.Esent
             }
         }
 
+        public bool ContainsBlockUnmintedTxes(UInt256 blockHash)
+        {
+            Api.JetSetCurrentIndex(this.jetSession, this.unmintedTxTableId, "IX_UnmintedBlockHash");
+            Api.MakeKey(this.jetSession, this.unmintedTxTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
+            return Api.TrySeek(this.jetSession, this.unmintedTxTableId, SeekGrbit.SeekEQ);
+        }
+
+        public bool TryGetBlockUnmintedTxes(UInt256 blockHash, out IImmutableList<UnmintedTx> unmintedTxes)
+        {
+            Api.JetSetCurrentIndex(this.jetSession, this.unmintedTxTableId, "IX_UnmintedBlockHash");
+
+            Api.MakeKey(this.jetSession, this.unmintedTxTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
+
+            if (Api.TrySeek(this.jetSession, this.unmintedTxTableId, SeekGrbit.SeekEQ))
+            {
+                var unmintedTxesBytes = Api.RetrieveColumn(this.jetSession, this.unmintedTxTableId, this.unmintedDataColumnId);
+
+                using (var stream = new MemoryStream(unmintedTxesBytes))
+                using (var reader = new BinaryReader(stream))
+                {
+                    unmintedTxes = ImmutableList.CreateRange(reader.ReadList(() => DataEncoder.DecodeUnmintedTx(stream)));
+                }
+
+                return true;
+            }
+            else
+            {
+                unmintedTxes = null;
+                return false;
+            }
+        }
+
+        public bool TryAddBlockUnmintedTxes(UInt256 blockHash, IImmutableList<UnmintedTx> unmintedTxes)
+        {
+            try
+            {
+                using (var jetUpdate = this.jetSession.BeginUpdate(this.unmintedTxTableId, JET_prep.Insert))
+                {
+                    byte[] unmintedTxesBytes;
+                    using (var stream = new MemoryStream())
+                    using (var writer = new BinaryWriter(stream))
+                    {
+                        writer.WriteList(unmintedTxes.ToImmutableArray(), unmintedTx => DataEncoder.EncodeUnmintedTx(stream, unmintedTx));
+                        unmintedTxesBytes = stream.ToArray();
+                    }
+
+                    Api.SetColumn(this.jetSession, this.unmintedTxTableId, this.unmintedBlockHashColumnId, DbEncoder.EncodeUInt256(blockHash));
+                    Api.SetColumn(this.jetSession, this.unmintedTxTableId, this.unmintedDataColumnId, unmintedTxesBytes);
+
+                    jetUpdate.Save();
+                }
+
+                return true;
+            }
+            catch (EsentKeyDuplicateException)
+            {
+                return false;
+            }
+        }
+
+        public bool TryRemoveBlockUnmintedTxes(UInt256 blockHash)
+        {
+            Api.JetSetCurrentIndex(this.jetSession, this.unmintedTxTableId, "IX_UnmintedBlockHash");
+
+            Api.MakeKey(this.jetSession, this.unmintedTxTableId, DbEncoder.EncodeUInt256(blockHash), MakeKeyGrbit.NewKey);
+
+            if (Api.TrySeek(this.jetSession, this.unmintedTxTableId, SeekGrbit.SeekEQ))
+            {
+                Api.JetDelete(this.jetSession, this.unmintedTxTableId);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         public void BeginTransaction()
         {
             if (this.inTransaction)
@@ -454,7 +538,10 @@ namespace BitSharp.Esent
             out JET_COLUMNID outputStatesColumnId,
             out JET_TABLEID spentTxTableId,
             out JET_COLUMNID spentSpentBlockIndexColumnId,
-            out JET_COLUMNID spentDataColumnId)
+            out JET_COLUMNID spentDataColumnId,
+            out JET_TABLEID unmintedTxTableId,
+            out JET_COLUMNID unmintedBlockHashColumnId,
+            out JET_COLUMNID unmintedDataColumnId)
         {
             jetSession = new Session(jetInstance);
             try
@@ -481,6 +568,10 @@ namespace BitSharp.Esent
                 Api.JetOpenTable(jetSession, chainStateDbId, "SpentTx", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out spentTxTableId);
                 spentSpentBlockIndexColumnId = Api.GetTableColumnid(jetSession, spentTxTableId, "SpentBlockIndex");
                 spentDataColumnId = Api.GetTableColumnid(jetSession, spentTxTableId, "SpentData");
+
+                Api.JetOpenTable(jetSession, chainStateDbId, "UnmintedTx", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out unmintedTxTableId);
+                unmintedBlockHashColumnId = Api.GetTableColumnid(jetSession, unmintedTxTableId, "BlockHash");
+                unmintedDataColumnId = Api.GetTableColumnid(jetSession, unmintedTxTableId, "UnmintedData");
             }
             catch (Exception)
             {
