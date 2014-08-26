@@ -370,6 +370,13 @@ namespace BitSharp.Core.Storage
                 handler(chainedHeader);
         }
 
+        private void RaiseBlockTxesRemoved(ChainedHeader chainedHeader)
+        {
+            var handler = this.BlockTxesRemoved;
+            if (handler != null)
+                handler(chainedHeader);
+        }
+
         private void RaiseBlockTxesMissed(UInt256 blockHash)
         {
             var handler = this.BlockTxesMissed;

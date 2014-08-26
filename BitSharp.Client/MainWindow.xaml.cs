@@ -70,8 +70,8 @@ namespace BitSharp.Client
 
                 // directories
                 var baseDirectory = Config.LocalStoragePath;
-                if (false && Debugger.IsAttached)
-                    baseDirectory = Path.Combine(baseDirectory, "Debugger");
+                //if (Debugger.IsAttached)
+                //    baseDirectory = Path.Combine(baseDirectory, "Debugger");
 
                 var rulesType = useTestNet ? RulesEnum.TestNet3 : RulesEnum.MainNet;
 
