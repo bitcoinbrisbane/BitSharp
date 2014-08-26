@@ -448,5 +448,17 @@ namespace BitSharp.Common.ExtensionMethods
             var range = maxValue - minValue;
             return (random.NextDouble() * range) + minValue;
         }
+
+        public static ulong Sum<T>(this IEnumerable<T> source, Func<T, ulong> selector)
+        {
+            checked
+            {
+                var sum = 0UL;
+                foreach (var item in source)
+                    sum += selector(item);
+
+                return sum;
+            }
+        }
     }
 }

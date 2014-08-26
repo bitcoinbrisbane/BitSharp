@@ -1,4 +1,5 @@
-﻿using BitSharp.Core.Domain;
+﻿using BitSharp.Common.ExtensionMethods;
+using BitSharp.Core.Domain;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -19,6 +20,11 @@ namespace BitSharp.Core.Test
             block = block.With(block.Header.With(MerkleRoot: MerkleTree.CalculateMerkleRoot(block.Transactions)));
 
             return block;
+        }
+
+        public static UInt64 OutputValue(this Transaction transaction)
+        {
+            return transaction.Outputs.Sum(x => x.Value);
         }
     }
 }
