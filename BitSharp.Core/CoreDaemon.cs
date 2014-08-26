@@ -147,6 +147,9 @@ namespace BitSharp.Core
             set { this.pruningWorker.Mode = value; }
         }
 
+        //TODO any replayers should register their chain tip with CoreDaemon, and update it as the replay
+        //TODO CoreDaemon can then keep track of all the chains and determine how much can safely be pruned
+        //TODO the pruning of rollback replay information would also be coordinated against the registered chain tips
         public int PrunableHeight
         {
             get { return this.pruningWorker.PrunableHeight; }
