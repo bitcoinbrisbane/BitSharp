@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
 using System.Collections.Immutable;
+using System.Net;
 
 namespace BitSharp.Common
 {
@@ -105,6 +106,38 @@ namespace BitSharp.Common
             Buffer.BlockCopy(Bits.GetBytes(this.part3), 0, buffer, 8 + offset, 8);
             Buffer.BlockCopy(Bits.GetBytes(this.part2), 0, buffer, 16 + offset, 8);
             Buffer.BlockCopy(Bits.GetBytes(this.part1), 0, buffer, 24 + offset, 8);
+        }
+
+        //TODO properly taken into account host endianness
+        public byte[] ToByteArrayBE()
+        {
+            unchecked
+            {
+                var buffer = new byte[32];
+                Buffer.BlockCopy(BitConverter.GetBytes(IPAddress.HostToNetworkOrder((long)this.part1)), 0, buffer, 0, 8);
+                Buffer.BlockCopy(BitConverter.GetBytes(IPAddress.HostToNetworkOrder((long)this.part2)), 0, buffer, 8, 8);
+                Buffer.BlockCopy(BitConverter.GetBytes(IPAddress.HostToNetworkOrder((long)this.part3)), 0, buffer, 16, 8);
+                Buffer.BlockCopy(BitConverter.GetBytes(IPAddress.HostToNetworkOrder((long)this.part4)), 0, buffer, 24, 8);
+
+                return buffer;
+            }
+        }
+
+        //TODO properly taken into account host endianness
+        public static UInt256 FromByteArrayBE(byte[] buffer)
+        {
+            unchecked
+            {
+                if (buffer.Length != 32)
+                    throw new ArgumentException();
+
+                var part1 = (ulong)IPAddress.HostToNetworkOrder(BitConverter.ToInt64(buffer, 0));
+                var part2 = (ulong)IPAddress.HostToNetworkOrder(BitConverter.ToInt64(buffer, 8));
+                var part3 = (ulong)IPAddress.HostToNetworkOrder(BitConverter.ToInt64(buffer, 16));
+                var part4 = (ulong)IPAddress.HostToNetworkOrder(BitConverter.ToInt64(buffer, 24));
+
+                return new UInt256(part1, part2, part3, part4);
+            }
         }
 
         public BigInteger ToBigInteger()

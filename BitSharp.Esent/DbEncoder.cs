@@ -11,12 +11,12 @@ namespace BitSharp.Esent
     {
         public static byte[] EncodeUInt256(UInt256 value)
         {
-            return value.ToByteArray().Reverse().ToArray();
+            return value.ToByteArrayBE();
         }
 
         public static UInt256 DecodeUInt256(byte[] value)
         {
-            return new UInt256(value.Reverse().ToArray());
+            return UInt256.FromByteArrayBE(value);
         }
     }
 }
