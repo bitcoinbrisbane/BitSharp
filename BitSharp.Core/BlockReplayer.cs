@@ -28,7 +28,7 @@ namespace BitSharp.Core.Builders
         private IChainState chainState;
         private ChainedHeader replayBlock;
         private bool replayForward;
-        private ConcurrentDictionary<UInt256, UnmintedTx> unmintedTxes;
+        private ImmutableDictionary<UInt256, UnmintedTx> unmintedTxes;
         private ConcurrentDictionary<UInt256, Transaction> txCache;
         private ConcurrentBlockingQueue<TxWithPrevOutputKeys> pendingTxes;
         private ConcurrentBlockingQueue<TxWithPrevOutputs> loadedTxes;
@@ -81,7 +81,7 @@ namespace BitSharp.Core.Builders
                     throw new MissingDataException(this.replayBlock.Hash);
                 }
 
-                this.unmintedTxes = new ConcurrentDictionary<UInt256, UnmintedTx>(
+                this.unmintedTxes = ImmutableDictionary.CreateRange(
                     unmintedTxesList.Select(x => new KeyValuePair<UInt256, UnmintedTx>(x.TxHash, x)));
             }
 
@@ -210,7 +210,7 @@ namespace BitSharp.Core.Builders
 
                             var prevOutputBlockHash = this.chainState.Chain.Blocks[unspentTx.BlockIndex].Hash;
                             var prevOutputTxIndex = unspentTx.TxIndex;
-                            
+
                             prevOutputTxKeys.Add(new BlockTxKey(prevOutputBlockHash, prevOutputTxIndex));
                         }
                     }
