@@ -38,6 +38,8 @@ namespace BitSharp.Core.Test.Storage
             var sha256 = new SHA256Managed();
 
             var blockProvider = new MainnetBlockProvider();
+            //TODO this should go to height 5500 so that it will fail if blocks txes aren't rolled back in reverse
+            //TODO it makes the test run fairly slow
             var blocks = Enumerable.Range(0, 500).Select(x => blockProvider.GetBlock(x)).ToList();
 
             var genesisBlock = blocks[0];
@@ -72,6 +74,7 @@ namespace BitSharp.Core.Test.Storage
 
                 // verify the utxo state before rolling back
                 //TODO verify the UTXO hash hard-coded here is correct
+                //TODO 5500: 0e9da3d53272cda9ecb6037c411ebc3cd0b65b5c16698baba41665edb29b8eaf
                 var expectedUtxoHash = UInt256.Parse("609eb5882e0b71a707fb876c844fbfe6b4579e04eb27c7c0cefbb7478bac737b", NumberStyles.HexNumber);
                 using (var utxoStream = new UtxoStream(logger, expectedUtxos.Last()))
                 {
