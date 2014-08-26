@@ -465,42 +465,98 @@ namespace BitSharp.Core
             }
         }
 
-        public static OutputStates DecodeOutputStates(Stream stream)
+        public static BlockTxKey DecodeBlockTxKey(Stream stream)
         {
             using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
             {
-                return new OutputStates
-                (
-                    bytes: reader.ReadVarBytes(),
-                    length: reader.ReadInt32()
+                return new BlockTxKey(
+                    blockHash: reader.ReadUInt256(),
+                    txIndex: reader.ReadInt32()
                 );
+            }
+        }
+
+        public static BlockTxKey DecodeBlockTxKey(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeBlockTxKey(stream);
+            }
+        }
+
+        public static void EncodeBlockTxKey(Stream stream, BlockTxKey blockTxKey)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.WriteUInt256(blockTxKey.BlockHash);
+                writer.WriteInt32(blockTxKey.TxIndex);
+            }
+        }
+
+        public static byte[] EncodeBlockTxKey(BlockTxKey blockTxKey)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeBlockTxKey(stream, blockTxKey);
+                return stream.ToArray();
+            }
+        }
+
+        public static UnmintedTx DecodeUnmintedTx(Stream stream)
+        {
+            using (var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                return new UnmintedTx(
+                    txHash: reader.ReadUInt256(),
+                    prevOutputTxKeys: reader.ReadList(() => DecodeBlockTxKey(stream))
+                );
+            }
+        }
+
+        public static UnmintedTx DecodeUnmintedTx(byte[] bytes)
+        {
+            using (var stream = new MemoryStream(bytes))
+            {
+                return DecodeUnmintedTx(stream);
+            }
+        }
+
+        public static void EncodeUnmintedTx(Stream stream, UnmintedTx unmintedTx)
+        {
+            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                writer.WriteUInt256(unmintedTx.TxHash);
+                writer.WriteList(unmintedTx.PrevOutputTxKeys, x => EncodeBlockTxKey(stream, x));
+            }
+        }
+
+        public static byte[] EncodeUnmintedTx(UnmintedTx unmintedTx)
+        {
+            using (var stream = new MemoryStream())
+            {
+                EncodeUnmintedTx(stream, unmintedTx);
+                return stream.ToArray();
             }
         }
 
         public static OutputStates DecodeOutputStates(byte[] bytes)
         {
-            using (var stream = new MemoryStream(bytes))
-            {
-                return DecodeOutputStates(stream);
-            }
-        }
+            var length = BitConverter.ToInt32(bytes, 0);
+            var outputStateBytes = new byte[bytes.Length - 4];
+            Buffer.BlockCopy(bytes, 4, outputStateBytes, 0, bytes.Length - 4);
 
-        public static void EncodeOutputStates(Stream stream, OutputStates outputStates)
-        {
-            using (var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true))
-            {
-                writer.WriteVarBytes(outputStates.ToByteArray());
-                writer.WriteInt32(outputStates.Length);
-            }
+            return new OutputStates(outputStateBytes, length);
         }
 
         public static byte[] EncodeOutputStates(OutputStates outputStates)
         {
-            using (var stream = new MemoryStream())
-            {
-                EncodeOutputStates(stream, outputStates);
-                return stream.ToArray();
-            }
+            var outputStateBytes = outputStates.ToByteArray();
+            var buffer = new byte[4 + outputStateBytes.Length];
+
+            Buffer.BlockCopy(BitConverter.GetBytes(outputStates.Length), 0, buffer, 0, 4);
+            Buffer.BlockCopy(outputStateBytes, 0, buffer, 4, outputStateBytes.Length);
+
+            return buffer;
         }
 
         public static TxOutputKey DecodeTxOutputKey(Stream stream)
