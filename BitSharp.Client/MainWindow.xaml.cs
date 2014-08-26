@@ -49,8 +49,7 @@ namespace BitSharp.Client
             {
                 //TODO
                 //**************************************************************
-                var rulesType = RulesEnum.TestNet3;
-                //var rulesType = RulesEnum.MainNet;
+                var useTestNet = true;
 
                 var bypassValidation = false;
                 var ignoreScripts = false;
@@ -73,6 +72,8 @@ namespace BitSharp.Client
                 var baseDirectory = Config.LocalStoragePath;
                 if (false && Debugger.IsAttached)
                     baseDirectory = Path.Combine(baseDirectory, "Debugger");
+
+                var rulesType = useTestNet ? RulesEnum.TestNet3 : RulesEnum.MainNet;
 
                 //TODO
                 if (cleanData)
