@@ -50,6 +50,7 @@ namespace BitSharp.Client
                 //TODO
                 //**************************************************************
                 var useTestNet = true;
+                var connectToPeers = true;
 
                 var bypassValidation = false;
                 var ignoreScripts = false;
@@ -156,7 +157,7 @@ namespace BitSharp.Client
                 this.coreDaemon.Start();
 
                 // start p2p client
-                var startThread = new Thread(() => this.localClient.Start());
+                var startThread = new Thread(() => this.localClient.Start(connectToPeers));
                 startThread.Name = "LocalClient.Start";
                 startThread.Start();
 

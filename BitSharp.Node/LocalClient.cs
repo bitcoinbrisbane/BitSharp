@@ -107,7 +107,7 @@ namespace BitSharp.Node
 
         internal ConcurrentSet<Peer> ConnectedPeers { get { return this.peerWorker.ConnectedPeers; } }
 
-        public void Start()
+        public void Start(bool connectToPeers = true)
         {
             if (this.Type != RulesEnum.ComparisonToolTestNet)
             {
@@ -115,7 +115,9 @@ namespace BitSharp.Node
             }
             this.blockRequestWorker.Start();
 
-            this.peerWorker.Start();
+            if (connectToPeers)
+                this.peerWorker.Start();
+
             this.statsWorker.Start();
 
             if (this.Type != RulesEnum.ComparisonToolTestNet)
