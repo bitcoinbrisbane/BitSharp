@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Common
 {
-    public class Bits
+    public static class Bits
     {
         private static readonly bool isLE = BitConverter.IsLittleEndian;
 
@@ -20,11 +20,6 @@ namespace BitSharp.Common
             return Order(BitConverter.GetBytes(value));
         }
 
-        public static byte[] GetBytesBE(UInt16 value)
-        {
-            return OrderBE(BitConverter.GetBytes(value));
-        }
-
         public static byte[] GetBytes(Int32 value)
         {
             return Order(BitConverter.GetBytes(value));
@@ -33,11 +28,6 @@ namespace BitSharp.Common
         public static byte[] GetBytes(UInt32 value)
         {
             return Order(BitConverter.GetBytes(value));
-        }
-
-        public static byte[] GetBytesBE(UInt32 value)
-        {
-            return OrderBE(BitConverter.GetBytes(value));
         }
 
         public static byte[] GetBytes(Int64 value)
@@ -50,47 +40,32 @@ namespace BitSharp.Common
             return Order(BitConverter.GetBytes(value));
         }
 
-        public static byte[] GetBytesBE(UInt64 value)
-        {
-            return OrderBE(BitConverter.GetBytes(value));
-        }
-
         public static byte[] GetBytes(UInt256 value)
         {
             return value.ToByteArray();
         }
 
-        public static string ToString(byte[] value)
+        public static string ToString(byte[] value, int startIndex = 0)
         {
-            return BitConverter.ToString(Order(value));
+            return BitConverter.ToString(Order(value), startIndex);
         }
 
-        public static UInt16 ToUInt16(byte[] value)
+        public static UInt16 ToUInt16(byte[] value, int startIndex = 0)
         {
-            return BitConverter.ToUInt16(Order(value), startIndex: 0);
+            return BitConverter.ToUInt16(Order(value), startIndex);
         }
 
-        public static UInt16 ToUInt16BE(byte[] value)
+        public static Int32 ToInt32(byte[] value, int startIndex = 0)
         {
-            return BitConverter.ToUInt16(OrderBE(value), startIndex: 0);
+            return BitConverter.ToInt32(Order(value), startIndex);
         }
 
-        public static Int32 ToInt32(byte[] value)
+        public static UInt32 ToUInt32(byte[] value, int startIndex = 0)
         {
-            return BitConverter.ToInt32(Order(value), startIndex: 0);
+            return BitConverter.ToUInt32(Order(value), startIndex);
         }
 
-        public static UInt32 ToUInt32(byte[] value)
-        {
-            return BitConverter.ToUInt32(Order(value), startIndex: 0);
-        }
-
-        public static UInt64 ToUInt64(byte[] value)
-        {
-            return BitConverter.ToUInt64(Order(value), startIndex: 0);
-        }
-
-        public static UInt64 ToUInt64(byte[] value, int startIndex)
+        public static UInt64 ToUInt64(byte[] value, int startIndex = 0)
         {
             return BitConverter.ToUInt64(Order(value), startIndex);
         }
@@ -103,11 +78,6 @@ namespace BitSharp.Common
         public static byte[] Order(byte[] value)
         {
             return isLE ? value : value.Reverse().ToArray();
-        }
-
-        public static byte[] OrderBE(byte[] value)
-        {
-            return isLE ? value.Reverse().ToArray() : value;
         }
     }
 }
