@@ -80,7 +80,6 @@
     <Compile Include="Address\Top10000Address.cs" />
     <Compile Include="Base58\ArrayHelpers.cs" />
     <Compile Include="Base58\Base58Encoding.cs" />
-    <Compile Include="Base58\Base58EncodingTests.cs" />
     <Compile Include="EnumWalletEntryType.cs" />
     <Compile Include="IWalletAddress.cs" />
     <Compile Include="MonitoredWalletAddress.cs" />
