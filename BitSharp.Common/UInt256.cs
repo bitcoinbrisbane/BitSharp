@@ -31,21 +31,11 @@ namespace BitSharp.Common
             if (value.Length < 32)
                 value = value.Concat(new byte[32 - value.Length]);
 
-            // read LE parts in reverse order to store in BE
-            var part1Bytes = new byte[8];
-            var part2Bytes = new byte[8];
-            var part3Bytes = new byte[8];
-            var part4Bytes = new byte[8];
-            Buffer.BlockCopy(value, 0, part4Bytes, 0, 8);
-            Buffer.BlockCopy(value, 8, part3Bytes, 0, 8);
-            Buffer.BlockCopy(value, 16, part2Bytes, 0, 8);
-            Buffer.BlockCopy(value, 24, part1Bytes, 0, 8);
-
             // convert parts and store
-            this.part1 = Bits.ToUInt64(part1Bytes);
-            this.part2 = Bits.ToUInt64(part2Bytes);
-            this.part3 = Bits.ToUInt64(part3Bytes);
-            this.part4 = Bits.ToUInt64(part4Bytes);
+            this.part1 = Bits.ToUInt64(value, 24);
+            this.part2 = Bits.ToUInt64(value, 16);
+            this.part3 = Bits.ToUInt64(value, 8);
+            this.part4 = Bits.ToUInt64(value, 0);
 
             this.hashCode = this.part1.GetHashCode() ^ this.part2.GetHashCode() ^ this.part3.GetHashCode() ^ this.part4.GetHashCode();
         }
