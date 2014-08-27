@@ -67,9 +67,7 @@ namespace BitSharp.Core.Script
 
         public byte[] CreatePublicKeyScript(byte[] publicKey)
         {
-            var sha256 = new SHA256Managed();
-            var ripemd160 = new RIPEMD160Managed();
-            var publicKeyHash = ripemd160.ComputeHash(sha256.ComputeHash(publicKey));
+            var publicKeyHash = RIPEMD160Static.ComputeHash(SHA256Static.ComputeHash(publicKey));
 
             using (var publicKeyScript = new ScriptBuilder())
             {
@@ -88,13 +86,12 @@ namespace BitSharp.Core.Script
         public byte[] CreatePrivateKeyScript(Transaction tx, int inputIndex, byte hashType, ECPrivateKeyParameters privateKey, ECPublicKeyParameters publicKey)
         {
             //TODO
-            var sha256 = new SHA256Managed();
             var scriptEngine = new ScriptEngine(this.logger);
 
             var publicAddress = CreatePublicAddress(publicKey);
             var publicKeyScript = CreatePublicKeyScript(publicAddress);
             var txSignature = scriptEngine.TxSignature(publicKeyScript.ToImmutableArray(), tx, inputIndex, hashType);
-            var txSignatureHash = sha256.ComputeDoubleHash(txSignature);
+            var txSignatureHash = SHA256Static.ComputeDoubleHash(txSignature);
 
             //Debug.WriteLine("Signing Tx:       {0}".Format2(txSignature.ToHexDataString()));
             //Debug.WriteLine("Signing Tx  Hash: {0}".Format2(txSignatureHash.ToHexDataString()));

@@ -48,12 +48,11 @@ namespace BitSharp.Wallet.Address
 
         private UInt256 AddressToOutputScriptHash(string address)
         {
-            var sha256 = new SHA256Managed();
             var addressBytes = Base58Encoding.DecodeWithCheckSum(address);
             var publicKeyHash = addressBytes.Skip(1).ToArray();
 
             var outputScript = new PayToPublicKeyHashBuilder().CreateOutputFromPublicKeyHash(publicKeyHash);
-            var outputScriptHash = new UInt256(sha256.ComputeHash(outputScript));
+            var outputScriptHash = new UInt256(SHA256Static.ComputeHash(outputScript));
 
             return outputScriptHash;
         }

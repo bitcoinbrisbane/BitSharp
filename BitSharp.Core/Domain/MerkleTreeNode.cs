@@ -94,8 +94,7 @@ namespace BitSharp.Core.Domain
             left.Hash.ToByteArray(pairHashBytes, 0);
             right.Hash.ToByteArray(pairHashBytes, 32);
 
-            var sha256 = new SHA256Managed();
-            var pairHash = new UInt256(sha256.ComputeDoubleHash(pairHashBytes));
+            var pairHash = new UInt256(SHA256Static.ComputeDoubleHash(pairHashBytes));
 
             return new MerkleTreeNode(left.Index, left.Depth + 1, pairHash, pruned: true);
         }

@@ -19,8 +19,6 @@ namespace BitSharp.Core.Test
         [TestMethod]
         public void TestPruneMerkleTreeNodes()
         {
-            var sha256 = new SHA256Managed();
-
             var node1 = new MerkleTreeNode(index: 0, depth: 0, hash: 1, pruned: false);
             var node2 = new MerkleTreeNode(index: 1, depth: 0, hash: 2, pruned: false);
             var node3 = new MerkleTreeNode(index: 2, depth: 0, hash: 3, pruned: false);
@@ -109,8 +107,6 @@ namespace BitSharp.Core.Test
         [TestMethod]
         public void TestReadMerkleTreeNodes()
         {
-            var sha256 = new SHA256Managed();
-
             var node1 = new MerkleTreeNode(index: 0, depth: 0, hash: 1, pruned: false);
             var node2 = new MerkleTreeNode(index: 1, depth: 0, hash: 2, pruned: false);
             var node3 = new MerkleTreeNode(index: 2, depth: 0, hash: 3, pruned: false);
@@ -130,8 +126,6 @@ namespace BitSharp.Core.Test
         [TestMethod]
         public void TestReadMerkleTreeNodesOddPower()
         {
-            var sha256 = new SHA256Managed();
-
             var depth0Hash1 = (UInt256)1;
             var depth0Hash2 = (UInt256)2;
             var depth0Hash3 = (UInt256)3;
@@ -155,8 +149,6 @@ namespace BitSharp.Core.Test
         [TestMethod]
         public void TestReadMerkleTreeNodesPruned()
         {
-            var sha256 = new SHA256Managed();
-
             var depth0Hash1 = (UInt256)1;
             var depth0Hash2 = (UInt256)2;
             var depth0Hash3 = (UInt256)3;
@@ -215,8 +207,6 @@ namespace BitSharp.Core.Test
         [ExpectedException(typeof(InvalidOperationException))]
         public void TestReadMerkleTreeNodesBadDepth()
         {
-            var sha256 = new SHA256Managed();
-
             var depth0Hash1 = (UInt256)1;
             var depth0Hash2 = (UInt256)2;
             var depth0Hash3 = (UInt256)3;
@@ -241,8 +231,6 @@ namespace BitSharp.Core.Test
         [ExpectedException(typeof(InvalidOperationException))]
         public void TestReadMerkleTreeNodesBadIndex()
         {
-            var sha256 = new SHA256Managed();
-
             var depth0Hash1 = (UInt256)1;
             var depth0Hash2 = (UInt256)2;
             var depth0Hash3 = (UInt256)3;
@@ -273,8 +261,6 @@ namespace BitSharp.Core.Test
         [TestMethod]
         public void TestCalculateMerkleRoot()
         {
-            var sha256 = new SHA256Managed();
-
             var node1 = new MerkleTreeNode(index: 0, depth: 0, hash: 1, pruned: false);
             var node2 = new MerkleTreeNode(index: 1, depth: 0, hash: 2, pruned: false);
             var node3 = new MerkleTreeNode(index: 2, depth: 0, hash: 3, pruned: false);

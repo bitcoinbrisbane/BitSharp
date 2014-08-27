@@ -24,9 +24,7 @@ namespace BitSharp.Core.Script
     {
         public byte[] CreateOutputFromPublicKey(byte[] publicKey)
         {
-            var sha256 = new SHA256Managed();
-            var ripemd160 = new RIPEMD160Managed();
-            var publicKeyHash = ripemd160.ComputeHash(sha256.ComputeHash(publicKey));
+            var publicKeyHash = RIPEMD160Static.ComputeHash(SHA256Static.ComputeHash(publicKey));
             return CreateOutputFromPublicKeyHash(publicKeyHash);
         }
 

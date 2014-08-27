@@ -18,26 +18,22 @@ namespace BitSharp.Core
     {
         public static UInt256 CalculateBlockHash(BlockHeader blockHeader)
         {
-            var sha256 = new SHA256Managed();
-            return new UInt256(sha256.ComputeDoubleHash(DataEncoder.EncodeBlockHeader(blockHeader)));
+            return new UInt256(SHA256Static.ComputeDoubleHash(DataEncoder.EncodeBlockHeader(blockHeader)));
         }
 
         public static UInt256 CalculateBlockHash(UInt32 Version, UInt256 PreviousBlock, UInt256 MerkleRoot, UInt32 Time, UInt32 Bits, UInt32 Nonce)
         {
-            var sha256 = new SHA256Managed();
-            return new UInt256(sha256.ComputeDoubleHash(DataEncoder.EncodeBlockHeader(Version, PreviousBlock, MerkleRoot, Time, Bits, Nonce)));
+            return new UInt256(SHA256Static.ComputeDoubleHash(DataEncoder.EncodeBlockHeader(Version, PreviousBlock, MerkleRoot, Time, Bits, Nonce)));
         }
 
         public static UInt256 CalculateTransactionHash(Transaction tx)
         {
-            var sha256 = new SHA256Managed();
-            return new UInt256(sha256.ComputeDoubleHash(DataEncoder.EncodeTransaction(tx)));
+            return new UInt256(SHA256Static.ComputeDoubleHash(DataEncoder.EncodeTransaction(tx)));
         }
 
         public static UInt256 CalculateTransactionHash(UInt32 Version, ImmutableArray<TxInput> Inputs, ImmutableArray<TxOutput> Outputs, UInt32 LockTime)
         {
-            var sha256 = new SHA256Managed();
-            return new UInt256(sha256.ComputeDoubleHash(DataEncoder.EncodeTransaction(Version, Inputs, Outputs, LockTime)));
+            return new UInt256(SHA256Static.ComputeDoubleHash(DataEncoder.EncodeTransaction(Version, Inputs, Outputs, LockTime)));
         }
 
         //TDOO name...

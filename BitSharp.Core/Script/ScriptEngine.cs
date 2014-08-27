@@ -70,9 +70,6 @@ Verifying script for block {0}, transaction {1}, input {2}
 
         private bool ExecuteOps(ImmutableArray<byte> scriptPubKey, Transaction tx, int inputIndex, byte[] script, out Stack stack, out Stack altStack)
         {
-            var sha256 = new SHA256Managed();
-            var ripemd160 = new RIPEMD160Managed();
-
             stack = new Stack();
             altStack = new Stack();
 
@@ -195,7 +192,7 @@ Verifying script for block {0}, transaction {1}, input {2}
 
                                 var value = stack.PopBytes().ToArray();
 
-                                var hash = sha256.ComputeHash(value);
+                                var hash = SHA256Static.ComputeHash(value);
                                 stack.PushBytes(hash);
 
                                 if (this.logger.IsTraceEnabled)
@@ -213,7 +210,7 @@ Verifying script for block {0}, transaction {1}, input {2}
 
                                 var value = stack.PopBytes().ToArray();
 
-                                var hash = ripemd160.ComputeHash(sha256.ComputeHash(value));
+                                var hash = RIPEMD160Static.ComputeHash(SHA256Static.ComputeHash(value));
                                 stack.PushBytes(hash);
 
                                 if (this.logger.IsTraceEnabled)
@@ -311,8 +308,7 @@ Verifying script for block {0}, transaction {1}, input {2}
             txSignature = TxSignature(scriptPubKey, tx, inputIndex, hashType);
 
             // get the hash of the simplified/signing version of the transaction
-            var sha256 = new SHA256Managed();
-            txSignatureHash = sha256.ComputeDoubleHash(txSignature);
+            txSignatureHash = SHA256Static.ComputeDoubleHash(txSignature);
 
             if (this.ignoreSignatures)
             {

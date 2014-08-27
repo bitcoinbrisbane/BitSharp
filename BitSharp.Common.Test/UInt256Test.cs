@@ -79,8 +79,7 @@ namespace BitSharp.Common.Test
         [TestMethod]
         public void TestUInt256Sha256()
         {
-            var sha256 = new SHA256Managed();
-            var expected = sha256.ComputeDoubleHash(UInt256.Parse(TestData.HEX_STRING_64, NumberStyles.HexNumber).ToByteArray());
+            var expected = SHA256Static.ComputeDoubleHash(UInt256.Parse(TestData.HEX_STRING_64, NumberStyles.HexNumber).ToByteArray());
             var actual = new UInt256(expected).ToByteArray();
 
             CollectionAssert.AreEqual(expected, actual);

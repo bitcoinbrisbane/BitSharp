@@ -121,8 +121,6 @@ namespace BitSharp.Esent
 
                 using (var jetTx = cursor.jetSession.BeginTransaction())
                 {
-                    var sha256 = new SHA256Managed();
-
                     Api.JetSetCurrentIndex(cursor.jetSession, cursor.blocksTableId, "IX_BlockIdTxIndex");
                     Api.MakeKey(cursor.jetSession, cursor.blocksTableId, blockId, MakeKeyGrbit.NewKey);
                     Api.MakeKey(cursor.jetSession, cursor.blocksTableId, -1, MakeKeyGrbit.None);
@@ -148,7 +146,7 @@ namespace BitSharp.Esent
                         if (!pruned)
                         {
                             // verify transaction is not corrupt
-                            if (txHash != new UInt256(sha256.ComputeDoubleHash(txBytes)))
+                            if (txHash != new UInt256(SHA256Static.ComputeDoubleHash(txBytes)))
                                 throw new MissingDataException(blockHash);
 
                             tx = DataEncoder.DecodeTransaction(txBytes, txHash);
@@ -191,9 +189,8 @@ namespace BitSharp.Esent
                         if (txBytes != null)
                         {
                             // verify transaction is not corrupt
-                            var sha256 = new SHA256Managed();
                             var txHash = DbEncoder.DecodeUInt256(Api.RetrieveColumn(cursor.jetSession, cursor.blocksTableId, cursor.blockTxHashColumnId));
-                            if (txHash != new UInt256(sha256.ComputeDoubleHash(txBytes)))
+                            if (txHash != new UInt256(SHA256Static.ComputeDoubleHash(txBytes)))
                                 throw new MissingDataException(blockHash);
 
                             transaction = DataEncoder.DecodeTransaction(txBytes, txHash);

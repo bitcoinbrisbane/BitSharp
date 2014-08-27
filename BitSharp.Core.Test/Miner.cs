@@ -27,13 +27,11 @@ namespace BitSharp.Core.Test
         {
             public readonly byte[] headerBytes;
             public long total;
-            public readonly SHA256 sha256;
 
             public LocalMinerState(byte[] headerBytes)
             {
                 this.headerBytes = (byte[])headerBytes.Clone();
                 this.total = 0;
-                this.sha256 = SHA256.Create();
             }
         }
 
@@ -66,8 +64,7 @@ namespace BitSharp.Core.Test
                     Buffer.BlockCopy(nonceBytes, 0, localState.headerBytes, nonceIndex, 4);
 
                     var headerBytes = localState.headerBytes;
-                    var sha256 = localState.sha256;
-                    var hashBytes = sha256.ComputeDoubleHash(headerBytes);
+                    var hashBytes = SHA256Static.ComputeDoubleHash(headerBytes);
 
                     if (BytesCompareLE(hashBytes, hashTargetBytes) < 0)
                     {

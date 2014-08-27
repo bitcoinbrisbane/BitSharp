@@ -35,7 +35,6 @@ namespace BitSharp.Core.Test.Storage
         private void TestRollback(ITestStorageProvider provider)
         {
             var logger = LogManager.CreateNullLogger();
-            var sha256 = new SHA256Managed();
 
             var blockProvider = new MainnetBlockProvider();
             //TODO this should go to height 5500 so that it will fail if blocks txes aren't rolled back in reverse
@@ -78,7 +77,7 @@ namespace BitSharp.Core.Test.Storage
                 var expectedUtxoHash = UInt256.Parse("609eb5882e0b71a707fb876c844fbfe6b4579e04eb27c7c0cefbb7478bac737b", NumberStyles.HexNumber);
                 using (var utxoStream = new UtxoStream(logger, expectedUtxos.Last()))
                 {
-                    var utxoHash = new UInt256(sha256.ComputeDoubleHash(utxoStream));
+                    var utxoHash = new UInt256(SHA256Static.ComputeDoubleHash(utxoStream));
                     Assert.AreEqual(expectedUtxoHash, utxoHash);
                 }
                 expectedUtxos.RemoveAt(expectedUtxos.Count - 1);

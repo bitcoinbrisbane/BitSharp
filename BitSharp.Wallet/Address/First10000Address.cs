@@ -60,9 +60,8 @@ namespace BitSharp.Wallet.Address
                 Debugger.Break();
             //Debug.Assert(publicKey.Length == 65);
 
-            var sha256 = new SHA256Managed();
             var outputScript = new PayToPublicKeyBuilder().CreateOutput(publicKey);
-            var outputScriptHash = new UInt256(sha256.ComputeHash(outputScript));
+            var outputScriptHash = new UInt256(SHA256Static.ComputeHash(outputScript));
 
             return outputScriptHash;
         }
@@ -73,9 +72,8 @@ namespace BitSharp.Wallet.Address
                 Debugger.Break();
             //Debug.Assert(publicKeyHash.Length == 20);
 
-            var sha256 = new SHA256Managed();
             var outputScript = new PayToPublicKeyHashBuilder().CreateOutputFromPublicKeyHash(publicKeyHash);
-            var outputScriptHash = new UInt256(sha256.ComputeHash(outputScript));
+            var outputScriptHash = new UInt256(SHA256Static.ComputeHash(outputScript));
 
             return outputScriptHash;
         }

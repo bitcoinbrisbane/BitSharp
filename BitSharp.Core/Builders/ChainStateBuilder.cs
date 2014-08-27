@@ -28,7 +28,6 @@ namespace BitSharp.Core.Builders
     internal class ChainStateBuilder : IDisposable
     {
         private readonly Logger logger;
-        private readonly SHA256Managed sha256;
         private readonly IBlockchainRules rules;
         private readonly CoreStorage coreStorage;
 
@@ -47,7 +46,6 @@ namespace BitSharp.Core.Builders
         public ChainStateBuilder(Logger logger, IBlockchainRules rules, CoreStorage coreStorage)
         {
             this.logger = logger;
-            this.sha256 = new SHA256Managed();
             this.rules = rules;
             this.coreStorage = coreStorage;
 
@@ -255,7 +253,7 @@ namespace BitSharp.Core.Builders
 
         private UInt256 GetOutputScripHash(TxOutput txOutput)
         {
-            return new UInt256(this.sha256.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
+            return new UInt256(SHA256Static.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
         }
 
         //TODO cache the latest immutable snapshot

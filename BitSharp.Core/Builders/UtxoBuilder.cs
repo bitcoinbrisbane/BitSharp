@@ -40,7 +40,6 @@ namespace BitSharp.Core.Builders
         public UtxoBuilder(IChainStateCursor chainStateCursor, Logger logger)
         {
             this.logger = logger;
-            this.sha256 = new SHA256Managed();
 
             this.chainStateCursor = chainStateCursor;
         }

@@ -404,16 +404,6 @@ namespace BitSharp.Common.ExtensionMethods
             }
         }
 
-        public static byte[] ComputeDoubleHash(this SHA256 sha256, byte[] buffer)
-        {
-            return sha256.ComputeHash(sha256.ComputeHash(buffer));
-        }
-
-        public static byte[] ComputeDoubleHash(this SHA256 sha256, Stream inputStream)
-        {
-            return sha256.ComputeHash(sha256.ComputeHash(inputStream));
-        }
-
         public static bool TryAdd<TKey, TValue>(this ImmutableDictionary<TKey, TValue>.Builder dict, TKey key, TValue value)
         {
             try

@@ -149,7 +149,7 @@ namespace BitSharp.Core
             var bytes = ImmutableArray.CreateBuilder<byte>(64);
             bytes.AddRange(left.ToByteArray());
             bytes.AddRange(right.ToByteArray());
-            return new UInt256(new SHA256Managed().ComputeDoubleHash(bytes.ToArray()));
+            return new UInt256(SHA256Static.ComputeDoubleHash(bytes.ToArray()));
         }
 
         private class MerkleStream

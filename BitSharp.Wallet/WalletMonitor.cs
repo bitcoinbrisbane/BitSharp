@@ -170,8 +170,6 @@ namespace BitSharp.Wallet
 
         private void ScanBlock(IChainState chainState, ChainedHeader scanBlock, bool forward)
         {
-            var sha256 = new SHA256Managed();
-
             using (this.blockReplayer.StartReplay(chainState, scanBlock.Hash))
             {
                 foreach (var txWithPrevOutputs in this.blockReplayer.ReplayBlock())
@@ -185,7 +183,7 @@ namespace BitSharp.Wallet
                         {
                             var input = tx.Inputs[inputIndex];
                             var prevOutput = txWithPrevOutputs.PrevTxOutputs[inputIndex];
-                            var prevOutputScriptHash = new UInt256(sha256.ComputeHash(prevOutput.ScriptPublicKey.ToArray()));
+                            var prevOutputScriptHash = new UInt256(SHA256Static.ComputeHash(prevOutput.ScriptPublicKey.ToArray()));
 
                             var chainPosition = ChainPosition.Fake();
                             var entryType = forward ? EnumWalletEntryType.Spend : EnumWalletEntryType.UnSpend;
@@ -197,7 +195,7 @@ namespace BitSharp.Wallet
                     for (var outputIndex = 0; outputIndex < tx.Outputs.Length; outputIndex++)
                     {
                         var output = tx.Outputs[outputIndex];
-                        var outputScriptHash = new UInt256(sha256.ComputeHash(output.ScriptPublicKey.ToArray()));
+                        var outputScriptHash = new UInt256(SHA256Static.ComputeHash(output.ScriptPublicKey.ToArray()));
 
                         var chainPosition = ChainPosition.Fake();
                         var entryType =

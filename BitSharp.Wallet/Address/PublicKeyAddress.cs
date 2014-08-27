@@ -21,11 +21,10 @@ namespace BitSharp.Wallet.Address
         {
             this.publicKeyBytes = publicKeyBytes;
 
-            var sha256 = new SHA256Managed();
             var outputScript1 = new PayToPublicKeyBuilder().CreateOutput(publicKeyBytes.ToArray());
             var outputScript2 = new PayToPublicKeyHashBuilder().CreateOutputFromPublicKey(publicKeyBytes.ToArray());
-            this.outputScript1Hash = new UInt256(sha256.ComputeHash(outputScript1));
-            this.outputScript2Hash = new UInt256(sha256.ComputeHash(outputScript2));
+            this.outputScript1Hash = new UInt256(SHA256Static.ComputeHash(outputScript1));
+            this.outputScript2Hash = new UInt256(SHA256Static.ComputeHash(outputScript2));
         }
 
         public IEnumerable<UInt256> GetOutputScriptHashes()

@@ -92,6 +92,8 @@
     <Compile Include="DurationMeasure.cs" />
     <Compile Include="CountMeasure.cs" />
     <Compile Include="RateMeasure.cs" />
+    <Compile Include="RIPEMD160Static.cs" />
+    <Compile Include="SHA256Static.cs" />
     <Compile Include="SortedValueDictionary.cs" />
     <Compile Include="UInt256.cs" />
     <Compile Include="Worker.cs" />

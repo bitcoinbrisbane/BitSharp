@@ -71,8 +71,7 @@ namespace BitSharp.Node.Network
 
         public static UInt32 CalculatePayloadChecksum(byte[] payload)
         {
-            var sha256 = new SHA256Managed();
-            return Bits.ToUInt32(sha256.ComputeDoubleHash(payload).Take(4).ToArray());
+            return Bits.ToUInt32(SHA256Static.ComputeDoubleHash(payload).Take(4).ToArray());
         }
 
         public static bool VerifyPayloadChecksum(UInt32 checksum, byte[] payload)

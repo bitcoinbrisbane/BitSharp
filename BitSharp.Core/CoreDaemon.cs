@@ -260,15 +260,13 @@ namespace BitSharp.Core
             //    {
             //        using (var utxoStream = new UtxoStream(this.logger, chainStateLocal.ReadUnspentTransactions()))
             //        {
-            //            var sha256 = new SHA256Managed();
-            //            var utxoHash = sha256.ComputeHash(utxoStream);
+            //            var utxoHash = SHA256Pool.ComputeHash(utxoStream);
             //            this.logger.Info("UXO Commitment Hash: {0}".Format2(utxoHash.ToHexNumberString()));
             //        }
             //    });
 
             //    //new MethodTimer().Time("Full UTXO Scan: {0:#,##0}".Format2(chainStateLocal.Utxo.TransactionCount), () =>
             //    //{
-            //    //    var sha256 = new SHA256Managed();
             //    //    foreach (var output in chainStateLocal.Utxo.GetUnspentTransactions())
             //    //    {
             //    //    }

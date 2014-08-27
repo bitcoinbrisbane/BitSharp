@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BitSharp.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -119,9 +120,8 @@ namespace BitSharp.Wallet.Base58
             //Contract.Requires<ArgumentNullException>(data != null);
             //Contract.Ensures(Contract.Result<byte[]>() != null);
 
-            SHA256 sha256 = new SHA256Managed();
-            byte[] hash1 = sha256.ComputeHash(data);
-            byte[] hash2 = sha256.ComputeHash(hash1);
+            byte[] hash1 = SHA256Static.ComputeHash(data);
+            byte[] hash2 = SHA256Static.ComputeHash(hash1);
 
             var result = new byte[CheckSumSizeInBytes];
             Buffer.BlockCopy(hash2, 0, result, 0, result.Length);
