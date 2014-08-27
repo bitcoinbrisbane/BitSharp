@@ -106,8 +106,7 @@ namespace BitSharp.Core.Workers
                             ? targetChainLocal.ToBuilder()
                             : new ChainBuilder(Chain.CreateForGenesisBlock(this.rules.GenesisChainedHeader));
 
-                    var deltaBlockPath = new MethodTimer(false).Time("deltaBlockPath", () =>
-                        new BlockchainWalker().GetBlockchainPath(newTargetChain.LastBlock, targetBlockLocal, blockHash => this.coreStorage.GetChainedHeader(blockHash)));
+                    var deltaBlockPath = new BlockchainWalker().GetBlockchainPath(newTargetChain.LastBlock, targetBlockLocal, blockHash => this.coreStorage.GetChainedHeader(blockHash));
 
                     foreach (var rewindBlock in deltaBlockPath.RewindBlocks)
                     {
