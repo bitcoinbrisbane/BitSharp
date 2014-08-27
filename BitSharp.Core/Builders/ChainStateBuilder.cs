@@ -100,30 +100,27 @@ namespace BitSharp.Core.Builders
                     this.chain.AddBlock(chainedHeader);
                     this.chainStateCursor.AddChainedHeader(chainedHeader);
 
-                    // calculate the new block utxo, double spends will be checked for
-                    new MethodTimer(false).Time("CalculateUtxo", () =>
+                    // ignore transactions on geneis block
+                    if (chainedHeader.Height > 0)
                     {
-                        // ignore transactions on geneis block
-                        if (chainedHeader.Height > 0)
+                        // calculate the new block utxo, only output availability is checked and updated
+                        foreach (var pendingTx in this.utxoBuilder.CalculateUtxo(this.chain.ToImmutable(), blockTxes.Select(x => x.Transaction)))
                         {
-                            foreach (var pendingTx in this.utxoBuilder.CalculateUtxo(this.chain.ToImmutable(), blockTxes.Select(x => x.Transaction)))
-                            {
-                                this.blockValidator.AddPendingTx(pendingTx);
+                            this.blockValidator.AddPendingTx(pendingTx);
 
-                                // track stats
-                                this.stats.txCount++;
-                                this.stats.inputCount += pendingTx.Transaction.Inputs.Length;
-                                this.stats.txRateMeasure.Tick();
-                                this.stats.inputRateMeasure.Tick(pendingTx.Transaction.Inputs.Length);
-                            }
+                            // track stats
+                            this.stats.txCount++;
+                            this.stats.inputCount += pendingTx.Transaction.Inputs.Length;
+                            this.stats.txRateMeasure.Tick();
+                            this.stats.inputRateMeasure.Tick(pendingTx.Transaction.Inputs.Length);
                         }
+                    }
 
-                        // finished queuing up block's txes
-                        this.blockValidator.CompleteAdding();
+                    // finished queuing up block's txes
+                    this.blockValidator.CompleteAdding();
 
-                        // track stats
-                        this.stats.blockCount++;
-                    });
+                    // track stats
+                    this.stats.blockCount++;
 
                     // wait for block validation to complete
                     this.blockValidator.WaitToComplete();
