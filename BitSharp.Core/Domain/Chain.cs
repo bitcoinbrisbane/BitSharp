@@ -10,11 +10,18 @@ using System.Threading.Tasks;
 
 namespace BitSharp.Core.Domain
 {
+    /// <summary>
+    /// This class represents a valid, contiguous chain of headers from height 0. Headers are indexed by height and by hash.
+    /// </summary>
     public class Chain
     {
+        // chained headers by height
         private readonly ImmutableList<ChainedHeader> blocks;
+
+        // chained headers by hash
         private readonly ImmutableDictionary<UInt256, ChainedHeader> blocksByHash;
 
+        // constructor, at least 1 header must be present, both view counts must match
         internal Chain(ImmutableList<ChainedHeader> blocks, ImmutableDictionary<UInt256, ChainedHeader> blocksByHash)
         {
             if (blocks == null)
@@ -23,56 +30,77 @@ namespace BitSharp.Core.Domain
                 throw new ArgumentNullException("blocksByHash");
             if (blocks.Count != blocksByHash.Count)
                 throw new ArgumentException();
+            if (blocks.Count == 0)
+                throw new ArgumentException();
 
             this.blocks = blocks;
             this.blocksByHash = blocksByHash;
         }
 
+        /// <summary>
+        /// The chain's genesis header.
+        /// </summary>
         public ChainedHeader GenesisBlock { get { return this.blocks.First(); } }
 
+        /// <summary>
+        /// The last header in the chain.
+        /// </summary>
         public ChainedHeader LastBlock { get { return this.blocks.Last(); } }
 
+        /// <summary>
+        /// The height of the chain. This will be one less than the count of headers.
+        /// </summary>
         public int Height { get { return this.blocks.Count() - 1; } }
 
+        /// <summary>
+        /// The total amount of work done on this chain.
+        /// </summary>
         public BigInteger TotalWork { get { return this.LastBlock.TotalWork; } }
 
+        /// <summary>
+        /// The list of headers in the chain, starting from height 0.
+        /// </summary>
         public ImmutableList<ChainedHeader> Blocks { get { return this.blocks; } }
 
+        /// <summary>
+        /// The dictionary of headers in the chain, indexed by hash.
+        /// </summary>
         public ImmutableDictionary<UInt256, ChainedHeader> BlocksByHash { get { return this.blocksByHash; } }
 
-        public IEnumerable<ChainedHeader> ReadFromGenesis()
-        {
-            var expectedHeight = 0;
-            var expectedPrevBlockHash = this.GenesisBlock.PreviousBlockHash;
-            foreach (var block in this.blocks)
-            {
-                if (block.Height != expectedHeight
-                    || block.PreviousBlockHash != expectedPrevBlockHash)
-                    throw new InvalidOperationException();
-
-                yield return block;
-                expectedHeight++;
-                expectedPrevBlockHash = block.Hash;
-            }
-        }
-
+        /// <summary>
+        /// Enumerate the path of headers to get from this chain to the target chain.
+        /// </summary>
+        /// <param name="targetChain">The chain to navigate towards.</param>
+        /// <returns>An enumeration of the path's headers.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if there is no path to the target chain.</exception>
         public IEnumerable<Tuple<int, ChainedHeader>> NavigateTowards(Chain targetChain)
         {
             return this.NavigateTowards(() => targetChain);
         }
 
+        /// <summary>
+        /// Enumerate the path of headers to get from this chain to a target chain, with the target chain updating after each yield.
+        /// </summary>
+        /// <param name="targetChain">The function to return the chain to navigate towards.</param>
+        /// <returns>An enumeration of the path's headers.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if there is no path to the target chain.</exception>
+        /// <remarks>
+        /// <para>The path from block 2 to block 4 would consist of [+1,block3], [+1,block4].</para>
+        /// <para>The path from block 4a to block 3b, with a last common ancestor of block 1, would
+        /// consist of: [-1,block3a], [-1,block2a], [+1,block2b], [+1,block3b]. Note that the last
+        /// common ancestor is not listed.</para>
+        /// </remarks>
         public IEnumerable<Tuple<int, ChainedHeader>> NavigateTowards(Func<Chain> getTargetChain)
         {
             var currentBlock = this.LastBlock;
             while (true)
             {
+                // acquire the target chain
                 var targetChain = getTargetChain();
                 if (targetChain == null)
                     yield break;
                 else if (targetChain.GenesisBlock != this.GenesisBlock)
                     throw new InvalidOperationException();
-
-                var targetBlock = targetChain.LastBlock;
 
                 // if currently ahead of target chain, must rewind
                 if (currentBlock.Height > targetChain.Height)
@@ -114,11 +142,20 @@ namespace BitSharp.Core.Domain
             }
         }
 
+        /// <summary>
+        /// Create a new ChainBuilder instance from this chain. Changes to the builder have no effect on this chain.
+        /// </summary>
+        /// <returns>The builder instance.</returns>
         public ChainBuilder ToBuilder()
         {
             return new ChainBuilder(this);
         }
 
+        /// <summary>
+        /// Create a new Chain instance consisting of a single genesis header.
+        /// </summary>
+        /// <param name="genesisBlock">The genesis header.</param>
+        /// <returns>The Chain instance.</returns>
         public static Chain CreateForGenesisBlock(ChainedHeader genesisBlock)
         {
             var chainBuilder = new ChainBuilder();

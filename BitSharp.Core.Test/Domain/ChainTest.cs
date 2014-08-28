@@ -131,25 +131,6 @@ namespace BitSharp.Core.Test.Domain
         }
 
         [TestMethod]
-        public void TestReadFromGenesis()
-        {
-            var fakeHeaders = new FakeHeaders();
-            var header0 = fakeHeaders.GenesisChained();
-            var header1 = fakeHeaders.NextChained();
-
-            var chainBuilder = new ChainBuilder(new[] { header0 });
-
-            // verify read with 1 block
-            var chain0 = chainBuilder.ToImmutable();
-            CollectionAssert.AreEqual(new[] { header0 }, chain0.ReadFromGenesis().ToList());
-
-            // verify read with 2 blocks
-            chainBuilder.AddBlock(header1);
-            var chain1 = chainBuilder.ToImmutable();
-            CollectionAssert.AreEqual(new[] { header0, header1 }, chain1.ReadFromGenesis().ToList());
-        }
-
-        [TestMethod]
         public void TestNavigateTowards()
         {
             Assert.Inconclusive("TODO");
