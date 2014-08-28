@@ -133,7 +133,77 @@ namespace BitSharp.Core.Test.Domain
         [TestMethod]
         public void TestNavigateTowards()
         {
-            Assert.Inconclusive("TODO");
+            // create forked chains
+            var fakeHeadersA = new FakeHeaders();
+            var header0 = fakeHeadersA.GenesisChained();
+            var header1 = fakeHeadersA.NextChained();
+
+            var fakeHeadersB = new FakeHeaders(fakeHeadersA);
+            var header2A = fakeHeadersA.NextChained();
+            var header3A = fakeHeadersA.NextChained();
+            var header4A = fakeHeadersA.NextChained();
+            var header2B = fakeHeadersB.NextChained();
+            var header3B = fakeHeadersB.NextChained();
+            var header4B = fakeHeadersB.NextChained();
+
+            var chain0 = new ChainBuilder(new[] { header0, header1, header2A, header3A }).ToImmutable();
+            var chain1 = new ChainBuilder(new[] { header0, header1, header2B, header3B, header4B }).ToImmutable();
+
+            // verify path from chain 0 to chain 1
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    Tuple.Create(-1, header3A),
+                    Tuple.Create(-1, header2A),
+                    Tuple.Create(+1, header2B),
+                    Tuple.Create(+1, header3B),
+                    Tuple.Create(+1, header4B)
+                }
+                , chain0.NavigateTowards(chain1).ToList());
+
+            // verify path from chain 1 to chain 0
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    Tuple.Create(-1, header4B),
+                    Tuple.Create(-1, header3B),
+                    Tuple.Create(-1, header2B),
+                    Tuple.Create(+1, header2A),
+                    Tuple.Create(+1, header3A)
+                }
+                , chain1.NavigateTowards(chain0).ToList());
+        }
+
+        [TestMethod]
+        public void TestNavigateTowardsFunc()
+        {
+            // create chains
+            var fakeHeaders = new FakeHeaders();
+            var header0 = fakeHeaders.GenesisChained();
+            var header1 = fakeHeaders.NextChained();
+            var header2 = fakeHeaders.NextChained();
+            var header3 = fakeHeaders.NextChained();
+
+            var chain0 = new ChainBuilder(new[] { header0, }).ToImmutable();
+            var chain1 = new ChainBuilder(new[] { header0, header1, }).ToImmutable();
+            var chain2 = new ChainBuilder(new[] { header0, header1, header2 }).ToImmutable();
+            var chain3 = new ChainBuilder(new[] { header0, header1, header2, header3 }).ToImmutable();
+
+            // the list of target chains to use, stays 1 ahead and then catches up with chain 3
+            var targetStack = new Stack<Chain>(new[] { chain1, chain2, chain3, chain3 }.Reverse());
+
+            // verify navigating towards an updating chain
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    Tuple.Create(+1, header1),
+                    Tuple.Create(+1, header2),
+                    Tuple.Create(+1, header3)
+                }
+                , chain0.NavigateTowards(() => targetStack.Pop()).ToList());
+
+            // verify all targets used
+            Assert.AreEqual(0, targetStack.Count);
         }
 
         [TestMethod]

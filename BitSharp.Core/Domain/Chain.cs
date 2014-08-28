@@ -87,7 +87,7 @@ namespace BitSharp.Core.Domain
         /// <remarks>
         /// <para>The path from block 2 to block 4 would consist of [+1,block3], [+1,block4].</para>
         /// <para>The path from block 4a to block 3b, with a last common ancestor of block 1, would
-        /// consist of: [-1,block3a], [-1,block2a], [+1,block2b], [+1,block3b]. Note that the last
+        /// consist of: [-1,block4a],[-1,block3a], [-1,block2a], [+1,block2b], [+1,block3b]. Note that the last
         /// common ancestor is not listed.</para>
         /// </remarks>
         public IEnumerable<Tuple<int, ChainedHeader>> NavigateTowards(Func<Chain> getTargetChain)
