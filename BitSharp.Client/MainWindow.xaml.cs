@@ -65,6 +65,8 @@ namespace BitSharp.Client
                 var cleanData = false;
                 var cleanChainState = false;
 
+                var cacheSizeMaxBytes = 500.MILLION();
+
                 //NOTE: Running with a cleaned chained state against a pruned blockchain does not work.
                 //      It will see the data is missing, but won't redownload the blocks.
                 //**************************************************************
@@ -108,7 +110,7 @@ namespace BitSharp.Client
                 }
                 else
                 {
-                    modules.Add(new EsentStorageModule(baseDirectory, rulesType));
+                    modules.Add(new EsentStorageModule(baseDirectory, rulesType, cacheSizeMaxBytes));
                 }
 
                 // add cache modules
