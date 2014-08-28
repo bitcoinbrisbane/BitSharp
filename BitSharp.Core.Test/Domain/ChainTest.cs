@@ -21,9 +21,14 @@ namespace BitSharp.Core.Test.Domain
             var header0 = fakeHeaders.GenesisChained();
             var header1 = fakeHeaders.NextChained();
 
-            var chainBuilder = new ChainBuilder(new[] { header0 });
+            var chainBuilder = new ChainBuilder();
+
+            // verify genesis with 0 blocks
+            var chainEmpty = chainBuilder.ToImmutable();
+            Assert.IsNull(chainEmpty.GenesisBlock);
 
             // verify genesis with 1 block
+            chainBuilder.AddBlock(header0);
             var chain0 = chainBuilder.ToImmutable();
             Assert.AreEqual(header0, chain0.GenesisBlock);
 
@@ -40,9 +45,14 @@ namespace BitSharp.Core.Test.Domain
             var header0 = fakeHeaders.GenesisChained();
             var header1 = fakeHeaders.NextChained();
 
-            var chainBuilder = new ChainBuilder(new[] { header0 });
+            var chainBuilder = new ChainBuilder();
+
+            // verify last block with 0 blocks
+            var chainEmpty = chainBuilder.ToImmutable();
+            Assert.IsNull(chainEmpty.LastBlock);
 
             // verify last block with 1 block
+            chainBuilder.AddBlock(header0);
             var chain0 = chainBuilder.ToImmutable();
             Assert.AreEqual(header0, chain0.LastBlock);
 
@@ -59,9 +69,14 @@ namespace BitSharp.Core.Test.Domain
             var header0 = fakeHeaders.GenesisChained();
             var header1 = fakeHeaders.NextChained();
 
-            var chainBuilder = new ChainBuilder(new[] { header0 });
+            var chainBuilder = new ChainBuilder();
+
+            // verify height with 0 blocks
+            var chainEmpty = chainBuilder.ToImmutable();
+            Assert.AreEqual(-1, chainEmpty.Height);
 
             // verify height with 1 block
+            chainBuilder.AddBlock(header0);
             var chain0 = chainBuilder.ToImmutable();
             Assert.AreEqual(0, chain0.Height);
 
@@ -80,9 +95,14 @@ namespace BitSharp.Core.Test.Domain
             var totalWork0 = DataCalculator.CalculateWork(header0);
             var totalWork1 = totalWork0 + DataCalculator.CalculateWork(header1);
 
-            var chainBuilder = new ChainBuilder(new[] { header0 });
+            var chainBuilder = new ChainBuilder();
+
+            // verify total work with 0 blocks
+            var chainEmpty = chainBuilder.ToImmutable();
+            Assert.AreEqual(0, chainEmpty.TotalWork);
 
             // verify total work with 1 block
+            chainBuilder.AddBlock(header0);
             var chain0 = chainBuilder.ToImmutable();
             Assert.AreEqual(totalWork0, chain0.TotalWork);
 
@@ -99,13 +119,18 @@ namespace BitSharp.Core.Test.Domain
             var header0 = fakeHeaders.GenesisChained();
             var header1 = fakeHeaders.NextChained();
 
-            var chainBuilder = new ChainBuilder(new[] { header0 });
+            var chainBuilder = new ChainBuilder();
 
-            // verify total work with 1 block
+            // verify block list with 0 blocks
+            var chainEmpty = chainBuilder.ToImmutable();
+            Assert.AreEqual(0, chainEmpty.Blocks.Count);
+
+            // verify block list with 1 block
+            chainBuilder.AddBlock(header0);
             var chain0 = chainBuilder.ToImmutable();
             CollectionAssert.AreEqual(new[] { header0 }, chain0.Blocks);
 
-            // verify total work with 2 blocks
+            // verify block list with 2 blocks
             chainBuilder.AddBlock(header1);
             var chain1 = chainBuilder.ToImmutable();
             CollectionAssert.AreEqual(new[] { header0, header1 }, chain1.Blocks);
@@ -118,9 +143,14 @@ namespace BitSharp.Core.Test.Domain
             var header0 = fakeHeaders.GenesisChained();
             var header1 = fakeHeaders.NextChained();
 
-            var chainBuilder = new ChainBuilder(new[] { header0 });
+            var chainBuilder = new ChainBuilder();
+
+            // verify blocks dictionary with 0 blocks
+            var chainEmpty = chainBuilder.ToImmutable();
+            Assert.AreEqual(0, chainEmpty.BlocksByHash.Count);
 
             // verify blocks dictionary with 1 block
+            chainBuilder.AddBlock(header0);
             var chain0 = chainBuilder.ToImmutable();
             CollectionAssert.AreEquivalent(new Dictionary<UInt256, ChainedHeader> { { header0.Hash, header0 } }, chain0.BlocksByHash);
 
@@ -213,9 +243,16 @@ namespace BitSharp.Core.Test.Domain
             var header0 = fakeHeaders.GenesisChained();
             var header1 = fakeHeaders.NextChained();
 
-            var chainBuilder = new ChainBuilder(new[] { header0 });
+            var chainBuilder = new ChainBuilder();
+
+            // verify to builder with 0 blocks
+            var chainEmpty = chainBuilder.ToImmutable();
+            var chainBuilderEmpty = chainEmpty.ToBuilder();
+            Assert.AreEqual(0, chainBuilderEmpty.Blocks.Count);
+            Assert.AreEqual(0, chainBuilderEmpty.BlocksByHash.Count);
 
             // verify to builder with 1 block
+            chainBuilder.AddBlock(header0);
             var chain0 = chainBuilder.ToImmutable();
             var chainBuilder0 = chain0.ToBuilder();
             CollectionAssert.AreEqual(new[] { header0 }, chainBuilder0.Blocks);
