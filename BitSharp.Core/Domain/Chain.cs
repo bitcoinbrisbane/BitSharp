@@ -91,6 +91,9 @@ namespace BitSharp.Core.Domain
         public IEnumerable<Tuple<int, ChainedHeader>> NavigateTowards(Func<Chain> getTargetChain)
         {
             var currentBlock = this.LastBlock;
+            if (currentBlock == null)
+                throw new InvalidOperationException();
+
             while (true)
             {
                 // acquire the target chain

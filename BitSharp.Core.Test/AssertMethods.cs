@@ -1,4 +1,5 @@
 ﻿using BitSharp.Common;
+using BitSharp.Common.ExtensionMethods;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -16,6 +17,20 @@ namespace BitSharp.Core.Test
             Assert.AreEqual(expectedBlockHash, daemon.TargetChain.LastBlock.Hash);
             Assert.AreEqual(expectedHeight, daemon.CurrentChain.Height);
             Assert.AreEqual(expectedBlockHash, daemon.CurrentChain.LastBlock.Hash);
+        }
+
+        public static void AssertThrows<T>(Action action) where T : Exception
+        {
+            try
+            {
+                action();
+                Assert.Fail("No exception thrown, expected: {0}".Format2(typeof(T).Name));
+            }
+            catch (UnitTestAssertException) { throw; }
+            catch (Exception e)
+            {
+                Assert.IsInstanceOfType(e, typeof(T), "Unexpected exeption thrown: {0}".Format2(e));
+            }
         }
     }
 }

@@ -460,7 +460,7 @@ namespace BitSharp.Core.Test.Storage
                 CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor.ReadChain().ToList());
 
                 // try to add header 0 again
-                AssertThrows<InvalidOperationException>(() => chainStateCursor.AddChainedHeader(chainedHeader0));
+                AssertMethods.AssertThrows<InvalidOperationException>(() => chainStateCursor.AddChainedHeader(chainedHeader0));
 
                 // verify chain
                 CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor.ReadChain().ToList());
@@ -501,7 +501,7 @@ namespace BitSharp.Core.Test.Storage
                 CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor.ReadChain().ToList());
 
                 // try to remove header 1 again
-                AssertThrows<InvalidOperationException>(() => chainStateCursor.RemoveChainedHeader(chainedHeader1));
+                AssertMethods.AssertThrows<InvalidOperationException>(() => chainStateCursor.RemoveChainedHeader(chainedHeader1));
 
                 // verify chain
                 CollectionAssert.AreEqual(new[] { chainedHeader0 }, chainStateCursor.ReadChain().ToList());
@@ -1019,20 +1019,6 @@ namespace BitSharp.Core.Test.Storage
         public void TestDefragment(ITestStorageProvider provider)
         {
             Assert.Inconclusive("TODO");
-        }
-
-        private void AssertThrows<T>(Action action) where T : Exception
-        {
-            try
-            {
-                action();
-                Assert.Fail("No exception thrown, expected: {0}".Format2(typeof(T).Name));
-            }
-            catch (UnitTestAssertException) { throw; }
-            catch (Exception e)
-            {
-                Assert.IsInstanceOfType(e, typeof(T), "Unexpected exeption thrown.");
-            }
         }
     }
 }

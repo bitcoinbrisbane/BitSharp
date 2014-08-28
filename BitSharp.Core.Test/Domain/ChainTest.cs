@@ -237,6 +237,34 @@ namespace BitSharp.Core.Test.Domain
         }
 
         [TestMethod]
+        public void TestNavigateTowardsInvalidChains()
+        {
+            // create distinct chains
+            var fakeHeadersA = new FakeHeaders();
+            var header0A = fakeHeadersA.GenesisChained();
+            var header1A = fakeHeadersA.NextChained();
+
+            var fakeHeadersB = new FakeHeaders();
+            var header0B = fakeHeadersA.NextChained();
+            var header1B = fakeHeadersA.NextChained();
+
+            var chainEmpty = new ChainBuilder().ToImmutable();
+            var chainA = new ChainBuilder(new[] { header0A, header1A }).ToImmutable();
+            var chainB = new ChainBuilder(new[] { header0B, header1B, }).ToImmutable();
+
+            // empty chain should always error
+            AssertMethods.AssertThrows<InvalidOperationException>(() => chainEmpty.NavigateTowards(chainEmpty).ToList());
+            AssertMethods.AssertThrows<InvalidOperationException>(() => chainEmpty.NavigateTowards(chainA).ToList());
+            AssertMethods.AssertThrows<InvalidOperationException>(() => chainEmpty.NavigateTowards(chainB).ToList());
+            AssertMethods.AssertThrows<InvalidOperationException>(() => chainA.NavigateTowards(chainEmpty).ToList());
+            AssertMethods.AssertThrows<InvalidOperationException>(() => chainB.NavigateTowards(chainEmpty).ToList());
+            
+            // unrelated chains should error
+            AssertMethods.AssertThrows<InvalidOperationException>(() => chainA.NavigateTowards(chainB).ToList());
+            AssertMethods.AssertThrows<InvalidOperationException>(() => chainB.NavigateTowards(chainA).ToList());
+        }
+
+        [TestMethod]
         public void TestToBuilder()
         {
             var fakeHeaders = new FakeHeaders();
