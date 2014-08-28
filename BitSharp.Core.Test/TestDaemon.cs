@@ -90,8 +90,8 @@ namespace BitSharp.Core.Test
 
                 // verify initial state
                 Assert.AreEqual(0, this.coreDaemon.TargetChainHeight);
-                Assert.AreEqual(this.genesisBlock.Hash, this.coreDaemon.TargetChain.LastBlockHash);
-                Assert.AreEqual(this.genesisBlock.Hash, this.coreDaemon.CurrentChain.LastBlockHash);
+                Assert.AreEqual(this.genesisBlock.Hash, this.coreDaemon.TargetChain.LastBlock.Hash);
+                Assert.AreEqual(this.genesisBlock.Hash, this.coreDaemon.CurrentChain.LastBlock.Hash);
             }
             catch (Exception)
             {

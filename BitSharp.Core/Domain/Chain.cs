@@ -15,12 +15,14 @@ namespace BitSharp.Core.Domain
         private readonly ImmutableList<ChainedHeader> blocks;
         private readonly ImmutableDictionary<UInt256, ChainedHeader> blocksByHash;
 
-        public Chain(ImmutableList<ChainedHeader> blocks, ImmutableDictionary<UInt256, ChainedHeader> blocksByHash)
+        internal Chain(ImmutableList<ChainedHeader> blocks, ImmutableDictionary<UInt256, ChainedHeader> blocksByHash)
         {
             if (blocks == null)
                 throw new ArgumentNullException("blocks");
             if (blocksByHash == null)
                 throw new ArgumentNullException("blocksByHash");
+            if (blocks.Count != blocksByHash.Count)
+                throw new ArgumentException();
 
             this.blocks = blocks;
             this.blocksByHash = blocksByHash;
@@ -29,8 +31,6 @@ namespace BitSharp.Core.Domain
         public ChainedHeader GenesisBlock { get { return this.blocks.First(); } }
 
         public ChainedHeader LastBlock { get { return this.blocks.Last(); } }
-
-        public UInt256 LastBlockHash { get { return this.LastBlock.Hash; } }
 
         public int Height { get { return this.blocks.Count() - 1; } }
 
@@ -52,7 +52,7 @@ namespace BitSharp.Core.Domain
 
                 yield return block;
                 expectedHeight++;
-                expectedPrevBlockHash = block.PreviousBlockHash;
+                expectedPrevBlockHash = block.Hash;
             }
         }
 

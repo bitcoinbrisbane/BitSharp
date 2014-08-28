@@ -40,8 +40,6 @@ namespace BitSharp.Core.Builders
 
         public ChainedHeader LastBlock { get { return this.blocks.LastOrDefault(); } }
 
-        public UInt256 LastBlockHash { get { return this.LastBlock != null ? this.LastBlock.Hash : UInt256.Zero; } }
-
         public int Height { get { return this.blocks.Count() - 1; } }
 
         public BigInteger TotalWork { get { return this.LastBlock != null ? this.LastBlock.TotalWork : 0; } }
