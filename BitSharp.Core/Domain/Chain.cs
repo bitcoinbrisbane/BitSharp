@@ -21,7 +21,7 @@ namespace BitSharp.Core.Domain
         // chained headers by hash
         private readonly ImmutableDictionary<UInt256, ChainedHeader> blocksByHash;
 
-        // constructor, at least 1 header must be present, both view counts must match
+        // constructor, both headers counts must match
         internal Chain(ImmutableList<ChainedHeader> blocks, ImmutableDictionary<UInt256, ChainedHeader> blocksByHash)
         {
             if (blocks == null)
@@ -29,8 +29,6 @@ namespace BitSharp.Core.Domain
             if (blocksByHash == null)
                 throw new ArgumentNullException("blocksByHash");
             if (blocks.Count != blocksByHash.Count)
-                throw new ArgumentException();
-            if (blocks.Count == 0)
                 throw new ArgumentException();
 
             this.blocks = blocks;
