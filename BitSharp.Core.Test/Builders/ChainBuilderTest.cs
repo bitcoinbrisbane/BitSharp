@@ -48,6 +48,18 @@ namespace BitSharp.Core.Test.Builders
         }
 
         [TestMethod]
+        public void TestCreateFromInvalidEnumerable()
+        {
+            // create a chain
+            var fakeHeaders = new FakeHeaders();
+            var header0 = fakeHeaders.GenesisChained();
+            var header1 = fakeHeaders.NextChained();
+
+            // create builder from out of order enumerable
+            AssertMethods.AssertThrows<InvalidOperationException>(() => new ChainBuilder(new[] { header1, header0 }));
+        }
+
+        [TestMethod]
         public void TestGenesisBlock()
         {
             var fakeHeaders = new FakeHeaders();
@@ -173,6 +185,86 @@ namespace BitSharp.Core.Test.Builders
             // verify blocks dictionary with 2 blocks
             chainBuilder.AddBlock(header1);
             CollectionAssert.AreEquivalent(new Dictionary<UInt256, ChainedHeader> { { header0.Hash, header0 }, { header1.Hash, header1 } }, chainBuilder.BlocksByHash);
+        }
+
+        [TestMethod]
+        public void TestAddBlock()
+        {
+            var fakeHeaders = new FakeHeaders();
+            var header0 = fakeHeaders.GenesisChained();
+            var header1 = fakeHeaders.NextChained();
+
+            var chainBuilder = new ChainBuilder();
+
+            // add header 0 and verify
+            chainBuilder.AddBlock(header0);
+            CollectionAssert.AreEqual(new[] { header0 }, chainBuilder.Blocks);
+            CollectionAssert.AreEquivalent(new Dictionary<UInt256, ChainedHeader> { { header0.Hash, header0 } }, chainBuilder.BlocksByHash);
+
+            // add header 1 and verify
+            chainBuilder.AddBlock(header1);
+            CollectionAssert.AreEqual(new[] { header0, header1 }, chainBuilder.Blocks);
+            CollectionAssert.AreEquivalent(new Dictionary<UInt256, ChainedHeader> { { header0.Hash, header0 }, { header1.Hash, header1 } }, chainBuilder.BlocksByHash);
+        }
+
+        [TestMethod]
+        public void TestAddBlockInvalid()
+        {
+            var fakeHeaders = new FakeHeaders();
+            var header0 = fakeHeaders.GenesisChained();
+            var header1 = fakeHeaders.NextChained();
+            var header2 = fakeHeaders.NextChained();
+
+            var chainBuilder = new ChainBuilder();
+
+            // adding header 1 first should fail
+            AssertMethods.AssertThrows<InvalidOperationException>(() => chainBuilder.AddBlock(header1));
+
+            // add header 0
+            chainBuilder.AddBlock(header0);
+
+            // adding header 2 without header 1 should fail
+            AssertMethods.AssertThrows<InvalidOperationException>(() => chainBuilder.AddBlock(header2));
+        }
+
+        [TestMethod]
+        public void TestRemoveBlock()
+        {
+            var fakeHeaders = new FakeHeaders();
+            var header0 = fakeHeaders.GenesisChained();
+            var header1 = fakeHeaders.NextChained();
+
+            var chainBuilder = new ChainBuilder(new[] { header0, header1 });
+
+            // remove header 1 and verify
+            chainBuilder.RemoveBlock(header1);
+            CollectionAssert.AreEqual(new[] { header0 }, chainBuilder.Blocks);
+            CollectionAssert.AreEquivalent(new Dictionary<UInt256, ChainedHeader> { { header0.Hash, header0 } }, chainBuilder.BlocksByHash);
+
+            // remove header 0 and verify
+            chainBuilder.RemoveBlock(header0);
+            Assert.AreEqual(0, chainBuilder.Blocks.Count);
+            Assert.AreEqual(0, chainBuilder.BlocksByHash.Count);
+        }
+
+        [TestMethod]
+        public void TestRemoveBlockInvalid()
+        {
+            var fakeHeaders = new FakeHeaders();
+            var header0 = fakeHeaders.GenesisChained();
+            var header1 = fakeHeaders.NextChained();
+            var header2 = fakeHeaders.NextChained();
+
+            var chainBuilder = new ChainBuilder(new[] { header0, header1, header2 });
+
+            // removing header 1 first should fail
+            AssertMethods.AssertThrows<InvalidOperationException>(() => chainBuilder.RemoveBlock(header1));
+
+            // remove header 2
+            chainBuilder.RemoveBlock(header2);
+
+            // removing header 0 with header 1 present should fail
+            AssertMethods.AssertThrows<InvalidOperationException>(() => chainBuilder.AddBlock(header0));
         }
 
         [TestMethod]

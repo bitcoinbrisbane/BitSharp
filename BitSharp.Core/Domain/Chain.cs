@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace BitSharp.Core.Domain
 {
     /// <summary>
-    /// This class represents a valid, contiguous chain of headers from height 0. Headers are indexed by height and by hash.
+    /// This class represents an immutable and valid, contiguous chain of headers from height 0. Headers are indexed by height and by hash.
     /// </summary>
     public class Chain
     {
