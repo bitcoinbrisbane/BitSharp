@@ -17,7 +17,7 @@ using BitSharp.Core.Script;
 namespace BitSharp.Core.Test.Script
 {
     [TestClass]
-    public class ScriptEngineTest
+    public class ScriptEngineTest : IDisposable
     {
         private static MainnetBlockProvider provider;
 
@@ -37,9 +37,9 @@ namespace BitSharp.Core.Test.Script
             this.logger = this.kernel.Get<Logger>();
         }
 
-        [TestCleanup]
-        public void TestCleanup()
+        public void Dispose()
         {
+            this.kernel.Dispose();
         }
 
         [TestMethod]

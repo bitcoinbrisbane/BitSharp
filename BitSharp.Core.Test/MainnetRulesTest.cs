@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 namespace BitSharp.Blockchain.Test
 {
     [TestClass]
-    public class MainnetRulesTest
+    public class MainnetRulesTest : IDisposable
     {
         private IKernel kernel;
         private MainnetRules rules;
@@ -29,6 +29,11 @@ namespace BitSharp.Blockchain.Test
             this.rules = kernel.Get<MainnetRules>();
         }
 
+        public void Dispose()
+        {
+            this.kernel.Dispose();
+        }
+        
         [TestMethod]
         public void TestTargetToDifficulty()
         {
