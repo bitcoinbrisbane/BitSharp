@@ -19,12 +19,11 @@ using BitSharp.Core.Domain;
 
 namespace BitSharp.Node.Network
 {
-    public class RemoteSender
+    public class RemoteSender : IDisposable
     {
         public event Action<Exception> OnFailed;
 
         private readonly Logger logger;
-        //TODO semaphore not disposed
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1);
         private readonly Socket socket;
 
@@ -32,6 +31,11 @@ namespace BitSharp.Node.Network
         {
             this.logger = logger;
             this.socket = socket;
+        }
+
+        public void Dispose()
+        {
+            this.semaphore.Dispose();
         }
 
         private void Fail(Exception e)
@@ -56,7 +60,7 @@ namespace BitSharp.Node.Network
             await Task.Yield();
 
             var sendBlockMessage = Messaging.ConstructMessage("block", DataEncoder.EncodeBlock(block));
-            
+
             await SendMessageAsync(sendBlockMessage);
         }
 
@@ -108,7 +112,7 @@ namespace BitSharp.Node.Network
                     DataEncoder.EncodeBlockHeader(payloadStream, blockHeader);
                     payloadWriter.WriteVarInt(0);
                 }
-                
+
                 await SendMessageAsync(Messaging.ConstructMessage("headers", payloadStream.ToArray()));
             }
         }
@@ -171,7 +175,7 @@ namespace BitSharp.Node.Network
                         }
 
                         stopwatch.Stop();
-                        
+
                         if (this.logger.IsTraceEnabled)
                             this.logger.Trace("Sent {0} in {1} ms\nPayload: {2}".Format2(message.Command, stopwatch.ElapsedMilliseconds, message.Payload.ToArray().ToHexDataString()));
                     }

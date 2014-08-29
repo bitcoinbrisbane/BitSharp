@@ -19,6 +19,7 @@ namespace BitSharp.Common
         private int tickCount;
         private long tickDuration;
         private readonly Task sampleTask;
+        private bool isDisposed;
 
         public DurationMeasure(TimeSpan? sampleCutoff = null, TimeSpan? sampleResolution = null)
         {
@@ -39,9 +40,16 @@ namespace BitSharp.Common
 
         public void Dispose()
         {
+            if (this.isDisposed)
+                return;
+
             this.cancelToken.Cancel();
             this.sampleTask.Wait();
+
             this.cancelToken.Dispose();
+            this.rwLock.Dispose();
+
+            this.isDisposed = true;
         }
 
         public void Tick(TimeSpan duration)

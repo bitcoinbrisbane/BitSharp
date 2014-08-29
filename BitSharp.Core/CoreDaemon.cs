@@ -113,6 +113,7 @@ namespace BitSharp.Core
             this.gcWorker.Dispose();
             this.utxoScanWorker.Dispose();
             this.chainStateBuilder.Dispose();
+            this.coreStorage.Dispose();
         }
 
         public CoreStorage CoreStorage { get { return this.coreStorage; } }

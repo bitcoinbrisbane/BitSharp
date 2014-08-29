@@ -62,18 +62,12 @@ namespace BitSharp.Core.Builders
             this.stats = new BuilderStats();
         }
 
-        ~ChainStateBuilder()
-        {
-            this.Dispose();
-        }
-
         public void Dispose()
         {
-            GC.SuppressFinalize(this);
-
             this.blockValidator.Dispose();
             this.chainStateCursorHandle.Dispose();
             this.stats.Dispose();
+            this.commitLock.Dispose();
         }
 
         public Chain Chain { get { return this.chain.ToImmutable(); } }

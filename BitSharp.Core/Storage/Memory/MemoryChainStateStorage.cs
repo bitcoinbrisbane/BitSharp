@@ -14,7 +14,7 @@ namespace BitSharp.Core.Storage.Memory
 {
     internal class MemoryChainStateStorage
     {
-        private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1);
+        private readonly object lockObject = new object();
 
         private ChainBuilder chain;
         private ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
@@ -40,8 +40,7 @@ namespace BitSharp.Core.Storage.Memory
 
         public void BeginTransaction(out ChainBuilder chain, out ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, out ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes, out ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>>.Builder blockUnmintedTxes, out long chainVersion, out long unspentTxesVersion, out long spentTxesVersion, out long unmintedTxesVersion)
         {
-            this.semaphore.Wait();
-            try
+            lock (this.lockObject)
             {
                 chain = this.chain.ToImmutable().ToBuilder();
                 unspentTransactions = this.unspentTransactions.ToImmutable().ToBuilder();
@@ -53,15 +52,11 @@ namespace BitSharp.Core.Storage.Memory
                 spentTxesVersion = this.blockSpentTxesVersion;
                 unmintedTxesVersion = this.blockUnmintedTxesVersion;
             }
-            finally
-            {
-                this.semaphore.Release();
-            }
         }
 
         public void CommitTransaction(ChainBuilder chain, ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes, ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>>.Builder blockUnmintedTxes, long chainVersion, long unspentTxesVersion, long blockSpentTxesVersion, long blockUnmintedTxesVersion)
         {
-            this.semaphore.Do(() =>
+            lock (this.lockObject)
             {
                 if (chain != null && this.chainVersion != chainVersion
                     || unspentTransactions != null && unspentTxesVersion != this.unspentTxesVersion
@@ -92,94 +87,87 @@ namespace BitSharp.Core.Storage.Memory
                     this.blockUnmintedTxes = blockUnmintedTxes.ToImmutable().ToBuilder();
                     this.blockUnmintedTxesVersion++;
                 }
-            });
+            }
         }
 
         public IEnumerable<ChainedHeader> ReadChain()
         {
-            return this.semaphore.Do(() =>
-                this.chain.ToImmutable()).Blocks;
+            lock (this.lockObject)
+                return this.chain.ToImmutable().Blocks;
         }
 
         public ChainedHeader GetChainTip()
         {
-            return this.semaphore.Do(() =>
-                this.chain.LastBlock);
+            lock (this.lockObject)
+                return this.chain.LastBlock;
         }
 
         public void AddChainedHeader(ChainedHeader chainedHeader)
         {
-            this.semaphore.Do(() =>
+            lock (this.lockObject)
             {
                 this.chain.AddBlock(chainedHeader);
                 this.chainVersion++;
-            });
+            }
         }
 
         public void RemoveChainedHeader(ChainedHeader chainedHeader)
         {
-            this.semaphore.Do(() =>
+            lock (this.lockObject)
             {
                 this.chain.RemoveBlock(chainedHeader);
                 this.chainVersion++;
-            });
+            }
         }
 
         public int UnspentTxCount
         {
             get
             {
-                return this.semaphore.Do(() =>
-                    this.unspentTransactions.Count);
+                lock (this.lockObject)
+                    return this.unspentTransactions.Count;
             }
         }
 
         public bool ContainsUnspentTx(UInt256 txHash)
         {
-            return this.semaphore.Do(() =>
-                this.unspentTransactions.ContainsKey(txHash));
+            lock (this.lockObject)
+                return this.unspentTransactions.ContainsKey(txHash);
         }
 
         public bool TryGetUnspentTx(UInt256 txHash, out UnspentTx unspentTx)
         {
-            this.semaphore.Wait();
-            try
-            {
+            lock (this.lockObject)
                 return this.unspentTransactions.TryGetValue(txHash, out unspentTx);
-            }
-            finally
-            {
-                this.semaphore.Release();
-            }
         }
 
         public bool TryAddUnspentTx(UnspentTx unspentTx)
         {
-            return this.semaphore.Do(() =>
+            lock (this.lockObject)
             {
                 var wasAdded = this.unspentTransactions.TryAdd(unspentTx.TxHash, unspentTx);
                 if (wasAdded)
                     this.unspentTxesVersion++;
 
                 return wasAdded;
-            });
+            }
         }
 
         public bool TryRemoveUnspentTx(UInt256 txHash)
         {
-            return this.semaphore.Do(() =>
+            lock (this.lockObject)
             {
                 var wasRemoved = this.unspentTransactions.Remove(txHash);
                 if (wasRemoved)
                     this.unspentTxesVersion++;
 
                 return wasRemoved;
-            });
+            }
         }
 
         public bool TryUpdateUnspentTx(UnspentTx unspentTx)
         {
-            return this.semaphore.Do(() =>
+            lock (this.lockObject)
             {
                 if (this.unspentTransactions.ContainsKey(unspentTx.TxHash))
                 {
@@ -191,38 +179,33 @@ namespace BitSharp.Core.Storage.Memory
                 {
                     return false;
                 }
-            });
+            }
         }
 
         public IEnumerable<UnspentTx> ReadUnspentTransactions()
         {
-            return this.semaphore.Do(() =>
-                this.unspentTransactions.ToImmutable()).Values;
+            lock (this.lockObject)
+                return this.unspentTransactions.ToImmutable().Values;
         }
 
         public bool ContainsBlockSpentTxes(int blockIndex)
         {
-            return this.semaphore.Do(() =>
-                this.blockSpentTxes.ContainsKey(blockIndex));
+            lock (this.lockObject)
+                return this.blockSpentTxes.ContainsKey(blockIndex);
         }
 
 
         public bool TryGetBlockSpentTxes(int blockIndex, out IImmutableList<SpentTx> spentTxes)
         {
-            this.semaphore.Wait();
-            try
+            lock (this.lockObject)
             {
                 return this.blockSpentTxes.TryGetValue(blockIndex, out spentTxes);
-            }
-            finally
-            {
-                this.semaphore.Release();
             }
         }
 
         public bool TryAddBlockSpentTxes(int blockIndex, IImmutableList<SpentTx> spentTxes)
         {
-            return this.semaphore.Do(() =>
+            lock (this.lockObject)
             {
                 try
                 {
@@ -234,43 +217,36 @@ namespace BitSharp.Core.Storage.Memory
                 {
                     return false;
                 }
-            });
+            }
         }
 
         public bool TryRemoveBlockSpentTxes(int blockIndex)
         {
-            return this.semaphore.Do(() =>
+            lock (this.lockObject)
             {
                 var wasRemoved = this.blockSpentTxes.Remove(blockIndex);
                 if (wasRemoved)
                     this.blockSpentTxesVersion++;
 
                 return wasRemoved;
-            });
+            }
         }
 
         public bool ContainsBlockUnmintedTxes(UInt256 blockHash)
         {
-            return this.semaphore.Do(() =>
-                this.blockUnmintedTxes.ContainsKey(blockHash));
+            lock (this.lockObject)
+                return this.blockUnmintedTxes.ContainsKey(blockHash);
         }
 
         public bool TryGetBlockUnmintedTxes(UInt256 blockHash, out IImmutableList<UnmintedTx> unmintedTxes)
         {
-            this.semaphore.Wait();
-            try
-            {
+            lock (this.lockObject)
                 return this.blockUnmintedTxes.TryGetValue(blockHash, out unmintedTxes);
-            }
-            finally
-            {
-                this.semaphore.Release();
-            }
         }
 
         public bool TryAddBlockUnmintedTxes(UInt256 blockHash, IImmutableList<UnmintedTx> unmintedTxes)
         {
-            return this.semaphore.Do(() =>
+            lock (this.lockObject)
             {
                 try
                 {
@@ -282,19 +258,19 @@ namespace BitSharp.Core.Storage.Memory
                 {
                     return false;
                 }
-            });
+            }
         }
 
         public bool TryRemoveBlockUnmintedTxes(UInt256 blockHash)
         {
-            return this.semaphore.Do(() =>
+            lock (this.lockObject)
             {
                 var wasRemoved = this.blockUnmintedTxes.Remove(blockHash);
                 if (wasRemoved)
                     this.blockUnmintedTxesVersion++;
 
                 return wasRemoved;
-            });
+            }
         }
 
         public void Defragment()

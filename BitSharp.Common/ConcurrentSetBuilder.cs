@@ -12,79 +12,77 @@ namespace BitSharp.Common
     public class ConcurrentSetBuilder<T> : IEnumerable<T>, ISet<T>, ICollection<T>
     {
         private readonly ImmutableHashSet<T>.Builder builder;
-        //TODO make the set disposable because of lock?
-        private readonly ReaderWriterLockSlim builderLock;
+        private readonly object builderLock = new object();
 
         public ConcurrentSetBuilder()
         {
             this.builder = ImmutableHashSet.CreateBuilder<T>();
-            this.builderLock = new ReaderWriterLockSlim();
         }
 
         public bool Add(T item)
         {
-            return this.builderLock.DoWrite(() =>
-                this.builder.Add(item));
+            lock (this.builderLock)
+                return this.builder.Add(item);
         }
 
         public void ExceptWith(IEnumerable<T> other)
         {
-            this.builderLock.DoWrite(() =>
-                this.builder.ExceptWith(other));
+            lock (this.builderLock)
+                this.builder.ExceptWith(other);
         }
 
         public void IntersectWith(IEnumerable<T> other)
         {
-            this.builderLock.DoWrite(() =>
-                this.builder.IntersectWith(other));
+            lock (this.builderLock)
+                this.builder.IntersectWith(other);
         }
 
         public bool IsProperSubsetOf(IEnumerable<T> other)
         {
-            return this.builderLock.DoRead(() =>
-                this.builder.IsProperSubsetOf(other));
+            lock (this.builderLock)
+                return this.builder.IsProperSubsetOf(other);
         }
 
         public bool IsProperSupersetOf(IEnumerable<T> other)
         {
-            return this.builderLock.DoRead(() =>
-                this.builder.IsProperSupersetOf(other));
+            lock (this.builderLock)
+                return this.builder.IsProperSupersetOf(other);
         }
 
         public bool IsSubsetOf(IEnumerable<T> other)
         {
-            return this.builderLock.DoRead(() =>
-                this.builder.IsSubsetOf(other));
+            lock (this.builderLock)
+                return this.builder.IsSubsetOf(other);
         }
 
         public bool IsSupersetOf(IEnumerable<T> other)
         {
-            return this.builderLock.DoRead(() =>
-                this.builder.IsSupersetOf(other));
+            lock (this.builderLock)
+                return this.builder.IsSupersetOf(other);
         }
 
         public bool Overlaps(IEnumerable<T> other)
         {
-            return this.builderLock.DoRead(() =>
-                this.builder.Overlaps(other));
+            lock (this.builderLock)
+                return this.builder.Overlaps(other);
         }
 
         public bool SetEquals(IEnumerable<T> other)
         {
-            return this.builderLock.DoRead(() =>
-                this.builder.SetEquals(other));
+            lock (this.builderLock)
+                return this.builder.SetEquals(other);
         }
 
         public void SymmetricExceptWith(IEnumerable<T> other)
         {
-            this.builderLock.DoWrite(() =>
-                this.builder.SymmetricExceptWith(other));
+            lock (this.builderLock)
+                this.builder.SymmetricExceptWith(other);
         }
 
         public void UnionWith(IEnumerable<T> other)
         {
-            this.builderLock.DoWrite(() =>
-                this.builder.UnionWith(other));
+            lock (this.builderLock)
+                this.builder.UnionWith(other);
         }
 
         void ICollection<T>.Add(T item)
@@ -94,28 +92,28 @@ namespace BitSharp.Common
 
         public void Clear()
         {
-            this.builderLock.DoWrite(() =>
-                this.builder.Clear());
+            lock (this.builderLock)
+                this.builder.Clear();
         }
 
         public bool Contains(T item)
         {
-            return this.builderLock.DoRead(() =>
-                this.builder.Contains(item));
+            lock (this.builderLock)
+                return this.builder.Contains(item);
         }
 
         public void CopyTo(T[] array, int arrayIndex)
         {
-            this.builderLock.DoRead(() =>
-                Buffer.BlockCopy(this.builder.ToArray(), 0, array, arrayIndex, this.builder.Count));
+            lock (this.builderLock)
+                Buffer.BlockCopy(this.builder.ToArray(), 0, array, arrayIndex, this.builder.Count);
         }
 
         public int Count
         {
             get
             {
-                return this.builderLock.DoRead(() =>
-                    this.builder.Count);
+                lock (this.builderLock)
+                    return this.builder.Count;
             }
         }
 
@@ -126,8 +124,8 @@ namespace BitSharp.Common
 
         public bool Remove(T item)
         {
-            return this.builderLock.DoWrite(() =>
-                this.builder.Remove(item));
+            lock (this.builderLock)
+                return this.builder.Remove(item);
         }
 
         public IEnumerator<T> GetEnumerator()
@@ -142,8 +140,8 @@ namespace BitSharp.Common
 
         public ImmutableHashSet<T> ToImmutable()
         {
-            return this.builderLock.DoRead(() =>
-                this.builder.ToImmutable());
+            lock (this.builderLock)
+                return this.builder.ToImmutable();
         }
     }
 }

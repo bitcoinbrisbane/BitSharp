@@ -114,7 +114,6 @@
     <Compile Include="DataEncoderExtensionMethods.cs" />
     <Compile Include="Domain\Block.cs" />
     <Compile Include="Domain\BlockchainPath.cs" />
-    <Compile Include="Builders\BlockchainPathBuilder.cs" />
     <Compile Include="Domain\BlockHeader.cs" />
     <Compile Include="Builders\ChainBuilder.cs" />
     <Compile Include="Builders\ChainStateBuilder.cs" />

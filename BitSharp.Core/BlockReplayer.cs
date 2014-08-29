@@ -57,6 +57,12 @@ namespace BitSharp.Core.Builders
         {
             this.pendingTxLoader.Dispose();
             this.txLoader.Dispose();
+
+            if (this.pendingTxes != null)
+                this.pendingTxes.Dispose();
+
+            if (this.loadedTxes != null)
+                this.loadedTxes.Dispose();
         }
 
         public IDisposable StartReplay(IChainState chainState, UInt256 blockHash)

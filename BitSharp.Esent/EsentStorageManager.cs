@@ -46,11 +46,14 @@ namespace BitSharp.Esent
 
         public void Dispose()
         {
-            new IDisposable[] {
-                this.chainStateManager,
-                this.blockStorage,
-                this.blockTxesStorage,
-            }.DisposeList();
+            if (this.chainStateManager != null)
+                this.chainStateManager.Dispose();
+
+            if (this.blockStorage != null)
+                this.blockStorage.Dispose();
+
+            if (this.blockTxesStorage != null)
+                this.blockTxesStorage.Dispose();
         }
 
         public IBlockStorage BlockStorage

@@ -59,6 +59,15 @@ namespace BitSharp.Core.Builders
             this.txLoader.Dispose();
             this.txValidator.Dispose();
             this.scriptValidator.Dispose();
+
+            if (this.pendingTxes != null)
+                this.pendingTxes.Dispose();
+
+            if (this.loadedTxes != null)
+                this.loadedTxes.Dispose();
+
+            if (this.loadedTxInputs != null)
+                this.loadedTxInputs.Dispose();
         }
 
         public ConcurrentBag<Exception> TxLoaderExceptions { get { return this.txLoaderExceptions; } }

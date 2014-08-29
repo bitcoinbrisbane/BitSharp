@@ -25,10 +25,10 @@ namespace BitSharp.Node.Network
         public event Action<Peer, ImmutableArray<byte>> OnPing;
         public event Action<Peer> OnDisconnect;
 
+        private readonly object objectLock = new object();
         private readonly Logger logger;
-        //TODO semaphore not disposed
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1);
-        private int disposeCount;
+        private bool isDisposed;
 
         private bool startedConnecting = false;
         private bool isConnected = false;
@@ -73,38 +73,22 @@ namespace BitSharp.Node.Network
             WireNode();
         }
 
-        ~Peer()
-        {
-            Dispose();
-        }
-
         public void Dispose()
         {
-            // already disposed, only dispose once
-            if (Interlocked.Increment(ref this.disposeCount) != 1)
-                return;
-            
-            GC.SuppressFinalize(this);
-
-            UnwireNode();
-
-            try
+            lock (this.objectLock)
             {
+                if (this.isDisposed)
+                    return;
+
+                UnwireNode();
+
+                this.sender.Dispose();
                 this.socket.Dispose();
+                this.blockMissCountMeasure.Dispose();
+                this.semaphore.Dispose();
+
+                this.isDisposed = true;
             }
-            catch (Exception) { }
-
-            if (this.startedConnecting || this.isConnected)
-            {
-                this.startedConnecting = false;
-                this.isConnected = false;
-
-                var handler = this.OnDisconnect;
-                if (handler != null)
-                    handler(this);
-            }
-
-            this.blockMissCountMeasure.Dispose();
         }
 
         public IPEndPoint LocalEndPoint { get { return this.localEndPoint; } }
@@ -119,36 +103,63 @@ namespace BitSharp.Node.Network
 
         public bool IsSeed { get { return this.isSeed; } }
 
-        public int BlockMissCount { get { return this.blockMissCountMeasure.GetCount(); } }
+        public int BlockMissCount
+        {
+            get
+            {
+                lock (this.objectLock)
+                {
+                    if (!this.isDisposed)
+                        return this.blockMissCountMeasure.GetCount();
+                    else
+                        return 0;
+                }
+            }
+        }
 
         public void AddBlockMiss()
         {
-            this.blockMissCountMeasure.Tick();
+            lock (this.objectLock)
+            {
+                if (!this.isDisposed)
+                    this.blockMissCountMeasure.Tick();
+            }
         }
 
         public async Task ConnectAsync()
         {
-            await semaphore.DoAsync(async () =>
+            // take the lock to see if a connect can be started
+            lock (this.objectLock)
             {
-                try
-                {
-                    if (!IsConnected)
-                    {
-                        this.startedConnecting = true;
+                if (this.isDisposed)
+                    return;
 
-                        await Task.Factory.FromAsync(this.socket.BeginConnect(this.remoteEndPoint, null, null), this.socket.EndConnect);
+                // don't connect if already connected, or started connecting elsewhere
+                if (this.isConnected || this.startedConnecting)
+                    return;
 
-                        this.localEndPoint = (IPEndPoint)this.socket.LocalEndPoint;
+                // indicate that connecting will be started
+                this.startedConnecting = true;
+            }
 
-                        this.isConnected = true;
-                    }
-                }
-                catch (Exception e)
-                {
-                    this.logger.Debug(string.Format("Error on connecting to {0}", remoteEndPoint), e);
-                    Disconnect();
-                }
-            });
+            // start the connection
+            try
+            {
+                await Task.Factory.FromAsync(this.socket.BeginConnect(this.remoteEndPoint, null, null), this.socket.EndConnect);
+
+                this.localEndPoint = (IPEndPoint)this.socket.LocalEndPoint;
+                this.isConnected = true;
+            }
+            catch (Exception e)
+            {
+                this.logger.Debug(string.Format("Error on connecting to {0}", remoteEndPoint), e);
+                Disconnect();
+            }
+            finally
+            {
+                // ensure started connecting flag is cleared
+                this.startedConnecting = false;
+            }
         }
 
         public void Disconnect()
