@@ -70,7 +70,14 @@ namespace BitSharp.Core.Builders
             this.commitLock.Dispose();
         }
 
-        public Chain Chain { get { return this.chain.ToImmutable(); } }
+        public Chain Chain
+        {
+            get
+            {
+                return this.commitLock.DoRead(() =>
+                    this.chain.ToImmutable());
+            }
+        }
 
         public BuilderStats Stats { get { return this.stats; } }
 
@@ -248,9 +255,7 @@ namespace BitSharp.Core.Builders
         public ChainState ToImmutable()
         {
             return this.commitLock.DoRead(() =>
-            {
-                return new ChainState(this.chain.ToImmutable(), this.coreStorage.StorageManager);
-            });
+                new ChainState(this.chain.ToImmutable(), this.coreStorage.StorageManager));
         }
 
         private void BeginTransaction()
