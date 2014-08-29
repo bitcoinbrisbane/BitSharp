@@ -48,16 +48,6 @@ namespace BitSharp.Core.Builders
 
         public ImmutableDictionary<UInt256, ChainedHeader> BlocksByHash { get { return this.blocksByHash.ToImmutable(); } }
 
-        public IEnumerable<Tuple<int, ChainedHeader>> NavigateTowards(Chain targetChain)
-        {
-            return this.NavigateTowards(() => targetChain);
-        }
-
-        public IEnumerable<Tuple<int, ChainedHeader>> NavigateTowards(Func<Chain> getTargetChain)
-        {
-            return this.ToImmutable().NavigateTowards(getTargetChain);
-        }
-
         public void AddBlock(ChainedHeader chainedHeader)
         {
             var lastBlock = this.LastBlock;

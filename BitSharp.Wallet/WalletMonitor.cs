@@ -132,7 +132,7 @@ namespace BitSharp.Wallet
             using (var chainState = this.coreDaemon.GetChainState())
             {
                 var stopwatch = Stopwatch.StartNew();
-                foreach (var pathElement in this.chainBuilder.NavigateTowards(chainState.Chain))
+                foreach (var pathElement in this.chainBuilder.ToImmutable().NavigateTowards(chainState.Chain))
                 {
                     // cooperative loop
                     this.ThrowIfCancelled();
