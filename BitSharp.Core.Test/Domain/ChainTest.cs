@@ -245,8 +245,8 @@ namespace BitSharp.Core.Test.Domain
             var header1A = fakeHeadersA.NextChained();
 
             var fakeHeadersB = new FakeHeaders();
-            var header0B = fakeHeadersA.NextChained();
-            var header1B = fakeHeadersA.NextChained();
+            var header0B = fakeHeadersB.GenesisChained();
+            var header1B = fakeHeadersB.NextChained();
 
             var chainEmpty = new ChainBuilder().ToImmutable();
             var chainA = new ChainBuilder(new[] { header0A, header1A }).ToImmutable();
