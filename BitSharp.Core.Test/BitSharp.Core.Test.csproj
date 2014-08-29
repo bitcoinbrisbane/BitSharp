@@ -103,6 +103,7 @@
     <Compile Include="AssertMethods.cs" />
     <Compile Include="BlockchainWalkerTest.cs" />
     <Compile Include="BlockReplayerTest.cs" />
+    <Compile Include="Builders\ChainBuilderTest.cs" />
     <Compile Include="Domain\ChainTest.cs" />
     <Compile Include="MerkleTreeTest.cs" />
     <Compile Include="FakeHeaders.cs" />
