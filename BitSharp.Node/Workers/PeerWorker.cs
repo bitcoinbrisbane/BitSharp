@@ -141,6 +141,10 @@ namespace BitSharp.Node.Workers
 
             foreach (var peer in this.connectedPeers)
             {
+                // clear out any disconnected peers
+                if (!peer.IsConnected)
+                    DisconnectPeer(peer);
+
                 if (this.connectedPeers.Count <= 5)
                     break;
 

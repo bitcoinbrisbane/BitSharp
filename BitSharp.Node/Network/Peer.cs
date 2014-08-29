@@ -164,6 +164,10 @@ namespace BitSharp.Node.Network
 
         public void Disconnect()
         {
+            var handler = this.OnDisconnect;
+            if (handler != null)
+                handler(this);
+
             this.Dispose();
         }
 
