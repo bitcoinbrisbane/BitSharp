@@ -91,13 +91,11 @@ namespace BitSharp.Common
                 return;
 
             this.consumeWorkers.DisposeList();
-            new IDisposable[]
-            {
-                this.readWorker,
-                this.completedReadingEvent,
-                this.completedConsumingEvent,
-                this.queue
-            }.DisposeList();
+            this.readWorker.Dispose();
+            this.completedReadingEvent.Dispose();
+            this.completedConsumingEvent.Dispose();
+            if (this.queue != null)
+                this.queue.Dispose();
 
             this.isDisposed = true;
         }

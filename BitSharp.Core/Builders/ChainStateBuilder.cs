@@ -71,12 +71,9 @@ namespace BitSharp.Core.Builders
         {
             GC.SuppressFinalize(this);
 
-            new IDisposable[]
-            {
-                this.blockValidator,
-                this.chainStateCursorHandle,
-                this.stats,
-            }.DisposeList();
+            this.blockValidator.Dispose();
+            this.chainStateCursorHandle.Dispose();
+            this.stats.Dispose();
         }
 
         public Chain Chain { get { return this.chain.ToImmutable(); } }

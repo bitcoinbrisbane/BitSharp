@@ -291,27 +291,8 @@ namespace BitSharp.Common.ExtensionMethods
 
         public static void DisposeList(this IEnumerable<IDisposable> disposables)
         {
-            var exceptions = new List<Exception>();
-
-            foreach (var item in disposables)
-            {
-                if (item != null)
-                {
-                    try
-                    {
-                        item.Dispose();
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.WriteLine(e.Message);
-                        Debug.WriteLine(e.StackTrace);
-                        exceptions.Add(e);
-                    }
-                }
-            }
-
-            if (exceptions.Count > 0)
-                throw new AggregateException(exceptions);
+            foreach (var item in disposables.Where(x => x != null))
+                item.Dispose();
         }
 
         public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this IEnumerable<KeyValuePair<TKey, TValue>> keyPairs)

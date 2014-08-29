@@ -189,13 +189,10 @@ namespace BitSharp.Client
             this.logger.Info("Shutting down");
 
             // shutdown
-            new IDisposable[]
-            {
-                this.localClient,
-                this.dummyMonitor,
-                this.coreDaemon,
-                this.kernel
-            }.DisposeList();
+            this.localClient.Dispose();
+            this.dummyMonitor.Dispose();
+            this.coreDaemon.Dispose();
+            this.kernel.Dispose();
 
             base.OnClosed(e);
 

@@ -97,11 +97,8 @@ namespace BitSharp.Core.Workers
             this.coreStorage.ChainedHeaderAdded -= HandleChanged;
             this.targetChainWorker.OnTargetChainChanged -= HandleChanged;
 
-            new IDisposable[]
-            {
-                this.blockProcessingDurationMeasure,
-                this.blockMissCountMeasure,
-            }.DisposeList();
+            this.blockProcessingDurationMeasure.Dispose();
+            this.blockMissCountMeasure.Dispose();
         }
 
         protected override void WorkAction()

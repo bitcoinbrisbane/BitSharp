@@ -58,10 +58,8 @@ namespace BitSharp.Esent
 
         public void Dispose()
         {
-            new IDisposable[] {
-                this.cursorCache,
-                this.jetInstance
-            }.DisposeList();
+            this.cursorCache.Dispose();
+            this.jetInstance.Dispose();
         }
 
         public DisposeHandle<IChainStateCursor> OpenChainStateCursor()

@@ -144,16 +144,13 @@ namespace BitSharp.Node
             this.peerWorker.PeerConnected -= HandlePeerConnected;
             this.peerWorker.PeerDisconnected -= HandlePeerDisconnected;
 
-            new IDisposable[]
-            {
-                this.messageRateMeasure,
-                this.statsWorker,
-                this.headersRequestWorker,
-                this.blockRequestWorker,
-                this.peerWorker,
-                this.listenWorker,
-                this.shutdownToken
-            }.DisposeList();
+            this.messageRateMeasure.Dispose();
+            this.statsWorker.Dispose();
+            this.headersRequestWorker.Dispose();
+            this.blockRequestWorker.Dispose();
+            this.peerWorker.Dispose();
+            this.listenWorker.Dispose();
+            this.shutdownToken.Dispose();
         }
 
         public float GetBlockDownloadRate(TimeSpan perUnitTime)

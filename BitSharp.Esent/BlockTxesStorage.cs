@@ -59,11 +59,8 @@ namespace BitSharp.Esent
 
         public void Dispose()
         {
-            new IDisposable[]
-            {
-                this.cursorCache,
-                this.jetInstance
-            }.DisposeList();
+            this.cursorCache.Dispose();
+            this.jetInstance.Dispose();
         }
 
         internal Instance JetInstance { get { return this.jetInstance; } }
@@ -226,7 +223,7 @@ namespace BitSharp.Esent
             instance.Parameters.CheckpointDepthMax = 64 * 1024 * 1024;
             instance.Parameters.LogFileSize = 1024;
             instance.Parameters.LogBuffers = 1024;
-            instance.Parameters.CleanupMismatchedLogFiles = true; 
+            instance.Parameters.CleanupMismatchedLogFiles = true;
             instance.Parameters.MaxTemporaryTables = 16;
             instance.Parameters.MaxVerPages = 1024 * 256;
             instance.Parameters.NoInformationEvent = true;

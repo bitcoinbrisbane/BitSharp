@@ -58,11 +58,8 @@ namespace BitSharp.Esent
 
         public void Dispose()
         {
-            new IDisposable[]
-            {
-                this.cursorCache,
-                this.jetInstance
-            }.DisposeList();
+            this.cursorCache.Dispose();
+            this.jetInstance.Dispose();
         }
 
         public bool ContainsChainedHeader(UInt256 blockHash)

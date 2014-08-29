@@ -30,11 +30,7 @@ namespace BitSharp.Node.Storage
 
         public override void Unload()
         {
-            new IDisposable[]
-            {
-                this.networkPeerCache
-            }
-            .DisposeList();
+            this.networkPeerCache.Dispose();
 
             base.Unload();
         }

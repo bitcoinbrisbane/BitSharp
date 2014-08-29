@@ -106,16 +106,13 @@ namespace BitSharp.Core
             this.pruningWorker.OnWorkFinished -= this.defragWorker.NotifyWork;
 
             // cleanup workers
-            new IDisposable[]
-            {
-                this.defragWorker,
-                this.pruningWorker,
-                this.chainStateWorker,
-                this.targetChainWorker,
-                this.gcWorker,
-                this.utxoScanWorker,
-                this.chainStateBuilder
-            }.DisposeList();
+            this.defragWorker.Dispose();
+            this.pruningWorker.Dispose();
+            this.chainStateWorker.Dispose();
+            this.targetChainWorker.Dispose();
+            this.gcWorker.Dispose();
+            this.utxoScanWorker.Dispose();
+            this.chainStateBuilder.Dispose();
         }
 
         public CoreStorage CoreStorage { get { return this.coreStorage; } }

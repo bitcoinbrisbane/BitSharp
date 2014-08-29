@@ -56,12 +56,9 @@ namespace BitSharp.Core.Builders
 
         public void Dispose()
         {
-            new IDisposable[]
-            {
-                this.txLoader,
-                this.txValidator,
-                this.scriptValidator
-            }.DisposeList();
+            this.txLoader.Dispose();
+            this.txValidator.Dispose();
+            this.scriptValidator.Dispose();
         }
 
         public ConcurrentBag<Exception> TxLoaderExceptions { get { return this.txLoaderExceptions; } }
@@ -112,15 +109,12 @@ namespace BitSharp.Core.Builders
             this.loadedTxes.CompleteAdding();
             this.loadedTxInputs.CompleteAdding();
 
-            new IDisposable[]
-            {
-                this.txLoaderStopper,
-                this.txValidatorStopper,
-                this.scriptValidatorStopper,
-                this.pendingTxes,
-                this.loadedTxes,
-                this.loadedTxInputs
-            }.DisposeList();
+            this.txLoaderStopper.Dispose();
+            this.txValidatorStopper.Dispose();
+            this.scriptValidatorStopper.Dispose();
+            this.pendingTxes.Dispose();
+            this.loadedTxes.Dispose();
+            this.loadedTxInputs.Dispose();
 
             this.txCache = null;
             this.pendingTxes = null;
