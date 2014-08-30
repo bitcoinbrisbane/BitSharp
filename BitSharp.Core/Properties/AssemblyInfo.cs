@@ -38,3 +38,4 @@ using System.Runtime.InteropServices;
 // Allow unit testing of internals
 [assembly: InternalsVisibleTo("BitSharp.Core.Test")]
 [assembly: InternalsVisibleTo("BitSharp.Core.Test.Storage")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
