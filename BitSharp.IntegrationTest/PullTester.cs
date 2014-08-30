@@ -29,10 +29,6 @@ namespace BitSharp.IntegrationTest
             if (!File.Exists(javaPath))
                 Assert.Inconclusive("java.exe could not be found under JAVA_HOME");
 
-            // clear comparison tool database files
-            foreach (var file in Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "BitcoindComparisonTool.*"))
-                File.Delete(file);
-            
             // initialize kernel
             using (var kernel = new StandardKernel())
             {
