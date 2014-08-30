@@ -237,6 +237,33 @@ namespace BitSharp.Core.Test.Domain
         }
 
         [TestMethod]
+        public void TestNavigateTowardsEmpty()
+        {
+            // create chain
+            var fakeHeaders = new FakeHeaders();
+            var header0 = fakeHeaders.GenesisChained();
+            var header1 = fakeHeaders.NextChained();
+            var header2 = fakeHeaders.NextChained();
+
+            var chainEmpty = new ChainBuilder().ToImmutable();
+            var chain = new ChainBuilder(new[] { header0, header1, header2 }).ToImmutable();
+
+            // verify chaining to empty does nothing
+            Assert.AreEqual(0, chainEmpty.NavigateTowards(chainEmpty).Count());
+            Assert.AreEqual(0, chain.NavigateTowards(chainEmpty).Count());
+
+            // verify path from empty chain to chain
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    Tuple.Create(+1, header0),
+                    Tuple.Create(+1, header1),
+                    Tuple.Create(+1, header2)
+                }
+                , chainEmpty.NavigateTowards(chain).ToList());
+        }
+
+        [TestMethod]
         public void TestNavigateTowardsInvalidChains()
         {
             // create distinct chains
@@ -252,13 +279,6 @@ namespace BitSharp.Core.Test.Domain
             var chainA = new ChainBuilder(new[] { header0A, header1A }).ToImmutable();
             var chainB = new ChainBuilder(new[] { header0B, header1B, }).ToImmutable();
 
-            // empty chain should always error
-            AssertMethods.AssertThrows<InvalidOperationException>(() => chainEmpty.NavigateTowards(chainEmpty).ToList());
-            AssertMethods.AssertThrows<InvalidOperationException>(() => chainEmpty.NavigateTowards(chainA).ToList());
-            AssertMethods.AssertThrows<InvalidOperationException>(() => chainEmpty.NavigateTowards(chainB).ToList());
-            AssertMethods.AssertThrows<InvalidOperationException>(() => chainA.NavigateTowards(chainEmpty).ToList());
-            AssertMethods.AssertThrows<InvalidOperationException>(() => chainB.NavigateTowards(chainEmpty).ToList());
-            
             // unrelated chains should error
             AssertMethods.AssertThrows<InvalidOperationException>(() => chainA.NavigateTowards(chainB).ToList());
             AssertMethods.AssertThrows<InvalidOperationException>(() => chainB.NavigateTowards(chainA).ToList());

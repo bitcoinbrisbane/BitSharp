@@ -91,20 +91,32 @@ namespace BitSharp.Core.Domain
         public IEnumerable<Tuple<int, ChainedHeader>> NavigateTowards(Func<Chain> getTargetChain)
         {
             var currentBlock = this.LastBlock;
-            if (currentBlock == null)
-                throw new InvalidOperationException();
+            var genesisBlock = currentBlock != null ? this.GenesisBlock : null;
 
             while (true)
             {
                 // acquire the target chain
                 var targetChain = getTargetChain();
+
+                // no target chain, stop navigating
                 if (targetChain == null)
                     yield break;
-                else if (targetChain.GenesisBlock != this.GenesisBlock)
+                // if empty target chain, stop navigating
+                else if (targetChain.Height == -1)
+                    yield break;
+                // verify the genesis block of the target chain matches current chain
+                else if (genesisBlock != null && genesisBlock != targetChain.GenesisBlock)
                     throw new InvalidOperationException();
 
+                // if no current block, add genesis
+                if (currentBlock == null)
+                {
+                    genesisBlock = targetChain.GenesisBlock;
+                    currentBlock = genesisBlock;
+                    yield return Tuple.Create(+1, currentBlock);
+                }
                 // if currently ahead of target chain, must rewind
-                if (currentBlock.Height > targetChain.Height)
+                else if (currentBlock.Height > targetChain.Height)
                 {
                     if (currentBlock.Height == 0)
                         throw new InvalidOperationException();
