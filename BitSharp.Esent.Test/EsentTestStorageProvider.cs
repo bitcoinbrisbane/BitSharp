@@ -19,7 +19,7 @@ namespace BitSharp.Esent.Test
 
         public void TestInitialize()
         {
-            this.baseDirectory = Path.Combine(Path.GetTempPath(), "BitSharp", "Tests");
+            this.baseDirectory = Path.Combine(Path.GetTempPath(), "BitSharp", "Tests", Path.GetRandomFileName());
 
             if (Directory.Exists(this.baseDirectory))
                 Directory.Delete(this.baseDirectory, recursive: true);
