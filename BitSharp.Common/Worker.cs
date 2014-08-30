@@ -100,6 +100,11 @@ namespace BitSharp.Common
         public event Action OnWorkFinished;
 
         /// <summary>
+        /// This event is raised when the worker throws an exception.
+        /// </summary>
+        public event Action<Exception> OnWorkError;
+
+        /// <summary>
         /// The name of the worker.
         /// </summary>
         public string Name { get; protected set; }
@@ -410,7 +415,11 @@ namespace BitSharp.Common
                     catch (Exception e)
                     {
                         this.logger.Error("Unhandled worker exception in {0}: ".Format2(this.Name), e);
-                        Debugger.Break();
+                        
+                        // notify work error
+                        var errorHandler = this.OnWorkError;
+                        if (errorHandler != null)
+                            errorHandler(e);
                     }
                     finally
                     {

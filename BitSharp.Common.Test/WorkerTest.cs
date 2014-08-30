@@ -281,5 +281,51 @@ namespace BitSharp.Common.Test
                 Assert.AreEqual(2, workCount);
             }
         }
+
+        [TestMethod]
+        public void TestOnNotifyWork()
+        {
+            Assert.Inconclusive("TODO");
+        }
+
+        [TestMethod]
+        public void TestOnWorkStarted()
+        {
+            Assert.Inconclusive("TODO");
+        }
+
+        [TestMethod]
+        public void TestOnWorkFinished()
+        {
+            Assert.Inconclusive("TODO");
+        }
+
+        [TestMethod]
+        public void TestOnWorkError()
+        {
+            // prepare workAction to throw exception
+            var expectedException = new Exception();
+            Action workAction = () => { throw expectedException; };
+
+            // initialize worker
+            using (var worker = new MockWorker(workAction))
+            {
+                // prepare OnWorkError call tracking
+                Exception actualException = null;
+                var callEvent = new AutoResetEvent(false);
+                worker.OnWorkError += e => { actualException = e; callEvent.Set(); };
+
+                // start worker
+                worker.Start();
+
+                // notify worker
+                worker.NotifyWork();
+
+                // verify OnWorkError was called with expected exception
+                var wasCalled = callEvent.WaitOne(100);
+                Assert.IsTrue(wasCalled);
+                Assert.AreSame(expectedException, actualException);
+            }
+        }
     }
 }
