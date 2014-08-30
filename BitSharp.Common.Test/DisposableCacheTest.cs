@@ -115,8 +115,7 @@ namespace BitSharp.Common.Test
                     stopwatch.Stop();
 
                     // verify the timout period was respected before the exception was thrown
-                    Assert.IsTrue(stopwatch.Elapsed > timeout);
-                    Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds - timeout.TotalMilliseconds < 50);
+                    Assert.IsTrue(stopwatch.Elapsed >= timeout);
                 }
             }
         }
@@ -149,8 +148,7 @@ namespace BitSharp.Common.Test
                 {
                     stopwatch.Stop();
 
-                    Assert.IsTrue(stopwatch.Elapsed > delay);
-                    Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds - delay.TotalMilliseconds < 100);
+                    Assert.IsTrue(stopwatch.Elapsed >= delay);
                 }
             }
         }
