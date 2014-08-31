@@ -431,5 +431,17 @@ namespace BitSharp.Common.ExtensionMethods
                 return sum;
             }
         }
+
+        public static BigInteger Sum<T>(this IEnumerable<T> source, Func<T, BigInteger> selector)
+        {
+            checked
+            {
+                var sum = new BigInteger();
+                foreach (var item in source)
+                    sum += selector(item);
+
+                return sum;
+            }
+        }
     }
 }

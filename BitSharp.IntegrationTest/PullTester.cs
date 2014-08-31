@@ -22,7 +22,7 @@ namespace BitSharp.IntegrationTest
     public class PullTester
     {
         [TestMethod]
-        [Timeout(60000/*ms*/)]
+        [Timeout(300000/*ms*/)]
         public void TestPullTester()
         {
             // locate java.exe
