@@ -29,12 +29,17 @@ namespace BitSharp.Core.Test
             this.totalWork = 0;
         }
 
-        public FakeHeaders(FakeHeaders parent)
+        public FakeHeaders(IEnumerable<BlockHeader> blockHeaders)
         {
-            this.blockHeaders = new List<BlockHeader>(parent.blockHeaders);
+            this.blockHeaders = new List<BlockHeader>(blockHeaders);
             this.bits = DataCalculator.TargetToBits(UnitTestRules.Target0);
             this.nonce = (UInt32)Interlocked.Increment(ref staticNonce);
-            this.totalWork = parent.totalWork;
+            this.totalWork = this.blockHeaders.Sum(x => x.CalculateWork());
+        }
+
+        public FakeHeaders(FakeHeaders parent)
+            : this(parent.blockHeaders)
+        {
         }
 
         public BlockHeader Genesis()
