@@ -27,6 +27,7 @@ namespace BitSharp.Wallet.Test
     public class WalletMonitorTest
     {
         [TestMethod]
+        [Timeout(300000/*ms*/)]
         public void TestMonitorAddress()
         {
             var publicKey =
