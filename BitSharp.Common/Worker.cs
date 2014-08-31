@@ -220,7 +220,7 @@ namespace BitSharp.Common
                 }
             }
         }
-        
+
         /// <summary>
         /// Stop the worker and release all resources.
         /// </summary>
@@ -382,13 +382,14 @@ namespace BitSharp.Common
                         continue;
 
                     // delay for the requested wait time, unless forced
-                    this.forceNotifyEvent.WaitOne(this.MinIdleTime);
-
-                    // wait for work notification
-                    if (this.MaxIdleTime == TimeSpan.MaxValue)
-                        this.notifyEvent.WaitOne();
-                    else
-                        this.notifyEvent.WaitOne(this.MaxIdleTime - this.MinIdleTime); // subtract time already spent waiting
+                    if (!this.forceNotifyEvent.WaitOne(this.MinIdleTime))
+                    {
+                        // wait for work notification
+                        if (this.MaxIdleTime == TimeSpan.MaxValue)
+                            this.notifyEvent.WaitOne();
+                        else
+                            this.notifyEvent.WaitOne(this.MaxIdleTime - this.MinIdleTime); // subtract time already spent waiting
+                    }
 
                     // cooperative loop
                     if (!this.isStarted)
@@ -408,18 +409,29 @@ namespace BitSharp.Common
                     {
                         WorkAction();
                     }
-                    // ignore a cancellation exception
-                    // workers can throw this to stop the current work action
-                    catch (OperationCanceledException) { }
-                    // worker leaked an exception
                     catch (Exception e)
                     {
-                        this.logger.Error("Unhandled worker exception in {0}: ".Format2(this.Name), e);
-                        
-                        // notify work error
-                        var errorHandler = this.OnWorkError;
-                        if (errorHandler != null)
-                            errorHandler(e);
+                        // ignore a cancellation exception
+                        // workers can throw this to stop the current work action
+                        bool cancelled;
+                        if (e is OperationCanceledException)
+                            cancelled = true;
+                        else if (e is AggregateException
+                                && ((AggregateException)e).InnerExceptions.All(x => x is OperationCanceledException))
+                            cancelled = true;
+                        else
+                            cancelled = false;
+
+                        // worker leaked an exception
+                        if (!cancelled)
+                        {
+                            this.logger.Error("Unhandled worker exception in {0}: ".Format2(this.Name), e);
+
+                            // notify work error
+                            var errorHandler = this.OnWorkError;
+                            if (errorHandler != null)
+                                errorHandler(e);
+                        }
                     }
                     finally
                     {

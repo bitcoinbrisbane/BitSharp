@@ -322,9 +322,66 @@ namespace BitSharp.Common.Test
                 worker.NotifyWork();
 
                 // verify OnWorkError was called with expected exception
-                var wasCalled = callEvent.WaitOne(100);
+                var wasCalled = callEvent.WaitOne(1000);
                 Assert.IsTrue(wasCalled);
                 Assert.AreSame(expectedException, actualException);
+            }
+        }
+
+        [TestMethod]
+        public void TestWorkCancelledException()
+        {
+            // prepare workAction to throw exception
+            Exception currentException = null;
+            Action workAction = () => { throw currentException; };
+
+            // initialize worker
+            using (var worker = new MockWorker(workAction))
+            {
+                var finishedEvent = new AutoResetEvent(false);
+                worker.OnWorkFinished += () => { finishedEvent.Set(); };
+
+                bool wasError;
+                worker.OnWorkError += e => wasError = true;
+
+                // start worker
+                worker.Start();
+
+                // throw OperationCanceledException
+                wasError = false;
+                currentException = new OperationCanceledException();
+                worker.NotifyWork();
+
+                // verify work finished
+                Assert.IsTrue(finishedEvent.WaitOne(1000));
+                Assert.IsFalse(wasError);
+
+                // throw Exception
+                wasError = false;
+                currentException = new Exception();
+                worker.NotifyWork();
+
+                // verify work errored
+                Assert.IsTrue(finishedEvent.WaitOne(1000));
+                Assert.IsTrue(wasError);
+
+                // throw AggregateException of all OperationCanceledException
+                wasError = false;
+                currentException = new AggregateException(new OperationCanceledException(), new OperationCanceledException());
+                worker.NotifyWork();
+
+                // verify work finished
+                Assert.IsTrue(finishedEvent.WaitOne(1000));
+                Assert.IsFalse(wasError);
+
+                // throw AggregateException of some OperationCanceledException
+                wasError = false;
+                currentException = new AggregateException(new OperationCanceledException(), new Exception());
+                worker.NotifyWork();
+
+                // verify work errored
+                Assert.IsTrue(finishedEvent.WaitOne(1000));
+                Assert.IsTrue(wasError);
             }
         }
     }
