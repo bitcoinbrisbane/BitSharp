@@ -46,6 +46,9 @@ namespace BitSharp.Common
 
                         yield return value;
                     }
+
+                    // ensure a cancellation exception is thrown if the loop exited due to cancelToken
+                    cancelToken.GetValueOrDefault(CancellationToken.None).ThrowIfCancellationRequested();
                 }
                 finally
                 {
