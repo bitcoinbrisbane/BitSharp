@@ -15,6 +15,9 @@ using BitSharp.Core;
 using BitSharp.Node;
 using System.Reflection;
 using System.Threading;
+using System.Net.Sockets;
+using System.Net;
+using BitSharp.Node.Network;
 
 namespace BitSharp.IntegrationTest
 {
@@ -30,71 +33,102 @@ namespace BitSharp.IntegrationTest
             if (!File.Exists(javaPath))
                 Assert.Inconclusive("java.exe could not be found under JAVA_HOME");
 
-            // initialize kernel
-            using (var kernel = new StandardKernel())
+            // prepare a temp folder for bitcoinj
+            var tempFolder = Path.Combine(Path.GetTempPath(), "BitSharp", "Tests", Path.GetRandomFileName());
+            var tempFile = Path.Combine(tempFolder, "BitcoindComparisonTool");
+            Directory.CreateDirectory(tempFolder);
+            try
             {
-                // add logging module
-                kernel.Load(new ConsoleLoggingModule(LogLevel.Info));
-
-                // log startup
-                var logger = kernel.Get<Logger>();
-                logger.Info("Starting up: {0}".Format2(DateTime.Now));
-
-                // add storage module
-                kernel.Load(new MemoryStorageModule());
-                kernel.Load(new NodeMemoryStorageModule());
-
-                // add cache modules
-                kernel.Load(new NodeCacheModule());
-
-                // add rules module
-                var rulesType = RulesEnum.ComparisonToolTestNet;
-                kernel.Load(new RulesModule(rulesType));
-
-                // initialize the blockchain daemon
-                using (var coreDaemon = kernel.Get<CoreDaemon>())
+                // initialize kernel
+                using (var kernel = new StandardKernel())
                 {
-                    kernel.Bind<CoreDaemon>().ToConstant(coreDaemon).InTransientScope();
+                    // add logging module
+                    kernel.Load(new ConsoleLoggingModule(LogLevel.Info));
 
-                    // initialize p2p client
-                    using (var localClient = kernel.Get<LocalClient>())
+                    // log startup
+                    var logger = kernel.Get<Logger>();
+                    logger.Info("Starting up: {0}".Format2(DateTime.Now));
+
+                    // add storage module
+                    kernel.Load(new MemoryStorageModule());
+                    kernel.Load(new NodeMemoryStorageModule());
+
+                    // add cache modules
+                    kernel.Load(new NodeCacheModule());
+
+                    // add rules module
+                    var rulesType = RulesEnum.ComparisonToolTestNet;
+                    kernel.Load(new RulesModule(rulesType));
+
+                    // initialize the blockchain daemon
+                    using (var coreDaemon = kernel.Get<CoreDaemon>())
                     {
-                        kernel.Bind<LocalClient>().ToConstant(localClient).InTransientScope();
+                        kernel.Bind<CoreDaemon>().ToConstant(coreDaemon).InTransientScope();
 
-                        // start the blockchain daemon
-                        coreDaemon.Start();
-
-                        // start p2p client
-                        localClient.Start();
-
-                        // run pull tester
-                        var javaProcessInfo = new ProcessStartInfo
+                        // initialize p2p client
+                        using (var localClient = kernel.Get<LocalClient>())
                         {
-                            FileName = javaPath,
-                            Arguments = "-jar pull-tests.jar",
-                            UseShellExecute = false,
-                            RedirectStandardOutput = true,
-                            RedirectStandardError = true
-                        };
-                        using (var javaProcess = Process.Start(javaProcessInfo))
-                        {
-                            javaProcess.OutputDataReceived += (sender, e) =>
-                                logger.Info("[Pull Tester]:  " + e.Data);
-                            javaProcess.ErrorDataReceived += (sender, e) =>
-                                logger.Error("[Pull Tester]: " + e.Data);
+                            kernel.Bind<LocalClient>().ToConstant(localClient).InTransientScope();
 
-                            javaProcess.BeginOutputReadLine();
-                            javaProcess.BeginErrorReadLine();
+                            // start the blockchain daemon
+                            coreDaemon.Start();
 
-                            javaProcess.WaitForExit();
+                            // find a free port
+                            var port = FindFreePort();
+                            Messaging.Port = port;
 
-                            logger.Info("Pull Tester Result: {0}".Format2(javaProcess.ExitCode));
+                            // start p2p client
+                            localClient.Start();
 
-                            Assert.Inconclusive("TODO");
-                            Assert.AreEqual(0, javaProcess.ExitCode);
+                            // run pull tester
+                            var runLargeReorgs = 0;
+                            var javaProcessInfo = new ProcessStartInfo
+                            {
+                                FileName = javaPath,
+                                Arguments = @"-jar pull-tests.jar {0} {1} {2}".Format2(tempFile, runLargeReorgs, port),
+                                UseShellExecute = false,
+                                RedirectStandardOutput = true,
+                                RedirectStandardError = true
+                            };
+                            using (var javaProcess = Process.Start(javaProcessInfo))
+                            {
+                                javaProcess.OutputDataReceived += (sender, e) =>
+                                    logger.Info("[Pull Tester]:  " + e.Data);
+                                javaProcess.ErrorDataReceived += (sender, e) =>
+                                    logger.Error("[Pull Tester]: " + e.Data);
+
+                                javaProcess.BeginOutputReadLine();
+                                javaProcess.BeginErrorReadLine();
+
+                                javaProcess.WaitForExit();
+
+                                logger.Info("Pull Tester Result: {0}".Format2(javaProcess.ExitCode));
+
+                                Assert.Inconclusive("TODO");
+                                Assert.AreEqual(0, javaProcess.ExitCode);
+                            }
                         }
                     }
                 }
+            }
+            finally
+            {
+                // cleanup the temp bitcoinj folder
+                Directory.Delete(tempFolder, recursive: true);
+            }
+        }
+
+        private int FindFreePort()
+        {
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            try
+            {
+                return ((IPEndPoint)listener.LocalEndpoint).Port;
+            }
+            finally
+            {
+                listener.Stop();
             }
         }
     }
