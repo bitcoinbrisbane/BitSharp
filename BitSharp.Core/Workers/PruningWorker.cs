@@ -213,8 +213,8 @@ namespace BitSharp.Core.Workers
                     }
                 }
 
-                if (pruneBlock.Height % 20 == 0)
-                    this.logger.Info("{0:#,##0}: {1,10:#,##0}, {2,10:#,##0}".Format2(pruneBlock.Height, pruneData.Count, txCount));
+                //if (pruneBlock.Height % 20 == 0)
+                //    this.logger.Info("{0:#,##0}: {1,10:#,##0}, {2,10:#,##0}".Format2(pruneBlock.Height, pruneData.Count, txCount));
             }
             else if (pruneBlock.Height > 0)
             {
