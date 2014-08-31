@@ -24,7 +24,7 @@ using BitSharp.Core.Builders;
 
 namespace BitSharp.Core
 {
-    public class CoreDaemon : IDisposable
+    public class CoreDaemon : ICoreDaemon, IDisposable
     {
         public event EventHandler OnTargetChainChanged;
         public event EventHandler OnChainStateChanged;
@@ -59,7 +59,7 @@ namespace BitSharp.Core
             this.coreStorage.TryAddBlock(this.rules.GenesisBlock);
 
             // create chain state builder
-            this.chainStateBuilder = new ChainStateBuilder(this.logger, this.rules, this.coreStorage);
+            this.chainStateBuilder = new ChainStateBuilder(this.logger, this.rules, this.storageManager);
 
             // add genesis block to chain state, if needed
             if (this.chainStateBuilder.Chain.Height < 0)
@@ -75,12 +75,12 @@ namespace BitSharp.Core
                 this.targetChainWorker, this.chainStateBuilder, this.logger, this.rules, this.coreStorage);
 
             this.pruningWorker = new PruningWorker(
-                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(60), maxIdleTime: TimeSpan.FromMinutes(15)),
-                this.coreStorage, this.chainStateWorker, this.chainStateBuilder, this.logger, this.rules);
+                new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromSeconds(1), maxIdleTime: TimeSpan.FromMinutes(5)),
+                this, this.storageManager, this.chainStateWorker, this.logger);
 
             this.defragWorker = new DefragWorker(
                 new WorkerConfig(initialNotify: true, minIdleTime: TimeSpan.FromMinutes(5), maxIdleTime: TimeSpan.FromMinutes(5)),
-                this.coreStorage, this.logger);
+                this.storageManager, this.logger);
 
             this.gcWorker = new WorkerMethod("GC Worker", GcWorker,
                 initialNotify: true, minIdleTime: TimeSpan.FromSeconds(30), maxIdleTime: TimeSpan.FromSeconds(30), logger: this.logger);
@@ -193,9 +193,9 @@ namespace BitSharp.Core
         public void Stop()
         {
             // stop workers
+            this.chainStateWorker.Stop();
             this.utxoScanWorker.Stop();
             this.pruningWorker.Stop();
-            this.chainStateWorker.Stop();
             this.targetChainWorker.Stop();
             this.defragWorker.Stop();
             this.gcWorker.Stop();

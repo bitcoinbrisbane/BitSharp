@@ -24,6 +24,12 @@ namespace BitSharp.Core.Storage.Memory
             this.index = -2;
         }
 
+        public MemoryMerkleTreePruningCursor(IEnumerable<Transaction> nodes)
+        {
+            this.nodes = new List<BlockTx>(nodes.Select((tx, txIndex) => new BlockTx(txIndex, 0, tx.Hash, false, tx)));
+            this.index = -2;
+        }
+
         public bool TryMoveToIndex(int index)
         {
             this.index = this.nodes.FindIndex(x => x.Index == index);

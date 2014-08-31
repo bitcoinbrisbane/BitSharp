@@ -318,16 +318,6 @@ namespace BitSharp.Core.Storage
             }
         }
 
-        public void FlushBlockTxes()
-        {
-            this.blockTxesStorage.Flush();
-        }
-
-        public void PruneElements(UInt256 blockHash, IEnumerable<int> txIndices)
-        {
-            this.blockTxesStorage.PruneElements(blockHash, txIndices);
-        }
-
         public bool IsBlockInvalid(UInt256 blockHash)
         {
             return this.blockStorage.IsBlockInvalid(blockHash);
@@ -336,11 +326,6 @@ namespace BitSharp.Core.Storage
         internal IStorageManager StorageManager
         {
             get { return this.storageManager; }
-        }
-
-        internal DisposeHandle<IChainStateCursor> OpenChainStateCursor()
-        {
-            return this.storageManager.OpenChainStateCursor();
         }
 
         //TODO this should mark any blocks chained on top as invalid

@@ -21,22 +21,23 @@ namespace BitSharp.Core.Workers
     internal class DefragWorker : Worker
     {
         private readonly Logger logger;
-        private readonly CoreStorage coreStorage;
+        private readonly IStorageManager storageManager;
 
-        public DefragWorker(WorkerConfig workerConfig, CoreStorage coreStorage, Logger logger)
+        public DefragWorker(WorkerConfig workerConfig, IStorageManager storageManager, Logger logger)
             : base("DefragWorker", workerConfig.initialNotify, workerConfig.minIdleTime, workerConfig.maxIdleTime, logger)
         {
             this.logger = logger;
-            this.coreStorage = coreStorage;
+            this.storageManager = storageManager;
         }
 
         protected override void WorkAction()
         {
             this.logger.Info("Begin defragging");
 
-            this.coreStorage.Defragment();
+            this.storageManager.BlockStorage.Defragment();
+            this.storageManager.BlockTxesStorage.Defragment();
 
-            using (var handle = coreStorage.OpenChainStateCursor())
+            using (var handle = this.storageManager.OpenChainStateCursor())
             {
                 var chainStateCursor = handle.Item;
                 chainStateCursor.Defragment();

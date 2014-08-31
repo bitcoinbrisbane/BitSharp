@@ -19,7 +19,7 @@ namespace BitSharp.Core.Builders
     internal class BlockValidator : IDisposable
     {
         private readonly Logger logger;
-        private readonly CoreStorage coreStorage;
+        private readonly IStorageManager storageManager;
         private readonly IBlockchainRules rules;
 
         private readonly ParallelConsumer<TxWithPrevOutputKeys> txLoader;
@@ -37,10 +37,10 @@ namespace BitSharp.Core.Builders
         private ConcurrentBag<Exception> txValidatorExceptions;
         private ConcurrentBag<Exception> scriptValidatorExceptions;
 
-        public BlockValidator(CoreStorage coreStorage, IBlockchainRules rules, Logger logger)
+        public BlockValidator(IStorageManager storageManager, IBlockchainRules rules, Logger logger)
         {
             this.logger = logger;
-            this.coreStorage = coreStorage;
+            this.storageManager = storageManager;
             this.rules = rules;
 
             // thread count for i/o task (TxLoader)
@@ -220,7 +220,7 @@ namespace BitSharp.Core.Builders
                             var spentTx = spentTxes[inputIndex];
 
                             Transaction prevTx;
-                            if (this.coreStorage.TryGetTransaction(spentTx.BlockHash, spentTx.TxIndex, out prevTx))
+                            if (this.storageManager.BlockTxesStorage.TryGetTransaction(spentTx.BlockHash, spentTx.TxIndex, out prevTx))
                             {
                                 if (input.PreviousTxOutputKey.TxHash != prevTx.Hash)
                                     throw new Exception("TODO");

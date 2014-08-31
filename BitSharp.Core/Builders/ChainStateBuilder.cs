@@ -29,7 +29,7 @@ namespace BitSharp.Core.Builders
     {
         private readonly Logger logger;
         private readonly IBlockchainRules rules;
-        private readonly CoreStorage coreStorage;
+        private readonly IStorageManager storageManager;
 
         private readonly BlockValidator blockValidator;
 
@@ -43,15 +43,15 @@ namespace BitSharp.Core.Builders
 
         private readonly BuilderStats stats;
 
-        public ChainStateBuilder(Logger logger, IBlockchainRules rules, CoreStorage coreStorage)
+        public ChainStateBuilder(Logger logger, IBlockchainRules rules, IStorageManager storageManager)
         {
             this.logger = logger;
             this.rules = rules;
-            this.coreStorage = coreStorage;
+            this.storageManager = storageManager;
 
-            this.blockValidator = new BlockValidator(this.coreStorage, this.rules, this.logger);
+            this.blockValidator = new BlockValidator(this.storageManager, this.rules, this.logger);
 
-            this.chainStateCursorHandle = coreStorage.OpenChainStateCursor();
+            this.chainStateCursorHandle = this.storageManager.OpenChainStateCursor();
             this.chainStateCursor = this.chainStateCursorHandle.Item;
 
             this.chain = new ChainBuilder(chainStateCursor.ReadChain());
@@ -255,7 +255,7 @@ namespace BitSharp.Core.Builders
         public ChainState ToImmutable()
         {
             return this.commitLock.DoRead(() =>
-                new ChainState(this.chain.ToImmutable(), this.coreStorage.StorageManager));
+                new ChainState(this.chain.ToImmutable(), this.storageManager));
         }
 
         private void BeginTransaction()
