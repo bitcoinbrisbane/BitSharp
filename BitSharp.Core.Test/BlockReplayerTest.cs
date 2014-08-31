@@ -20,6 +20,7 @@ namespace BitSharp.Core.Test
         private const UInt64 SATOSHI_PER_BTC = 100 * 1000 * 1000;
 
         [TestMethod]
+        [Timeout(300000/*ms*/)]
         public void TestReplayBlock()
         {
             var logger = LogManager.CreateNullLogger();
