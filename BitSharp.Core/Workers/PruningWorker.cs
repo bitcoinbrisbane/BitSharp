@@ -114,7 +114,10 @@ namespace BitSharp.Core.Workers
                     {
                         //TODO better way to block chain state worker when pruning is behind
                         if (this.chainStateWorker != null)
+                        {
                             this.chainStateWorker.Start();
+                            this.chainStateWorker.NotifyWork();
+                        }
                         break;
                     }
 
