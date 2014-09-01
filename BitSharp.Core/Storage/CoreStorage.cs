@@ -323,22 +323,11 @@ namespace BitSharp.Core.Storage
             return this.blockStorage.IsBlockInvalid(blockHash);
         }
 
-        internal IStorageManager StorageManager
-        {
-            get { return this.storageManager; }
-        }
-
         //TODO this should mark any blocks chained on top as invalid
         internal void MarkBlockInvalid(UInt256 blockHash)
         {
             this.blockStorage.MarkBlockInvalid(blockHash);
             RaiseBlockInvalidated(blockHash);
-        }
-
-        internal void Defragment()
-        {
-            this.blockStorage.Defragment();
-            this.blockTxesStorage.Defragment();
         }
 
         private void RaiseChainedHeaderAdded(ChainedHeader chainedHeader)

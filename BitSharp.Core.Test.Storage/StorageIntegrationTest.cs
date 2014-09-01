@@ -49,7 +49,7 @@ namespace BitSharp.Core.Test.Storage
 
             using (var storageManager = provider.OpenStorageManager())
             using (var coreStorage = new CoreStorage(storageManager, logger))
-            using (var chainStateBuilder = new ChainStateBuilder(logger, rules, coreStorage.StorageManager))
+            using (var chainStateBuilder = new ChainStateBuilder(logger, rules, storageManager))
             {
                 // add blocks to storage
                 coreStorage.AddGenesisBlock(ChainedHeader.CreateForGenesisBlock(blocks[0].Header));
