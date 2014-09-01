@@ -65,13 +65,23 @@ namespace BitSharp.Core.Workers
             using (var handle = this.storageManager.OpenChainStateCursor())
             {
                 var chainStateCursor = handle.Item;
-                var stopwatch = Stopwatch.StartNew();
+                
+                var totalStopwatch = Stopwatch.StartNew();
+                var pruneStopwatch = new Stopwatch();
+                var flushStopwatch = new Stopwatch();
+                var commitStopwatch = new Stopwatch();
+                
+                var startHeight = this.prunedChain.Height;
+                var stopHeight = this.prunedChain.Height;
+                var txCount = 0;
 
                 // get the current processed chain
                 var processedChain = this.coreDaemon.CurrentChain;
 
                 // ensure chain state is flushed before pruning
+                flushStopwatch.Start();
                 chainStateCursor.Flush();
+                flushStopwatch.Stop();
 
                 // begin the pruning transaction
                 chainStateCursor.BeginTransaction();
@@ -111,7 +121,11 @@ namespace BitSharp.Core.Workers
                     if (direction > 0)
                     {
                         // prune the block
-                        this.PruneBlock(mode, processedChain, chainedHeader, chainStateCursor);
+                        pruneStopwatch.Start();
+                        int pruneBlockTxCount;
+                        this.PruneBlock(mode, processedChain, chainedHeader, chainStateCursor, out pruneBlockTxCount);
+                        txCount += pruneBlockTxCount;
+                        pruneStopwatch.Stop();
 
                         // track pruned block
                         this.prunedChain.AddBlock(chainedHeader);
@@ -127,8 +141,10 @@ namespace BitSharp.Core.Workers
                         throw new InvalidOperationException();
                     }
 
+                    stopHeight = this.prunedChain.Height;
+
                     // limit how long pruning transaction is kept open
-                    if (stopwatch.Elapsed > TimeSpan.FromSeconds(15))
+                    if (totalStopwatch.Elapsed > TimeSpan.FromSeconds(15))
                     {
                         //TODO better way to block chain state worker when pruning is behind
                         this.logger.Info("Pausing chain state processing, pruning is lagging.");
@@ -143,11 +159,31 @@ namespace BitSharp.Core.Workers
                 // blocks must be flushed as the pruning information has been removed from the chain state
                 // if the system crashed and the pruned chain state was persisted while the pruned blocks were not,
                 // the information to prune them again would be lost
+                flushStopwatch.Start();
                 this.storageManager.BlockTxesStorage.Flush();
+                flushStopwatch.Stop();
 
                 // commit pruned chain state
                 // flush is not needed here, at worst pruning will be performed again against already pruned transactions
+                commitStopwatch.Start();
                 chainStateCursor.CommitTransaction();
+                commitStopwatch.Stop();
+
+                // log if pruning was done
+                if (stopHeight > startHeight)
+                {
+                    var txRate = txCount / totalStopwatch.Elapsed.TotalSeconds;
+                    this.logger.Info(
+@"Pruned from block {0:#,##0} to {1:#,##0}:
+- tx count: {2,10:#,##0}
+- tx rate:  {3,10:#,##0}/s
+- prune:        {4,10:#,##0.000}s
+- flush:        {5,10:#,##0.000}s
+- commit:       {6,10:#,##0.000}s
+- TOTAL:        {7,10:#,##0.000}s"
+                        .Format2(startHeight, stopHeight, txCount, txRate, pruneStopwatch.Elapsed.TotalSeconds, flushStopwatch.Elapsed.TotalSeconds, commitStopwatch.Elapsed.TotalSeconds, totalStopwatch.Elapsed.TotalSeconds));
+                }
+
 
                 //this.logger.Info("Finished round of pruning.");
 
@@ -155,14 +191,14 @@ namespace BitSharp.Core.Workers
             }
         }
 
-        private void PruneBlock(PruningMode mode, Chain chain, ChainedHeader pruneBlock, IChainStateCursor chainStateCursor)
+        private void PruneBlock(PruningMode mode, Chain chain, ChainedHeader pruneBlock, IChainStateCursor chainStateCursor, out int txCount)
         {
             //TODO the replay information about blocks that have been rolled back also needs to be pruned (UnmintedTx)
 
             // dictionary to keep track of spent transactions against their block
             var pruneData = new SortedDictionary<int, List<int>>();
 
-            var txCount = 0;
+            txCount = 0;
 
             // retrieve the spent txes for this block
             IImmutableList<SpentTx> spentTxes;
