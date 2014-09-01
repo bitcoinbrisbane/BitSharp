@@ -173,7 +173,7 @@ namespace BitSharp.Core.Workers
                 if (stopHeight > startHeight)
                 {
                     var txRate = txCount / totalStopwatch.Elapsed.TotalSeconds;
-                    this.logger.Info(
+                    this.logger.Debug(
 @"Pruned from block {0:#,##0} to {1:#,##0}:
 - tx count: {2,10:#,##0}
 - tx rate:  {3,10:#,##0}/s
