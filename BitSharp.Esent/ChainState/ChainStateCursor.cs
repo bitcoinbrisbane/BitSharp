@@ -39,7 +39,7 @@ namespace BitSharp.Esent
 
         public readonly JET_TABLEID globalsTableId;
         public readonly JET_COLUMNID unspentTxCountColumnId;
-        
+
         public readonly JET_TABLEID flushTableId;
         public readonly JET_COLUMNID flushColumnId;
 
@@ -239,7 +239,7 @@ namespace BitSharp.Esent
 
                     jetUpdate.Save();
                 }
-                
+
                 return true;
             }
             catch (EsentKeyDuplicateException)
@@ -497,16 +497,18 @@ namespace BitSharp.Esent
 
         public void Flush()
         {
-            using (var jetTx = this.jetSession.BeginTransaction())
-            {
-                Api.EscrowUpdate(this.jetSession, this.flushTableId, this.flushColumnId, 1);
-                jetTx.Commit(CommitTransactionGrbit.None);
-            }
-
             if (EsentVersion.SupportsServer2003Features)
+            {
                 Api.JetCommitTransaction(this.jetSession, Server2003Grbits.WaitAllLevel0Commit);
+            }
             else
-                Api.JetCommitTransaction(this.jetSession, CommitTransactionGrbit.WaitLastLevel0Commit);
+            {
+                using (var jetTx = this.jetSession.BeginTransaction())
+                {
+                    Api.EscrowUpdate(this.jetSession, this.flushTableId, this.flushColumnId, 1);
+                    jetTx.Commit(CommitTransactionGrbit.None);
+                }
+            }
         }
 
         public void Defragment()

@@ -461,16 +461,18 @@ namespace BitSharp.Esent
             {
                 var cursor = handle.Item;
 
-                using (var jetTx = cursor.jetSession.BeginTransaction())
-                {
-                    Api.EscrowUpdate(cursor.jetSession, cursor.globalsTableId, cursor.flushColumnId, 1);
-                    jetTx.Commit(CommitTransactionGrbit.None);
-                }
-
                 if (EsentVersion.SupportsServer2003Features)
+                {
                     Api.JetCommitTransaction(cursor.jetSession, Server2003Grbits.WaitAllLevel0Commit);
+                }
                 else
-                    Api.JetCommitTransaction(cursor.jetSession, CommitTransactionGrbit.WaitLastLevel0Commit);
+                {
+                    using (var jetTx = cursor.jetSession.BeginTransaction())
+                    {
+                        Api.EscrowUpdate(cursor.jetSession, cursor.globalsTableId, cursor.flushColumnId, 1);
+                        jetTx.Commit(CommitTransactionGrbit.None);
+                    }
+                }
             }
         }
 
