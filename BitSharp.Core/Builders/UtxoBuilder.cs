@@ -83,6 +83,9 @@ namespace BitSharp.Core.Builders
                 // mint the transaction's outputs in the utxo
                 this.Mint(tx, txIndex, chainedHeader);
 
+                // increment unspent tx count
+                this.chainStateCursor.UnspentTxCount++;
+
                 yield return new TxWithPrevOutputKeys(txIndex, tx, chainedHeader, prevOutputTxKeys.ToImmutable());
             }
 
@@ -135,7 +138,12 @@ namespace BitSharp.Core.Builders
 
             // store pruning information for a fully spent transaction
             if (unspentTx.IsFullySpent)
+            {
                 blockSpentTxes.Add(unspentTx.ToSpentTx(chainedHeader.Height));
+
+                // decrement unspent tx count
+                this.chainStateCursor.UnspentTxCount--;
+            }
 
             return unspentTx;
         }
@@ -151,6 +159,9 @@ namespace BitSharp.Core.Builders
 
                 // remove transaction outputs
                 this.Unmint(tx, chainedHeader, isCoinbase: true);
+
+                // decrement unspent tx count
+                this.chainStateCursor.UnspentTxCount--;
 
                 var prevOutputTxKeys = ImmutableArray.CreateBuilder<BlockTxKey>(tx.Inputs.Length);
 
@@ -252,6 +263,9 @@ namespace BitSharp.Core.Builders
                 var wasAdded = this.chainStateCursor.TryAddUnspentTx(unspentTx);
                 if (!wasAdded)
                     throw new ValidationException(chainedHeader.Hash);
+
+                // increment unspent tx count
+                this.chainStateCursor.UnspentTxCount--;
             }
 
             return unspentTx;

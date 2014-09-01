@@ -16,14 +16,14 @@ namespace BitSharp.Core.Storage.Memory
         private readonly MemoryChainStateStorage chainStateStorage;
 
         public MemoryStorageManager()
-            : this(null, null, null)
+            : this(null, null, null, null)
         { }
 
-        internal MemoryStorageManager(Chain chain = null, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions = null, ImmutableDictionary<int, IImmutableList<SpentTx>> spentTransactions = null)
+        internal MemoryStorageManager(Chain chain = null, int? unspentTxCount = null, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions = null, ImmutableDictionary<int, IImmutableList<SpentTx>> spentTransactions = null)
         {
             this.blockStorage = new MemoryBlockStorage();
             this.blockTxesStorage = new MemoryBlockTxesStorage();
-            this.chainStateStorage = new MemoryChainStateStorage(chain, unspentTransactions, spentTransactions);
+            this.chainStateStorage = new MemoryChainStateStorage(chain, unspentTxCount, unspentTransactions, spentTransactions);
         }
 
         public void Dispose()

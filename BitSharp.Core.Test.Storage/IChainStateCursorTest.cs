@@ -240,6 +240,7 @@ namespace BitSharp.Core.Test.Storage
                 // add data
                 chainStateCursor.AddChainedHeader(chainedHeader0);
                 chainStateCursor.TryAddUnspentTx(unspentTx);
+                chainStateCursor.UnspentTxCount++;
                 chainStateCursor.TryAddBlockSpentTxes(0, spentTxes);
 
                 // verify data
@@ -296,6 +297,7 @@ namespace BitSharp.Core.Test.Storage
 
                 // add unspent tx
                 chainStateCursor.TryAddUnspentTx(unspentTx);
+                chainStateCursor.UnspentTxCount++;
 
                 // verify unspent tx
                 Assert.IsTrue(chainStateCursor.ContainsUnspentTx(unspentTx.TxHash));
@@ -531,41 +533,17 @@ namespace BitSharp.Core.Test.Storage
                 // verify initial count
                 Assert.AreEqual(0, chainStateCursor.UnspentTxCount);
 
-                // add unspent tx 0
-                chainStateCursor.TryAddUnspentTx(unspentTx0);
+                // increment count
+                chainStateCursor.UnspentTxCount++;
 
                 // verify count
                 Assert.AreEqual(1, chainStateCursor.UnspentTxCount);
 
-                // add unspent tx 1
-                chainStateCursor.TryAddUnspentTx(unspentTx1);
+                // set count
+                chainStateCursor.UnspentTxCount = 10;
 
                 // verify count
-                Assert.AreEqual(2, chainStateCursor.UnspentTxCount);
-
-                // add unspent tx 2
-                chainStateCursor.TryAddUnspentTx(unspentTx2);
-
-                // verify count
-                Assert.AreEqual(3, chainStateCursor.UnspentTxCount);
-
-                // remove unspent tx 2
-                chainStateCursor.TryRemoveUnspentTx(unspentTx2.TxHash);
-
-                // verify count
-                Assert.AreEqual(2, chainStateCursor.UnspentTxCount);
-
-                // remove unspent tx 1
-                chainStateCursor.TryRemoveUnspentTx(unspentTx1.TxHash);
-
-                // verify count
-                Assert.AreEqual(1, chainStateCursor.UnspentTxCount);
-
-                // remove unspent tx 0
-                chainStateCursor.TryRemoveUnspentTx(unspentTx0.TxHash);
-
-                // verify count
-                Assert.AreEqual(0, chainStateCursor.UnspentTxCount);
+                Assert.AreEqual(10, chainStateCursor.UnspentTxCount);
             }
         }
 

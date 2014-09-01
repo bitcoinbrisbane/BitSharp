@@ -237,18 +237,17 @@ namespace BitSharp.Core.Builders
                 /*5*/ inputRate.ToString("#,##0"),
                 /*6*/ this.Stats.txCount.ToString("#,##0"),
                 /*7*/ this.Stats.inputCount.ToString("#,##0"),
-                /*8*/ this.TransactionCount.ToString("#,##0")
+                /*8*/ this.UnspentTxCount.ToString("#,##0")
                 ));
         }
 
-        public int TransactionCount
+        public int UnspentTxCount
         {
-            get { return this.chainStateCursor.UnspentTxCount; }
-        }
-
-        private UInt256 GetOutputScripHash(TxOutput txOutput)
-        {
-            return new UInt256(SHA256Static.ComputeHash(txOutput.ScriptPublicKey.ToArray()));
+            get
+            {
+                return this.commitLock.DoRead(() =>
+                    this.chainStateCursor.UnspentTxCount);
+            }
         }
 
         //TODO cache the latest immutable snapshot

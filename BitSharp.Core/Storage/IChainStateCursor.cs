@@ -63,7 +63,7 @@ namespace BitSharp.Core.Storage
         /// <summary>
         /// The current unspent transaction count.
         /// </summary>
-        int UnspentTxCount { get; }
+        int UnspentTxCount { get; set; }
 
         /// <summary>
         /// Determine whether an unspent transaction is present.

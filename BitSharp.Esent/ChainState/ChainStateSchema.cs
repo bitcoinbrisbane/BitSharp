@@ -26,6 +26,7 @@ namespace BitSharp.Esent.ChainState
                 Api.JetCreateDatabase(jetSession, jetDatabase, "", out utxoDbId, createGrbit);
 
                 CreateGlobalsTable(utxoDbId, jetSession);
+                CreateFlushTable(utxoDbId, jetSession);
                 CreateChainTable(utxoDbId, jetSession);
                 CreateUnspentTxTable(utxoDbId, jetSession);
                 CreateSpentTxTable(utxoDbId, jetSession);
@@ -37,24 +38,40 @@ namespace BitSharp.Esent.ChainState
         {
             JET_TABLEID globalsTableId;
             JET_COLUMNID unspentTxCountColumnId;
-            JET_COLUMNID flushColumnId;
-
-            var defaultValue = BitConverter.GetBytes(0);
 
             Api.JetCreateTable(jetSession, utxoDbId, "Globals", 0, 0, out globalsTableId);
-            Api.JetAddColumn(jetSession, globalsTableId, "UnspentTxCount", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnEscrowUpdate }, defaultValue, defaultValue.Length, out unspentTxCountColumnId);
-            Api.JetAddColumn(jetSession, globalsTableId, "Flush", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnEscrowUpdate }, defaultValue, defaultValue.Length, out flushColumnId);
+            Api.JetAddColumn(jetSession, globalsTableId, "UnspentTxCount", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnNotNULL}, null, 0, out unspentTxCountColumnId);
 
             // initialize global data
             using (var jetUpdate = jetSession.BeginUpdate(globalsTableId, JET_prep.Insert))
             {
                 Api.SetColumn(jetSession, globalsTableId, unspentTxCountColumnId, 0);
-                Api.SetColumn(jetSession, globalsTableId, flushColumnId, 0);
 
                 jetUpdate.Save();
             }
 
             Api.JetCloseTable(jetSession, globalsTableId);
+        }
+
+        private static void CreateFlushTable(JET_DBID utxoDbId, Session jetSession)
+        {
+            JET_TABLEID flushTableId;
+            JET_COLUMNID flushColumnId;
+
+            var defaultValue = BitConverter.GetBytes(0);
+
+            Api.JetCreateTable(jetSession, utxoDbId, "Flush", 0, 0, out flushTableId);
+            Api.JetAddColumn(jetSession, flushTableId, "Flush", new JET_COLUMNDEF { coltyp = JET_coltyp.Long, grbit = ColumndefGrbit.ColumnEscrowUpdate }, defaultValue, defaultValue.Length, out flushColumnId);
+
+            // initialize global data
+            using (var jetUpdate = jetSession.BeginUpdate(flushTableId, JET_prep.Insert))
+            {
+                Api.SetColumn(jetSession, flushTableId, flushColumnId, 0);
+
+                jetUpdate.Save();
+            }
+
+            Api.JetCloseTable(jetSession, flushTableId);
         }
 
         private static void CreateChainTable(JET_DBID utxoDbId, Session jetSession)
@@ -73,7 +90,7 @@ namespace BitSharp.Esent.ChainState
                         new JET_INDEXCREATE
                         {
                             cbKeyMost = 255,
-                            grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                            grbit = CreateIndexGrbit.IndexUnique | CreateIndexGrbit.IndexDisallowNull,
                             szIndexName = "IX_BlockHeight",
                             szKey = "+BlockHeight\0\0",
                             cbKey = "+BlockHeight\0\0".Length
@@ -103,7 +120,7 @@ namespace BitSharp.Esent.ChainState
                         new JET_INDEXCREATE
                         {
                             cbKeyMost = 255,
-                            grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                            grbit = CreateIndexGrbit.IndexUnique | CreateIndexGrbit.IndexDisallowNull,
                             szIndexName = "IX_TxHash",
                             szKey = "+TxHash\0\0",
                             cbKey = "+TxHash\0\0".Length
@@ -129,7 +146,7 @@ namespace BitSharp.Esent.ChainState
                         new JET_INDEXCREATE
                         {
                             cbKeyMost = 255,
-                            grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                            grbit = CreateIndexGrbit.IndexUnique | CreateIndexGrbit.IndexDisallowNull,
                             szIndexName = "IX_SpentBlockIndex",
                             szKey = "+SpentBlockIndex\0\0",
                             cbKey = "+SpentBlockIndex\0\0".Length
@@ -155,7 +172,7 @@ namespace BitSharp.Esent.ChainState
                         new JET_INDEXCREATE
                         {
                             cbKeyMost = 255,
-                            grbit = CreateIndexGrbit.IndexPrimary | CreateIndexGrbit.IndexDisallowNull,
+                            grbit = CreateIndexGrbit.IndexUnique | CreateIndexGrbit.IndexDisallowNull,
                             szIndexName = "IX_UnmintedBlockHash",
                             szKey = "+BlockHash\0\0",
                             cbKey = "+BlockHash\0\0".Length
@@ -181,9 +198,9 @@ namespace BitSharp.Esent.ChainState
                     using (var cursor = new ChainStateCursor(jetDatabase, jetInstance, logger))
                     {
                         // reset flush column
-                        using (var jetUpdate = cursor.jetSession.BeginUpdate(cursor.globalsTableId, JET_prep.Replace))
+                        using (var jetUpdate = cursor.jetSession.BeginUpdate(cursor.flushTableId, JET_prep.Replace))
                         {
-                            Api.SetColumn(cursor.jetSession, cursor.globalsTableId, cursor.flushColumnId, 0);
+                            Api.SetColumn(cursor.jetSession, cursor.flushTableId, cursor.flushColumnId, 0);
 
                             jetUpdate.Save();
                         }

@@ -17,6 +17,7 @@ namespace BitSharp.Core.Storage.Memory
         private readonly object lockObject = new object();
 
         private ChainBuilder chain;
+        private int unspentTxCount;
         private ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
         private ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes;
         private ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>>.Builder blockUnmintedTxes;
@@ -26,9 +27,10 @@ namespace BitSharp.Core.Storage.Memory
         private long blockSpentTxesVersion;
         private long blockUnmintedTxesVersion;
 
-        public MemoryChainStateStorage(Chain chain = null, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions = null, ImmutableDictionary<int, IImmutableList<SpentTx>> blockSpentTxes = null, ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>> blockUnmintedTxes = null)
+        public MemoryChainStateStorage(Chain chain = null, int? unspentTxCount = null, ImmutableSortedDictionary<UInt256, UnspentTx> unspentTransactions = null, ImmutableDictionary<int, IImmutableList<SpentTx>> blockSpentTxes = null, ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>> blockUnmintedTxes = null)
         {
             this.chain = chain != null ? chain.ToBuilder() : new ChainBuilder();
+            this.unspentTxCount = unspentTxCount ?? 0;
             this.unspentTransactions = unspentTransactions != null ? unspentTransactions.ToBuilder() : ImmutableSortedDictionary.CreateBuilder<UInt256, UnspentTx>();
             this.blockSpentTxes = blockSpentTxes != null ? blockSpentTxes.ToBuilder() : ImmutableDictionary.CreateBuilder<int, IImmutableList<SpentTx>>();
             this.blockUnmintedTxes = blockUnmintedTxes != null ? blockUnmintedTxes.ToBuilder() : ImmutableDictionary.CreateBuilder<UInt256, IImmutableList<UnmintedTx>>();
@@ -38,11 +40,12 @@ namespace BitSharp.Core.Storage.Memory
         {
         }
 
-        public void BeginTransaction(out ChainBuilder chain, out ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, out ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes, out ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>>.Builder blockUnmintedTxes, out long chainVersion, out long unspentTxesVersion, out long spentTxesVersion, out long unmintedTxesVersion)
+        public void BeginTransaction(out ChainBuilder chain, out int? unspentTxCount, out ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, out ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes, out ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>>.Builder blockUnmintedTxes, out long chainVersion, out long unspentTxesVersion, out long spentTxesVersion, out long unmintedTxesVersion)
         {
             lock (this.lockObject)
             {
                 chain = this.chain.ToImmutable().ToBuilder();
+                unspentTxCount = this.unspentTxCount;
                 unspentTransactions = this.unspentTransactions.ToImmutable().ToBuilder();
                 blockSpentTxes = this.blockSpentTxes.ToImmutable().ToBuilder();
                 blockUnmintedTxes = this.blockUnmintedTxes.ToImmutable().ToBuilder();
@@ -54,11 +57,12 @@ namespace BitSharp.Core.Storage.Memory
             }
         }
 
-        public void CommitTransaction(ChainBuilder chain, ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes, ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>>.Builder blockUnmintedTxes, long chainVersion, long unspentTxesVersion, long blockSpentTxesVersion, long blockUnmintedTxesVersion)
+        public void CommitTransaction(ChainBuilder chain, int? unspentTxCount, ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions, ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes, ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>>.Builder blockUnmintedTxes, long chainVersion, long unspentTxesVersion, long blockSpentTxesVersion, long blockUnmintedTxesVersion)
         {
             lock (this.lockObject)
             {
                 if (chain != null && this.chainVersion != chainVersion
+                    || unspentTxCount != null && unspentTxesVersion != this.unspentTxesVersion
                     || unspentTransactions != null && unspentTxesVersion != this.unspentTxesVersion
                     || blockSpentTxes != null && blockSpentTxesVersion != this.blockSpentTxesVersion
                     || blockUnmintedTxes != null && blockUnmintedTxesVersion != this.blockUnmintedTxesVersion)
@@ -72,6 +76,7 @@ namespace BitSharp.Core.Storage.Memory
 
                 if (unspentTransactions != null)
                 {
+                    this.unspentTxCount = unspentTxCount.Value;
                     this.unspentTransactions = unspentTransactions.ToImmutable().ToBuilder();
                     this.unspentTxesVersion++;
                 }
@@ -126,6 +131,14 @@ namespace BitSharp.Core.Storage.Memory
             {
                 lock (this.lockObject)
                     return this.unspentTransactions.Count;
+            }
+            set
+            {
+                lock (this.lockObject)
+                {
+                    this.unspentTxCount = value;
+                    this.unspentTxesVersion++;
+                }
             }
         }
 

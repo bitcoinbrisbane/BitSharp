@@ -18,6 +18,7 @@ namespace BitSharp.Core.Storage.Memory
         private bool inTransaction;
 
         private ChainBuilder chain;
+        private int? unspentTxCount;
         private ImmutableSortedDictionary<UInt256, UnspentTx>.Builder unspentTransactions;
         private ImmutableDictionary<int, IImmutableList<SpentTx>>.Builder blockSpentTxes;
         private ImmutableDictionary<UInt256, IImmutableList<UnmintedTx>>.Builder blockUnmintedTxes;
@@ -53,7 +54,7 @@ namespace BitSharp.Core.Storage.Memory
             if (this.inTransaction)
                 throw new InvalidOperationException();
 
-            this.chainStateStorage.BeginTransaction(out this.chain, out this.unspentTransactions, out this.blockSpentTxes, out this.blockUnmintedTxes, out this.chainVersion, out this.unspentTxesVersion, out this.spentTxesVersion, out this.unmintedTxesVersion);
+            this.chainStateStorage.BeginTransaction(out this.chain, out this.unspentTxCount, out this.unspentTransactions, out this.blockSpentTxes, out this.blockUnmintedTxes, out this.chainVersion, out this.unspentTxesVersion, out this.spentTxesVersion, out this.unmintedTxesVersion);
 
             this.chainModified = false;
             this.unspentTxesModified = false;
@@ -70,12 +71,14 @@ namespace BitSharp.Core.Storage.Memory
 
             this.chainStateStorage.CommitTransaction(
                 this.chainModified ? this.chain : null,
+                this.unspentTxesModified ? this.unspentTxCount : null,
                 this.unspentTxesModified ? this.unspentTransactions : null,
                 this.spentTxesModified ? this.blockSpentTxes : null,
                 this.unmintedTxesModified ? this.blockUnmintedTxes : null,
                 this.chainVersion, this.unspentTxesVersion, this.spentTxesVersion, this.unmintedTxesVersion);
 
             this.chain = null;
+            this.unspentTxCount = null;
             this.unspentTransactions = null;
             this.blockSpentTxes = null;
             this.blockUnmintedTxes = null;
@@ -89,6 +92,7 @@ namespace BitSharp.Core.Storage.Memory
                 throw new InvalidOperationException();
 
             this.chain = null;
+            this.unspentTxCount = null;
             this.unspentTransactions = null;
             this.blockSpentTxes = null;
             this.blockUnmintedTxes = null;
@@ -143,9 +147,19 @@ namespace BitSharp.Core.Storage.Memory
             get
             {
                 if (this.inTransaction)
-                    return this.unspentTransactions.Count;
+                    return this.unspentTxCount.Value;
                 else
                     return this.chainStateStorage.UnspentTxCount;
+            }
+            set
+            {
+                if (this.inTransaction)
+                {
+                    this.unspentTxCount = value;
+                    this.unspentTxesModified = true;
+                }
+                else
+                    this.chainStateStorage.UnspentTxCount = value;
             }
         }
 

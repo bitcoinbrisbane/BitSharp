@@ -39,6 +39,8 @@ namespace BitSharp.Esent
 
         public readonly JET_TABLEID globalsTableId;
         public readonly JET_COLUMNID unspentTxCountColumnId;
+        
+        public readonly JET_TABLEID flushTableId;
         public readonly JET_COLUMNID flushColumnId;
 
         public readonly JET_TABLEID chainTableId;
@@ -75,6 +77,7 @@ namespace BitSharp.Esent
                 out this.chainStateDbId,
                 out this.globalsTableId,
                     out this.unspentTxCountColumnId,
+                out this.flushTableId,
                     out this.flushColumnId,
                 out this.chainTableId,
                     out this.blockHeightColumnId,
@@ -182,6 +185,17 @@ namespace BitSharp.Esent
             {
                 return Api.RetrieveColumnAsInt32(this.jetSession, this.globalsTableId, this.unspentTxCountColumnId).Value;
             }
+            set
+            {
+                if (!this.inTransaction)
+                    throw new InvalidOperationException();
+
+                using (var jetUpdate = this.jetSession.BeginUpdate(this.globalsTableId, JET_prep.Replace))
+                {
+                    Api.SetColumn(this.jetSession, this.globalsTableId, this.unspentTxCountColumnId, value);
+                    jetUpdate.Save();
+                }
+            }
         }
 
         public bool ContainsUnspentTx(UInt256 txHash)
@@ -224,12 +238,9 @@ namespace BitSharp.Esent
                     Api.SetColumn(this.jetSession, this.unspentTxTableId, this.outputStatesColumnId, DataEncoder.EncodeOutputStates(unspentTx.OutputStates));
 
                     jetUpdate.Save();
-
-                    // increase unspent tx count
-                    Api.EscrowUpdate(this.jetSession, this.globalsTableId, this.unspentTxCountColumnId, +1);
-
-                    return true;
                 }
+                
+                return true;
             }
             catch (EsentKeyDuplicateException)
             {
@@ -247,9 +258,6 @@ namespace BitSharp.Esent
             if (Api.TrySeek(this.jetSession, this.unspentTxTableId, SeekGrbit.SeekEQ))
             {
                 Api.JetDelete(this.jetSession, this.unspentTxTableId);
-
-                // decrease unspent tx count
-                Api.EscrowUpdate(this.jetSession, this.globalsTableId, this.unspentTxCountColumnId, -1);
 
                 return true;
             }
@@ -491,7 +499,7 @@ namespace BitSharp.Esent
         {
             using (var jetTx = this.jetSession.BeginTransaction())
             {
-                Api.EscrowUpdate(this.jetSession, this.globalsTableId, this.flushColumnId, 1);
+                Api.EscrowUpdate(this.jetSession, this.flushTableId, this.flushColumnId, 1);
                 jetTx.Commit(CommitTransactionGrbit.None);
             }
 
@@ -523,6 +531,7 @@ namespace BitSharp.Esent
             out JET_DBID chainStateDbId,
             out JET_TABLEID globalsTableId,
             out JET_COLUMNID unspentTxCountColumnId,
+            out JET_TABLEID flushTableId,
             out JET_COLUMNID flushColumnId,
             out JET_TABLEID chainTableId,
             out JET_COLUMNID blockHeightColumnId,
@@ -546,9 +555,14 @@ namespace BitSharp.Esent
 
                 Api.JetOpenTable(jetSession, chainStateDbId, "Globals", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out globalsTableId);
                 unspentTxCountColumnId = Api.GetTableColumnid(jetSession, globalsTableId, "UnspentTxCount");
-                flushColumnId = Api.GetTableColumnid(jetSession, globalsTableId, "Flush");
 
                 if (!Api.TryMoveFirst(jetSession, globalsTableId))
+                    throw new InvalidOperationException();
+
+                Api.JetOpenTable(jetSession, chainStateDbId, "Flush", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out flushTableId);
+                flushColumnId = Api.GetTableColumnid(jetSession, flushTableId, "Flush");
+
+                if (!Api.TryMoveFirst(jetSession, flushTableId))
                     throw new InvalidOperationException();
 
                 Api.JetOpenTable(jetSession, chainStateDbId, "Chain", null, 0, readOnly ? OpenTableGrbit.ReadOnly : OpenTableGrbit.None, out chainTableId);
