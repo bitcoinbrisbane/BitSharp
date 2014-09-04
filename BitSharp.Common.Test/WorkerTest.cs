@@ -94,28 +94,28 @@ namespace BitSharp.Common.Test
             using (var worker = new MockWorker(workAction))
             {
                 // verify workAction has not been called
-                var wasCalled = callEvent.WaitOne(10);
+                var wasCalled = callEvent.WaitOne(1000);
                 Assert.IsFalse(wasCalled);
 
                 // start worker
                 worker.Start();
 
                 // verify workAction has not been called
-                wasCalled = callEvent.WaitOne(10);
+                wasCalled = callEvent.WaitOne(1000);
                 Assert.IsFalse(wasCalled);
 
                 // notify worker
                 worker.NotifyWork();
 
                 // verify workAction has been called
-                wasCalled = callEvent.WaitOne(10);
+                wasCalled = callEvent.WaitOne();
                 Assert.IsTrue(wasCalled);
 
                 // stop worker
                 worker.Stop();
 
                 // verify workAction has not been called
-                wasCalled = callEvent.WaitOne(10);
+                wasCalled = callEvent.WaitOne(1000);
                 Assert.IsFalse(wasCalled);
             }
         }
@@ -131,28 +131,28 @@ namespace BitSharp.Common.Test
             using (var worker = new MockWorker(workAction))
             {
                 // verify workAction has not been called
-                var wasCalled = callEvent.WaitOne(10);
+                var wasCalled = callEvent.WaitOne(1000);
                 Assert.IsFalse(wasCalled);
 
                 // notify worker before it has been started
                 worker.NotifyWork();
 
                 // verify workAction has not been called
-                wasCalled = callEvent.WaitOne(10);
+                wasCalled = callEvent.WaitOne(1000);
                 Assert.IsFalse(wasCalled);
 
                 // start worker, it has already been notified
                 worker.Start();
 
                 // verify workAction has been called
-                wasCalled = callEvent.WaitOne(1000);
+                wasCalled = callEvent.WaitOne();
                 Assert.IsTrue(wasCalled);
 
                 // stop worker
                 worker.Stop();
 
                 // verify workAction has not been called
-                wasCalled = callEvent.WaitOne(10);
+                wasCalled = callEvent.WaitOne(1000);
                 Assert.IsFalse(wasCalled);
             }
         }
@@ -178,14 +178,14 @@ namespace BitSharp.Common.Test
                 worker.NotifyWork();
 
                 // verify workAction has been called
-                wasCalled = callEvent.WaitOne(10);
+                wasCalled = callEvent.WaitOne();
                 Assert.IsTrue(wasCalled);
 
                 // stop worker
                 worker.Stop();
 
                 // verify workAction has not been called
-                wasCalled = callEvent.WaitOne(10);
+                wasCalled = callEvent.WaitOne(1000);
                 Assert.IsFalse(wasCalled);
 
                 // start worker again
@@ -195,7 +195,7 @@ namespace BitSharp.Common.Test
                 worker.NotifyWork();
 
                 // verify workAction has been called
-                wasCalled = callEvent.WaitOne(10);
+                wasCalled = callEvent.WaitOne();
                 Assert.IsTrue(wasCalled);
             }
         }
@@ -214,14 +214,14 @@ namespace BitSharp.Common.Test
                 worker.Start();
 
                 // verify workAction has not been called
-                var wasCalled = callEvent.WaitOne(10);
+                var wasCalled = callEvent.WaitOne(1000);
                 Assert.IsFalse(wasCalled);
 
                 // notify worker
                 worker.NotifyWork();
 
                 // verify workAction has been called
-                wasCalled = callEvent.WaitOne(10);
+                wasCalled = callEvent.WaitOne();
                 Assert.IsTrue(wasCalled);
 
                 // stop worker
@@ -231,14 +231,14 @@ namespace BitSharp.Common.Test
                 worker.NotifyWork();
 
                 // verify workAction has not been called
-                wasCalled = callEvent.WaitOne(10);
+                wasCalled = callEvent.WaitOne(1000);
                 Assert.IsFalse(wasCalled);
 
                 // start worker again, it has already been notified
                 worker.Start();
 
                 // verify workAction has been called
-                wasCalled = callEvent.WaitOne(1000);
+                wasCalled = callEvent.WaitOne();
                 Assert.IsTrue(wasCalled);
             }
         }
@@ -270,14 +270,14 @@ namespace BitSharp.Common.Test
 
                 // notify and verify work was performed
                 worker.NotifyWork();
-                Assert.IsTrue(workedEvent.WaitOne(100));
+                Assert.IsTrue(workedEvent.WaitOne());
                 Assert.AreEqual(1, workCount);
 
                 // the first work action cancelled, need to verify that a second work action can be performed
 
                 // notify and verify work was performed
                 worker.NotifyWork();
-                Assert.IsTrue(workedEvent.WaitOne(100));
+                Assert.IsTrue(workedEvent.WaitOne());
                 Assert.AreEqual(2, workCount);
             }
         }
@@ -322,7 +322,7 @@ namespace BitSharp.Common.Test
                 worker.NotifyWork();
 
                 // verify OnWorkError was called with expected exception
-                var wasCalled = callEvent.WaitOne(1000);
+                var wasCalled = callEvent.WaitOne();
                 Assert.IsTrue(wasCalled);
                 Assert.AreSame(expectedException, actualException);
             }
@@ -362,7 +362,7 @@ namespace BitSharp.Common.Test
                 worker.NotifyWork();
 
                 // verify work errored
-                Assert.IsTrue(finishedEvent.WaitOne(1000));
+                Assert.IsTrue(finishedEvent.WaitOne());
                 Assert.IsTrue(wasError);
 
                 // throw AggregateException of all OperationCanceledException
@@ -371,7 +371,7 @@ namespace BitSharp.Common.Test
                 worker.NotifyWork();
 
                 // verify work finished
-                Assert.IsTrue(finishedEvent.WaitOne(1000));
+                Assert.IsTrue(finishedEvent.WaitOne());
                 Assert.IsFalse(wasError);
 
                 // throw AggregateException of some OperationCanceledException
@@ -380,7 +380,7 @@ namespace BitSharp.Common.Test
                 worker.NotifyWork();
 
                 // verify work errored
-                Assert.IsTrue(finishedEvent.WaitOne(1000));
+                Assert.IsTrue(finishedEvent.WaitOne());
                 Assert.IsTrue(wasError);
             }
         }
