@@ -72,11 +72,14 @@ namespace BitSharp.Common
                 if (duration <= TimeSpan.Zero)
                     return TimeSpan.Zero;
 
-                var totalTickCount = this.samples.Sum(x => x.TickCount) + this.tickCount;
+                var cutoff = now - this.SampleCutoff;
+                var validSamples = this.samples.Where(x => x.SampleStart >= cutoff).ToList();
+
+                var totalTickCount = validSamples.Sum(x => x.TickCount) + this.tickCount;
                 if (totalTickCount == 0)
                     return TimeSpan.Zero;
 
-                var totalTickDuration = this.samples.Sum(x => x.TickDuration) + this.tickDuration;
+                var totalTickDuration = validSamples.Sum(x => x.TickDuration) + this.tickDuration;
 
                 return new TimeSpan(totalTickDuration / totalTickCount);
             });
