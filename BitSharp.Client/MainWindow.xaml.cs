@@ -110,7 +110,8 @@ namespace BitSharp.Client
                 }
                 else
                 {
-                    modules.Add(new EsentStorageModule(baseDirectory, rulesType, cacheSizeMaxBytes: cacheSizeMaxBytes));
+                    //modules.Add(new EsentStorageModule(baseDirectory, rulesType, cacheSizeMaxBytes: cacheSizeMaxBytes));
+                    modules.Add(new BitSharp.SqlServer.Azure.SqlModule());
                 }
 
                 // add cache modules

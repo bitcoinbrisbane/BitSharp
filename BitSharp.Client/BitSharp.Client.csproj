@@ -152,6 +152,10 @@
       <Project>{6d4d2210-a54f-41f0-bca4-727b7ddb27c2}</Project>
       <Name>BitSharp.Esent</Name>
     </ProjectReference>
+    <ProjectReference Include="..\BitSharp.SqlServer.Azure\BitSharp.SqlServer.Azure.csproj">
+      <Project>{68e8733d-0390-4cae-8517-5d05a890016f}</Project>
+      <Name>BitSharp.SqlServer.Azure</Name>
+    </ProjectReference>
     <ProjectReference Include="..\BitSharp.Wallet\BitSharp.Wallet.csproj">
       <Project>{102f8bf7-b34c-47de-ada1-175266d7fbbd}</Project>
       <Name>BitSharp.Wallet</Name>
