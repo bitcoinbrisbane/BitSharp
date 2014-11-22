@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Express 2013 for Windows Desktop
-VisualStudioVersion = 12.0.30723.0
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30501.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Client", "BitSharp.Client\BitSharp.Client.csproj", "{0EE7A0E7-573E-4CE7-B4C2-2BAAEE4E4E9F}"
 EndProject
@@ -32,6 +32,15 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Core.Test.Storage", "BitSharp.Core.Test.Storage\BitSharp.Core.Test.Storage.csproj", "{B0699775-A157-48AA-A62D-2CB18930D6FF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.IntegrationTest", "BitSharp.IntegrationTest\BitSharp.IntegrationTest.csproj", "{F73B1ABE-2D1F-4F29-A0BC-562158E208E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.SqlServer.Azure", "BitSharp.SqlServer.Azure\BitSharp.SqlServer.Azure.csproj", "{68E8733D-0390-4CAE-8517-5D05A890016F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{FC5CD31B-7D97-4C67-B488-7B586567D79F}"
+	ProjectSection(SolutionItems) = preProject
+		.nuget\NuGet.Config = .nuget\NuGet.Config
+		.nuget\NuGet.exe = .nuget\NuGet.exe
+		.nuget\NuGet.targets = .nuget\NuGet.targets
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -161,6 +170,12 @@ Global
 		{F73B1ABE-2D1F-4F29-A0BC-562158E208E7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F73B1ABE-2D1F-4F29-A0BC-562158E208E7}.Release|x64.ActiveCfg = Release|x64
 		{F73B1ABE-2D1F-4F29-A0BC-562158E208E7}.Release|x64.Build.0 = Release|x64
+		{68E8733D-0390-4CAE-8517-5D05A890016F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68E8733D-0390-4CAE-8517-5D05A890016F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68E8733D-0390-4CAE-8517-5D05A890016F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{68E8733D-0390-4CAE-8517-5D05A890016F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68E8733D-0390-4CAE-8517-5D05A890016F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68E8733D-0390-4CAE-8517-5D05A890016F}.Release|x64.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
