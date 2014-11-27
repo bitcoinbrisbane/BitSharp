@@ -1,4 +1,5 @@
 ﻿using BitSharp.Core.Storage;
+using BitSharp.Sql.Azure;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,8 @@ namespace BitSharp.SqlServer.Azure
 {
     public class BlockStorage : IBlockStorage
     {
+        private BitcoinEntities db = new BitcoinEntities();
+
         public bool ContainsChainedHeader(Common.UInt256 blockHash)
         {
             throw new NotImplementedException();
@@ -16,12 +19,33 @@ namespace BitSharp.SqlServer.Azure
 
         public bool TryAddChainedHeader(Core.Domain.ChainedHeader chainedHeader)
         {
-            throw new NotImplementedException();
+            db.ChainedHeaders.Add(new ChainedHeader()
+            {
+                Bits = chainedHeader.Bits,
+                Hash = chainedHeader.Hash.ToByteArray(),
+                Nonce = chainedHeader.Nonce, //,
+                Version = Convert.ToInt16(chainedHeader.Version)
+                //TimeStamp = chainedHeader.Time
+            });
+
+            db.SaveChanges();
+            return true;
         }
 
         public bool TryGetChainedHeader(Common.UInt256 blockHash, out Core.Domain.ChainedHeader chainedHeader)
         {
-            throw new NotImplementedException();
+            ChainedHeader header = db.ChainedHeaders.FirstOrDefault(x => x.Hash == blockHash.ToByteArray());
+
+            chainedHeader = null; // new Core.Domain.ChainedHeader(new Core.Domain.BlockHeader(), 1, 1);
+
+            if (header != null)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         public bool TryRemoveChainedHeader(Common.UInt256 blockHash)
@@ -51,17 +75,14 @@ namespace BitSharp.SqlServer.Azure
 
         public void Flush()
         {
-            throw new NotImplementedException();
         }
 
         public void Defragment()
         {
-            throw new NotImplementedException();
         }
 
         public void Dispose()
         {
-            throw new NotImplementedException();
         }
     }
 }

@@ -17,7 +17,8 @@ namespace BitSharp.SqlServer.Azure
 
         public IBlockTxesStorage BlockTxesStorage
         {
-            get { throw new NotImplementedException(); }
+            get;
+            private set;
         }
 
         public Common.DisposeHandle<IChainStateCursor> OpenChainStateCursor()
@@ -28,11 +29,11 @@ namespace BitSharp.SqlServer.Azure
         public SqlStorageManager()
         {
             this.BlockStorage = new SqlServer.Azure.BlockStorage();
+            this.BlockTxesStorage = new Sql.Azure.BlockTxesStorage();
         }
 
         public void Dispose()
         {
-            throw new NotImplementedException();
         }
     }
 }

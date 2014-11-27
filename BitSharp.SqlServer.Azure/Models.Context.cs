@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace BitSharp.SqlServer.Azure
+namespace BitSharp.Sql.Azure
 {
     using System;
     using System.Data.Entity;
@@ -29,5 +29,7 @@ namespace BitSharp.SqlServer.Azure
         public virtual DbSet<Input> Inputs { get; set; }
         public virtual DbSet<Output> Outputs { get; set; }
         public virtual DbSet<Transaction> Transactions { get; set; }
+        public virtual DbSet<BlockHeader> BlockHeaders { get; set; }
+        public virtual DbSet<ChainedHeader> ChainedHeaders { get; set; }
     }
 }

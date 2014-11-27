@@ -12,6 +12,8 @@
         <AssociationConnector Association="BitcoinModel.FK_Transactions_blocks" ManuallyRouted="false" />
         <AssociationConnector Association="BitcoinModel.FK_Inputs_Inputs" ManuallyRouted="false" />
         <AssociationConnector Association="BitcoinModel.FK_Outputs_Transactions" ManuallyRouted="false" />
+        <EntityTypeShape EntityType="BitcoinModel.BlockHeader" Width="1.5" PointX="0.75" PointY="5.75" />
+        <EntityTypeShape EntityType="BitcoinModel.ChainedHeader" Width="1.5" PointX="3.375" PointY="6.75" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

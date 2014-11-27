@@ -33,7 +33,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Core.Test.Storage"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.IntegrationTest", "BitSharp.IntegrationTest\BitSharp.IntegrationTest.csproj", "{F73B1ABE-2D1F-4F29-A0BC-562158E208E7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.SqlServer.Azure", "BitSharp.SqlServer.Azure\BitSharp.SqlServer.Azure.csproj", "{68E8733D-0390-4CAE-8517-5D05A890016F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitSharp.Sql.Azure", "BitSharp.SqlServer.Azure\BitSharp.Sql.Azure.csproj", "{68E8733D-0390-4CAE-8517-5D05A890016F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{FC5CD31B-7D97-4C67-B488-7B586567D79F}"
 	ProjectSection(SolutionItems) = preProject

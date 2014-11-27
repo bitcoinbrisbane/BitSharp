@@ -4,7 +4,20 @@
   <edmx:Runtime>
     <!-- SSDL content -->
     <edmx:StorageModels>
-      <Schema Namespace="BitcoinModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012.Azure" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+    <Schema Namespace="BitcoinModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012.Azure" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="BlockHeader">
+          <Key>
+            <PropertyRef Name="ID" />
+          </Key>
+          <Property Name="ID" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="Bits" Type="bigint" Nullable="false" />
+          <Property Name="Hash" Type="binary" MaxLength="32" Nullable="false" />
+          <Property Name="MerkleRoot" Type="binary" MaxLength="32" Nullable="false" />
+          <Property Name="Nonce" Type="bigint" Nullable="false" />
+          <Property Name="PreviousBlock" Type="binary" MaxLength="32" Nullable="false" />
+          <Property Name="Time" Type="datetime2" Precision="7" Nullable="false" />
+          <Property Name="Version" Type="smallint" Nullable="false" />
+        </EntityType>
         <EntityType Name="Blocks">
           <Key>
             <PropertyRef Name="ID" />
@@ -17,6 +30,19 @@
           <Property Name="TargetDifficulty" Type="bigint" Nullable="false" />
           <Property Name="TimeStamp" Type="datetime" Nullable="false" />
           <Property Name="MerkleRoot" Type="binary" MaxLength="32" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ChainedHeader">
+          <Key>
+            <PropertyRef Name="ID" />
+          </Key>
+          <Property Name="ID" Type="bigint" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="Hash" Type="binary" MaxLength="32" Nullable="false" />
+          <Property Name="Version" Type="smallint" Nullable="false" />
+          <Property Name="PreviousBlockHash" Type="binary" MaxLength="32" Nullable="false" />
+          <Property Name="MerkleRoot" Type="binary" MaxLength="32" Nullable="false" />
+          <Property Name="Bits" Type="bigint" Nullable="false" />
+          <Property Name="Time" Type="datetime2" Precision="7" Nullable="false" />
+          <Property Name="Nonce" Type="bigint" Nullable="false" />
         </EntityType>
         <EntityType Name="Inputs">
           <Key>
@@ -83,7 +109,9 @@
           </ReferentialConstraint>
         </Association>
         <EntityContainer Name="BitcoinModelStoreContainer">
+          <EntitySet Name="BlockHeader" EntityType="Self.BlockHeader" Schema="BlockChain" store:Type="Tables" />
           <EntitySet Name="Blocks" EntityType="Self.Blocks" Schema="BlockChain" store:Type="Tables" />
+          <EntitySet Name="ChainedHeader" EntityType="Self.ChainedHeader" Schema="BlockChain" store:Type="Tables" />
           <EntitySet Name="Inputs" EntityType="Self.Inputs" Schema="BlockChain" store:Type="Tables" />
           <EntitySet Name="Outputs" EntityType="Self.Outputs" Schema="BlockChain" store:Type="Tables" />
           <EntitySet Name="Transactions" EntityType="Self.Transactions" Schema="BlockChain" store:Type="Tables" />
@@ -100,8 +128,7 @@
             <End Role="Transactions" EntitySet="Transactions" />
           </AssociationSet>
         </EntityContainer>
-      </Schema>
-    </edmx:StorageModels>
+      </Schema></edmx:StorageModels>
     <!-- CSDL content -->
     <edmx:ConceptualModels>
       <Schema Namespace="BitcoinModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
@@ -205,7 +232,35 @@
             <End Role="Transactions" EntitySet="Transactions" />
             <End Role="Outputs" EntitySet="Outputs" />
           </AssociationSet>
+          <EntitySet Name="BlockHeaders" EntityType="BitcoinModel.BlockHeader" />
+          <EntitySet Name="ChainedHeaders" EntityType="BitcoinModel.ChainedHeader" />
         </EntityContainer>
+        <EntityType Name="BlockHeader">
+          <Key>
+            <PropertyRef Name="ID" />
+          </Key>
+          <Property Name="ID" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="Bits" Type="Int64" Nullable="false" />
+          <Property Name="Hash" Type="Binary" Nullable="false" MaxLength="32" FixedLength="true" />
+          <Property Name="MerkleRoot" Type="Binary" Nullable="false" MaxLength="32" FixedLength="true" />
+          <Property Name="Nonce" Type="Int64" Nullable="false" />
+          <Property Name="PreviousBlock" Type="Binary" Nullable="false" MaxLength="32" FixedLength="true" />
+          <Property Name="Time" Type="DateTime" Nullable="false" Precision="7" />
+          <Property Name="Version" Type="Int16" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ChainedHeader">
+          <Key>
+            <PropertyRef Name="ID" />
+          </Key>
+          <Property Name="ID" Type="Int64" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="Hash" Type="Binary" Nullable="false" MaxLength="32" FixedLength="true" />
+          <Property Name="Version" Type="Int16" Nullable="false" />
+          <Property Name="PreviousBlockHash" Type="Binary" Nullable="false" MaxLength="32" FixedLength="true" />
+          <Property Name="MerkleRoot" Type="Binary" Nullable="false" MaxLength="32" FixedLength="true" />
+          <Property Name="Bits" Type="Int64" Nullable="false" />
+          <Property Name="Time" Type="DateTime" Nullable="false" Precision="7" />
+          <Property Name="Nonce" Type="Int64" Nullable="false" />
+        </EntityType>
       </Schema>
     </edmx:ConceptualModels>
     <!-- C-S mapping content -->
@@ -254,6 +309,34 @@
                 <ScalarProperty Name="ID" ColumnName="ID" />
                 <ScalarProperty Name="BlockID" ColumnName="BlockID" />
                 <ScalarProperty Name="Version" ColumnName="Version" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="BlockHeaders">
+            <EntityTypeMapping TypeName="BitcoinModel.BlockHeader">
+              <MappingFragment StoreEntitySet="BlockHeader">
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="Time" ColumnName="Time" />
+                <ScalarProperty Name="PreviousBlock" ColumnName="PreviousBlock" />
+                <ScalarProperty Name="Nonce" ColumnName="Nonce" />
+                <ScalarProperty Name="MerkleRoot" ColumnName="MerkleRoot" />
+                <ScalarProperty Name="Hash" ColumnName="Hash" />
+                <ScalarProperty Name="Bits" ColumnName="Bits" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ChainedHeaders">
+            <EntityTypeMapping TypeName="BitcoinModel.ChainedHeader">
+              <MappingFragment StoreEntitySet="ChainedHeader">
+                <ScalarProperty Name="Nonce" ColumnName="Nonce" />
+                <ScalarProperty Name="Time" ColumnName="Time" />
+                <ScalarProperty Name="Bits" ColumnName="Bits" />
+                <ScalarProperty Name="MerkleRoot" ColumnName="MerkleRoot" />
+                <ScalarProperty Name="PreviousBlockHash" ColumnName="PreviousBlockHash" />
+                <ScalarProperty Name="Version" ColumnName="Version" />
+                <ScalarProperty Name="Hash" ColumnName="Hash" />
+                <ScalarProperty Name="ID" ColumnName="ID" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>

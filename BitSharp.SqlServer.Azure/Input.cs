@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace BitSharp.SqlServer.Azure
+namespace BitSharp.Sql.Azure
 {
     using System;
     using System.Collections.Generic;

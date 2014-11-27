@@ -7,8 +7,8 @@
     <ProjectGuid>{68E8733D-0390-4CAE-8517-5D05A890016F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BitSharp.SqlServer.Azure</RootNamespace>
-    <AssemblyName>BitSharp.SqlServer.Azure</AssemblyName>
+    <RootNamespace>BitSharp.Sql.Azure</RootNamespace>
+    <AssemblyName>BitSharp.Sql.Azure</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
@@ -57,7 +57,15 @@
     <Compile Include="Block.cs">
       <DependentUpon>Models.tt</DependentUpon>
     </Compile>
+    <Compile Include="BlockHeader.cs">
+      <DependentUpon>Models.tt</DependentUpon>
+    </Compile>
     <Compile Include="BlockStorage.cs" />
+    <Compile Include="BlockTxesStorage.cs" />
+    <Compile Include="ChainedHeader.cs">
+      <DependentUpon>Models.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ChainState\SqlChainStateManager.cs" />
     <Compile Include="Input.cs">
       <DependentUpon>Models.tt</DependentUpon>
     </Compile>
@@ -76,11 +84,12 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Models.edmx</DependentUpon>
     </Compile>
+    <Compile Include="NetworkPeerStorage.cs" />
     <Compile Include="Output.cs">
       <DependentUpon>Models.tt</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SqlModule.cs" />
+    <Compile Include="SqlStorageModule.cs" />
     <Compile Include="SqlStorageManager.cs" />
     <Compile Include="Transaction.cs">
       <DependentUpon>Models.tt</DependentUpon>
@@ -94,6 +103,14 @@
     <ProjectReference Include="..\BitSharp.Core\BitSharp.Core.csproj">
       <Project>{2ecfa6c0-46b6-4587-a662-3f61c7efbc44}</Project>
       <Name>BitSharp.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BitSharp.Esent\BitSharp.Esent.csproj">
+      <Project>{6d4d2210-a54f-41f0-bca4-727b7ddb27c2}</Project>
+      <Name>BitSharp.Esent</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BitSharp.Node\BitSharp.Node.csproj">
+      <Project>{b76235bf-6037-45b8-9341-957e6407f8e1}</Project>
+      <Name>BitSharp.Node</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

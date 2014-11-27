@@ -12,13 +12,15 @@ namespace BitSharp.Sql.Azure
     using System;
     using System.Collections.Generic;
     
-    public partial class Output
+    public partial class ChainedHeader
     {
         public long ID { get; set; }
-        public long TransactionID { get; set; }
-        public long Value { get; set; }
-        public byte[] Script { get; set; }
-    
-        public virtual Transaction Transaction { get; set; }
+        public byte[] Hash { get; set; }
+        public short Version { get; set; }
+        public byte[] PreviousBlockHash { get; set; }
+        public byte[] MerkleRoot { get; set; }
+        public long Bits { get; set; }
+        public System.DateTime Time { get; set; }
+        public long Nonce { get; set; }
     }
 }
